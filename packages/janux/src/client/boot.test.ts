@@ -212,13 +212,19 @@ describe('client boot (resume without hydration)', () => {
     expect(document.querySelector('[data-jxa="counter#default:inc"]')!.classList.contains('janux-agent-glow')).toBe(true);
     await new Promise((resolve) => setTimeout(resolve, 30));
 
-    // counter.reset has no element in the view → fallback to the island
+    // confirm-guarded intents do NOT glow on call — nothing executed yet
     const resetPending = client.call('counter.reset');
 
-    expect(island.classList.contains('janux-agent-glow')).toBe(true);
+    expect(island.classList.contains('janux-agent-glow')).toBe(false);
     const proposal: any = await resetPending;
 
-    await client.approve(proposal.id);
+    expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(0);
+
+    // the glow happens on APPROVAL, when the action actually runs
+    const approvePending = client.approve(proposal.id);
+
+    expect(island.classList.contains('janux-agent-glow')).toBe(true);
+    await approvePending;
   });
 
   it('boot({ glow: true }) injects styles and glows the operated island', async () => {

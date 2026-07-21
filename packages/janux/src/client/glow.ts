@@ -56,10 +56,13 @@ export function glowTargetFor(tool: string, scope: ParentNode = document): Eleme
 export function enableAgentGlow(options: GlowOptions = {}): () => void {
   const duration = options.duration ?? 700;
   const onToolCall = (event: Event): void => {
-    const { tool, phase } = (event as CustomEvent).detail ?? {};
+    const { tool, phase, guard, approval } = (event as CustomEvent).detail ?? {};
     const target = tool ? glowTargetFor(tool) : undefined;
 
     if (!target) return;
+    // confirm-guarded calls only PROPOSE — nothing executes, nothing glows.
+    // The glow fires on approval, when the action actually runs.
+    if (guard === 'confirm' && !approval) return;
     if (phase === 'start') target.classList.add(GLOW_CLASS);
     else setTimeout(() => target.classList.remove(GLOW_CLASS), duration);
   };

@@ -96,6 +96,13 @@ function delegate(): void {
   });
 }
 
+function guardFor(tool: string): string {
+  const intentName = tool.split('.')[1] ?? '';
+  const guard = (currentDef as any)?.intents?.[intentName]?.guard ?? 'auto';
+
+  return typeof guard === 'function' ? guard({ ctx: {} }) : guard;
+}
+
 /** The control carrying the intent's marker glows; morph preserves janux-* classes. */
 function glowTarget(tool: string): Element {
   const intentName = tool.split('.')[1] ?? '';
@@ -158,7 +165,8 @@ async function handleMessage(data: any): Promise<void> {
   if (data?.type === 'run') await run(data.code);
   if (data?.type === 'glow') glowEnabled = data.enabled === true;
   if (data?.type === 'call') {
-    if (glowEnabled) {
+    // confirm-guarded calls only propose — the glow fires on approval instead.
+    if (glowEnabled && guardFor(data.tool) !== 'confirm') {
       injectGlowStyles();
       glowElement(glowTarget(data.tool), 900);
     }
@@ -173,6 +181,10 @@ async function handleMessage(data: any): Promise<void> {
 
     if (proposal) {
       proposals.delete(data.id);
+      if (glowEnabled) {
+        injectGlowStyles();
+        glowElement(glowTarget(proposal.tool), 900);
+      }
       await proposal.execute();
       await report();
     }
