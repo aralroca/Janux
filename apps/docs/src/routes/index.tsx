@@ -9,7 +9,9 @@ export const meta = {
     'One component, two faces: a live view for humans, typed MCP tools & resources for AI agents — generated from the same definition.',
 };
 
-const SAMPLE_CODE = `export const Counter = component({
+const SAMPLE_CODE = `import { component, intent, schema, int } from 'janux';
+
+export const Counter = component({
   name: 'counter',
   state: schema({ count: int() }),
   intents: {

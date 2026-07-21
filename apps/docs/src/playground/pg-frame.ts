@@ -93,7 +93,23 @@ function delegate(): void {
 }
 
 function reportError(error: unknown): void {
-  post({ type: 'error', message: String(error) });
+  const message = String(error);
+  const hint = /is not defined/.test(message)
+    ? "\n\nHint: did you forget the import? e.g.\nimport { component, intent, schema, int } from 'janux';"
+    : '';
+
+  showErrorInPreview(message + hint);
+  post({ type: 'error', message: message + hint });
+}
+
+function showErrorInPreview(message: string): void {
+  const pre = document.createElement('pre');
+
+  pre.style.cssText =
+    'margin:16px;padding:14px;border-radius:10px;background:#fef2f2;color:#b91c1c;' +
+    'font:12.5px/1.6 ui-monospace,Menlo,monospace;white-space:pre-wrap;';
+  pre.textContent = message;
+  root.replaceChildren(pre);
 }
 
 async function run(code: string): Promise<void> {
