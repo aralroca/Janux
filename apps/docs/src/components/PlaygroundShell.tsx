@@ -30,7 +30,11 @@ export const PlaygroundShell = component({
       </div>
       <div class="playground">
         <div class="editor-pane" id="pg-editor"></div>
-        <div class="preview-pane" id="pg-preview"></div>
+        <div class="preview-pane" id="pg-preview">
+          <div class="pg-loading" id="pg-loading">
+            <span class="pg-spinner"></span> Running…
+          </div>
+        </div>
         <div class="agent-pane" id="pg-agent"></div>
       </div>
       <div class="error-overlay" id="pg-error" hidden></div>

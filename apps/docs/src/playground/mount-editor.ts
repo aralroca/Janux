@@ -8,6 +8,7 @@ interface Els {
   preview: HTMLElement;
   agent: HTMLElement;
   error: HTMLElement;
+  loading: HTMLElement;
   example: HTMLSelectElement;
   share: HTMLButtonElement;
 }
@@ -18,6 +19,7 @@ function grabEls(): Els {
     preview: document.getElementById('pg-preview')!,
     agent: document.getElementById('pg-agent')!,
     error: document.getElementById('pg-error')!,
+    loading: document.getElementById('pg-loading')!,
     example: document.getElementById('pg-example') as HTMLSelectElement,
     share: document.getElementById('pg-share') as HTMLButtonElement,
   };
@@ -55,6 +57,7 @@ export async function mountPlayground(): Promise<void> {
   let glowEnabled = true;
   const run = (): void => {
     els.error.hidden = true;
+    els.loading.classList.add('on');
     pendingProposal = undefined;
     frame.send({ type: 'run', code: editor.getValue() });
   };
@@ -73,6 +76,7 @@ export async function mountPlayground(): Promise<void> {
     frame.send({ type: 'glow', enabled });
   };
   const onFrameMessage = (data: any): void => {
+    if (data?.type === 'ready' || data?.type === 'error') els.loading.classList.remove('on');
     if (data?.type === 'frame-ready') run();
     if (data?.type === 'state') {
       renderAgentPanel(els.agent, data.manifest, data.resource, callTool, {
@@ -92,6 +96,7 @@ export async function mountPlayground(): Promise<void> {
   editor.onDidChangeModelContent(debounce(run, 600));
   els.example.addEventListener('change', () => {
     editor.setValue(EXAMPLES[els.example.value] ?? '');
+    run();
   });
   els.share.addEventListener('click', () => {
     location.hash = `c=${encodeShare(editor.getValue())}`;

@@ -28,9 +28,10 @@ export function createFrame(
   const iframe = document.createElement('iframe');
 
   // allow-same-origin is required for the module import map to load from the
-  // dev server (opaque origins are CORS-blocked). The sandbox here isolates
-  // crashes, not the user from their own code — same trade-off as any REPL.
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+  // dev server (opaque origins are CORS-blocked); allow-forms so <form intent>
+  // examples fire their (preventDefaulted) submit events. The sandbox here
+  // isolates crashes, not the user from their own code — same as any REPL.
+  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
   iframe.srcdoc = SRCDOC;
   container.appendChild(iframe);
   window.addEventListener('message', (event) => {

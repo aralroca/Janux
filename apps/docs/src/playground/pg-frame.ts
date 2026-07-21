@@ -78,7 +78,7 @@ function delegate(): void {
     if (!el) return;
     const intentName = el.getAttribute('data-jxa')!.split(':')[1]!;
 
-    invokeIntent(intentName, elementInput(el), 'human').catch(reportError);
+    invokeIntent(intentName, elementInput(el), 'human').catch(postError);
   });
   root.addEventListener('submit', (event) => {
     const el = (event.target as Element).closest('[data-jxform]');
@@ -88,8 +88,13 @@ function delegate(): void {
     const intentName = el.getAttribute('data-jxform')!.split(':')[1]!;
     const input = Object.fromEntries(new FormData(event.target as HTMLFormElement).entries());
 
-    invokeIntent(intentName, input, 'human').catch(reportError);
+    invokeIntent(intentName, input, 'human').catch(postError);
   });
+}
+
+/** Intent failures (e.g. validation) go to the parent overlay only — never nuke the preview. */
+function postError(error: unknown): void {
+  post({ type: 'error', message: String(error) });
 }
 
 function reportError(error: unknown): void {

@@ -637,6 +637,40 @@ td {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border);
+  position: relative;
+}
+
+.pg-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pg-loading.on {
+  display: flex;
+}
+
+.pg-spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #ddd6fe;
+  border-top-color: var(--violet);
+  border-radius: 50%;
+  animation: pg-spin 0.7s linear infinite;
+}
+
+@keyframes pg-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .playground .preview-pane iframe {
