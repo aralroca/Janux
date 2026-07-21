@@ -8,3 +8,4 @@ out/
 .env.*
 !.env.example
 coverage/
+PLAN-*.md
