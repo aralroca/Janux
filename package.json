@@ -22,7 +22,8 @@
     "test": "bun test packages",
     "test:e2e": "bun test e2e",
     "typecheck": "for p in janux janux-server janux-agent janux-vite janux-cli; do bunx tsc --noEmit -p packages/$p || exit 1; done",
-    "dev:shop": "bun run --cwd examples/shop dev"
+    "dev:shop": "bun run --cwd examples/shop dev",
+    "release": "for d in janux janux-server janux-agent janux-vite janux-cli create-janux; do (cd packages/$d && bun publish --access public) || exit 1; done"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

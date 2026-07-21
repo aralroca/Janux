@@ -18,5 +18,26 @@
   },
   "dependencies": {
     "janux": "workspace:*"
+  },
+  "homepage": "https://github.com/aralroca/Janux#readme",
+  "bugs": "https://github.com/aralroca/Janux/issues",
+  "keywords": [
+    "janux",
+    "agentic-ui",
+    "mcp",
+    "webmcp",
+    "ai-agents",
+    "fullstack",
+    "framework",
+    "bun",
+    "vite",
+    "resumability",
+    "copilot"
+  ],
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }
