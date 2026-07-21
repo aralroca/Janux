@@ -165,6 +165,93 @@ describe('client boot (resume without hydration)', () => {
     expect(clientQuery).toHaveBeenCalledTimes(0);
   });
 
+  it('emits janux:tool-call events around bridge calls (agent activity)', async () => {
+    const client = await serveAndBoot();
+    const phases: string[] = [];
+    const onTool = (event: any) => phases.push(`${event.detail.tool}:${event.detail.phase}`);
+
+    document.addEventListener('janux:tool-call', onTool);
+    await client.call('counter.inc');
+    const proposal: any = await client.call('counter.reset');
+
+    expect(phases).toEqual([
+      'counter.inc:start',
+      'counter.inc:ok',
+      'counter.reset:start',
+      'counter.reset:proposal',
+    ]);
+    document.removeEventListener('janux:tool-call', onTool);
+    await client.approve(proposal.id);
+  });
+
+  it('glow targets the element carrying the intent marker, falling back to the island', async () => {
+    const { html, snapshots } = await renderToString(jsx(counter as any, {}), {
+      initialState: { 'ui://counter#default': { n: 5, history: [] } },
+      storeDefs: { session },
+    });
+    const scripts = snapshots
+      .map(
+        (s) =>
+          `<script type="application/janux+state" data-uri="${s.uri}">${JSON.stringify({ state: s.state, sources: s.sources ?? {} })}</script>`,
+      )
+      .join('');
+
+    document.body.innerHTML = html + scripts;
+    document.getElementById('janux-glow-styles')?.remove();
+    const client = boot({ defs: [counter, session], glow: { duration: 10 } });
+    const island = document.querySelector('janux-island')!;
+    const incButton = document.querySelector('[data-jxa="counter#default:inc"]')!;
+
+    // counter.inc has a button in the view → the BUTTON glows, not the island
+    const pending = client.call('counter.inc');
+
+    expect(incButton.classList.contains('janux-agent-glow')).toBe(true);
+    expect(island.classList.contains('janux-agent-glow')).toBe(false);
+    await pending;
+    // the intent mutated state → re-render happened; morph must NOT wipe the class
+    expect(document.querySelector('[data-jxa="counter#default:inc"]')!.classList.contains('janux-agent-glow')).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    // confirm-guarded intents do NOT glow on call — nothing executed yet
+    const resetPending = client.call('counter.reset');
+
+    expect(island.classList.contains('janux-agent-glow')).toBe(false);
+    const proposal: any = await resetPending;
+
+    expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(0);
+
+    // the glow happens on APPROVAL, when the action actually runs
+    const approvePending = client.approve(proposal.id);
+
+    expect(island.classList.contains('janux-agent-glow')).toBe(true);
+    await approvePending;
+  });
+
+  it('boot({ glow: true }) injects styles and glows the operated island', async () => {
+    const { html, snapshots } = await renderToString(jsx(counter as any, {}), {
+      initialState: { 'ui://counter#default': { n: 1, history: [] } },
+      storeDefs: { session },
+    });
+    const scripts = snapshots
+      .map(
+        (s) =>
+          `<script type="application/janux+state" data-uri="${s.uri}">${JSON.stringify({ state: s.state, sources: s.sources ?? {} })}</script>`,
+      )
+      .join('');
+
+    document.body.innerHTML = html + scripts;
+    document.getElementById('janux-glow-styles')?.remove();
+    const client = boot({ defs: [counter, session], glow: { duration: 10 } });
+
+    expect(document.getElementById('janux-glow-styles')).not.toBeNull();
+    const pending = client.call('counter.inc');
+
+    expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(1);
+    await pending;
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(0);
+  });
+
   it('survives a malformed state snapshot (boot regression)', async () => {
     document.body.innerHTML =
       '<script type="application/janux+state" data-uri="ui://broken">{not json</script>';

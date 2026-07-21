@@ -10,10 +10,17 @@
     "start": "janux start"
   },
   "dependencies": {
-    "janux": "workspace:*",
-    "@janux/server": "workspace:*",
     "@janux/agent": "workspace:*",
     "@janux/cli": "workspace:*",
-    "marked": "^15.0.0"
+    "@janux/server": "workspace:*",
+    "@shikijs/langs": "^3",
+    "@shikijs/monaco": "^3",
+    "@shikijs/themes": "^3",
+    "@tailwindcss/browser": "^4",
+    "janux": "workspace:*",
+    "marked": "^15.0.0",
+    "monaco-editor": "^0.52",
+    "shiki": "^3",
+    "sucrase": "^3.35"
   }
 }

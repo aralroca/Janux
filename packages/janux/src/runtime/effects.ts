@@ -1,5 +1,5 @@
 import { computed, effect as watch, untrack } from '../signals';
-import { allowMutations } from '../state/mutation-gate';
+import { withGate, type MutationGate } from '../state/mutation-gate';
 import { parseDuration } from '../define/factories';
 import type { Cleanup, EffectDef, RunBag } from '../define/types';
 import type { PendingTracker } from './settled';
@@ -8,8 +8,8 @@ interface EffectRuntime {
   dispose: () => void;
 }
 
-function runEffectBody(def: EffectDef, bag: RunBag, tracker: PendingTracker): Cleanup {
-  const result = allowMutations(() => def.run(bag));
+function runEffectBody(def: EffectDef, bag: RunBag, tracker: PendingTracker, gate: MutationGate): Cleanup {
+  const result = withGate(gate, () => def.run(bag));
 
   if (result instanceof Promise) {
     tracker.track(result);
@@ -20,7 +20,7 @@ function runEffectBody(def: EffectDef, bag: RunBag, tracker: PendingTracker): Cl
   return typeof result === 'function' ? result : undefined;
 }
 
-function startOne(def: EffectDef, bag: RunBag, tracker: PendingTracker): EffectRuntime {
+function startOne(def: EffectDef, bag: RunBag, tracker: PendingTracker, gate: MutationGate): EffectRuntime {
   const debounceMs = def.debounce ? parseDuration(def.debounce) : 0;
   let cleanup: Cleanup;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -29,7 +29,7 @@ function startOne(def: EffectDef, bag: RunBag, tracker: PendingTracker): EffectR
 
   const runNow = (): void => {
     cleanup?.();
-    cleanup = untrack(() => runEffectBody(def, bag, tracker));
+    cleanup = untrack(() => runEffectBody(def, bag, tracker, gate));
   };
 
   const schedule = (): void => {
@@ -73,8 +73,9 @@ export function startEffects(
   defs: Record<string, EffectDef> | undefined,
   bag: RunBag,
   tracker: PendingTracker,
+  gate: MutationGate,
 ): () => void {
-  const running = Object.values(defs ?? {}).map((def) => startOne(def, bag, tracker));
+  const running = Object.values(defs ?? {}).map((def) => startOne(def, bag, tracker, gate));
 
   return () => running.forEach((runtime) => runtime.dispose());
 }

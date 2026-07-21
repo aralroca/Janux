@@ -40,5 +40,5 @@ export {
 export { signal, computed, effect as watch, batch, untrack } from './signals';
 export { createInstance, type JanuxInstance, type InstanceOptions } from './runtime/instance';
 export { createBus, type EventBus } from './runtime/bus';
-export { JanuxIntentError, type AuditEntry, type Proposal } from './runtime/intents';
+export { JanuxIntentError, resolveGuard, type AuditEntry, type Proposal } from './runtime/intents';
 export { Fragment, jsx, jsxs, type JanuxNode } from './jsx-runtime';

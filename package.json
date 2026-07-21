@@ -19,7 +19,7 @@
     "apps/*"
   ],
   "scripts": {
-    "test": "bun test packages",
+    "test": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind",
     "test:e2e": "bun test e2e",
     "typecheck": "for p in janux janux-server janux-agent janux-vite janux-cli; do bunx tsc --noEmit -p packages/$p || exit 1; done",
     "dev:shop": "bun run --cwd examples/shop dev",

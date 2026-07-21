@@ -48,6 +48,29 @@ describe('instance: state, derived, intents', () => {
     expect(cart.derived.count).toBe(3);
   });
 
+  it('async intents may mutate state after awaits (regression)', async () => {
+    const def = component({
+      name: 'async-cart',
+      state: schema({ items: list({ id: str(), qty: int() }), coupon: str().nullable() }),
+      intents: {
+        addThenCoupon: intent({
+          run: async ({ state }: any) => {
+            state.items.push({ id: 'a', qty: 1 });
+            await Promise.resolve();
+            state.coupon = 'SAVE10';
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            state.items[0].qty = 2;
+          },
+        }),
+      },
+      view: noopView,
+    });
+    const cart = createInstance(def);
+
+    await cart.intents.addThenCoupon!({});
+    expect(cart.snapshot()).toEqual({ items: [{ id: 'a', qty: 2 }], coupon: 'SAVE10' });
+  });
+
   it('validates intent input against its schema', async () => {
     const cart = createInstance(cartDef());
 

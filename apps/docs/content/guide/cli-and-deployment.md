@@ -31,7 +31,7 @@ A Bun server that:
 ## Deployment notes
 
 - Any host that runs Bun works: a container, a VM, Railway/Fly-style platforms.
-- Set your model config in the environment (`JANUX_MODEL` or a provider key) — see [Agent](/docs/09-agent-and-copilot).
+- Set your model config in the environment (`JANUX_MODEL` or a provider key) — see [Agent](/docs/guide/agent-and-copilot).
 - The manifest endpoint is public by default; scope it with `ctxFor` (auth) if your tools are sensitive — forbidden/filtered tools never appear for unauthorized contexts.
 
 ## create-janux

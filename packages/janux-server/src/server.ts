@@ -1,4 +1,5 @@
-import { buildManifest, renderToString, validate, type ComponentDef, type Ctx } from 'janux';
+import { buildManifest, renderToString, type ComponentDef, type Ctx } from 'janux';
+import { assertValidInput, errorStatus, evictOldestProposal, json, type PendingApiProposal } from './http';
 import { apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createFsRouter } from './router';
 import { htmlDocument } from './html-shell';
@@ -25,49 +26,19 @@ export interface ServerOptions {
   islandModules?: Record<string, string>;
   title?: string;
   stylesheets?: string[];
+  favicon?: string;
 }
 
-interface PendingApiProposal {
-  id: string;
-  tool: string;
-  input: unknown;
-  execute: () => Promise<unknown>;
-}
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-}
-
-const MAX_PENDING_PROPOSALS = 100;
-
-function evictOldestProposal(proposals: Map<string, PendingApiProposal>): void {
-  if (proposals.size < MAX_PENDING_PROPOSALS) return;
-  const oldest = proposals.keys().next().value;
-
-  if (oldest) proposals.delete(oldest);
-}
-
-function assertValidInput(tool: { name: string; input?: any }, input: unknown): unknown {
-  const result = validate(tool.input, input ?? {});
-
-  if (!result.ok) {
-    const detail = result.errors.map((e: any) => `${e.path}: ${e.message}`).join('; ');
-
-    throw Object.assign(new Error(`Invalid input for "${tool.name}" — ${detail}`), {
-      code: 'invalid_input',
-    });
+async function resolveMeta(
+  rawMeta: unknown,
+  ctx: Ctx,
+  params: Record<string, string>,
+): Promise<{ title?: string; description?: string } | undefined> {
+  try {
+    return typeof rawMeta === 'function' ? await rawMeta({ ctx, params }) : (rawMeta as any);
+  } catch {
+    return undefined;
   }
-
-  return result.value;
-}
-
-function errorStatus(error: unknown): number {
-  const code = (error as any)?.code;
-
-  return code === 'forbidden' ? 403 : code === 'invalid_input' ? 400 : 500;
 }
 
 let proposalSeq = 0;
@@ -94,10 +65,13 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const route = findRoute(pathname);
 
     if (!route) return undefined;
-    const render = 'render' in route ? route.render : ((await loadRoute(route.load)) as any).default;
-    const vnode = render({ ctx, params: route.params });
+    const module = 'render' in route ? undefined : ((await loadRoute(route.load)) as any);
+    const render = 'render' in route ? route.render : module.default;
+    const meta = await resolveMeta(module?.meta, ctx, route.params);
+    const vnode = await render({ ctx, params: route.params });
+    const result = await renderToString(vnode, { ctx, storeDefs: options.storeDefs });
 
-    return renderToString(vnode, { ctx, storeDefs: options.storeDefs });
+    return { ...result, meta };
   };
 
   const manifestFor = async (pathname: string, ctx: Ctx): Promise<unknown> => {
@@ -164,13 +138,15 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const islandNames = [...new Set(result.registry.islands.map(({ def }) => def.name))];
     const html = htmlDocument({
       html: result.html,
-      title: options.title,
+      title: result.meta?.title ?? options.title,
+      description: result.meta?.description,
       snapshots: result.snapshots,
       islandNames,
       islandModules: options.islandModules,
       runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
       manifestUrl: `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
       stylesheets: options.stylesheets,
+      favicon: options.favicon,
     });
 
     return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });

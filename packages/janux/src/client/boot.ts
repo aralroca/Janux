@@ -4,11 +4,14 @@ import type { Proposal } from '../runtime/intents';
 import { createBridge, type JanuxBridge } from './bridge';
 import { mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
+import { enableAgentGlow, type GlowOptions } from './glow';
 
 export interface BootOptions {
   islands?: Record<string, IslandLoader>;
   defs?: ComponentDef[];
   ctx?: Record<string, unknown>;
+  /** Highlight islands while an agent operates them. `true` or `{ duration }`. */
+  glow?: boolean | GlowOptions;
 }
 
 export interface JanuxClient extends JanuxBridge {
@@ -111,6 +114,7 @@ export function boot(options: BootOptions = {}): JanuxClient {
   (options.defs ?? []).forEach((def) => registerDef(registry, def));
   readSnapshots(mount);
   listen(mount);
+  if (options.glow) enableAgentGlow(options.glow === true ? {} : options.glow);
   const bridge = createBridge(mount, proposals);
   const client: JanuxClient = {
     ...bridge,

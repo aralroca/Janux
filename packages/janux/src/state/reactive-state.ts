@@ -1,5 +1,5 @@
 import { batch, signal, untrack, type Sig } from '../signals';
-import { assertMutable } from './mutation-gate';
+import { assertMutable, createGate, type MutationGate } from './mutation-gate';
 
 const MUTATING_ARRAY_METHODS = new Set([
   'push',
@@ -34,7 +34,10 @@ function plainObject(value: object): Record<string, unknown> {
   return Object.fromEntries(Object.entries(value).map(([key, v]) => [key, plainify(v)]));
 }
 
-export function createReactiveState<T extends object>(initial: T): ReactiveState<T> {
+export function createReactiveState<T extends object>(
+  initial: T,
+  gate: MutationGate = createGate(),
+): ReactiveState<T> {
   const versions = new Map<string, Sig<number>>();
   let data = structuredClone(initial);
 
@@ -78,7 +81,7 @@ export function createReactiveState<T extends object>(initial: T): ReactiveState
 
   const wrapArrayMethod = (target: unknown[], path: string, method: string) => {
     return (...args: unknown[]) => {
-      assertMutable(path);
+      assertMutable(gate, path);
       const result = (target as any)[method](...args.map(plainify));
 
       touch(path);
@@ -112,7 +115,7 @@ export function createReactiveState<T extends object>(initial: T): ReactiveState
     if (typeof key === 'symbol') return Reflect.set(raw, key, value);
     const target = childPath(path, key);
 
-    assertMutable(target);
+    assertMutable(gate, target);
     Reflect.set(raw, key, plainify(value));
     touch(target);
 
@@ -123,7 +126,7 @@ export function createReactiveState<T extends object>(initial: T): ReactiveState
     if (typeof key === 'symbol') return Reflect.deleteProperty(raw, key);
     const target = childPath(path, key);
 
-    assertMutable(target);
+    assertMutable(gate, target);
     Reflect.deleteProperty(raw, key);
     touch(target);
 

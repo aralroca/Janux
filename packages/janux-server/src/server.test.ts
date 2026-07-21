@@ -116,6 +116,27 @@ describe('api endpoints', () => {
   });
 });
 
+describe('route meta', () => {
+  it('uses route-level meta for title and description', async () => {
+    const fsServer = createJanuxServer({ routesDir: `${import.meta.dirname}/__fixtures__/routes` });
+    const html = await (await fsServer.fetch(new Request('http://test/about'))).text();
+
+    expect(html).toContain('<title>About — Janux fixture</title>');
+    expect(html).toContain('<meta name="description" content="Route-level metadata fixture.">');
+    expect(html).toContain('<main>About page</main>');
+  });
+});
+
+describe('title escaping (XSS regression)', () => {
+  it('escapes route meta titles', async () => {
+    const fsServer = createJanuxServer({ routesDir: `${import.meta.dirname}/__fixtures__/routes` });
+    const html = await (await fsServer.fetch(new Request('http://test/evil'))).text();
+
+    expect(html).not.toContain('</title><script>');
+    expect(html).toContain('&lt;/title>&lt;script>');
+  });
+});
+
 describe('manifest endpoint', () => {
   it('merges mounted islands and api tools per route', async () => {
     const manifest: any = await (await get('/_janux/manifest?path=/shop')).json();

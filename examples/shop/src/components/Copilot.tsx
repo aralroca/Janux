@@ -1,6 +1,13 @@
 import { component, intent, schema, str, bool, enums, list, obj } from 'janux';
 
 let wire: any[] = [];
+let toolListener: ((event: any) => void) | undefined;
+
+const SUGGESTIONS = [
+  'Add two blue sneakers to my cart',
+  'Apply the SAVE10 coupon and check out',
+  'What is in my cart right now?',
+];
 
 async function postAgent(messages: unknown[], path: string): Promise<any> {
   const response = await fetch('/_janux/agent', {
@@ -14,8 +21,9 @@ async function postAgent(messages: unknown[], path: string): Promise<any> {
 
 async function runUiCalls(calls: any[], state: any): Promise<void> {
   for (const call of calls) {
-    const bridge = (window as any).janux;
-    const result = await bridge.call(call.name, call.input).catch((error: unknown) => ({ error: String(error) }));
+    const result = await (window as any).janux
+      .call(call.name, call.input)
+      .catch((error: unknown) => ({ error: String(error) }));
 
     if (result?.status === 'proposal') state.proposal = { id: result.id, tool: call.name };
     wire.push({ role: 'tool', toolCallId: call.id, content: JSON.stringify(result ?? null) });
@@ -34,20 +42,66 @@ async function converse(state: any, path: string): Promise<void> {
   state.messages.push({ role: 'assistant', text: reply.type === 'setup' ? reply.message : reply.text });
 }
 
+/** Scripted demo: real tool calls through the real bridge — no model involved, and labeled as such. */
+async function runDemo(state: any): Promise<void> {
+  const bridge = (window as any).janux;
+
+  state.messages.push({ role: 'assistant', text: '▶ Demo (no AI): watch me operate the page with real tool calls.' });
+  await bridge.call('cart.addItem', { productId: 'p1', qty: 2 });
+  await bridge.call('cart.applyCoupon', { code: 'SAVE10' });
+  const proposal: any = await bridge.call('cart.checkout');
+
+  if (proposal?.status === 'proposal') {
+    state.proposal = { id: proposal.id, tool: 'cart.checkout' };
+    state.messages.push({ role: 'assistant', text: 'Checkout needs your approval — that is the confirm guard.' });
+  }
+}
+
 export const Copilot = component({
   name: 'copilot',
-  description: 'Built-in chat copilot that operates this page through the agent bridge.',
+  description: 'Chat copilot that operates the shop through the agent bridge.',
 
   state: schema({
     messages: list({ role: enums(['user', 'assistant']), text: str() }),
+    activity: list({ line: str() }),
     busy: bool(),
     proposal: obj({ id: str(), tool: str() }).nullable(),
   }),
 
+  lifecycle: {
+    attach: ({ intents }: any) => {
+      wire = [];
+      toolListener = (event: any) => {
+        const { tool, phase } = event.detail;
+
+        if (phase === 'start' || tool.startsWith('copilot.')) return;
+        intents.logTool({ line: `${tool} ${phase === 'ok' ? '✓' : phase === 'proposal' ? '⏸ proposal' : '✗'}` });
+      };
+      document.addEventListener('janux:tool-call', toolListener);
+    },
+    detach: () => {
+      if (toolListener) document.removeEventListener('janux:tool-call', toolListener);
+    },
+  },
+
   intents: {
+    logTool: intent({
+      guard: 'forbidden',
+      input: schema({ line: str() }),
+      run: ({ state, input }: any) => {
+        state.activity.push({ line: input.line });
+        if (state.activity.length > 6) state.activity = state.activity.slice(-6);
+      },
+    }),
+    demo: intent({
+      guard: 'forbidden',
+      description: 'Run the scripted no-AI demo',
+      run: ({ state }: any) => runDemo(state),
+    }),
     send: intent({
       description: 'Send a message to the copilot',
       input: schema({ text: str().min(1) }),
+      ready: ({ state }: any) => !state.busy,
       run: async ({ state, input }: any) => {
         state.messages.push({ role: 'user', text: input.text });
         state.busy = true;
@@ -57,9 +111,7 @@ export const Copilot = component({
         });
       },
     }),
-
     approve: intent({
-      description: 'Approve the pending proposal',
       guard: 'forbidden',
       run: async ({ state }: any) => {
         if (!state.proposal) return;
@@ -68,9 +120,7 @@ export const Copilot = component({
         state.proposal = null;
       },
     }),
-
     reject: intent({
-      description: 'Reject the pending proposal',
       guard: 'forbidden',
       run: ({ state }: any) => {
         (window as any).janux.reject(state.proposal?.id);
@@ -81,7 +131,19 @@ export const Copilot = component({
 
   view: ({ state, intents }: any) => (
     <aside class="copilot">
-      <h3>Copilot</h3>
+      <h3>✦ Copilot</h3>
+      {state.messages.length === 0 ? (
+        <div class="chips">
+          {SUGGESTIONS.map((text) => (
+            <button key={text} class="chip" on={intents.send} data-input={JSON.stringify({ text })}>
+              {text}
+            </button>
+          ))}
+          <button class="chip demo" on={intents.demo}>
+            ▶ Demo without API key
+          </button>
+        </div>
+      ) : null}
       <ol class="chat">
         {state.messages.map((message: any, index: number) => (
           <li key={String(index)} class={message.role}>
@@ -89,6 +151,13 @@ export const Copilot = component({
           </li>
         ))}
       </ol>
+      {state.activity.length > 0 ? (
+        <ul class="activity">
+          {state.activity.map((entry: any, index: number) => (
+            <li key={String(index)}>→ {entry.line}</li>
+          ))}
+        </ul>
+      ) : null}
       {state.proposal ? (
         <div class="proposal">
           <p>The copilot wants to run “{state.proposal.tool}”.</p>

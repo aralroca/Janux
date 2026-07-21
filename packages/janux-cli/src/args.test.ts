@@ -22,3 +22,11 @@ describe('janux CLI args', () => {
     expect(() => parseArgs(['dev', '--port', 'abc'], '/app')).toThrow(/--port/);
   });
 });
+
+describe('tailwind auto-detection', () => {
+  it('returns undefined when @janux/tailwind is not installed', async () => {
+    const { loadTailwindPlugin } = await import('./commands');
+
+    expect(await loadTailwindPlugin('/tmp/definitely-not-a-janux-app')).toBeUndefined();
+  });
+});
