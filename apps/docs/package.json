@@ -1,0 +1,19 @@
+{
+  "name": "janux-docs",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The Janux documentation site — built with Janux itself, copilot included.",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev",
+    "build": "janux build",
+    "start": "janux start"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*",
+    "marked": "^15.0.0"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@janux/agent",
+  "version": "0.1.0",
+  "description": "Janux embedded agent runtime: zero-config model resolution, provider routing and the ui/api tool loop.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aralroca/Janux.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Aral Roca Gomez",
+    "email": "contact@aralroca.com"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*"
+  }
+}

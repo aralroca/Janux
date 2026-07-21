@@ -1,0 +1,121 @@
+import { validate } from '../schema';
+import { allowMutations } from '../state/mutation-gate';
+import type { ComponentDef, Ctx, GuardValue, IntentDef, Origin, RunBag } from '../define/types';
+
+export interface AuditEntry {
+  tool: string;
+  origin: Origin;
+  guard: GuardValue;
+  input: unknown;
+  ok: boolean;
+  error?: string;
+  at: number;
+}
+
+export interface Proposal {
+  id: string;
+  tool: string;
+  input: unknown;
+  execute: () => Promise<unknown>;
+}
+
+export interface IntentHooks {
+  onAudit?: (entry: AuditEntry) => void;
+  onProposal?: (proposal: Proposal) => void;
+  trackPending: <T>(work: Promise<T>) => Promise<T>;
+}
+
+export class JanuxIntentError extends Error {
+  readonly code: 'forbidden' | 'not_ready' | 'invalid_input' | 'unknown_intent';
+
+  constructor(code: JanuxIntentError['code'], message: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
+export function resolveGuard(def: IntentDef, ctx: Ctx): GuardValue {
+  const guard = def.guard ?? 'auto';
+
+  return typeof guard === 'function' ? guard({ ctx }) : guard;
+}
+
+let proposalSeq = 0;
+
+function nextProposalId(tool: string): string {
+  proposalSeq += 1;
+
+  return `prop_${tool.replace(/\W/g, '_')}_${proposalSeq}`;
+}
+
+function checkInvocable(tool: string, def: IntentDef, bag: RunBag): void {
+  if (def.ready && !def.ready(bag)) {
+    throw new JanuxIntentError('not_ready', `Intent "${tool}" is not ready`);
+  }
+}
+
+function parseInput(tool: string, def: IntentDef, input: unknown): unknown {
+  if (!def.input) return undefined;
+  const result = validate(def.input, input ?? {});
+
+  if (!result.ok) {
+    const detail = result.errors.map((e) => `${e.path}: ${e.message}`).join('; ');
+
+    throw new JanuxIntentError('invalid_input', `Invalid input for "${tool}" — ${detail}`);
+  }
+
+  return result.value;
+}
+
+function audit(hooks: IntentHooks, entry: Omit<AuditEntry, 'at'>): void {
+  hooks.onAudit?.({ ...entry, at: Date.now() });
+}
+
+async function execute(def: IntentDef, bag: RunBag, input: unknown): Promise<unknown> {
+  return allowMutations(() => def.run({ ...bag, input }));
+}
+
+function propose(tool: string, input: unknown, run: () => Promise<unknown>, hooks: IntentHooks) {
+  const proposal: Proposal = { id: nextProposalId(tool), tool, input, execute: run };
+
+  hooks.onProposal?.(proposal);
+
+  return { status: 'proposal' as const, id: proposal.id, tool, input };
+}
+
+/** The single invocation pipeline shared by human clicks, agent calls and RPC. */
+export async function invokeIntent(
+  componentName: string,
+  intentName: string,
+  def: IntentDef,
+  bag: RunBag,
+  input: unknown,
+  origin: Origin,
+  hooks: IntentHooks,
+): Promise<unknown> {
+  const tool = `${componentName}.${intentName}`;
+  const guard = resolveGuard(def, bag.ctx);
+
+  try {
+    if (origin === 'agent' && guard === 'forbidden') {
+      throw new JanuxIntentError('forbidden', `Intent "${tool}" is not available`);
+    }
+    checkInvocable(tool, def, bag);
+    const parsed = parseInput(tool, def, input);
+    const run = () => hooks.trackPending(execute(def, bag, parsed));
+
+    if (origin === 'agent' && guard === 'confirm') {
+      audit(hooks, { tool, origin, guard, input: parsed, ok: true });
+
+      return propose(tool, parsed, run, hooks);
+    }
+    const result = await run();
+
+    audit(hooks, { tool, origin, guard, input: parsed, ok: true });
+
+    return result;
+  } catch (error) {
+    audit(hooks, { tool, origin, guard, input, ok: false, error: String(error) });
+    throw error;
+  }
+}

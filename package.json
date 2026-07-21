@@ -1,0 +1,31 @@
+{
+  "name": "janux-monorepo",
+  "version": "0.1.0",
+  "description": "Janux — the agent-native fullstack UI framework. One component, two faces.",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aralroca/Janux.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Aral Roca Gomez",
+    "email": "contact@aralroca.com"
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "examples/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "bun test packages",
+    "test:e2e": "bun test e2e",
+    "typecheck": "for p in janux janux-server janux-agent janux-vite janux-cli; do bunx tsc --noEmit -p packages/$p || exit 1; done",
+    "dev:shop": "bun run --cwd examples/shop dev"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.6.0"
+  }
+}

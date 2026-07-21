@@ -1,0 +1,22 @@
+{
+  "name": "@janux/server",
+  "version": "0.1.0",
+  "description": "Janux fullstack server: SSR, api() RPC endpoints that double as agent tools, manifest service and MCP surface.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aralroca/Janux.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Aral Roca Gomez",
+    "email": "contact@aralroca.com"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "janux": "workspace:*"
+  }
+}

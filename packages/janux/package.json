@@ -1,0 +1,28 @@
+{
+  "name": "janux",
+  "version": "0.1.0",
+  "description": "The agent-native UI framework core. One component, two faces: a view for humans, typed MCP tools & resources for AI agents.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aralroca/Janux.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Aral Roca Gomez",
+    "email": "contact@aralroca.com"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/schema/index.ts",
+    "./jsx-runtime": "./src/jsx-runtime.ts",
+    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
+    "./server": "./src/render/server.ts",
+    "./client": "./src/client/index.ts",
+    "./manifest": "./src/manifest/index.ts"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^15.11.0"
+  }
+}

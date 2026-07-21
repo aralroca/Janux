@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+.janux/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+coverage/
