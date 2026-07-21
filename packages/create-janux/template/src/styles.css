@@ -1,0 +1,220 @@
+:root {
+  --ink: #1e1b4b;
+  --violet: #7c3aed;
+  --cyan: #06b6d4;
+  --text: #334155;
+  --border: #e2e8f0;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+  color: var(--text);
+  background: #f8fafc;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 24px 120px;
+}
+
+main.shop {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 28px;
+}
+
+main.shop > h1 {
+  grid-column: 1 / -1;
+}
+
+h1 {
+  margin: 0 0 20px;
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+h2,
+h3 {
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: var(--violet);
+  font-weight: 600;
+}
+
+code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #ede9fe;
+  color: #5b21b6;
+  font-family: var(--mono);
+  font-size: 0.88em;
+}
+
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 9px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s, opacity 0.12s;
+}
+
+button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* ── Cart ───────────────────────────────────────────────────────── */
+.cart {
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 30px -18px rgba(30, 27, 75, 0.35);
+}
+
+.cart ul {
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cart .catalog li,
+.cart .items li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+}
+
+.cart .catalog button {
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+}
+
+.cart .items li {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.cart .total {
+  margin: 16px 0 8px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.cart .order {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 600;
+}
+
+/* ── Copilot ────────────────────────────────────────────────────── */
+.copilot {
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 30px -18px rgba(30, 27, 75, 0.35);
+}
+
+.copilot h3 {
+  margin: 0 0 12px;
+}
+
+.copilot .chat {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.copilot .chat li {
+  margin-bottom: 8px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 88%;
+}
+
+.copilot .chat li.user {
+  margin-left: auto;
+  background: linear-gradient(90deg, var(--violet), #6d28d9);
+  color: #fff;
+}
+
+.copilot .chat li.assistant {
+  background: #f1f5f9;
+  color: var(--ink);
+}
+
+.copilot form {
+  display: flex;
+  gap: 8px;
+}
+
+.copilot input {
+  flex: 1;
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 14px;
+  outline: none;
+}
+
+.copilot input:focus {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.proposal {
+  margin: 0 0 12px;
+  padding: 14px;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  background: #fffbeb;
+}
+
+.proposal p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #92400e;
+}
+
+.proposal button + button {
+  margin-left: 8px;
+  background: #e2e8f0;
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  main.shop {
+    grid-template-columns: 1fr;
+  }
+}

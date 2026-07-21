@@ -1,0 +1,167 @@
+<p align="center">
+  <img src="docs/logo.svg" width="150" alt="Janux — a two-faced head inside a doorway: a human profile looking left, an agent profile looking right" />
+</p>
+
+<h1 align="center">Janux</h1>
+
+<p align="center">
+  <strong>The agent-native fullstack UI framework.</strong><br/>
+  One component, two faces: a live view for humans, typed MCP tools &amp; resources for AI agents — generated from the same definition.
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
+  <img src="https://img.shields.io/badge/tests-82%20passing-brightgreen" alt="82 tests passing" />
+  <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
+  <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
+  <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" /></a>
+</p>
+
+---
+
+Named after **Janus**, the two-faced Roman god of doorways: one face toward the human, one toward the agent, one threshold. Designed in [RFC 0001](https://github.com/aralroca/Janux/issues/1).
+
+- 🧿 **One definition, three projections.** A component is simultaneously a view (DOM), a resource (`ui://cart`) and a set of tools (`cart.addItem`). The mounted tree *is* the MCP tree — UI and agent surface cannot drift.
+- 🪶 **0 KB JS static pages.** Components without state compile to plain HTML; a page with no islands ships no `<script>` at all.
+- ⚡ **Structural resumability.** State is schema-typed JSON, behavior is named — the client resumes from snapshots with no hydration replay and no closure serialization. Zero component code runs until first interaction (asserted in the test suite).
+- 🛡️ **Guards as a language feature.** `auto` / `confirm` / `forbidden` on every intent and api. Agent proposals are approved by humans on the real UI, with an audit trail.
+- 🔌 **`api()` = endpoint + stub + tool.** A server function is at once a validated HTTP endpoint, a ~100-byte typed client stub (SWC transform) and an agent tool.
+- 🤖 **Zero-config copilot.** `JANUX_MODEL` or one provider API key is all it takes. Every app ships the agent endpoint, the manifest and the gui-agent bridge (`window.janux`).
+- 🧘 **Observable quiescence.** `await janux.settled()` — the `sleep(500)` idiom dies here.
+
+> ⚠️ Early/experimental (v0.1). The public contract is stable by design; see [honest deviations from the RFC](apps/docs/content/11-architecture-and-roadmap.md).
+
+## Table of Contents
+
+- [Install](#install)
+- [Quick start](#quick-start)
+- [One component, two faces](#one-component-two-faces)
+- [How it works](#how-it-works)
+- [Configure the copilot model](#configure-the-copilot-model)
+- [Packages](#packages)
+- [Documentation](#documentation)
+- [Examples](#examples)
+- [Develop](#develop)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Install
+
+```bash
+bunx create-janux my-app
+cd my-app && bun install && bun run dev
+```
+
+Or add the pieces to an existing workspace:
+
+```bash
+bun add janux @janux/server @janux/agent @janux/cli
+```
+
+## Quick start
+
+```tsx
+import { component, intent, schema, str, int, money, list } from 'janux';
+
+export const Cart = component({
+  name: 'cart',
+  description: 'Shopping cart with line items.',
+  state: schema({ items: list({ productId: str(), qty: int().min(1), unitPrice: money() }) }),
+  derived: { total: (s) => s.items.reduce((a, i) => a + i.qty * i.unitPrice, 0) },
+  intents: {
+    addItem: intent({
+      description: 'Add a product to the cart',
+      input: schema({ productId: str(), qty: int().default(1) }),
+      run: ({ state, input }) => state.items.push(input),
+    }),
+    checkout: intent({ guard: 'confirm', run: ({ state }) => pay(state) }),
+  },
+  view: ({ state, derived, intents }) => (
+    <section>
+      {state.items.map((i) => <Line key={i.productId} item={i} />)}
+      <button on={intents.checkout}>Pay ({derived.total}¢)</button>
+    </section>
+  ),
+});
+```
+
+## One component, two faces
+
+That single definition is, at once:
+
+| Projection | For | What it looks like |
+|---|---|---|
+| **View** | humans | server-rendered HTML, resumable island |
+| **Resource** | agents | `ui://cart` — typed state, readable & subscribable |
+| **Tools** | both | `cart.addItem` (auto), `cart.checkout` (**confirm** → human approves) |
+
+A human click and an agent tool call run the **exact same pipeline**: guard check → schema validation → `run()` → audit entry.
+
+## How it works
+
+```
+Browser ── janux core (signals, resume, morph, delegation, window.janux bridge)
+   │  HTML + state snapshots │ RPC │ agent turns
+Server ── @janux/server (SSR, api(), manifest, proposals)
+              └── @janux/agent (model resolution, provider loop: api.* server-side, ui_calls → bridge)
+```
+
+- **SSR**: sources load server-side; islands arrive with real content plus a JSON state snapshot.
+- **Resume**: `boot()` indexes islands, installs two delegated listeners, and mounts an island **only** on first interaction or agent call — from the snapshot, morphing the SSR DOM in place.
+- **Agents**: `GET /_janux/manifest?path=/shop` for discovery; `POST /_janux/api/*` for server tools; `window.janux.call()` for UI tools; `POST /_janux/approve` for proposals.
+
+## Configure the copilot model
+
+Zero config — first match wins:
+
+1. `defineAgent({ model: 'anthropic/claude-fable-5' })`
+2. `JANUX_MODEL=provider/model`
+3. Provider key sniffing: `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`
+4. Nothing set → the endpoint answers with a setup card; the app never crashes.
+
+## Packages
+
+| Package | What |
+|---|---|
+| [`janux`](packages/janux) | Core: schema, signals, component runtime, SSR islands, manifest, client resume + bridge |
+| [`@janux/server`](packages/janux-server) | api() RPC, router, HTML shell, `/_janux/*` endpoints |
+| [`@janux/agent`](packages/janux-agent) | Model resolution, providers, tool loop |
+| [`@janux/vite`](packages/janux-vite) | Vite plugin (SWC api stubs, SSR bridge) |
+| [`@janux/cli`](packages/janux-cli) | `janux dev / build / start` |
+| [`create-janux`](packages/create-janux) | Scaffolder |
+
+## Documentation
+
+The docs site is **built with Janux itself** — content pages are static components, and the "Ask AI" copilot runs on the same agent bridge every Janux app gets:
+
+```bash
+bun run --cwd apps/docs dev
+```
+
+Sources in [`apps/docs/content`](apps/docs/content): getting started, components, schema, intents & guards, sources/effects/events, stores, SSR & resumability, api(), agent & copilot, CLI, architecture & roadmap.
+
+## Examples
+
+- [`examples/shop`](examples/shop) — full cart + copilot: catalog source, debounced persist effect, `confirm` checkout with human approval.
+
+```bash
+bun run --cwd examples/shop dev
+```
+
+## Develop
+
+```bash
+bun install
+bun test packages    # 82 tests: schema, signals, runtime, SSR, resume, guards, agent loop, SWC stubs
+bun run typecheck
+```
+
+## Contributing
+
+PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+[MIT](LICENSE) © [Aral Roca](https://aralroca.com)
