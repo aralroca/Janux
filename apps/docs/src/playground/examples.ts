@@ -4,22 +4,22 @@ export const EXAMPLES: Record<string, string> = {
 export const Counter = component({
   name: 'counter',
   description: 'A counter agents can read and operate.',
-  state: schema({ n: int() }),
+  state: schema({ count: int() }),
   intents: {
     inc: intent({
       description: 'Increment the counter',
       input: schema({ by: int().default(1) }),
-      run: ({ state, input }) => (state.n += input.by),
+      run: ({ state, input }) => (state.count += input.by),
     }),
     reset: intent({
       description: 'Reset to zero. Needs human approval.',
       guard: 'confirm',
-      run: ({ state }) => (state.n = 0),
+      run: ({ state }) => (state.count = 0),
     }),
   },
   view: ({ state, intents }) => (
     <section style="font-family:sans-serif;text-align:center;padding-top:40px">
-      <h1 style="font-size:48px;margin:0">{state.n}</h1>
+      <h1 style="font-size:48px;margin:0">{state.count}</h1>
       <button on={intents.inc} style="font-size:18px;padding:8px 24px;margin-top:12px">+1</button>
     </section>
   ),

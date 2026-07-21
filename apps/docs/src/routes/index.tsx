@@ -11,30 +11,30 @@ export const meta = {
 
 const SAMPLE_CODE = `export const Counter = component({
   name: 'counter',
-  state: schema({ n: int() }),
+  state: schema({ count: int() }),
   intents: {
     inc: intent({
       description: 'Increment the counter',
       input: schema({ by: int().default(1) }),
-      run: ({ state, input }) => (state.n += input.by),
+      run: ({ state, input }) => (state.count += input.by),
     }),
-    reset: intent({ guard: 'confirm', run: ({ state }) => (state.n = 0) }),
+    reset: intent({ guard: 'confirm', run: ({ state }) => (state.count = 0) }),
   },
   view: ({ state, intents }) => (
-    <button on={intents.inc}>{state.n}</button>
+    <button on={intents.inc}>{state.count}</button>
   ),
 });`;
 
 const sampleDef = component({
   name: 'counter',
-  state: schema({ n: int() }),
+  state: schema({ count: int() }),
   intents: {
     inc: intent({
       description: 'Increment the counter',
       input: schema({ by: int().default(1) }),
-      run: ({ state, input }: any) => (state.n += input.by),
+      run: ({ state, input }: any) => (state.count += input.by),
     }),
-    reset: intent({ guard: 'confirm', run: ({ state }: any) => (state.n = 0) }),
+    reset: intent({ guard: 'confirm', run: ({ state }: any) => (state.count = 0) }),
   },
   view: () => null,
 });
