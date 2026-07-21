@@ -48,15 +48,30 @@ function exampleInput(schema: any): Record<string, unknown> {
   return Object.fromEntries(entries);
 }
 
+function glowToggle(enabled: boolean, onToggle: (enabled: boolean) => void): HTMLElement {
+  const label = el('label', 'glow-toggle');
+  const box = document.createElement('input');
+
+  box.type = 'checkbox';
+  box.checked = enabled;
+  box.addEventListener('change', () => onToggle(box.checked));
+  label.appendChild(box);
+  label.appendChild(document.createTextNode(' ✨ Glow the UI while the agent acts'));
+
+  return label;
+}
+
 /** Re-renders the agent pane from a fresh manifest + resource snapshot. */
 export function renderAgentPanel(
   pane: HTMLElement,
   manifest: any,
   resource: any,
   onCall: CallFn,
+  glow?: { enabled: boolean; onToggle: (enabled: boolean) => void },
 ): void {
   pane.innerHTML = '';
   pane.appendChild(el('h2', '', '🤖 What the agent sees'));
+  if (glow) pane.appendChild(glowToggle(glow.enabled, glow.onToggle));
   manifest.tools.forEach((tool: any) => pane.appendChild(toolRow(tool, onCall)));
   pane.appendChild(el('h2', '', `Resource <code>${resource.uri}</code>`));
   const pre = el('pre', 'resource shiki');

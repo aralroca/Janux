@@ -13,6 +13,7 @@ export const SECTIONS: Record<string, string[]> = {
     'schema',
     'intents-and-guards',
     'sources-effects-events',
+    'events-and-interactions',
     'stores',
     'ssr-and-resumability',
     'api-rpc',

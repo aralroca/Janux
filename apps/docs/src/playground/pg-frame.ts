@@ -5,6 +5,8 @@ import {
   watch,
   toDomNodes,
   morph,
+  injectGlowStyles,
+  glowElement,
   type ComponentDef,
   type JanuxInstance,
   type Proposal,
@@ -14,6 +16,7 @@ const root = document.getElementById('root')!;
 const proposals = new Map<string, Proposal>();
 
 let generation = 0;
+let glowEnabled = true;
 let current: JanuxInstance | undefined;
 let currentDef: ComponentDef | undefined;
 let stopRender: (() => void) | undefined;
@@ -120,7 +123,13 @@ async function run(code: string): Promise<void> {
 
 async function handleMessage(data: any): Promise<void> {
   if (data?.type === 'run') await run(data.code);
+  if (data?.type === 'glow') glowEnabled = data.enabled === true;
   if (data?.type === 'call') {
+    if (glowEnabled) {
+      injectGlowStyles();
+      // Glow the container, not rendered content — morph would wipe the class.
+      glowElement(root, 900);
+    }
     const result = await invokeIntent(data.tool.split('.')[1], data.input, 'agent').catch((error) => ({
       error: String(error),
     }));

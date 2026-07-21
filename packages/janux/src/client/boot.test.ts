@@ -184,6 +184,32 @@ describe('client boot (resume without hydration)', () => {
     await client.approve(proposal.id);
   });
 
+  it('boot({ glow: true }) injects styles and glows the operated island', async () => {
+    const { html, snapshots } = await renderToString(jsx(counter as any, {}), {
+      initialState: { 'ui://counter#default': { n: 1, history: [] } },
+      storeDefs: { session },
+    });
+    const scripts = snapshots
+      .map(
+        (s) =>
+          `<script type="application/janux+state" data-uri="${s.uri}">${JSON.stringify({ state: s.state, sources: s.sources ?? {} })}</script>`,
+      )
+      .join('');
+
+    document.body.innerHTML = html + scripts;
+    document.getElementById('janux-glow-styles')?.remove();
+    const client = boot({ defs: [counter, session], glow: { duration: 10 } });
+
+    expect(document.getElementById('janux-glow-styles')).not.toBeNull();
+    const island = document.querySelector('janux-island')!;
+    const pending = client.call('counter.inc');
+
+    expect(island.classList.contains('janux-agent-glow')).toBe(true);
+    await pending;
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(island.classList.contains('janux-agent-glow')).toBe(false);
+  });
+
   it('survives a malformed state snapshot (boot regression)', async () => {
     document.body.innerHTML =
       '<script type="application/janux+state" data-uri="ui://broken">{not json</script>';

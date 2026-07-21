@@ -8,8 +8,10 @@ Everything importable from `janux/client`, plus the browser conventions.
 import { boot } from 'janux/client';
 import { Cart } from './components/Cart';
 
-const client = boot({ defs: [Cart], ctx: {} });
+const client = boot({ defs: [Cart], ctx: {}, glow: true });
 ```
+
+`glow: true | { duration }` enables the built-in agent-activity highlight (see [Events and interactions](/docs/guide/events-and-interactions)); style it with the `--janux-glow-*` CSS variables. Lower-level: `enableAgentGlow`, `glowElement`, `injectGlowStyles`, `GLOW_CLASS`.
 
 Called once in `src/client.ts`. It indexes islands and state snapshots, installs two delegated listeners (click, submit) and exposes the bridge as `window.janux`. **No component code runs** until first interaction or agent call — that's the resume guarantee.
 

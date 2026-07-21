@@ -52,6 +52,7 @@ export async function mountPlayground(): Promise<void> {
 
   let frame: FrameHost;
   let pendingProposal: any;
+  let glowEnabled = true;
   const run = (): void => {
     els.error.hidden = true;
     pendingProposal = undefined;
@@ -67,10 +68,17 @@ export async function mountPlayground(): Promise<void> {
   const showProposal = (): void => {
     if (pendingProposal) renderProposal(els.agent, pendingProposal, approve);
   };
+  const toggleGlow = (enabled: boolean): void => {
+    glowEnabled = enabled;
+    frame.send({ type: 'glow', enabled });
+  };
   const onFrameMessage = (data: any): void => {
     if (data?.type === 'frame-ready') run();
     if (data?.type === 'state') {
-      renderAgentPanel(els.agent, data.manifest, data.resource, callTool);
+      renderAgentPanel(els.agent, data.manifest, data.resource, callTool, {
+        enabled: glowEnabled,
+        onToggle: toggleGlow,
+      });
       showProposal();
     }
     if (data?.type === 'proposal') {

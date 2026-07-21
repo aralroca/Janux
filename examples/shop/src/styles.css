@@ -81,15 +81,10 @@ button:hover {
   transform: translateY(-1px);
 }
 
-/* ── Islands glow when the agent acts ───────────────────────────── */
+/* Framework agent-glow (boot({ glow: true })) — tune it via CSS vars. */
 janux-island {
   display: block;
-  border-radius: 18px;
-  transition: box-shadow 0.25s;
-}
-
-janux-island.agent-glow {
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.55), 0 0 34px 4px rgba(34, 211, 238, 0.35);
+  --janux-glow-radius: 18px;
 }
 
 /* ── Catalog + cart grid ────────────────────────────────────────── */
