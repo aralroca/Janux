@@ -1,0 +1,17 @@
+{
+  "name": "tasks-check",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev",
+    "build": "janux build",
+    "start": "janux start"
+  },
+  "dependencies": {
+    "janux": "^0.1.0",
+    "@janux/server": "^0.1.0",
+    "@janux/agent": "^0.1.0",
+    "@janux/cli": "^0.1.0"
+  }
+}
