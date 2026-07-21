@@ -1,10 +1,6 @@
 export const EXAMPLES: Record<string, string> = {
   Counter: `import { component, intent, schema, int } from 'janux';
 
-const btn = 'font-size:20px;padding:10px 26px;margin:14px 6px 0;border:none;' +
-  'border-radius:12px;color:#fff;cursor:pointer;font-weight:700;' +
-  'box-shadow:0 6px 18px -6px rgba(30,27,75,.4)';
-
 export const Counter = component({
   name: 'counter',
   description: 'A counter agents can read and operate.',
@@ -27,10 +23,16 @@ export const Counter = component({
     }),
   },
   view: ({ state, intents }) => (
-    <section style="font-family:sans-serif;text-align:center;padding-top:40px">
-      <h1 style="font-size:56px;margin:0;color:#1e1b4b">{state.count}</h1>
-      <button on={intents.dec} style={btn + ';background:#64748b'}>−1</button>
-      <button on={intents.inc} style={btn + ';background:linear-gradient(90deg,#7c3aed,#06b6d4)'}>+1</button>
+    <section class="flex min-h-screen flex-col items-center justify-center gap-6 font-sans">
+      <h1 class="text-6xl font-extrabold text-indigo-950">{state.count}</h1>
+      <div class="flex gap-3">
+        <button on={intents.dec} class="rounded-xl bg-slate-500 px-7 py-2.5 text-xl font-bold text-white shadow-lg hover:bg-slate-600">
+          −1
+        </button>
+        <button on={intents.inc} class="rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 px-7 py-2.5 text-xl font-bold text-white shadow-lg hover:opacity-90">
+          +1
+        </button>
+      </div>
     </section>
   ),
 });`,
@@ -55,11 +57,19 @@ export const Cart = component({
     }),
   },
   view: ({ state, derived, intents }) => (
-    <section style="font-family:sans-serif;padding:24px">
-      <button on={intents.add} data-input='{"id":"sneakers"}'>Add sneakers (9.99)</button>
-      <ul>{state.items.map((i, n) => <li key={String(n)}>{i.id} — {(i.price / 100).toFixed(2)}€</li>)}</ul>
-      <p><strong>Total: {(derived.total / 100).toFixed(2)}€</strong></p>
-      <button on={intents.checkout}>Checkout</button>
+    <section class="mx-auto mt-10 max-w-sm rounded-2xl border border-slate-200 p-6 font-sans shadow-xl">
+      <button on={intents.add} data-input='{"id":"sneakers"}' class="rounded-lg bg-gradient-to-r from-violet-600 to-cyan-500 px-4 py-2 font-semibold text-white">
+        Add sneakers (9.99)
+      </button>
+      <ul class="my-4 divide-y divide-slate-100">
+        {state.items.map((i, n) => (
+          <li key={String(n)} class="py-2 text-slate-700">{i.id} — {(i.price / 100).toFixed(2)}€</li>
+        ))}
+      </ul>
+      <p class="text-lg font-extrabold text-indigo-950">Total: {(derived.total / 100).toFixed(2)}€</p>
+      <button on={intents.checkout} class="mt-3 w-full rounded-lg bg-indigo-950 py-2 font-bold text-white">
+        Checkout
+      </button>
     </section>
   ),
 });`,
@@ -78,12 +88,16 @@ export const Guestbook = component({
     }),
   },
   view: ({ state, intents }) => (
-    <section style="font-family:sans-serif;padding:24px">
-      <form intent={intents.sign}>
-        <input name="name" placeholder="Your name" />
-        <button type="submit">Sign</button>
+    <section class="mx-auto mt-10 max-w-sm p-6 font-sans">
+      <form intent={intents.sign} class="flex gap-2">
+        <input name="name" placeholder="Your name" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-violet-500" />
+        <button type="submit" class="rounded-lg bg-violet-600 px-4 py-2 font-semibold text-white hover:bg-violet-700">
+          Sign
+        </button>
       </form>
-      <ol>{state.entries.map((e, n) => <li key={String(n)}>{e.name}</li>)}</ol>
+      <ol class="mt-4 list-decimal pl-6 text-slate-700">
+        {state.entries.map((e, n) => <li key={String(n)}>{e.name}</li>)}
+      </ol>
     </section>
   ),
 });`,

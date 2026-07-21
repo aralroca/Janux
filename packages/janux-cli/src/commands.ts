@@ -5,9 +5,31 @@ import { defineAgent } from '@janux/agent';
 import { apiFiles, apiModuleName, janux, resolveAppConfig } from '@janux/vite';
 import type { CliCommand } from './args';
 
+/** Zero-config integrations: installing @janux/tailwind IS the configuration. */
+export async function loadTailwindPlugin(root: string): Promise<any | undefined> {
+  try {
+    const mod = await import(Bun.resolveSync('@janux/tailwind', root));
+
+    return mod.default();
+  } catch {
+    return undefined;
+  }
+}
+
+/** Shared vite options: janux plugin + the tailwind postcss pipeline when installed. */
+async function viteOptions(root: string): Promise<Record<string, unknown>> {
+  const tailwind = await loadTailwindPlugin(root);
+
+  return {
+    root,
+    plugins: [janux()],
+    css: tailwind ? { postcss: { plugins: [tailwind] } } : undefined,
+  };
+}
+
 export async function dev({ root, port }: CliCommand): Promise<void> {
   const { createServer } = await import('vite');
-  const server = await createServer({ root, plugins: [janux()], server: { port } });
+  const server = await createServer({ ...(await viteOptions(root)), server: { port } });
 
   await server.listen();
   console.log(`\n  janux dev ready\n  → app:      http://localhost:${port}/`);
@@ -15,24 +37,47 @@ export async function dev({ root, port }: CliCommand): Promise<void> {
   console.log(`  → agent:    http://localhost:${port}/_janux/agent\n`);
 }
 
+function bundleInputs(app: { clientEntry: string; stylesheet?: string }, tailwind: boolean) {
+  const input: Record<string, string> = {};
+
+  if (app.clientEntry) input.client = app.clientEntry;
+  if (tailwind && app.stylesheet) input.styles = app.stylesheet;
+
+  return input;
+}
+
+function cssAsStyles(info: any): string {
+  const name = info.names?.[0] ?? info.name ?? '';
+
+  return name.endsWith('.css') ? 'styles.css' : 'assets/[name]-[hash][extname]';
+}
+
+async function bundleClient(root: string, input: Record<string, string>): Promise<void> {
+  const { build: viteBuild } = await import('vite');
+
+  await viteBuild({
+    ...(await viteOptions(root)),
+    build: {
+      outDir: 'dist/client',
+      rollupOptions: {
+        input,
+        output: {
+          entryFileNames: (chunk: any) => (chunk.name === 'client' ? 'client.js' : '[name].js'),
+          assetFileNames: cssAsStyles,
+        },
+      },
+    },
+  });
+}
+
 export async function build({ root }: CliCommand): Promise<void> {
   const app = resolveAppConfig(root);
+  const tailwind = await loadTailwindPlugin(root);
+  const input = bundleInputs(app, tailwind !== undefined);
 
-  if (app.clientEntry) {
-    const { build: viteBuild } = await import('vite');
-
-    await viteBuild({
-      root,
-      plugins: [janux()],
-      build: {
-        outDir: 'dist/client',
-        rollupOptions: { input: app.clientEntry, output: { entryFileNames: 'client.js' } },
-      },
-    });
-  } else {
-    console.log('janux build: no src/client.ts — fully static app, nothing to bundle (0 KB JS).');
-  }
-  copyStylesheet(app.stylesheet, root);
+  if (Object.keys(input).length > 0) await bundleClient(root, input);
+  else console.log('janux build: nothing to bundle — fully static app (0 KB JS).');
+  if (tailwind === undefined) copyStylesheet(app.stylesheet, root);
   copyPublicDir(root);
 }
 

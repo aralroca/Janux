@@ -25,6 +25,7 @@ export const SECTIONS: Record<string, string[]> = {
   reference: ['core-api', 'schema-api', 'server-api', 'agent-api', 'client-api', 'cli'],
   recipes: [
     'testing-components',
+    'tailwind',
     'auth-and-context',
     'cross-island-events',
     'deploying',

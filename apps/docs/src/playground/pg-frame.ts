@@ -1,3 +1,7 @@
+// Tailwind's runtime JIT: playground code uses real utility classes and this
+// compiles them on the fly inside the sandboxed frame (MutationObserver-based,
+// so classes added by re-renders work too).
+import '@tailwindcss/browser';
 import { transform } from 'sucrase';
 import {
   buildManifest,
