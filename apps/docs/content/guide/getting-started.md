@@ -53,4 +53,4 @@ Resolution order: `defineAgent({ model })` → `JANUX_MODEL` → provider-key sn
 | `janux build` | Bundles client assets (skips cleanly if the app is fully static) |
 | `janux start` | Production server on Bun |
 
-Next: read [Components](/docs/02-components) — the core idea of the framework.
+Next: read [Components](/docs/guide/components) — the core idea of the framework.

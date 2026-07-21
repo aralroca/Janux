@@ -9,6 +9,7 @@ export interface JanuxAppConfig {
   agentModule?: string;
   storesModule?: string;
   stylesheet?: string;
+  favicon?: string;
   title?: string;
 }
 
@@ -35,6 +36,7 @@ export function resolveAppConfig(root: string, options: JanuxPluginOptions = {})
     agentModule: options.agentModule ?? optional(resolve(root, 'src/agent.ts')),
     storesModule: options.storesModule ?? optional(resolve(root, 'src/stores.ts')),
     stylesheet: optional(resolve(root, 'src/styles.css')),
+    favicon: optional(resolve(root, 'public/favicon.svg')) ? '/favicon.svg' : undefined,
     title: options.title,
   };
 }

@@ -1,6 +1,8 @@
+import { readFileSync } from 'node:fs';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
+import { mimeFor, resolvePublicFile } from './static-files';
 import { apiFiles, resolveAppConfig, type JanuxPluginOptions } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { sendFetchResponse, toFetchRequest } from './request-adapter';
@@ -28,6 +30,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     storeDefs: (storesModule ?? {}) as ServerOptions['storeDefs'],
     runtimeUrl: app.clientEntry ? `/${relativeToRoot(vite.config.root, app.clientEntry)}` : undefined,
     stylesheets: app.stylesheet ? [`/${relativeToRoot(vite.config.root, app.stylesheet)}`] : [],
+    favicon: app.favicon,
     title: app.title,
   };
 }
@@ -74,6 +77,14 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       return () => {
         vite.middlewares.use((req, res, next) => {
           const handle = async () => {
+            const publicFile = resolvePublicFile(vite.config.root, req.url?.split('?')[0] ?? '/');
+
+            if (publicFile) {
+              res.writeHead(200, { 'content-type': mimeFor(publicFile) });
+              res.end(readFileSync(publicFile));
+
+              return;
+            }
             const server = await januxServer();
             const response = await server.fetch(await toFetchRequest(req));
 

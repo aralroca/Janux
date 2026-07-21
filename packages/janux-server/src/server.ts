@@ -25,6 +25,7 @@ export interface ServerOptions {
   islandModules?: Record<string, string>;
   title?: string;
   stylesheets?: string[];
+  favicon?: string;
 }
 
 interface PendingApiProposal {
@@ -94,10 +95,16 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const route = findRoute(pathname);
 
     if (!route) return undefined;
-    const render = 'render' in route ? route.render : ((await loadRoute(route.load)) as any).default;
-    const vnode = render({ ctx, params: route.params });
+    const module = 'render' in route ? undefined : ((await loadRoute(route.load)) as any);
+    const render = 'render' in route ? route.render : module.default;
+    const rawMeta = module?.meta;
+    const meta = (typeof rawMeta === 'function' ? rawMeta({ ctx, params: route.params }) : rawMeta) as
+      | { title?: string; description?: string }
+      | undefined;
+    const vnode = await render({ ctx, params: route.params });
+    const result = await renderToString(vnode, { ctx, storeDefs: options.storeDefs });
 
-    return renderToString(vnode, { ctx, storeDefs: options.storeDefs });
+    return { ...result, meta };
   };
 
   const manifestFor = async (pathname: string, ctx: Ctx): Promise<unknown> => {
@@ -164,13 +171,15 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const islandNames = [...new Set(result.registry.islands.map(({ def }) => def.name))];
     const html = htmlDocument({
       html: result.html,
-      title: options.title,
+      title: result.meta?.title ?? options.title,
+      description: result.meta?.description,
       snapshots: result.snapshots,
       islandNames,
       islandModules: options.islandModules,
       runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
       manifestUrl: `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
       stylesheets: options.stylesheets,
+      favicon: options.favicon,
     });
 
     return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });

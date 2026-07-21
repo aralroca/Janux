@@ -165,6 +165,25 @@ describe('client boot (resume without hydration)', () => {
     expect(clientQuery).toHaveBeenCalledTimes(0);
   });
 
+  it('emits janux:tool-call events around bridge calls (agent activity)', async () => {
+    const client = await serveAndBoot();
+    const phases: string[] = [];
+    const onTool = (event: any) => phases.push(`${event.detail.tool}:${event.detail.phase}`);
+
+    document.addEventListener('janux:tool-call', onTool);
+    await client.call('counter.inc');
+    const proposal: any = await client.call('counter.reset');
+
+    expect(phases).toEqual([
+      'counter.inc:start',
+      'counter.inc:ok',
+      'counter.reset:start',
+      'counter.reset:proposal',
+    ]);
+    document.removeEventListener('janux:tool-call', onTool);
+    await client.approve(proposal.id);
+  });
+
   it('survives a malformed state snapshot (boot regression)', async () => {
     document.body.innerHTML =
       '<script type="application/janux+state" data-uri="ui://broken">{not json</script>';

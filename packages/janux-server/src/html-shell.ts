@@ -1,12 +1,14 @@
 export interface ShellOptions {
   html: string;
   title?: string;
+  description?: string;
   snapshots: { uri: string; state: Record<string, unknown>; sources?: Record<string, unknown> }[];
   islandNames: string[];
   islandModules?: Record<string, string>;
   runtimeUrl?: string;
   manifestUrl?: string;
   stylesheets?: string[];
+  favicon?: string;
 }
 
 function safeJson(value: unknown): string {
@@ -50,11 +52,15 @@ export function htmlDocument(options: ShellOptions): string {
   const styleLinks = (options.stylesheets ?? [])
     .map((href) => `<link rel="stylesheet" href="${safeAttr(href)}">`)
     .join('');
+  const description = options.description
+    ? `<meta name="description" content="${safeAttr(options.description)}">`
+    : '';
+  const favicon = options.favicon ? `<link rel="icon" href="${safeAttr(options.favicon)}">` : '';
 
   return [
     '<!doctype html>',
     '<html>',
-    `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${options.title ?? 'Janux app'}</title>${manifestLink}${styleLinks}</head>`,
+    `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${options.title ?? 'Janux app'}</title>${description}${favicon}${manifestLink}${styleLinks}</head>`,
     '<body>',
     options.html,
     options.islandNames.length > 0 ? stateScripts(options.snapshots) : '',

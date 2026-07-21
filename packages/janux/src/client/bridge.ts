@@ -39,6 +39,12 @@ function liveInstances(registry: ClientRegistry): JanuxInstance[] {
   return [...registry.mounted.values(), ...registry.stores.values()];
 }
 
+/** Emits `janux:tool-call` DOM events so apps can visualize agent activity (glow, chat lines). */
+function emitToolEvent(tool: string, input: unknown, phase: 'start' | 'ok' | 'proposal' | 'error'): void {
+  if (typeof document === 'undefined') return;
+  document.dispatchEvent(new CustomEvent('janux:tool-call', { detail: { tool, input, phase } }));
+}
+
 /** The gui-agent bridge: `ui.read / ui.call / ui.settled / ui.subscribe` over the mounted tree. */
 export function createBridge(mount: MountContext, proposals: Map<string, Proposal>): JanuxBridge {
   const { registry } = mount;
@@ -53,12 +59,22 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
 
     async call(tool, input) {
       const [component = '', intentName = ''] = tool.split('.');
-      const instance = await instanceFor(component, mount);
-      const invoke = instance.intents[intentName];
 
-      if (!invoke) throw new Error(`Janux: unknown tool "${tool}"`);
+      emitToolEvent(tool, input, 'start');
+      try {
+        const instance = await instanceFor(component, mount);
+        const invoke = instance.intents[intentName];
 
-      return invoke(input, { origin: 'agent' });
+        if (!invoke) throw new Error(`Janux: unknown tool "${tool}"`);
+        const result: any = await invoke(input, { origin: 'agent' });
+
+        emitToolEvent(tool, input, result?.status === 'proposal' ? 'proposal' : 'ok');
+
+        return result;
+      } catch (error) {
+        emitToolEvent(tool, input, 'error');
+        throw error;
+      }
     },
 
     async approve(id) {

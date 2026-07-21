@@ -33,6 +33,7 @@ export async function build({ root }: CliCommand): Promise<void> {
     console.log('janux build: no src/client.ts — fully static app, nothing to bundle (0 KB JS).');
   }
   copyStylesheet(app.stylesheet, root);
+  copyPublicDir(root);
 }
 
 function copyStylesheet(stylesheet: string | undefined, root: string): void {
@@ -41,6 +42,13 @@ function copyStylesheet(stylesheet: string | undefined, root: string): void {
 
   mkdirSync(outDir, { recursive: true });
   cpSync(stylesheet, join(outDir, 'styles.css'));
+}
+
+function copyPublicDir(root: string): void {
+  const publicDir = join(root, 'public');
+
+  if (!existsSync(publicDir)) return;
+  cpSync(publicDir, join(root, 'dist/client'), { recursive: true });
 }
 
 async function prodServerOptions(root: string): Promise<ServerOptions> {
