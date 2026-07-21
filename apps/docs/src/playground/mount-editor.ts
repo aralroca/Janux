@@ -68,8 +68,12 @@ export async function mountPlayground(): Promise<void> {
     pendingProposal = undefined;
     frame.send({ type: 'approve', id });
   };
+  const reject = (id: string): void => {
+    pendingProposal = undefined;
+    frame.send({ type: 'reject', id });
+  };
   const showProposal = (): void => {
-    if (pendingProposal) renderProposal(els.agent, pendingProposal, approve);
+    if (pendingProposal) renderProposal(els.agent, pendingProposal, approve, reject);
   };
   const toggleGlow = (enabled: boolean): void => {
     glowEnabled = enabled;

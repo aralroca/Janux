@@ -92,6 +92,14 @@ function delegate(): void {
   });
 }
 
+/** The control carrying the intent's marker glows; morph preserves janux-* classes. */
+function glowTarget(tool: string): Element {
+  const intentName = tool.split('.')[1] ?? '';
+  const marker = `${currentDef?.name}:${intentName}`;
+
+  return root.querySelector(`[data-jxa="${marker}"], [data-jxform="${marker}"]`) ?? root;
+}
+
 /** Intent failures (e.g. validation) go to the parent overlay only — never nuke the preview. */
 function postError(error: unknown): void {
   post({ type: 'error', message: String(error) });
@@ -148,8 +156,7 @@ async function handleMessage(data: any): Promise<void> {
   if (data?.type === 'call') {
     if (glowEnabled) {
       injectGlowStyles();
-      // Glow the container, not rendered content — morph would wipe the class.
-      glowElement(root, 900);
+      glowElement(glowTarget(data.tool), 900);
     }
     const result = await invokeIntent(data.tool.split('.')[1], data.input, 'agent').catch((error) => ({
       error: String(error),
@@ -166,6 +173,7 @@ async function handleMessage(data: any): Promise<void> {
       await report();
     }
   }
+  if (data?.type === 'reject') proposals.delete(data.id);
 }
 
 window.addEventListener('message', (event) => {

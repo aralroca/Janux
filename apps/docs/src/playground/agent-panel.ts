@@ -81,24 +81,44 @@ export function renderAgentPanel(
   pane.appendChild(el('div', 'proposal-slot'));
 }
 
-/** Shows a pending proposal card with Approve/Reject; returns nothing if slot missing. */
-export function renderProposal(pane: HTMLElement, proposal: any, onApprove: ApproveFn): void {
+/** Shows a pending proposal as a high-contrast alert with Approve/Reject. */
+export function renderProposal(
+  pane: HTMLElement,
+  proposal: any,
+  onApprove: ApproveFn,
+  onReject: ApproveFn,
+): void {
   const slot = pane.querySelector('.proposal-slot');
 
   if (!slot) return;
   slot.innerHTML = '';
   const card = el(
     'div',
-    'tool-row',
-    `⏸ Proposal: <code>${proposal.tool}</code> ${JSON.stringify(proposal.input ?? {})}<br><small>guard: confirm — a human must approve</small>`,
+    'proposal-card',
+    `<p class="proposal-title">⏸ Approval required</p>
+     <p>The agent wants to run <code>${proposal.tool}</code> ${JSON.stringify(proposal.input ?? {})}</p>
+     <p class="proposal-why">guard: confirm — nothing happens until you decide.</p>`,
   );
+  const actions = el('div', 'proposal-actions');
   const approve = document.createElement('button');
+  const reject = document.createElement('button');
 
+  card.setAttribute('role', 'alert');
   approve.textContent = 'Approve';
+  approve.className = 'approve';
+  reject.textContent = 'Reject';
+  reject.className = 'reject';
   approve.addEventListener('click', () => {
     onApprove(proposal.id);
     slot.innerHTML = '';
   });
-  card.appendChild(approve);
+  reject.addEventListener('click', () => {
+    onReject(proposal.id);
+    slot.innerHTML = '';
+  });
+  actions.appendChild(approve);
+  actions.appendChild(reject);
+  card.appendChild(actions);
   slot.appendChild(card);
+  approve.focus();
 }

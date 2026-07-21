@@ -7,7 +7,11 @@ const SRCDOC = `<!doctype html>
   "janux/jsx-dev-runtime":"/src/playground/pg-runtime.ts",
   "janux/client":"/src/playground/pg-runtime.ts"
 }}</scr` + `ipt>
-<style>body{margin:0;background:#fff;color:#0f172a}</style>
+<style>
+body{margin:0;background:#fff;color:#0f172a}
+#root{margin:14px;border-radius:14px;min-height:calc(100vh - 28px);
+  --janux-glow-spread:16px;--janux-glow-radius:12px}
+</style>
 </head>
 <body>
 <div id="root"></div>

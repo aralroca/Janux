@@ -5,10 +5,12 @@ export interface GlowOptions {
   duration?: number;
 }
 
+/* !important: the glow is runtime-owned feedback and must win over inline
+   view styles (e.g. a button that sets its own box-shadow). */
 const GLOW_CSS = `
 .${GLOW_CLASS} {
   box-shadow: 0 0 0 3px var(--janux-glow-ring, rgba(124, 58, 237, 0.55)),
-    0 0 var(--janux-glow-spread, 34px) 4px var(--janux-glow-halo, rgba(34, 211, 238, 0.35));
+    0 0 var(--janux-glow-spread, 34px) 4px var(--janux-glow-halo, rgba(34, 211, 238, 0.35)) !important;
   border-radius: var(--janux-glow-radius, 18px);
   transition: box-shadow 0.25s;
 }`;
@@ -29,10 +31,21 @@ export function glowElement(el: Element, duration = 700): void {
   setTimeout(() => el.classList.remove(GLOW_CLASS), duration);
 }
 
-function islandFor(tool: string): Element | undefined {
-  const component = tool.split('.')[0];
+/**
+ * The element that carries the intent's delegation marker (`on={intents.x}` /
+ * `<form intent>`), so the glow points at the exact control the agent "pressed".
+ * Falls back to the whole island when the intent has no element in the view.
+ */
+export function glowTargetFor(tool: string, scope: ParentNode = document): Element | undefined {
+  const [component = '', intentName = ''] = tool.split('.');
+  const island = scope.querySelector(`janux-island[data-jx^="${component}#"]`);
 
-  return document.querySelector(`janux-island[data-jx^="${component}#"]`) ?? undefined;
+  if (!island) return undefined;
+  const marker = `${island.getAttribute('data-jx')}:${intentName}`;
+
+  return (
+    island.querySelector(`[data-jxa="${marker}"], [data-jxform="${marker}"]`) ?? island
+  );
 }
 
 /**
@@ -44,11 +57,11 @@ export function enableAgentGlow(options: GlowOptions = {}): () => void {
   const duration = options.duration ?? 700;
   const onToolCall = (event: Event): void => {
     const { tool, phase } = (event as CustomEvent).detail ?? {};
-    const island = tool ? islandFor(tool) : undefined;
+    const target = tool ? glowTargetFor(tool) : undefined;
 
-    if (!island) return;
-    if (phase === 'start') island.classList.add(GLOW_CLASS);
-    else setTimeout(() => island.classList.remove(GLOW_CLASS), duration);
+    if (!target) return;
+    if (phase === 'start') target.classList.add(GLOW_CLASS);
+    else setTimeout(() => target.classList.remove(GLOW_CLASS), duration);
   };
 
   injectGlowStyles();

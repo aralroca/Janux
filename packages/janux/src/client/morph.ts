@@ -1,4 +1,6 @@
 function syncAttrs(from: Element, to: Element): void {
+  const runtimeClasses = [...from.classList].filter((name) => name.startsWith('janux-'));
+
   [...from.getAttributeNames()]
     .filter((name) => !to.hasAttribute(name))
     .forEach((name) => from.removeAttribute(name));
@@ -7,6 +9,9 @@ function syncAttrs(from: Element, to: Element): void {
       from.setAttribute(name, to.getAttribute(name)!);
     }
   });
+  // `janux-*` classes belong to the runtime (e.g. the agent glow) — views
+  // never render them, so re-renders must not wipe them.
+  runtimeClasses.forEach((name) => from.classList.add(name));
 }
 
 function syncValue(from: Element, to: Element): void {

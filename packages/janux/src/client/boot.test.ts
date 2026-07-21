@@ -184,6 +184,43 @@ describe('client boot (resume without hydration)', () => {
     await client.approve(proposal.id);
   });
 
+  it('glow targets the element carrying the intent marker, falling back to the island', async () => {
+    const { html, snapshots } = await renderToString(jsx(counter as any, {}), {
+      initialState: { 'ui://counter#default': { n: 5, history: [] } },
+      storeDefs: { session },
+    });
+    const scripts = snapshots
+      .map(
+        (s) =>
+          `<script type="application/janux+state" data-uri="${s.uri}">${JSON.stringify({ state: s.state, sources: s.sources ?? {} })}</script>`,
+      )
+      .join('');
+
+    document.body.innerHTML = html + scripts;
+    document.getElementById('janux-glow-styles')?.remove();
+    const client = boot({ defs: [counter, session], glow: { duration: 10 } });
+    const island = document.querySelector('janux-island')!;
+    const incButton = document.querySelector('[data-jxa="counter#default:inc"]')!;
+
+    // counter.inc has a button in the view → the BUTTON glows, not the island
+    const pending = client.call('counter.inc');
+
+    expect(incButton.classList.contains('janux-agent-glow')).toBe(true);
+    expect(island.classList.contains('janux-agent-glow')).toBe(false);
+    await pending;
+    // the intent mutated state → re-render happened; morph must NOT wipe the class
+    expect(document.querySelector('[data-jxa="counter#default:inc"]')!.classList.contains('janux-agent-glow')).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    // counter.reset has no element in the view → fallback to the island
+    const resetPending = client.call('counter.reset');
+
+    expect(island.classList.contains('janux-agent-glow')).toBe(true);
+    const proposal: any = await resetPending;
+
+    await client.approve(proposal.id);
+  });
+
   it('boot({ glow: true }) injects styles and glows the operated island', async () => {
     const { html, snapshots } = await renderToString(jsx(counter as any, {}), {
       initialState: { 'ui://counter#default': { n: 1, history: [] } },
@@ -201,13 +238,12 @@ describe('client boot (resume without hydration)', () => {
     const client = boot({ defs: [counter, session], glow: { duration: 10 } });
 
     expect(document.getElementById('janux-glow-styles')).not.toBeNull();
-    const island = document.querySelector('janux-island')!;
     const pending = client.call('counter.inc');
 
-    expect(island.classList.contains('janux-agent-glow')).toBe(true);
+    expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(1);
     await pending;
     await new Promise((resolve) => setTimeout(resolve, 30));
-    expect(island.classList.contains('janux-agent-glow')).toBe(false);
+    expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(0);
   });
 
   it('survives a malformed state snapshot (boot regression)', async () => {

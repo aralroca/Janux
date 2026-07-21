@@ -1,6 +1,10 @@
 export const EXAMPLES: Record<string, string> = {
   Counter: `import { component, intent, schema, int } from 'janux';
 
+const btn = 'font-size:20px;padding:10px 26px;margin:14px 6px 0;border:none;' +
+  'border-radius:12px;color:#fff;cursor:pointer;font-weight:700;' +
+  'box-shadow:0 6px 18px -6px rgba(30,27,75,.4)';
+
 export const Counter = component({
   name: 'counter',
   description: 'A counter agents can read and operate.',
@@ -11,6 +15,11 @@ export const Counter = component({
       input: schema({ by: int().default(1) }),
       run: ({ state, input }) => (state.count += input.by),
     }),
+    dec: intent({
+      description: 'Decrement the counter',
+      input: schema({ by: int().default(1) }),
+      run: ({ state, input }) => (state.count -= input.by),
+    }),
     reset: intent({
       description: 'Reset to zero. Needs human approval.',
       guard: 'confirm',
@@ -19,8 +28,9 @@ export const Counter = component({
   },
   view: ({ state, intents }) => (
     <section style="font-family:sans-serif;text-align:center;padding-top:40px">
-      <h1 style="font-size:48px;margin:0">{state.count}</h1>
-      <button on={intents.inc} style="font-size:18px;padding:8px 24px;margin-top:12px">+1</button>
+      <h1 style="font-size:56px;margin:0;color:#1e1b4b">{state.count}</h1>
+      <button on={intents.dec} style={btn + ';background:#64748b'}>−1</button>
+      <button on={intents.inc} style={btn + ';background:linear-gradient(90deg,#7c3aed,#06b6d4)'}>+1</button>
     </section>
   ),
 });`,
