@@ -13,6 +13,7 @@ import {
 const root = document.getElementById('root')!;
 const proposals = new Map<string, Proposal>();
 
+let generation = 0;
 let current: JanuxInstance | undefined;
 let currentDef: ComponentDef | undefined;
 let stopRender: (() => void) | undefined;
@@ -93,11 +94,17 @@ function reportError(error: unknown): void {
 }
 
 async function run(code: string): Promise<void> {
+  const myGeneration = (generation += 1);
+
   stopRender?.();
+  stopRender = undefined;
   await current?.dispose();
+  current = undefined;
   root.innerHTML = '';
   proposals.clear();
   const defs = await loadDefs(code);
+
+  if (myGeneration !== generation) return;
   const def = defs.find((candidate) => candidate.kind === 'component' && candidate.view);
 
   if (!def) throw new Error('Export at least one component({ ... }) with a view');

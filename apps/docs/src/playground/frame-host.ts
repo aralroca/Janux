@@ -51,8 +51,12 @@ export function decodeShare(hash: string): string | undefined {
   const match = /#c=([A-Za-z0-9_-]+)/.exec(hash);
 
   if (!match) return undefined;
-  const base64 = match[1]!.replace(/-/g, '+').replace(/_/g, '/');
-  const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+  try {
+    const base64 = match[1]!.replace(/-/g, '+').replace(/_/g, '/');
+    const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
 
-  return new TextDecoder().decode(bytes);
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return undefined;
+  }
 }

@@ -22,7 +22,14 @@ function toolRow(tool: any, onCall: CallFn): HTMLElement {
   inputBox.rows = 2;
   inputBox.value = tool.input ? JSON.stringify(exampleInput(tool.input), null, 0) : '{}';
   button.textContent = 'Call as agent';
-  button.addEventListener('click', () => onCall(tool.name, JSON.parse(inputBox.value || '{}')));
+  button.addEventListener('click', () => {
+    try {
+      onCall(tool.name, JSON.parse(inputBox.value || '{}'));
+    } catch (error) {
+      inputBox.style.borderColor = '#ef4444';
+      inputBox.title = String(error);
+    }
+  });
   if (tool.input) row.appendChild(inputBox);
   row.appendChild(button);
 

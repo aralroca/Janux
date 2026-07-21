@@ -1,5 +1,5 @@
 import { existsSync, statSync } from 'node:fs';
-import { extname, join, normalize } from 'node:path';
+import { extname, join, relative } from 'node:path';
 
 const MIME_TYPES: Record<string, string> = {
   '.svg': 'image/svg+xml',
@@ -24,9 +24,17 @@ export function mimeFor(filePath: string): string {
 /** Resolves a request path inside `<root>/public`, refusing traversal outside it. */
 export function resolvePublicFile(root: string, pathname: string): string | undefined {
   const publicDir = join(root, 'public');
-  const candidate = normalize(join(publicDir, decodeURIComponent(pathname)));
+  let decoded: string;
 
-  if (!candidate.startsWith(publicDir + '/')) return undefined;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return undefined;
+  }
+  const candidate = join(publicDir, decoded);
+  const rel = relative(publicDir, candidate);
+
+  if (rel.startsWith('..') || rel === '') return undefined;
   if (!existsSync(candidate) || !statSync(candidate).isFile()) return undefined;
 
   return candidate;

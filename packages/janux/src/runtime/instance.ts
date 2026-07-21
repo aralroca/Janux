@@ -1,7 +1,7 @@
 import { buildDefault, toJsonSchema, validate } from '../schema';
 import { computed, untrack, type ReadonlySig } from '../signals';
 import { createReactiveState } from '../state/reactive-state';
-import { allowMutations } from '../state/mutation-gate';
+import { createGate, withGate } from '../state/mutation-gate';
 import type { ComponentDef, Ctx, Origin, RunBag, StoreHandle } from '../define/types';
 import { createBus, type EventBus } from './bus';
 import { createPendingTracker } from './settled';
@@ -79,7 +79,8 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
   const bus = options.bus ?? createBus();
   const tracker = createPendingTracker();
   const initial = options.initial ?? (def.state ? (buildDefault(def.state) as any) : {});
-  const state = createReactiveState(initial as Record<string, unknown>);
+  const gate = createGate();
+  const state = createReactiveState(initial as Record<string, unknown>, gate);
   const sourcesRuntime = createSources(def.sources, ctx, bus, tracker, options.initialSources);
   const { readers: derived, dispose: disposeDerived } = derivedReaders(def, state.proxy);
   const emit = makeEmit(def, bus);
@@ -98,6 +99,7 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     ctx,
   };
   const hooks = {
+    gate,
     onAudit: options.onAudit,
     onProposal: options.onProposal,
     trackPending: tracker.track,
@@ -113,7 +115,7 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
 
   let stopEffects: (() => void) | undefined;
   const busUnsubs = Object.entries(def.on ?? {}).map(([event, handler]) =>
-    bus.on(event, (payload) => allowMutations(() => handler({ ...bag, event: payload }))),
+    bus.on(event, (payload) => withGate(gate, () => handler({ ...bag, event: payload }))),
   );
 
   return {
@@ -148,15 +150,15 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     },
     async attach() {
       sourcesRuntime.start();
-      stopEffects = startEffects(def.effects, bag, tracker);
-      await allowMutations(() => def.lifecycle?.attach?.(bag));
+      stopEffects = startEffects(def.effects, bag, tracker, gate);
+      await withGate(gate, () => def.lifecycle?.attach?.(bag));
     },
     async dispose() {
       stopEffects?.();
       sourcesRuntime.dispose();
       disposeDerived();
       busUnsubs.forEach((unsub) => unsub());
-      await allowMutations(() => def.lifecycle?.detach?.(bag));
+      await withGate(gate, () => def.lifecycle?.detach?.(bag));
     },
     handle(): StoreHandle {
       return { state: state.proxy, derived, intents: bindHumanIntents(intents) };

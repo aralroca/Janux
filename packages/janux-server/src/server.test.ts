@@ -127,6 +127,16 @@ describe('route meta', () => {
   });
 });
 
+describe('title escaping (XSS regression)', () => {
+  it('escapes route meta titles', async () => {
+    const fsServer = createJanuxServer({ routesDir: `${import.meta.dirname}/__fixtures__/routes` });
+    const html = await (await fsServer.fetch(new Request('http://test/evil'))).text();
+
+    expect(html).not.toContain('</title><script>');
+    expect(html).toContain('&lt;/title>&lt;script>');
+  });
+});
+
 describe('manifest endpoint', () => {
   it('merges mounted islands and api tools per route', async () => {
     const manifest: any = await (await get('/_janux/manifest?path=/shop')).json();

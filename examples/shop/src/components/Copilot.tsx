@@ -70,6 +70,7 @@ export const Copilot = component({
 
   lifecycle: {
     attach: ({ intents }: any) => {
+      wire = [];
       toolListener = (event: any) => {
         const { tool, phase } = event.detail;
 
@@ -100,6 +101,7 @@ export const Copilot = component({
     send: intent({
       description: 'Send a message to the copilot',
       input: schema({ text: str().min(1) }),
+      ready: ({ state }: any) => !state.busy,
       run: async ({ state, input }: any) => {
         state.messages.push({ role: 'user', text: input.text });
         state.busy = true;
@@ -112,6 +114,7 @@ export const Copilot = component({
     approve: intent({
       guard: 'forbidden',
       run: async ({ state }: any) => {
+        if (!state.proposal) return;
         await (window as any).janux.approve(state.proposal.id);
         state.messages.push({ role: 'assistant', text: `Approved: ${state.proposal.tool} ✔` });
         state.proposal = null;

@@ -1,5 +1,5 @@
 import { validate } from '../schema';
-import { allowMutations } from '../state/mutation-gate';
+import { withGate, type MutationGate } from '../state/mutation-gate';
 import type { ComponentDef, Ctx, GuardValue, IntentDef, Origin, RunBag } from '../define/types';
 
 export interface AuditEntry {
@@ -20,6 +20,7 @@ export interface Proposal {
 }
 
 export interface IntentHooks {
+  gate: MutationGate;
   onAudit?: (entry: AuditEntry) => void;
   onProposal?: (proposal: Proposal) => void;
   trackPending: <T>(work: Promise<T>) => Promise<T>;
@@ -71,8 +72,8 @@ function audit(hooks: IntentHooks, entry: Omit<AuditEntry, 'at'>): void {
   hooks.onAudit?.({ ...entry, at: Date.now() });
 }
 
-async function execute(def: IntentDef, bag: RunBag, input: unknown): Promise<unknown> {
-  return allowMutations(() => def.run({ ...bag, input }));
+async function execute(def: IntentDef, bag: RunBag, input: unknown, gate: MutationGate): Promise<unknown> {
+  return withGate(gate, () => def.run({ ...bag, input }));
 }
 
 function propose(tool: string, input: unknown, run: () => Promise<unknown>, hooks: IntentHooks) {
@@ -102,7 +103,7 @@ export async function invokeIntent(
     }
     checkInvocable(tool, def, bag);
     const parsed = parseInput(tool, def, input);
-    const run = () => hooks.trackPending(execute(def, bag, parsed));
+    const run = () => hooks.trackPending(execute(def, bag, parsed, hooks.gate));
 
     if (origin === 'agent' && guard === 'confirm') {
       audit(hooks, { tool, origin, guard, input: parsed, ok: true });
