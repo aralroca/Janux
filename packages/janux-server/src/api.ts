@@ -1,5 +1,5 @@
 import { JxType, validate, toJsonSchema, JanuxIntentError } from 'janux';
-import type { Ctx, Guard, GuardValue, Origin } from 'janux';
+import type { AuditEntry, Ctx, Guard, GuardValue, Origin } from 'janux';
 
 export interface ApiDef {
   description?: string;
@@ -70,25 +70,61 @@ function parseApiInput(tool: ApiTool, input: unknown): unknown {
   return result.value;
 }
 
+function checkOutput(tool: ApiTool, result: unknown): unknown {
+  if (!tool.output) return result;
+  const check = validate(tool.output, result);
+
+  if (!check.ok) throw new Error(`Janux: api "${tool.name}" returned an invalid output`);
+
+  return check.value;
+}
+
+/** The verified agent key id on the request context, if Web Bot Auth identified one. */
+export function agentKeyId(ctx: Ctx): string | undefined {
+  const agent = ctx.agent as { verified?: boolean; keyId?: string } | undefined;
+
+  return agent?.verified ? agent.keyId : undefined;
+}
+
+export type ApiAudit = (entry: AuditEntry) => void;
+
+/** The single place the api() audit-entry shape is assembled (used by the pipeline and the proposal path). */
+export function apiAuditEntry(
+  tool: ApiTool,
+  origin: Origin,
+  guard: GuardValue,
+  ctx: Ctx,
+  extra: { input: unknown; ok: boolean; error?: string },
+): AuditEntry {
+  return { tool: `api.${tool.name}`, origin, guard, at: Date.now(), agent: agentKeyId(ctx), ...extra };
+}
+
 /** Single invocation pipeline for api() tools: guard → validate → run → validate output. */
-export async function invokeApi(tool: ApiTool, input: unknown, ctx: Ctx, origin: Origin): Promise<unknown> {
+export async function invokeApi(
+  tool: ApiTool,
+  input: unknown,
+  ctx: Ctx,
+  origin: Origin,
+  onAudit?: ApiAudit,
+): Promise<unknown> {
   const guard = resolveApiGuard(tool, ctx);
+  const audit = (extra: { input: unknown; ok: boolean; error?: string }) =>
+    onAudit?.(apiAuditEntry(tool, origin, guard, ctx, extra));
 
-  if (origin === 'agent' && guard === 'forbidden') {
-    throw new JanuxIntentError('forbidden', `Tool "${tool.name}" is not available`);
+  try {
+    if (origin === 'agent' && guard === 'forbidden') {
+      throw new JanuxIntentError('forbidden', `Tool "${tool.name}" is not available`);
+    }
+    const parsed = parseApiInput(tool, input);
+    const result = checkOutput(tool, await tool.run({ input: parsed, ctx }));
+
+    audit({ input: parsed, ok: true });
+
+    return result;
+  } catch (error) {
+    audit({ input, ok: false, error: String(error) });
+    throw error;
   }
-  const parsed = parseApiInput(tool, input);
-  const result = await tool.run({ input: parsed, ctx });
-
-  if (tool.output) {
-    const check = validate(tool.output, result);
-
-    if (!check.ok) throw new Error(`Janux: api "${tool.name}" returned an invalid output`);
-
-    return check.value;
-  }
-
-  return result;
 }
 
 export function apiManifestTools(tools: ApiTool[], ctx: Ctx) {

@@ -4,6 +4,12 @@
   "version": "0.1.0",
   "description": "The Janux documentation site — built with Janux itself, copilot included.",
   "type": "module",
+  "janux": {
+    "llmsTxt": {
+      "title": "Janux",
+      "description": "The agent-native fullstack UI framework. One component, two faces: a live view for humans, typed MCP tools & resources for AI agents."
+    }
+  },
   "scripts": {
     "dev": "janux dev",
     "build": "janux build",

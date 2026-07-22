@@ -29,6 +29,9 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 | `storeDefs` | `Record<alias, StoreDef>` | Stores available during SSR |
 | `agent` | `AgentMount` | Mounted at `/_janux/agent` |
 | `ctxFor` | `(req) => Ctx` | Auth: builds the per-request context |
+| `llmsTxt` | `{ title?, description? }` | Opt-in: serves `GET /llms.txt` — pages + agent tools index (`confirm` tools annotated "requires human approval"; dynamic routes expanded via `staticParams`) |
+| `agents` | `{ webBotAuth: { keys }, policy? }` | Web Bot Auth (RFC 9421) agent identity — see below |
+| `onAudit` | `(entry: AuditEntry) => void` | Called for every api() dispatch: tool, origin, guard, ok, and the verified agent key |
 | `runtimeUrl`, `stylesheets`, `favicon`, `title`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
 
 Returns `{ fetch(req): Promise<Response>, apiTools, manifestFor }` — mount `fetch` on Bun.serve, or anything Request/Response-shaped.
@@ -39,10 +42,15 @@ Returns `{ fetch(req): Promise<Response>, apiTools, manifestFor }` — mount `fe
 export const meta = { title: 'Shop', description: '...' };          // or a function:
 export const meta = ({ params }) => ({ title: `Order ${params.id}` });
 
+export const staticParams = [{ id: '1' }, { id: '2' }];             // or a function (async supported):
+export const staticParams = () => orders.map(({ id }) => ({ id }));
+
 export default async function Page({ ctx, params }) { ... }         // async supported
 ```
 
 `routes/index.tsx` → `/` · `routes/orders/[id].tsx` → `/orders/:id` (params decoded).
+
+`staticParams` enumerates the concrete pages of a dynamic route: `llms.txt` lists `/orders/1`, `/orders/2` instead of the raw `/orders/[id]` pattern. Without it, the pattern is listed as-is.
 
 ## HTTP surface
 
@@ -54,6 +62,23 @@ export default async function Page({ ctx, params }) { ... }         // async sup
 | `/_janux/manifest?path=/shop` | GET | Manifest for that route: mounted components + stores + api tools |
 | `/_janux/agent` | POST | The copilot turn protocol (see [Agent API](/docs/reference/agent-api)) |
 
-Error envelope: `{ ok: false, error }` with 400 (invalid input), 403 (forbidden), 404, 500.
+Error envelope: `{ ok: false, error }` with 400 (invalid input), 401 (`agent_required`), 403 (forbidden), 404, 500.
 
 > **Warning:** the origin header is not a security boundary — `human` is the default and the *most privileged* origin by design. Authentication belongs in `ctxFor`; guards control the agent, not the network.
+
+## Verified agent identity (Web Bot Auth)
+
+External agents can sign requests per [RFC 9421 / Web Bot Auth](https://developers.cloudflare.com/bots/concepts/bot/verified-bots/web-bot-auth/) (Ed25519 HTTP message signatures). Configure an allowlist of agent public JWKs:
+
+```ts
+createJanuxServer({
+  agents: {
+    webBotAuth: { keys: [agentPublicJwk] },
+    policy: 'observe',   // default: identify agents, serve everyone
+  },
+});
+```
+
+Signed requests get `ctx.agent = { verified, keyId }` (also `null`/absent when unsigned); use it in `ctxFor`-style authorization, guards or `run()`. Under `policy: 'require'`, unsigned or unverified requests with `x-janux-origin: agent` receive `401 { error: 'agent_required' }` — human traffic is never gated, and neither is the embedded copilot (`/_janux/agent`): it acts on the signed-in user's own session, so its authentication belongs in `ctxFor` like any human traffic. Fail closed: unknown key, bad signature, expired window, or `require` with an empty allowlist all deny.
+
+Not built yet: fetching keys from a signature-agent directory (SSRF story needed), nonce single-use enforcement, rate limiting (put it in `ctxFor` or your middleware — `onAudit` gives you per-tool outcome data to alert on).

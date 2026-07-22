@@ -7,9 +7,27 @@ describe('janux CLI args', () => {
       command: 'dev',
       port: 4000,
       root: '/app',
+      files: [],
+      url: 'http://localhost:3000',
+      startCommand: undefined,
+      json: false,
     });
     expect(parseArgs(['build'], '/app').command).toBe('build');
     expect(parseArgs(['start'], '/app').command).toBe('start');
+    expect(parseArgs(['verify'], '/app').command).toBe('verify');
+  });
+
+  it('parses eval files and flags', () => {
+    const parsed = parseArgs(
+      ['eval', 'evals/a.eval.json', '--url', 'http://localhost:4000', '--start', 'janux start', '--json'],
+      '/app',
+    );
+
+    expect(parsed.command).toBe('eval');
+    expect(parsed.files).toEqual(['evals/a.eval.json']);
+    expect(parsed.url).toBe('http://localhost:4000');
+    expect(parsed.startCommand).toBe('janux start');
+    expect(parsed.json).toBe(true);
   });
 
   it('falls back to help on unknown commands', () => {

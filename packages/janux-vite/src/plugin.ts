@@ -32,6 +32,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     stylesheets: app.stylesheet ? [`/${relativeToRoot(vite.config.root, app.stylesheet)}`] : [],
     favicon: app.favicon,
     title: app.title,
+    llmsTxt: app.llmsTxt,
   };
 }
 

@@ -1,0 +1,23 @@
+{
+  "name": "shop agent checkout",
+  "steps": [
+    {
+      "tool": "api.shop.catalog",
+      "expect": { "result": { "products": [{ "id": "p1" }] } }
+    },
+    {
+      "tool": "api.shop.pay",
+      "input": { "total": 5999 },
+      "expect": { "result": { "status": "proposal", "tool": "shop.pay" } }
+    },
+    {
+      "approve": "$steps[1].result.id",
+      "expect": { "result": { "charged": 5999 } }
+    },
+    {
+      "tool": "api.shop.pay",
+      "input": { "total": "not-money" },
+      "expect": { "ok": false, "status": 400, "error": "total" }
+    }
+  ]
+}
