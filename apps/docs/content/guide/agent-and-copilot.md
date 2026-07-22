@@ -47,6 +47,10 @@ janux.manifest();                         // live manifest of the mounted tree
 
 External MCP clients get the same surface over HTTP: `GET /_janux/manifest?path=/shop` for discovery, `POST /_janux/api/*` (with `x-janux-origin: agent`) for server tools.
 
+## WebMCP — zero config
+
+`boot()` also registers the whole surface with the browser's [WebMCP](https://developer.chrome.com/docs/ai/webmcp) API (`document.modelContext`), so browser-native agents and Chrome's DevTools WebMCP panel see your tools with no setup. Browsers without the API get a spec-shaped polyfill, so tests and in-page agents can drive `document.modelContext` everywhere. Registration re-syncs on every SPA navigation; opt out with `boot({ webmcp: false })`. See the [debugging recipe](/docs/recipes/debugging-webmcp).
+
 ## Building your own copilot UI
 
 The copilot chrome is just another Janux component (see the shop example's `Copilot.tsx`): messages in schema state, a `send` intent that runs the turn protocol, and human-only (`guard: 'forbidden'`) `approve`/`reject` intents — so the agent can never approve its own proposals.

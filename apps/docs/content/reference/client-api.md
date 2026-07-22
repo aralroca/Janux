@@ -15,6 +15,8 @@ const client = boot({ defs: [Cart], ctx: {}, glow: true });
 
 `navigation: false` disables client-side SPA navigation (on by default — see [SSR and resumability](/docs/guide/ssr-and-resumability#spa-navigation)).
 
+`webmcp: false` disables WebMCP registration (on by default). `boot()` registers every mounted tool with the browser's `document.modelContext` — polyfilled when the browser doesn't ship WebMCP — and re-syncs on every SPA navigation. See [Debugging agent tools with Chrome's WebMCP panel](/docs/recipes/debugging-webmcp). Lower-level: `installWebMCP(bridge)`, `createModelContextPolyfill()`.
+
 ## SPA navigation
 
 | Member / attribute | Purpose |

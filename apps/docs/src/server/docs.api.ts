@@ -31,6 +31,7 @@ export const SECTIONS: Record<string, string[]> = {
     'cross-island-events',
     'deploying',
     'external-mcp-clients',
+    'debugging-webmcp',
   ],
   more: ['comparison', 'faq', 'glossary'],
 };
