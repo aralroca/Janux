@@ -5,7 +5,8 @@ import { createBridge, type JanuxBridge } from './bridge';
 import { mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
 import { enableAgentGlow, type GlowOptions } from './glow';
-import { mountEagerIslands, performNavigation, prefetch } from './navigate';
+import { mountEagerIslands, performNavigation } from './navigate';
+import { prefetch } from './prefetch';
 
 export interface BootOptions {
   islands?: Record<string, IslandLoader>;

@@ -1,5 +1,6 @@
 import diff from 'diff-dom-streaming';
 import { mountIsland, type MountContext } from './mount';
+import { consumePrefetched } from './prefetch';
 
 export interface NavigateOptions {
   signal?: AbortSignal;
@@ -172,45 +173,4 @@ export function performNavigation(url: string, mount: MountContext, options: Nav
   navChain = navChain.then(() => runNavigation(url, mount, options));
 
   return navChain;
-}
-
-interface PrefetchEntry {
-  body: Promise<string>;
-  at: number;
-}
-
-const prefetched = new Map<string, PrefetchEntry>();
-const PREFETCH_TTL = 30_000;
-
-function isFresh(entry: PrefetchEntry | undefined): entry is PrefetchEntry {
-  return entry !== undefined && Date.now() - entry.at <= PREFETCH_TTL;
-}
-
-export function prefetch(url: string): void {
-  if (isFresh(prefetched.get(url))) return;
-  prefetched.set(url, {
-    at: Date.now(),
-    body: fetch(url, { headers: { accept: 'text/html' } }).then((response) =>
-      response.ok ? response.text() : Promise.reject(new Error('prefetch failed')),
-    ),
-  });
-  prefetched.get(url)!.body.catch(() => prefetched.delete(url));
-}
-
-function consumePrefetched(url: string): ReadableStream<Uint8Array> | undefined {
-  const entry = prefetched.get(url);
-
-  if (!isFresh(entry)) {
-    prefetched.delete(url);
-
-    return undefined;
-  }
-  prefetched.delete(url);
-
-  return new ReadableStream({
-    async start(controller) {
-      controller.enqueue(new TextEncoder().encode(await entry.body));
-      controller.close();
-    },
-  });
 }
