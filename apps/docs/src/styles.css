@@ -27,7 +27,7 @@
   --danger-text: light-dark(#991b1b, #fca5a5);
   --topbar-h: 57px;
   --sidebar-w: 264px;
-  /* Next.js-style centered frame: everything lives inside --frame-w. */
+  /* Centered frame: everything lives inside --frame-w. */
   --frame-w: 1400px;
   --frame-pad: max(0px, calc((100vw - var(--frame-w)) / 2));
   --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
