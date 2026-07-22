@@ -45,7 +45,7 @@ janux.subscribe('cart.checkedOut', fn);   // typed events
 janux.manifest();                         // live manifest of the mounted tree
 ```
 
-External MCP clients get the same surface over HTTP: `GET /_janux/manifest?path=/shop` for discovery, `POST /_janux/api/*` (with `x-janux-origin: agent`) for server tools. Two optional server features round this out: `llmsTxt` serves a `GET /llms.txt` index of pages and tools for agents that discover the site through the web, and `agents.webBotAuth` verifies signed agent requests (RFC 9421) into `ctx.agent` — see the [Server API](/docs/reference/server-api).
+External MCP clients get the same surface over HTTP: `GET /_janux/manifest?path=/shop` for discovery, `POST /_janux/api/*` (with `x-janux-origin: agent`) for server tools. Two optional server features round this out: `llmsTxt` serves a `GET /llms.txt` index of pages and tools for agents that discover the site through the web (dynamic routes list their real pages via `staticParams`), and `agents.webBotAuth` verifies signed agent requests (RFC 9421) into `ctx.agent` — see the [Server API](/docs/reference/server-api). The contract is also testable: `janux verify` fails CI when an agent-reachable tool lacks a description, and `janux eval` replays scripted agent tasks against a live app — see the [CLI reference](/docs/reference/cli).
 
 ## WebMCP — zero config
 
