@@ -7,6 +7,7 @@ import { createClientRegistry, registerDef, type IslandLoader } from './registry
 import { enableAgentGlow, type GlowOptions } from './glow';
 import { mountEagerIslands, performNavigation } from './navigate';
 import { prefetch } from './prefetch';
+import { installWebMCP } from './webmcp';
 
 export interface BootOptions {
   islands?: Record<string, IslandLoader>;
@@ -16,6 +17,8 @@ export interface BootOptions {
   glow?: boolean | GlowOptions;
   /** SPA navigation via the Navigation API + streamed DOM diff. Default: true. */
   navigation?: boolean;
+  /** Register mounted tools with `document.modelContext` (WebMCP), polyfilled when absent. Default: true. */
+  webmcp?: boolean;
 }
 
 export interface JanuxClient extends JanuxBridge {
@@ -194,6 +197,7 @@ export function boot(options: BootOptions = {}): JanuxClient {
   };
 
   if (typeof window !== 'undefined') (window as any).janux = client;
+  if (options.webmcp !== false) installWebMCP(bridge);
   mountEagerIslands(mount).catch(reportIntentError);
 
   return client;

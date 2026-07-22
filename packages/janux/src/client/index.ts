@@ -8,3 +8,11 @@ export { clientApi } from './api-stub';
 export { enableAgentGlow, injectGlowStyles, glowElement, GLOW_CLASS, type GlowOptions } from './glow';
 export { performNavigation, mountEagerIslands } from './navigate';
 export { prefetch } from './prefetch';
+export {
+  installWebMCP,
+  createModelContextPolyfill,
+  type ModelContext,
+  type ModelContextPolyfill,
+  type WebMCPHandle,
+  type WebMCPToolDescriptor,
+} from './webmcp';
