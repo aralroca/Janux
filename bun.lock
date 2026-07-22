@@ -11,7 +11,7 @@
     },
     "apps/docs": {
       "name": "janux-docs",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@aralroca/gui-agent": "^0.5.0",
         "@browser-ai/transformers-js": "^2.2.2",
@@ -33,7 +33,7 @@
     },
     "examples/shop": {
       "name": "janux-example-shop",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
@@ -43,14 +43,14 @@
     },
     "packages/create-janux": {
       "name": "create-janux",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "bin": {
         "create-janux": "./bin.ts",
       },
     },
     "packages/janux": {
       "name": "janux",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "diff-dom-streaming": "^0.6.6",
       },
@@ -60,7 +60,7 @@
     },
     "packages/janux-agent": {
       "name": "@janux/agent",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@aralroca/gui-agent": "^0.5.0",
         "@janux/server": "workspace:*",
@@ -82,7 +82,7 @@
     },
     "packages/janux-cli": {
       "name": "@janux/cli",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "bin": {
         "janux": "./bin.ts",
       },
@@ -96,7 +96,7 @@
     },
     "packages/janux-server": {
       "name": "@janux/server",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "janux": "workspace:*",
         "web-bot-auth": "^0.1.3",
@@ -104,7 +104,7 @@
     },
     "packages/janux-tailwind": {
       "name": "@janux/tailwind",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@tailwindcss/postcss": "^4.0.0",
         "tailwindcss": "^4.0.0",
@@ -112,7 +112,7 @@
     },
     "packages/janux-vite": {
       "name": "@janux/vite",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@janux/agent": "workspace:*",
         "@janux/server": "workspace:*",

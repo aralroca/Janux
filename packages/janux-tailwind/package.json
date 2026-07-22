@@ -1,6 +1,6 @@
 {
   "name": "@janux/tailwind",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Zero-config Tailwind CSS v4 integration for Janux. Install it and it's on.",
   "repository": {
     "type": "git",
