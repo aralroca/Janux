@@ -1,7 +1,5 @@
 import { boot } from 'janux/client';
-import { TaskBoard } from './components/TaskBoard';
-import { ThemeToggle } from './components/ThemeToggle';
-import { Copilot } from './components/Copilot';
-import { theme } from './stores';
+import { Counter } from './components/Counter';
+import { AgentPanel } from './components/AgentPanel';
 
-boot({ defs: [TaskBoard, ThemeToggle, Copilot, theme] });
+boot({ defs: [Counter, AgentPanel], glow: true });

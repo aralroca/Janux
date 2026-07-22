@@ -1,29 +1,27 @@
-import { loadTasks } from '../server/tasks.api';
-import { TaskBoard } from '../components/TaskBoard';
-import { ThemeToggle } from '../components/ThemeToggle';
-import { Copilot } from '../components/Copilot';
+import { Counter } from '../components/Counter';
+import { AgentPanel } from '../components/AgentPanel';
 
 export const meta = {
-  title: 'Tasks — a Janux app',
-  description: 'A task board with two faces: a UI for you, typed tools for your copilot.',
+  title: 'Welcome to Janux',
+  description: 'One component, two faces: a UI for you, typed tools for agents.',
 };
 
-export default async function Home() {
-  const saved: any = await loadTasks({});
-
+export default function Home() {
   return (
     <div class="app">
-      <header class="topbar">
-        <span class="brand">✦ Tasks</span>
-        <ThemeToggle />
+      <header class="bar">
+        <span class="brand">⚡ Janux</span>
+        <span class="bar-hint">The counter is your UI · the right panel is what an agent sees</span>
       </header>
-      <main>
-        <TaskBoard initial={{ tasks: saved.tasks, filter: 'all' }} />
-        <p class="hint">
-          This board is also an agent surface — <code>curl localhost:3000/_janux/manifest</code>
-        </p>
+      <main class="split">
+        <section class="preview">
+          <Counter />
+          <p class="curl">
+            Same surface over HTTP: <code>curl localhost:3000/_janux/manifest</code>
+          </p>
+        </section>
+        <AgentPanel eager />
       </main>
-      <Copilot persist />
     </div>
   );
 }

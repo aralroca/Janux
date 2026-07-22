@@ -1,6 +1,9 @@
 #!/usr/bin/env bun
 import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+
+// Install artifacts from running the template in place (local dev of the template itself).
+const SKIP = new Set(['node_modules', 'bun.lock']);
 
 const name = process.argv[2];
 
@@ -14,7 +17,10 @@ if (existsSync(target)) {
   console.error(`create-janux: "${name}" already exists`);
   process.exit(1);
 }
-cpSync(join(import.meta.dirname, 'template'), target, { recursive: true });
+cpSync(join(import.meta.dirname, 'template'), target, {
+  recursive: true,
+  filter: (source) => !SKIP.has(basename(source)),
+});
 
 const pkgPath = join(target, 'package.json');
 
@@ -25,4 +31,4 @@ console.log(`✔ ${name} created
   bun install
   bun run dev
 
-Configure the copilot with JANUX_MODEL or a provider API key (optional).`);
+The right panel is the agent surface — same thing as: curl localhost:3000/_janux/manifest`);

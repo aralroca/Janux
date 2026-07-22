@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
+    "types": ["bun"],
     "noEmit": true,
     "jsx": "react-jsx",
     "jsxImportSource": "janux"
