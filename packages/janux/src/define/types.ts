@@ -1,9 +1,10 @@
 import type { JxType } from '../schema';
 import type { JanuxNode } from '../jsx-runtime';
+import type { I18n } from '../i18n/types';
 
 export type GuardValue = 'auto' | 'confirm' | 'forbidden';
 export type Guard = GuardValue | ((bag: { ctx: Ctx }) => GuardValue);
-export type Ctx = Record<string, unknown>;
+export type Ctx = { i18n?: I18n } & Record<string, unknown>;
 export type Origin = 'human' | 'agent';
 export type Cleanup = (() => void) | undefined;
 
@@ -81,6 +82,8 @@ export interface ComponentDef {
   view?: (bag: RunBag) => unknown;
   scope?: 'app' | 'route';
   persist?: 'local' | 'none';
+  /** Extra i18n keys (exact or prefix strings, or RegExp) this island uses only after interaction — shipped to the client along with the keys recorded during SSR. */
+  i18nKeys?: (string | RegExp)[];
 }
 
 /**

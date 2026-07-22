@@ -39,11 +39,11 @@ curl -s -X POST https://your.app/_janux/agent \
 
 For sites whose pages don't depend on per-request state — documentation, marketing, blogs — you can skip the server entirely:
 
-```jsonc
-// package.json
-{
-  "janux": { "output": "static" }
-}
+```ts
+// janux.config.ts
+import { defineConfig } from 'janux';
+
+export default defineConfig({ output: 'static' });
 ```
 
 Now `janux build` also prerenders every page into `dist/client`:

@@ -1,4 +1,17 @@
-import { buildManifest, renderToString, type AuditEntry, type ComponentDef, type Ctx } from 'janux';
+import {
+  buildManifest,
+  renderToString,
+  selectMessages,
+  translateCore,
+  type AuditEntry,
+  type ComponentDef,
+  type Ctx,
+  type I18n,
+  type I18nConfig,
+  type RenderResult,
+} from 'janux';
+import { detectLocale, localeDir, splitLocale } from './i18n-routing';
+import type { ShellI18n } from './html-shell';
 import { assertValidInput, errorStatus, evictOldestProposal, json, type PendingApiProposal } from './http';
 import { apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
@@ -34,6 +47,7 @@ export interface ServerOptions {
   llmsTxt?: LlmsTxtConfig;
   agents?: AgentsConfig;
   onAudit?: (entry: AuditEntry) => void;
+  i18n?: I18nConfig;
 }
 
 async function resolveMeta(
@@ -69,6 +83,27 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const resolveCtx = async (req: Request): Promise<Ctx> => (await options.ctxFor?.(req)) ?? {};
 
+  const i18nCache = new Map<string, I18n>();
+  const i18nFor = (locale: string): I18n => {
+    const config = options.i18n!;
+    const cached = i18nCache.get(locale) ?? {
+      locale,
+      defaultLocale: config.defaultLocale,
+      locales: config.locales,
+      t: translateCore(locale, config),
+    };
+
+    i18nCache.set(locale, cached);
+
+    return cached;
+  };
+
+  const localize = (pathname: string) =>
+    options.i18n ? splitLocale(pathname, options.i18n.locales) : { locale: undefined, pathname };
+
+  const localeCtx = (ctx: Ctx, locale: string | undefined): Ctx =>
+    locale ? { ...ctx, i18n: i18nFor(locale) } : ctx;
+
   const agentAuth = options.agents ? createAgentAuth(options.agents) : undefined;
 
   let llmsTxtBody: string | undefined;
@@ -83,8 +118,11 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const listPages = async (): Promise<string[]> => {
     const fsPages = (await Promise.all(router?.routes.map(expandRoute) ?? [])).flat();
+    const pages = [...Object.keys(options.routes ?? {}), ...fsPages];
 
-    return [...Object.keys(options.routes ?? {}), ...fsPages];
+    if (!options.i18n) return pages;
+
+    return options.i18n.locales.flatMap((locale) => pages.map((page) => `/${locale}${page === '/' ? '' : page}`));
   };
 
   const renderLlmsTxt = async (): Promise<string> =>
@@ -120,7 +158,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
   };
 
   const manifestFor = async (pathname: string, ctx: Ctx): Promise<unknown> => {
-    const result = await renderPage(pathname, ctx);
+    const { locale, pathname: page } = localize(pathname);
+    // Unprefixed manifest paths resolve to the default locale — pages may assume ctx.i18n exists.
+    const result = await renderPage(page, localeCtx(ctx, locale ?? options.i18n?.defaultLocale));
     const entries = result
       ? [
           ...result.registry.islands.map(({ def, key, instance }) => ({ def, key, instance })),
@@ -180,9 +220,44 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return json({ ok: true, result: await proposal.execute() });
   };
 
+  /** The client payload ships only what the page's islands consume: SSR-recorded keys + declared `i18nKeys`. */
+  const shellI18n = (locale: string | undefined, result: RenderResult): ShellI18n | undefined => {
+    const config = options.i18n;
+
+    if (!locale || !config) return undefined;
+    const islands = result.registry.islands;
+    const declared = islands.flatMap(({ def }) => def.i18nKeys ?? []);
+    const messages = selectMessages(config.messages?.[locale] ?? {}, result.i18nKeys, declared, config.keySeparator);
+    const payload =
+      islands.length > 0
+        ? {
+            locale,
+            locales: config.locales,
+            defaultLocale: config.defaultLocale,
+            messages,
+            keySeparator: config.keySeparator,
+            allowEmptyStrings: config.allowEmptyStrings,
+            interpolation: config.interpolation && {
+              prefix: config.interpolation.prefix,
+              suffix: config.interpolation.suffix,
+            },
+          }
+        : undefined;
+
+    return { locale, dir: localeDir(locale), payload };
+  };
+
   const handlePage = async (req: Request, pathname: string): Promise<Response> => {
-    const ctx = await resolveCtx(req);
-    const result = await renderPage(pathname, ctx);
+    const { locale, pathname: page } = localize(pathname);
+
+    if (options.i18n && !locale) {
+      const { search } = new URL(req.url);
+      const location = `/${detectLocale(req, options.i18n)}${pathname === '/' ? '' : pathname}${search}`;
+
+      return new Response(null, { status: 302, headers: { location } });
+    }
+    const ctx = localeCtx(await resolveCtx(req), locale);
+    const result = await renderPage(page, ctx);
 
     if (!result) return new Response('Not found', { status: 404 });
     const islandNames = [...new Set(result.registry.islands.map(({ def }) => def.name))];
@@ -197,6 +272,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       manifestUrl: `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
       stylesheets: options.stylesheets,
       favicon: options.favicon,
+      i18n: shellI18n(locale, result),
     });
 
     return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });

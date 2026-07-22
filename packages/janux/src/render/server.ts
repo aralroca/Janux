@@ -25,6 +25,7 @@ export interface RenderOptions {
 interface RenderScope extends RenderOptions {
   registry: RenderRegistry;
   keySeq: Map<string, number>;
+  i18nKeys?: Set<string>;
 }
 
 function isComponentDef(type: unknown): type is ComponentDef {
@@ -57,6 +58,21 @@ function storeInstances(scope: RenderScope): Record<string, JanuxInstance> {
   return Object.fromEntries(scope.registry.stores);
 }
 
+/** Islands render with a recording `t`, so the page can ship only the messages they consume. */
+function islandCtx(scope: RenderScope): RenderOptions['ctx'] {
+  const i18n = scope.ctx?.i18n;
+  const record = scope.i18nKeys;
+
+  if (!i18n || !record) return scope.ctx;
+  const t = ((key: string, query?: unknown, options?: unknown) => {
+    record.add(String(key));
+
+    return (i18n.t as any)(key, query, options);
+  }) as typeof i18n.t;
+
+  return { ...scope.ctx, i18n: { ...i18n, t } };
+}
+
 async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): Promise<string> {
   const key = nextKey(scope, def, props.key ?? props.id);
   const stores = storeInstances(scope);
@@ -64,7 +80,7 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): 
     Object.keys(def.use ?? {}).map((alias) => [alias, stores[alias]!]),
   );
   const initial = scope.initialState?.[`ui://${def.name}#${key}`] ?? props.initial;
-  const instance = createInstance(def, { key, ctx: scope.ctx, bus: scope.bus, initial, stores: useStores });
+  const instance = createInstance(def, { key, ctx: islandCtx(scope), bus: scope.bus, initial, stores: useStores });
 
   await loadSources(instance);
   scope.registry.islands.push({ def, key, instance });
@@ -75,9 +91,26 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): 
   return `<janux-island data-jx="${escapeHtml(`${def.name}#${key}`)}"${persist}${eager}>${inner}</janux-island>`;
 }
 
+/**
+ * Internal links get the current locale prefix (Brisa-style). Already-prefixed
+ * hrefs — the language-switcher idiom — and `/_janux/*` URLs stay untouched.
+ */
+function localizedProps(node: JanuxNode, scope: RenderScope): Record<string, unknown> {
+  const i18n = scope.ctx?.i18n;
+  const href = node.$p.href;
+
+  if (node.$t !== 'a' || !i18n || typeof href !== 'string' || !href.startsWith('/')) return node.$p;
+  if (href.startsWith('/_janux')) return node.$p;
+  const [, first] = href.split('/');
+
+  if (first && i18n.locales.includes(first)) return node.$p;
+
+  return { ...node.$p, href: `/${i18n.locale}${href === '/' ? '' : href}` };
+}
+
 async function renderElement(node: JanuxNode, scope: RenderScope): Promise<string> {
   const tag = node.$t as string;
-  const attrs = renderAttrs(node.$p);
+  const attrs = renderAttrs(localizedProps(node, scope));
 
   if (VOID_ELEMENTS.has(tag)) return `<${tag}${attrs}/>`;
   const children =
@@ -102,7 +135,12 @@ export async function renderNode(node: unknown, scope: RenderScope): Promise<str
   if (typeof jsxNode.$t === 'function') {
     return renderNode((jsxNode.$t as any)(jsxNode.$p), scope);
   }
-  if (isComponentDef(jsxNode.$t)) return renderIsland(jsxNode.$t, jsxNode.$p, scope);
+  // TSX puts `key` in $k (never in props): surface it so `<Island key={locale} />` re-keys the island.
+  if (isComponentDef(jsxNode.$t)) {
+    const props = jsxNode.$k === undefined ? jsxNode.$p : { key: String(jsxNode.$k), ...jsxNode.$p };
+
+    return renderIsland(jsxNode.$t, props, scope);
+  }
 
   return renderElement(jsxNode, scope);
 }
@@ -117,12 +155,15 @@ export interface RenderResult {
   html: string;
   registry: RenderRegistry;
   snapshots: Snapshot[];
+  /** i18n keys the page's islands resolved during this render. */
+  i18nKeys: string[];
 }
 
 /** Server-renders a page tree: static components inline, bifacial components as islands. */
 export async function renderToString(node: unknown, options: RenderOptions = {}): Promise<RenderResult> {
   const registry: RenderRegistry = { islands: [], stores: new Map() };
-  const scope: RenderScope = { ...options, registry, keySeq: new Map() };
+  const i18nKeys = options.ctx?.i18n ? new Set<string>() : undefined;
+  const scope: RenderScope = { ...options, registry, keySeq: new Map(), i18nKeys };
   const html = await renderNode(node, scope);
   const islandSnapshots = registry.islands
     .filter(({ def }) => def.state || def.sources)
@@ -137,5 +178,5 @@ export async function renderToString(node: unknown, options: RenderOptions = {})
     sources: instance.sourcesSnapshot(),
   }));
 
-  return { html, registry, snapshots: [...islandSnapshots, ...storeSnapshots] };
+  return { html, registry, snapshots: [...islandSnapshots, ...storeSnapshots], i18nKeys: [...(i18nKeys ?? [])] };
 }

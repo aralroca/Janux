@@ -40,7 +40,7 @@ export const SECTIONS: SectionDef[] = [
           'stores',
         ],
       },
-      { label: 'Rendering & navigation', slugs: ['ssr-and-resumability', 'navigation'] },
+      { label: 'Rendering & navigation', slugs: ['ssr-and-resumability', 'navigation', 'i18n'] },
       { label: 'Server & agents', slugs: ['api-rpc', 'agent-and-copilot'] },
       { label: 'Shipping', slugs: ['cli-and-deployment', 'architecture-and-roadmap'] },
     ],

@@ -1,4 +1,5 @@
 import diff from 'diff-dom-streaming';
+import { installI18n } from './i18n';
 import { mountIsland, type MountContext } from './mount';
 import { consumePrefetched } from './prefetch';
 import { singleChunkStream } from './single-chunk';
@@ -152,6 +153,7 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
     throwIfAborted(options.signal);
     await applyPage(mount, stream, options.signal);
     reindexSnapshots(mount);
+    installI18n(mount.ctx);
     await sweepDisconnected(mount);
     await disposeRouteStores(mount);
     await mountEagerIslands(mount);

@@ -31,6 +31,16 @@
         "sucrase": "^3.35",
       },
     },
+    "examples/i18n": {
+      "name": "janux-example-i18n",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/shop": {
       "name": "janux-example-shop",
       "version": "0.2.1",
@@ -524,6 +534,8 @@
     "janux": ["janux@workspace:packages/janux"],
 
     "janux-docs": ["janux-docs@workspace:apps/docs"],
+
+    "janux-example-i18n": ["janux-example-i18n@workspace:examples/i18n"],
 
     "janux-example-shop": ["janux-example-shop@workspace:examples/shop"],
 

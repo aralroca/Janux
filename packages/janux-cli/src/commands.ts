@@ -71,7 +71,7 @@ async function bundleClient(root: string, input: Record<string, string>): Promis
 }
 
 export async function build({ root }: CliCommand): Promise<void> {
-  const app = resolveAppConfig(root);
+  const app = await resolveAppConfig(root);
   const tailwind = await loadTailwindPlugin(root);
   const input = bundleInputs(app, tailwind !== undefined);
 
@@ -90,9 +90,26 @@ async function writePage(server: { fetch(req: Request): Promise<Response> }, out
   await Bun.write(join(dir, 'index.html'), await response.text());
 }
 
+/** No-JS fallback is the meta refresh; with JS the stub matches the visitor's languages against the app's locales. */
+export function localeRedirectStub(locales: string[], defaultLocale: string): string {
+  const script =
+    `var locales=${JSON.stringify(locales)};` +
+    `var tags=(navigator.languages||[navigator.language||'']).map(function(l){return l.toLowerCase()});` +
+    `var match=tags.map(function(tag){return locales.find(function(l){var b=tag.split('-')[0];l=l.toLowerCase();return l===tag||l===b||l.indexOf(b+'-')===0})})` +
+    `.filter(Boolean)[0];` +
+    `location.replace('/'+(match||${JSON.stringify(defaultLocale)}))`;
+
+  return [
+    '<!doctype html>',
+    `<html><head><meta charset="utf-8"><meta http-equiv="refresh" content="1; url=/${defaultLocale}">`,
+    `<script>${script}</script></head><body></body></html>`,
+  ].join('');
+}
+
 /** `output: "static"`: prerenders every concrete page (dynamic routes via `staticParams`) into dist/client. */
 async function prerenderStatic(root: string): Promise<void> {
-  const server = createJanuxServer(await prodServerOptions(root));
+  const options = await prodServerOptions(root);
+  const server = createJanuxServer(options);
   const pages = await server.listPages();
   const outDir = join(root, 'dist/client');
   const concrete = pages.filter((page) => !page.includes('['));
@@ -101,6 +118,7 @@ async function prerenderStatic(root: string): Promise<void> {
   skipped.forEach((page) => console.log(`janux build: skipped ${page} — dynamic route without staticParams.`));
   await Promise.all(concrete.map((page) => writePage(server, outDir, page)));
   await writeLlmsTxt(server, outDir);
+  if (options.i18n) await Bun.write(join(outDir, 'index.html'), localeRedirectStub(options.i18n.locales, options.i18n.defaultLocale));
   console.log(`janux build: prerendered ${concrete.length} pages (output: static).`);
 }
 
@@ -126,7 +144,7 @@ function copyPublicDir(root: string): void {
 }
 
 export async function prodServerOptions(root: string): Promise<ServerOptions> {
-  const app = resolveAppConfig(root);
+  const app = await resolveAppConfig(root);
   const apiModules = Object.fromEntries(
     await Promise.all(
       apiFiles(app.serverDir).map(async (file) => [apiModuleName(file), await import(file)]),
@@ -134,6 +152,7 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
   );
   const agentModule = app.agentModule ? await import(app.agentModule) : undefined;
   const storesModule = app.storesModule ? await import(app.storesModule) : undefined;
+  const i18nModule = app.i18nModule ? await import(app.i18nModule) : undefined;
 
   return {
     routesDir: app.routesDir,
@@ -144,6 +163,7 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
     stylesheets: app.stylesheet ? ['/styles.css'] : [],
     title: app.title,
     llmsTxt: app.llmsTxt,
+    i18n: i18nModule?.default,
   };
 }
 

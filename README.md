@@ -157,9 +157,11 @@ Sources in [`apps/docs/content`](apps/docs/content), organized as **Guide** (com
 ## Examples
 
 - [`examples/shop`](examples/shop) — full cart + copilot: catalog source, debounced persist effect, `confirm` checkout with human approval.
+- [`examples/i18n`](examples/i18n) — internationalization: locale-prefixed routing, language switcher, type-safe `t()` with plurals, and page-scoped client translations.
 
 ```bash
 bun run --cwd examples/shop dev
+bun run --cwd examples/i18n dev
 ```
 
 ## Develop

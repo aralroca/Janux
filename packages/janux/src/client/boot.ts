@@ -5,6 +5,7 @@ import { createBridge, type JanuxBridge } from './bridge';
 import { mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
 import { enableAgentGlow, type GlowOptions } from './glow';
+import { installI18n } from './i18n';
 import { mountEagerIslands, performNavigation } from './navigate';
 import { prefetch } from './prefetch';
 import { installWebMCP } from './webmcp';
@@ -173,6 +174,7 @@ export function boot(options: BootOptions = {}): JanuxClient {
   });
   (options.defs ?? []).forEach((def) => registerDef(registry, def));
   readSnapshots(mount);
+  installI18n(mount.ctx);
   listen(mount);
   if (options.glow) enableAgentGlow(options.glow === true ? {} : options.glow);
   if (options.navigation !== false) installNavigation(mount);
