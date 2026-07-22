@@ -1,3 +1,10 @@
+export interface ShellI18n {
+  locale: string;
+  dir: 'ltr' | 'rtl';
+  /** `{ locale, messages }` client payload; only pages with islands embed it. */
+  payload?: unknown;
+}
+
 export interface ShellOptions {
   html: string;
   title?: string;
@@ -9,6 +16,7 @@ export interface ShellOptions {
   manifestUrl?: string;
   stylesheets?: string[];
   favicon?: string;
+  i18n?: ShellI18n;
 }
 
 function safeJson(value: unknown): string {
@@ -64,9 +72,14 @@ export function htmlDocument(options: ShellOptions): string {
     ? `<link rel="icon" id="jx-favicon" href="${safeAttr(options.favicon)}">`
     : '';
 
+  const htmlAttrs = options.i18n ? ` lang="${safeAttr(options.i18n.locale)}" dir="${options.i18n.dir}"` : '';
+  const i18nScript = options.i18n?.payload
+    ? `<script type="application/janux+i18n" id="jx-i18n">${safeJson(options.i18n.payload)}</script>`
+    : '';
+
   return [
     '<!doctype html>',
-    '<html>',
+    `<html${htmlAttrs}>`,
     // Order matters for SPA-navigation diffing: persistent, keyed resource
     // links (favicon, stylesheets) sit before the conditional description meta,
     // so a page that omits the description never shifts the stylesheet's
@@ -74,6 +87,7 @@ export function htmlDocument(options: ShellOptions): string {
     `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${favicon}${manifestLink}${styleLinks}${description}</head>`,
     '<body>',
     options.html,
+    i18nScript,
     options.islandNames.length > 0 ? stateScripts(options.snapshots) : '',
     runtimeScripts(options),
     '</body>',

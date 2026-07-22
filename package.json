@@ -23,6 +23,7 @@
     "test:e2e": "bun test e2e",
     "typecheck": "for p in janux janux-server janux-agent janux-vite janux-cli; do bunx tsc --noEmit -p packages/$p || exit 1; done",
     "dev:shop": "bun run --cwd examples/shop dev",
+    "dev:i18n": "bun run --cwd examples/i18n dev",
     "release": "bun scripts/release.ts"
   },
   "devDependencies": {

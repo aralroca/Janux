@@ -10,7 +10,7 @@ import { sendFetchResponse, toFetchRequest } from './request-adapter';
 const SSR_PACKAGES = ['janux', '@janux/server', '@janux/agent'];
 
 async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOptions): Promise<ServerOptions> {
-  const app = resolveAppConfig(vite.config.root, options);
+  const app = await resolveAppConfig(vite.config.root, options);
   const apiModules = Object.fromEntries(
     await Promise.all(
       apiFiles(app.serverDir).map(async (file) => [
@@ -21,6 +21,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
   );
   const agentModule = app.agentModule ? await vite.ssrLoadModule(app.agentModule) : undefined;
   const storesModule = app.storesModule ? await vite.ssrLoadModule(app.storesModule) : undefined;
+  const i18nModule = app.i18nModule ? await vite.ssrLoadModule(app.i18nModule) : undefined;
 
   return {
     routesDir: app.routesDir,
@@ -33,6 +34,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     favicon: app.favicon,
     title: app.title,
     llmsTxt: app.llmsTxt,
+    i18n: i18nModule?.default as ServerOptions['i18n'],
   };
 }
 

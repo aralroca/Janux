@@ -70,20 +70,23 @@ Everything is convention over configuration — each of these is optional:
 | `src/server/*.api.ts` | api() modules → endpoints + client stubs + agent tools |
 | `src/stores.ts` | Store defs available during SSR |
 | `src/agent.ts` | `export default defineAgent({...})` |
+| `src/i18n.ts` (or `src/i18n/index.ts`) | `export default` an `I18nConfig` — activates [internationalization](/docs/guide/i18n) |
 | `src/client.ts` | `boot({ defs })` — omit for fully static apps (0 KB JS) |
 | `src/styles.css` | App stylesheet, linked automatically |
 | `public/` | Static assets served at `/` (favicon.svg auto-linked) |
-| `package.json` → `"janux"` | Optional app config (`title`, `llmsTxt`, `output`, …) — same shape as the Vite plugin options, which win over it |
+| `janux.config.ts` | Optional app config (`title`, `llmsTxt`, `output`, …) — same shape as the Vite plugin options, which win over it |
 
-```jsonc
-// package.json
-{
-  "janux": {
-    "llmsTxt": { "title": "My App", "description": "What agents should know." },
-    "output": "static"
-  }
-}
+```ts
+// janux.config.ts
+import { defineConfig } from 'janux';
+
+export default defineConfig({
+  llmsTxt: { title: 'My App', description: 'What agents should know.' },
+  output: 'static',
+});
 ```
+
+> A `"janux"` field in `package.json` still works as a deprecated fallback; `janux.config.ts` wins over it.
 
 ## output
 

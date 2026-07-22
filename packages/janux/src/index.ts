@@ -43,3 +43,17 @@ export { createInstance, type JanuxInstance, type InstanceOptions } from './runt
 export { createBus, type EventBus } from './runtime/bus';
 export { JanuxIntentError, resolveGuard, type AuditEntry, type Proposal } from './runtime/intents';
 export { Fragment, jsx, jsxs, type JanuxNode } from './jsx-runtime';
+export { defineConfig, type JanuxConfig, type JanuxOutput } from './config';
+export {
+  translateCore,
+  formatElements,
+  getI18n,
+  selectMessages,
+  type I18n,
+  type I18nConfig,
+  type I18nDictionary,
+  type Paths,
+  type Translate,
+  type TranslateOptions,
+  type TranslationQuery,
+} from './i18n';
