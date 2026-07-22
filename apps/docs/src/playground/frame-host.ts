@@ -22,6 +22,7 @@ body{margin:0;background:#fff;color:#0f172a}
 export interface FrameHost {
   iframe: HTMLIFrameElement;
   send(message: Record<string, unknown>): void;
+  dispose(): void;
 }
 
 /** Sandboxed execution iframe: user code runs isolated; parent talks over postMessage. */
@@ -30,6 +31,9 @@ export function createFrame(
   onMessage: (data: any) => void,
 ): FrameHost {
   const iframe = document.createElement('iframe');
+  const relay = (event: MessageEvent): void => {
+    if (event.source === iframe.contentWindow) onMessage(event.data);
+  };
 
   // allow-same-origin is required for the module import map to load from the
   // dev server (opaque origins are CORS-blocked); allow-forms so <form intent>
@@ -38,11 +42,16 @@ export function createFrame(
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
   iframe.srcdoc = SRCDOC;
   container.appendChild(iframe);
-  window.addEventListener('message', (event) => {
-    if (event.source === iframe.contentWindow) onMessage(event.data);
-  });
+  window.addEventListener('message', relay);
 
-  return { iframe, send: (message) => iframe.contentWindow?.postMessage(message, '*') };
+  return {
+    iframe,
+    send: (message) => iframe.contentWindow?.postMessage(message, '*'),
+    dispose: () => {
+      window.removeEventListener('message', relay);
+      iframe.remove();
+    },
+  };
 }
 
 export function encodeShare(code: string): string {

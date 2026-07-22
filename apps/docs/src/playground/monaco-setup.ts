@@ -38,7 +38,12 @@ export async function createEditor(host: HTMLElement, initial: string) {
   };
   configureTypescript(monaco);
   await installTsxHighlighting(monaco);
-  const model = monaco.editor.createModel(initial, 'typescript', monaco.Uri.parse('file:///playground.tsx'));
+  const uri = monaco.Uri.parse('file:///playground.tsx');
+
+  // A revisit (SPA navigation back to /playground) reuses Monaco's global model
+  // registry — dispose any leftover model at this URI before recreating it.
+  monaco.editor.getModel(uri)?.dispose();
+  const model = monaco.editor.createModel(initial, 'typescript', uri);
   const editor = monaco.editor.create(host, {
     model,
     theme: 'one-dark-pro',

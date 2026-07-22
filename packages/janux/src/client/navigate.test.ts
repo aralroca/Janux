@@ -35,6 +35,16 @@ const chat = component({
   view: ({ state }: any) => jsx('ul', { children: state.messages.map((m: any, i: number) => jsx('li', { key: String(i), children: m.text })) }),
 });
 
+const editorAttach = mock(() => {});
+const editorDetach = mock(() => {});
+
+const editor = component({
+  name: 'editor',
+  lifecycle: { attach: () => editorAttach(), detach: () => editorDetach() },
+  intents: {},
+  view: () => jsx('div', { class: 'editor', children: 'ready' }),
+});
+
 function snapshotScripts(snapshots: any[]): string {
   return snapshots
     .map(
@@ -95,6 +105,33 @@ describe('SPA navigation (streamed diff)', () => {
     // rule 3: the counter was disposed (detach ran) and is gone from the page
     expect(counterDetach).toHaveBeenCalledTimes(1);
     expect(document.querySelector('janux-island[data-jx="counter#default"]')).toBeNull();
+  });
+
+  it('re-mounts an eager island when its page is revisited after navigating away', async () => {
+    const pageEditor = await pageHtml('Editor', [jsx('h1', { children: 'E' }), jsx(editor as any, { eager: true })]);
+    const pageDoc = await pageHtml('Doc', [jsx('h1', { children: 'D' })]);
+
+    document.write(pageEditor);
+    document.close();
+    editorAttach.mockClear();
+    editorDetach.mockClear();
+    const client = boot({ defs: [editor] });
+
+    await client.settled();
+    expect(editorAttach).toHaveBeenCalledTimes(1); // first visit mounts
+
+    // navigate away → the island is gone AND torn down (detach ran)
+    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageDoc).body }));
+    await client.navigate('/doc');
+    expect(document.querySelector('janux-island[data-jx="editor#default"]')).toBeNull();
+    expect(editorDetach).toHaveBeenCalledTimes(1);
+
+    // revisit → the eager island mounts again from a clean slate (the playground
+    // relies on this attach/detach symmetry to reset Monaco)
+    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageEditor).body }));
+    await client.navigate('/editor');
+    expect(document.querySelector('janux-island[data-jx="editor#default"]')).not.toBeNull();
+    expect(editorAttach).toHaveBeenCalledTimes(2);
   });
 
   it('emits janux:error and hard-navigates when the fetch fails', async () => {
