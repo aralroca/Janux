@@ -89,7 +89,7 @@ export default async function DocPage({ params }: { params: { section: string; s
         </main>
         {rendered ? <Toc toc={rendered.toc} /> : null}
       </div>
-      <DocsCopilot />
+      <DocsCopilot persist />
     </Layout>
   );
 }

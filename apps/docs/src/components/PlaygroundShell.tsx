@@ -1,10 +1,13 @@
 import { component } from 'janux';
 
+let teardown: (() => void) | undefined;
+
 /**
  * Thin island hosting the playground. Deliberately stateless: the view is a
  * static skeleton that never re-renders (a re-render would morph away the
  * imperative Monaco/agent-panel DOM). `attach` lazy-loads the heavy editor
- * code — Monaco and sucrase never touch any other page.
+ * code — Monaco and sucrase never touch any other page. `detach` tears Monaco
+ * down so revisiting via SPA navigation doesn't collide with a stale model.
  */
 export const PlaygroundShell = component({
   name: 'playground',
@@ -14,7 +17,11 @@ export const PlaygroundShell = component({
     attach: async () => {
       const { mountPlayground } = await import('../playground/mount-editor');
 
-      await mountPlayground();
+      teardown = await mountPlayground();
+    },
+    detach: () => {
+      teardown?.();
+      teardown = undefined;
     },
   },
 

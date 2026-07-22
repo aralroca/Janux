@@ -112,7 +112,7 @@ export default async function Home() {
           <span>MIT © Aral Roca</span>
         </footer>
       </main>
-      <DocsCopilot />
+      <DocsCopilot persist />
     </Layout>
   );
 }

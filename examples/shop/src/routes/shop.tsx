@@ -21,9 +21,9 @@ export default function ShopPage() {
       </header>
       <main class="shop">
         <Cart />
-        <Copilot />
+        <Copilot persist />
       </main>
-      <Toasts />
+      <Toasts eager />
     </div>
   );
 }

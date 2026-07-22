@@ -44,8 +44,8 @@ function debounce(fn: () => void, ms: number): () => void {
   };
 }
 
-/** Wires the whole playground: Monaco, sandboxed frame, agent panel, share links. */
-export async function mountPlayground(): Promise<void> {
+/** Wires the whole playground: Monaco, sandboxed frame, agent panel, share links. Returns a teardown. */
+export async function mountPlayground(): Promise<() => void> {
   const els = grabEls();
   const initial = decodeShare(location.hash) ?? EXAMPLES.Counter!;
   const editor = await createEditor(els.editor, initial);
@@ -108,6 +108,12 @@ export async function mountPlayground(): Promise<void> {
     els.share.textContent = 'Copied!';
     setTimeout(() => (els.share.textContent = 'Share'), 1500);
   });
+
+  return () => {
+    frame.dispose();
+    editor.getModel()?.dispose();
+    editor.dispose();
+  };
 }
 
 function showError(el: HTMLElement, message: string): void {

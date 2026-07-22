@@ -42,5 +42,8 @@
   ],
   "files": [
     "src"
-  ]
+  ],
+  "dependencies": {
+    "diff-dom-streaming": "^0.6.6"
+  }
 }

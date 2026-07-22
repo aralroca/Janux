@@ -32,6 +32,10 @@ If a route mounts no islands, the HTML document contains no `<script>` at all �
 
 Intents bound with `<form intent={...}>` are handled by the delegated submit listener; form fields become the intent's input object. Server-side no-JS fallback (a plain POST when the runtime hasn't loaded) is specified in the RFC and on the roadmap — v0.1 requires the runtime for form intents.
 
+## Navigation and resume are the same machinery
+
+Client-side navigation in Janux is just resume applied to a new page: the incoming HTML brings its own snapshots, and islands resume from them exactly as on first load — no hydration, no route manifest. Because it reuses everything on this page, it's covered on its own: see **[Navigation](/docs/guide/navigation)** for how the diff-based SPA router works, what state survives a navigation, and building console-style dashboards.
+
 ## Comparison
 
 | | React SSR | Qwik | Janux |
