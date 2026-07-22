@@ -23,7 +23,7 @@ export default async function Home() {
           This board is also an agent surface — <code>curl localhost:3000/_janux/manifest</code>
         </p>
       </main>
-      <Copilot />
+      <Copilot persist />
     </div>
   );
 }

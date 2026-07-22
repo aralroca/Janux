@@ -6,3 +6,4 @@ export { morph } from './morph';
 export { toDomNodes } from './dom';
 export { clientApi } from './api-stub';
 export { enableAgentGlow, injectGlowStyles, glowElement, GLOW_CLASS, type GlowOptions } from './glow';
+export { performNavigation, prefetch } from './navigate';

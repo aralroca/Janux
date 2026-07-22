@@ -20,7 +20,7 @@ The deeper difference: a React handler is an anonymous closure only the human pa
 - **Click**: `on={intents.x}` on any element; optional `data-input` JSON becomes the input.
 - **Submit**: `<form intent={intents.x}>`; form fields become the input object.
 - **Component events**: `emits:` / `on:` (see [Sources, effects and events](/docs/guide/sources-effects-events)).
-- **Runtime DOM events**: `janux:tool-call`, `janux:proposal`, `janux:error` (see [Client API](/docs/reference/client-api)).
+- **Runtime DOM events**: `janux:tool-call`, `janux:proposal`, `janux:navigate`, `janux:error` (see [Client API](/docs/reference/client-api)).
 
 Need `dblclick`, `keydown` or drag today? Attach a plain listener in `lifecycle.attach` and call your own intents from it — interactions still end up as intents, you just wire the trigger yourself. Richer declarative triggers are on the roadmap.
 

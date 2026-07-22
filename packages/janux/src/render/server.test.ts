@@ -75,6 +75,16 @@ describe('renderToString', () => {
     expect(result.html).toBe('<input value="x"/>');
   });
 
+  it('marks persist and eager islands with data attributes (SPA navigation)', async () => {
+    const persisted = await renderToString(jsx(cart as any, { persist: true }));
+    const eager = await renderToString(jsx(cart as any, { eager: true }));
+    const plain = await renderToString(jsx(cart as any, {}));
+
+    expect(persisted.html).toContain('data-jx="cart#default" data-jx-persist>');
+    expect(eager.html).toContain('data-jx="cart#default" data-jx-eager>');
+    expect(plain.html).toContain('data-jx="cart#default">');
+  });
+
   it('escapes attacker-controlled island keys (XSS regression)', async () => {
     const evil = 'x"><img src=x onerror=alert(1)>';
     const result = await renderToString(jsx(cart as any, { key: evil }));

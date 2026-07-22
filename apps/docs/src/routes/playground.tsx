@@ -10,7 +10,7 @@ export const meta = {
 export default function PlaygroundPage() {
   return (
     <Layout current="/playground">
-      <PlaygroundShell />
+      <PlaygroundShell eager />
     </Layout>
   );
 }

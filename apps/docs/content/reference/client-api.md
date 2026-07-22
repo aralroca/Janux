@@ -13,6 +13,20 @@ const client = boot({ defs: [Cart], ctx: {}, glow: true });
 
 `glow: true | { duration }` enables the built-in agent-activity highlight (see [Events and interactions](/docs/guide/events-and-interactions)); style it with the `--janux-glow-*` CSS variables. Lower-level: `enableAgentGlow`, `glowElement`, `injectGlowStyles`, `GLOW_CLASS`.
 
+`navigation: false` disables client-side SPA navigation (on by default — see [SSR and resumability](/docs/guide/ssr-and-resumability#spa-navigation)).
+
+## SPA navigation
+
+| Member / attribute | Purpose |
+|---|---|
+| `client.navigate(url)` | Programmatic SPA navigation (also what agents use) |
+| `<Component persist />` | Keep the island's live instance across navigations |
+| `<Component eager />` | Mount on load/navigation without waiting for interaction |
+| `<a data-native>` | Opt this link out — force a full-page navigation |
+| `boot({ navigation: false })` | Disable SPA navigation entirely |
+
+DOM events: `janux:navigate` fires with `{ phase: 'before' | 'after', from, to }` around each SPA navigation. `janux.navigate()` and link navigations both count toward `settled()`.
+
 Called once in `src/client.ts`. It indexes islands and state snapshots, installs two delegated listeners (click, submit) and exposes the bridge as `window.janux`. **No component code runs** until first interaction or agent call — that's the resume guarantee.
 
 `client.mount('name#key')` mounts an island eagerly (e.g. an editor page where the island IS the page).

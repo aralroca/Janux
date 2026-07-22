@@ -69,8 +69,10 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): 
   await loadSources(instance);
   scope.registry.islands.push({ def, key, instance });
   const inner = await renderNode(def.view!(instance.bag), scope);
+  const persist = props.persist ? ' data-jx-persist' : '';
+  const eager = props.eager ? ' data-jx-eager' : '';
 
-  return `<janux-island data-jx="${escapeHtml(`${def.name}#${key}`)}">${inner}</janux-island>`;
+  return `<janux-island data-jx="${escapeHtml(`${def.name}#${key}`)}"${persist}${eager}>${inner}</janux-island>`;
 }
 
 async function renderElement(node: JanuxNode, scope: RenderScope): Promise<string> {

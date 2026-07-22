@@ -5,6 +5,7 @@ import { createBridge, type JanuxBridge } from './bridge';
 import { mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
 import { enableAgentGlow, type GlowOptions } from './glow';
+import { mountEagerIslands, performNavigation, prefetch } from './navigate';
 
 export interface BootOptions {
   islands?: Record<string, IslandLoader>;
@@ -12,10 +13,13 @@ export interface BootOptions {
   ctx?: Record<string, unknown>;
   /** Highlight islands while an agent operates them. `true` or `{ duration }`. */
   glow?: boolean | GlowOptions;
+  /** SPA navigation via the Navigation API + streamed DOM diff. Default: true. */
+  navigation?: boolean;
 }
 
 export interface JanuxClient extends JanuxBridge {
   mount(id: string): Promise<unknown>;
+  navigate(url: string): Promise<void>;
   proposals: Map<string, Proposal>;
 }
 
@@ -62,8 +66,7 @@ function formInput(form: HTMLFormElement): Record<string, unknown> {
 }
 
 function trackInflight(mount: MountContext, work: Promise<unknown>): void {
-  mount.inflight.add(work);
-  work.catch(reportIntentError).finally(() => mount.inflight.delete(work));
+  awaitTracked(mount, work).catch(reportIntentError);
 }
 
 function listen(mount: MountContext): void {
@@ -87,6 +90,59 @@ function listen(mount: MountContext): void {
 
 function reportIntentError(error: unknown): void {
   document.dispatchEvent(new CustomEvent('janux:error', { detail: String(error) }));
+}
+
+/** Tracks navigation work in `inflight` (settled() waits it) while propagating failures. */
+async function awaitTracked(mount: MountContext, work: Promise<unknown>): Promise<void> {
+  mount.inflight.add(work);
+  try {
+    await work;
+  } finally {
+    mount.inflight.delete(work);
+  }
+}
+
+let nativeClickAt = 0;
+
+function shouldIntercept(event: any): boolean {
+  if (!event.canIntercept || event.hashChange || event.downloadRequest || event.formData) return false;
+  if (new URL(event.destination.url).origin !== location.origin) return false;
+  // Prefer the precise source element; fall back to a recent data-native click.
+  if (event.sourceElement) return !event.sourceElement.closest?.('[data-native]');
+  const wasNative = Date.now() - nativeClickAt < 100;
+
+  nativeClickAt = 0;
+
+  return !wasNative;
+}
+
+/**
+ * Navigation API interception (Baseline 2026). Browsers without it keep
+ * native MPA links — which already work — so there is no History fallback.
+ */
+function installNavigation(mount: MountContext): void {
+  const nav = (window as any).navigation;
+
+  document.addEventListener(
+    'click',
+    (event) => {
+      if ((event.target as Element | null)?.closest?.('[data-native]')) nativeClickAt = Date.now();
+    },
+    true,
+  );
+  nav?.addEventListener('navigate', (event: any) => {
+    if (!shouldIntercept(event)) return;
+    event.intercept({
+      scroll: 'after-transition',
+      handler: () =>
+        awaitTracked(mount, performNavigation(event.destination.url, mount, { signal: event.signal })),
+    });
+  });
+  document.addEventListener('mouseover', (event) => {
+    const link = (event.target as Element | null)?.closest?.('a[href^="/"]:not([data-native])');
+
+    if (link) prefetch((link as HTMLAnchorElement).href);
+  });
 }
 
 /**
@@ -115,6 +171,7 @@ export function boot(options: BootOptions = {}): JanuxClient {
   readSnapshots(mount);
   listen(mount);
   if (options.glow) enableAgentGlow(options.glow === true ? {} : options.glow);
+  if (options.navigation !== false) installNavigation(mount);
   const bridge = createBridge(mount, proposals);
   const client: JanuxClient = {
     ...bridge,
@@ -126,9 +183,17 @@ export function boot(options: BootOptions = {}): JanuxClient {
 
       return mountIsland(id, root, mount);
     },
+    async navigate(url: string) {
+      const nav = (window as any).navigation;
+
+      // Through the interceptor when the platform has it; direct SPA otherwise.
+      if (nav?.navigate) await nav.navigate(url).finished;
+      else await awaitTracked(mount, performNavigation(new URL(url, location.href).href, mount));
+    },
   };
 
   if (typeof window !== 'undefined') (window as any).janux = client;
+  mountEagerIslands(mount).catch(reportIntentError);
 
   return client;
 }

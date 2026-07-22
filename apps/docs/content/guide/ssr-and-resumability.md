@@ -32,6 +32,41 @@ If a route mounts no islands, the HTML document contains no `<script>` at all �
 
 Intents bound with `<form intent={...}>` are handled by the delegated submit listener; form fields become the intent's input object. Server-side no-JS fallback (a plain POST when the runtime hasn't loaded) is specified in the RFC and on the roadmap — v0.1 requires the runtime for form intents.
 
+## SPA navigation
+
+Once a page is live, navigating between routes is client-side by default — no full reload, no flash of the shell. The initial render is unchanged (full HTML + snapshots); only *subsequent* navigations are intercepted.
+
+**How it works:** Janux uses the browser's [Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/Navigation_API) (Baseline 2026) to intercept same-origin links, back/forward and `janux.navigate()`. It streams the next page's HTML and **diffs it against the live document** (via `diff-dom-streaming`). Unchanged parts of the shell — a dashboard's sidebar, header, breadcrumbs — are never touched: no flicker, scroll and focus preserved. Browsers without the Navigation API simply do normal MPA navigation, which already works — there's no fallback to maintain.
+
+Because navigating is just a re-render from the incoming snapshots, it costs no hydration — the same resume you already get on first load.
+
+### The three state rules
+
+What survives a navigation is deliberate and agent-legible:
+
+| What | Behavior |
+|---|---|
+| Stores with `scope: 'app'` (default) | **Survive** — theme, session, anything shared |
+| Islands marked `persist` | The live instance and its DOM are kept and grafted onto the incoming page — e.g. `<Copilot persist />` keeps its conversation across pages |
+| Everything else | Disposed and **re-resumed** from the incoming page's snapshots |
+| Stores with `scope: 'route'` | Disposed |
+
+> **Note:** state that must survive navigation belongs in a store or on the server — not in a plain route island. That's the same principle as resume: islands are ephemeral, stores and the server are durable.
+
+### Opting out and eager mounting
+
+```tsx
+<a href="/report.pdf" data-native>Download</a>   {/* full-page navigation */}
+<Copilot persist />                              {/* keep instance across navigations */}
+<Dashboard eager />                              {/* mount on load/navigation, don't wait for interaction */}
+```
+
+```ts
+boot({ defs: [...], navigation: false });        // disable SPA navigation entirely
+```
+
+Links are prefetched on hover (30s cache) so navigations feel instant.
+
 ## Comparison
 
 | | React SSR | Qwik | Janux |
