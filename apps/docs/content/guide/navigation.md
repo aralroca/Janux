@@ -56,17 +56,29 @@ By default an island resumes lazily — no code runs until you interact with it.
 
 Eager islands mount on initial load and after each navigation.
 
-## Opting out and turning it off
+## Opting a link out: `data-native`
+
+`data-native` tells Janux to **leave one link alone** — no interception, no diff, no hover-prefetch. The browser performs an ordinary full-page navigation, exactly as if Janux weren't on the page.
 
 ```tsx
-<a href="/report.pdf" data-native>Download</a>   {/* force a full-page navigation */}
+<a href="/report.pdf" data-native>Download</a>   {/* full-page navigation, not a diff */}
 ```
+
+It's a per-link escape hatch, not a workaround — reach for it whenever a diffed navigation isn't the right behavior:
+
+- **Non-Janux responses** — a file download, an API endpoint, or a route served by a different app. There's no incoming Janux page to diff against.
+- **Leaving your origin** — external links and third-party auth redirects. (Cross-origin links already aren't intercepted; `data-native` just makes the intent explicit.)
+- **A Janux page that must paint from a clean slate.** This is the non-obvious one. If a page mounts a widget that *measures the layout as it initializes* — a code editor, a canvas, a charting library — arriving via a diff can hand it a container that the new page's CSS hasn't finished applying yet, so it measures the wrong size and renders misaligned. A full load guarantees the page is laid out before the widget mounts. It's exactly why the [Playground](/playground) link in this site's sidebar is marked `data-native`: Monaco measures itself on mount, and an SPA revisit could catch it mid-layout.
+
+> **Rule of thumb:** if the destination isn't a Janux page, or its first paint depends on the browser having fully laid out a fresh document, use `data-native`. Everything else should stay a diffed navigation — that's what keeps the shell, scroll and focus intact.
+
+To turn SPA navigation off everywhere instead of per-link:
 
 ```ts
 boot({ defs: [...], navigation: false });        // disable SPA navigation entirely
 ```
 
-Use `data-native` for downloads, external auth redirects, or any route that isn't a Janux page. Links to same-origin pages are **prefetched on hover** (30-second cache), so by the time the click lands the HTML is usually already in hand.
+Same-origin links that *aren't* opted out are **prefetched on hover** (30-second cache), so by the time the click lands the HTML is usually already in hand.
 
 ## Programmatic and agent navigation
 

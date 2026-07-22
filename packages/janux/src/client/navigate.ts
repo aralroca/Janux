@@ -1,6 +1,7 @@
 import diff from 'diff-dom-streaming';
 import { mountIsland, type MountContext } from './mount';
 import { consumePrefetched } from './prefetch';
+import { singleChunkStream } from './single-chunk';
 
 export interface NavigateOptions {
   signal?: AbortSignal;
@@ -109,9 +110,12 @@ async function fetchStream(url: string, signal?: AbortSignal): Promise<ReadableS
   if (cached) return cached;
   const response = await fetch(url, { signal, headers: { accept: 'text/html' } });
 
-  if (!response.ok || !response.body) throw new Error(`navigation fetch failed (${response.status})`);
+  if (!response.ok) throw new Error(`navigation fetch failed (${response.status})`);
 
-  return response.body;
+  // Buffer the whole page before diffing: a navigation fetches a complete,
+  // server-rendered page, so a single-chunk stream is deterministic and
+  // avoids the streaming diff's chunk-boundary edge cases (a swap is not SSR).
+  return singleChunkStream(await response.text());
 }
 
 /**
