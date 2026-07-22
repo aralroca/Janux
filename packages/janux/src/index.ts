@@ -10,6 +10,7 @@ export {
 } from './define/factories';
 export type {
   ComponentDef,
+  ComponentTag,
   IntentDef,
   EffectDef,
   SourceDef,

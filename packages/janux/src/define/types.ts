@@ -1,4 +1,5 @@
 import type { JxType } from '../schema';
+import type { JanuxNode } from '../jsx-runtime';
 
 export type GuardValue = 'auto' | 'confirm' | 'forbidden';
 export type Guard = GuardValue | ((bag: { ctx: Ctx }) => GuardValue);
@@ -81,3 +82,11 @@ export interface ComponentDef {
   scope?: 'app' | 'route';
   persist?: 'local' | 'none';
 }
+
+/**
+ * ComponentDef with a phantom call signature so TSX accepts `<MyIsland />` as
+ * an element. The signature never exists at runtime: `component()` returns a
+ * frozen plain object, and the renderer checks `typeof $t === 'function'`
+ * before `isComponentDef`, so defs always take the island path.
+ */
+export type ComponentTag = ComponentDef & ((props?: Record<string, unknown>) => JanuxNode);
