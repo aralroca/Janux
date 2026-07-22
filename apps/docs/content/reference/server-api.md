@@ -50,7 +50,7 @@ export default async function Page({ ctx, params }) { ... }         // async sup
 
 `routes/index.tsx` → `/` · `routes/orders/[id].tsx` → `/orders/:id` (params decoded).
 
-`staticParams` enumerates the concrete pages of a dynamic route: `llms.txt` lists `/orders/1`, `/orders/2` instead of the raw `/orders/[id]` pattern. Without it, the pattern is listed as-is.
+`staticParams` enumerates the concrete pages of a dynamic route: `llms.txt` lists `/orders/1`, `/orders/2` instead of the raw `/orders/[id]` pattern, and with `output: "static"` they become the prerendered pages. Without it, the pattern is listed as-is (and the route is skipped in static builds). See [Deploying → Static export](/docs/recipes/deploying).
 
 ## HTTP surface
 
