@@ -87,7 +87,7 @@ describe('SPA navigation (streamed diff)', () => {
 
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
-      body: new Response(pageB).body,
+      text: async () => pageB,
     }));
     await client.navigate('/b');
 
@@ -121,17 +121,41 @@ describe('SPA navigation (streamed diff)', () => {
     expect(editorAttach).toHaveBeenCalledTimes(1); // first visit mounts
 
     // navigate away → the island is gone AND torn down (detach ran)
-    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageDoc).body }));
+    (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => pageDoc }));
     await client.navigate('/doc');
     expect(document.querySelector('janux-island[data-jx="editor#default"]')).toBeNull();
     expect(editorDetach).toHaveBeenCalledTimes(1);
 
     // revisit → the eager island mounts again from a clean slate (the playground
     // relies on this attach/detach symmetry to reset Monaco)
-    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageEditor).body }));
+    (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => pageEditor }));
     await client.navigate('/editor');
     expect(document.querySelector('janux-island[data-jx="editor#default"]')).not.toBeNull();
     expect(editorAttach).toHaveBeenCalledTimes(2);
+  });
+
+  it('buffers the response into a single chunk before diffing (deterministic swap)', async () => {
+    const pageA = await pageHtml('Page A', jsx('h1', { children: 'A' }));
+    const pageB = await pageHtml('Page B', jsx('h1', { children: 'B' }));
+    let bodyRead = false;
+
+    document.write(pageA);
+    document.close();
+    const client = boot({ defs: [] });
+
+    (globalThis as any).fetch = mock(async () => ({
+      ok: true,
+      text: async () => pageB,
+      get body() {
+        bodyRead = true;
+
+        return new Response(pageB).body;
+      },
+    }));
+    await client.navigate('/b');
+
+    expect(document.querySelector('h1')!.textContent).toBe('B');
+    expect(bodyRead).toBe(false);
   });
 
   it('emits janux:error and hard-navigates when the fetch fails', async () => {

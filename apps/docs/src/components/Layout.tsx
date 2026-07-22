@@ -32,7 +32,7 @@ function SectionNav({ section, current }: { section: string; current?: string })
 function SidebarNav({ current }: { current?: string }) {
   return (
     <div class="sidebar-nav">
-      <a href="/playground" class={current === '/playground' ? 'tool-link active' : 'tool-link'}>
+      <a href="/playground" data-native class={current === '/playground' ? 'tool-link active' : 'tool-link'}>
         ⚡ Playground
       </a>
       {Object.keys(SECTIONS).map((section) => (
