@@ -23,7 +23,21 @@ export const Counter = component({
     reset: intent({ guard: 'confirm', run: ({ state }) => (state.count = 0) }),
   },
   view: ({ state, intents }) => (
-    <button on={intents.inc}>{state.count}</button>
+    <section class="flex flex-col items-center gap-5 pt-16 font-sans">
+      <h1 class="text-6xl font-extrabold tracking-tight">{state.count}</h1>
+      <div class="flex gap-3">
+        <button on={intents.inc}
+          class="rounded-xl bg-violet-600 px-6 py-2.5 font-bold text-white
+                 shadow-lg shadow-violet-600/30 hover:bg-violet-700">
+          +1
+        </button>
+        <button on={intents.reset}
+          class="rounded-xl border border-neutral-300 px-6 py-2.5
+                 font-semibold text-neutral-500 hover:border-neutral-400">
+          Reset
+        </button>
+      </div>
+    </section>
   ),
 });`;
 
@@ -61,7 +75,13 @@ export default async function Home() {
     <Layout current="/">
       <main class="home">
         <section class="hero">
-          <img src="/logo.svg" alt="Janux logo" width="96" height="96" />
+          <img
+            class="hero-janus"
+            src="/janus.svg"
+            alt="Janus, the two-faced Roman god"
+            width="130"
+            height="157"
+          />
           <h1>
             One component. <span class="gradient">Two faces.</span>
           </h1>

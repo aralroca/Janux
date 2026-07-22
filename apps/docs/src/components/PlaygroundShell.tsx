@@ -35,11 +35,30 @@ export const PlaygroundShell = component({
         </button>
         <span class="pg-hint">Edits run automatically · the right panel is what an agent sees</span>
       </div>
-      <div class="playground">
-        <div class="editor-pane" id="pg-editor"></div>
-        <div class="preview-pane" id="pg-preview">
-          <div class="pg-loading" id="pg-loading">
-            <span class="pg-spinner"></span> Running…
+      <div class="playground" id="pg-root">
+        <div class="editor-pane">
+          <div class="pane-head">
+            <span class="pane-tab">playground.tsx</span>
+            <button id="pg-expand-editor" class="pane-expand" type="button" aria-label="Expand editor" aria-pressed="false">
+              ⛶
+            </button>
+          </div>
+          <div class="editor-host" id="pg-editor"></div>
+        </div>
+        <div class="preview-pane">
+          <div class="pane-head browser-chrome">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+            <span class="addr">preview</span>
+            <button id="pg-expand-preview" class="pane-expand" type="button" aria-label="Expand preview" aria-pressed="false">
+              ⛶
+            </button>
+          </div>
+          <div class="preview-host" id="pg-preview">
+            <div class="pg-loading" id="pg-loading">
+              <span class="pg-spinner"></span> Running…
+            </div>
           </div>
         </div>
         <div class="agent-pane" id="pg-agent"></div>

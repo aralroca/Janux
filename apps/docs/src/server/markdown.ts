@@ -1,13 +1,13 @@
 import { Marked } from 'marked';
 import { createHighlighter, type Highlighter } from 'shiki';
 
-const THEME = 'one-dark-pro';
+const THEMES = { light: 'github-light', dark: 'github-dark' } as const;
 const LANGS = ['typescript', 'tsx', 'bash', 'json', 'jsonc', 'css', 'html'];
 
 let highlighterPromise: Promise<Highlighter> | undefined;
 
 function getHighlighter(): Promise<Highlighter> {
-  highlighterPromise ??= createHighlighter({ themes: [THEME], langs: LANGS });
+  highlighterPromise ??= createHighlighter({ themes: Object.values(THEMES), langs: LANGS });
 
   return highlighterPromise;
 }
@@ -39,11 +39,19 @@ function codeRenderer(highlighter: Highlighter) {
   return ({ text, lang }: { text: string; lang?: string }): string => {
     const [language = 'text', ...flags] = (lang ?? '').split(/\s+/);
     const known = highlighter.getLoadedLanguages().includes(language) ? language : 'text';
-    const highlighted = highlighter.codeToHtml(text, { lang: known, theme: THEME });
+    // light-dark() colors follow the page's `color-scheme`, so code blocks flip
+    // with the theme toggle without any extra CSS plumbing.
+    const highlighted = highlighter.codeToHtml(text, {
+      lang: known,
+      themes: THEMES,
+      defaultColor: 'light-dark()',
+    });
 
     if (!flags.includes('live')) return highlighted;
 
-    return `<div class="live-block">${highlighted}<a class="try-it" href="/playground#c=${base64url(text)}">▶ Run in playground</a></div>`;
+    // data-native: the playground mounts Monaco imperatively — SPA-diffing into
+    // it breaks the page (pending fix upstream in diff-dom-streaming).
+    return `<div class="live-block">${highlighted}<a class="try-it" data-native href="/playground#c=${base64url(text)}">▶ Run in playground</a></div>`;
   };
 }
 

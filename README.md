@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/logo.svg" width="150" alt="Janux — a two-faced head inside a doorway: a human profile looking left, an agent profile looking right" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg" />
+    <img src="docs/logo.svg" width="150" alt="Janux — an engraved two-faced head: a human profile looking left, an agent profile looking right" />
+  </picture>
 </p>
 
 <h1 align="center">Janux</h1>
@@ -12,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-82%20passing-brightgreen" alt="82 tests passing" />
+  <img src="https://img.shields.io/badge/tests-138%20passing-brightgreen" alt="138 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -31,7 +34,7 @@ Named after **Janus**, the two-faced Roman god of doorways: one face toward the 
 - 🤖 **Zero-config copilot.** `JANUX_MODEL` or one provider API key is all it takes. Every app ships the agent endpoint, the manifest and the gui-agent bridge (`window.janux`).
 - 🧘 **Observable quiescence.** `await janux.settled()` — the `sleep(500)` idiom dies here.
 
-> ⚠️ Early/experimental (v0.1). The public contract is stable by design; see [honest deviations from the RFC](apps/docs/content/11-architecture-and-roadmap.md).
+> ⚠️ Early/experimental (v0.1). The public contract is stable by design; see [honest deviations from the RFC](apps/docs/content/guide/architecture-and-roadmap.md).
 
 ## Table of Contents
 
@@ -136,13 +139,20 @@ Zero config — first match wins:
 
 ## Documentation
 
-The docs site is **built with Janux itself** — content pages are static components, and the "Ask AI" copilot runs on the same agent bridge every Janux app gets:
+The docs site is **built with Janux itself** — Next.js-docs-style light/dark theme, ⌘K full-text search, an interactive playground, `llms.txt` for agents, and an "Ask AI" copilot running on the same agent bridge every Janux app gets:
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/docs-dark.png" />
+    <img src="docs/docs-light.png" width="720" alt="The Janux docs site: topbar with search, grouped sidebar, Janus engraving hero" />
+  </picture>
+</p>
 
 ```bash
 bun run --cwd apps/docs dev
 ```
 
-Sources in [`apps/docs/content`](apps/docs/content): getting started, components, schema, intents & guards, sources/effects/events, stores, SSR & resumability, api(), agent & copilot, CLI, architecture & roadmap.
+Sources in [`apps/docs/content`](apps/docs/content), organized as **Guide** (components & state, rendering & navigation, server & agents, shipping), **Tutorial** (a task board in 3 parts), **Reference** (per-package APIs & CLI), **Recipes** and **More**.
 
 ## Examples
 
@@ -156,7 +166,7 @@ bun run --cwd examples/shop dev
 
 ```bash
 bun install
-bun test packages    # 82 tests: schema, signals, runtime, SSR, resume, guards, agent loop, SWC stubs
+bun test packages    # 138 tests: schema, signals, runtime, SSR, resume, guards, agent loop, SWC stubs
 bun run typecheck
 ```
 

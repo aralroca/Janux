@@ -1,6 +1,6 @@
 import { Layout } from '../../../components/Layout';
 import { DocsCopilot } from '../../../components/DocsCopilot';
-import { docContent, docIndex } from '../../../server/docs.api';
+import { docContent, docIndex, groupLabel, sectionLabel } from '../../../server/docs.api';
 import { renderMarkdown, type TocEntry } from '../../../server/markdown';
 
 export function staticParams() {
@@ -14,13 +14,21 @@ export function meta({ params }: { params: { section: string; slug: string } }) 
   return { title: title ? `${title} — Janux docs` : 'Janux docs' };
 }
 
-const SECTION_LABELS: Record<string, string> = {
-  guide: 'Guide',
-  tutorial: 'Tutorial',
-  reference: 'Reference',
-  recipes: 'Recipes',
-  more: 'More',
-};
+function Breadcrumb({ section, slug }: { section: string; slug: string }) {
+  const group = groupLabel(section, slug);
+
+  return (
+    <p class="breadcrumb">
+      <a href="/">Docs</a> <span>/</span> {sectionLabel(section)}
+      {group ? (
+        <>
+          {' '}
+          <span>/</span> {group}
+        </>
+      ) : null}
+    </p>
+  );
+}
 
 function Toc({ toc }: { toc: TocEntry[] }) {
   if (toc.length < 2) return null;
@@ -85,9 +93,7 @@ export default async function DocPage({ params }: { params: { section: string; s
     <Layout current={path}>
       <div class="doc-grid">
         <main>
-          <p class="breadcrumb">
-            <a href="/">Docs</a> <span>/</span> {SECTION_LABELS[params.section] ?? params.section}
-          </p>
+          <Breadcrumb section={params.section} slug={params.slug} />
           {rendered ? <article dangerHTML={rendered.html} /> : <NotFound slug={params.slug} />}
           {rendered ? <PrevNext path={path} /> : null}
         </main>
