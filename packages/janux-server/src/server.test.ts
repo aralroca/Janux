@@ -122,7 +122,7 @@ describe('route meta', () => {
     const html = await (await fsServer.fetch(new Request('http://test/about'))).text();
 
     expect(html).toContain('<title>About — Janux fixture</title>');
-    expect(html).toContain('<meta name="description" content="Route-level metadata fixture.">');
+    expect(html).toContain('<meta name="description" id="jx-description" content="Route-level metadata fixture.">');
     expect(html).toContain('<main>About page</main>');
   });
 });
