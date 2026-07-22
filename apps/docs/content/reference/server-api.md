@@ -82,3 +82,18 @@ createJanuxServer({
 Signed requests get `ctx.agent = { verified, keyId }` (also `null`/absent when unsigned); use it in `ctxFor`-style authorization, guards or `run()`. Under `policy: 'require'`, unsigned or unverified requests with `x-janux-origin: agent` receive `401 { error: 'agent_required' }` — human traffic is never gated, and neither is the embedded copilot (`/_janux/agent`): it acts on the signed-in user's own session, so its authentication belongs in `ctxFor` like any human traffic. Fail closed: unknown key, bad signature, expired window, or `require` with an empty allowlist all deny.
 
 Not built yet: fetching keys from a signature-agent directory (SSRF story needed), nonce single-use enforcement, rate limiting (put it in `ctxFor` or your middleware — `onAudit` gives you per-tool outcome data to alert on).
+
+## Low-level exports (advanced)
+
+`createJanuxServer` composes these; import them directly only to embed Janux in another server or to test pieces in isolation.
+
+| Export | Signature | What it does |
+|---|---|---|
+| `collectApis(modules)` | `{ shop: mod } → ApiTool[]` | Turns `*.api.ts` module exports into namespaced tools (`api.shop.pay`). Rejects names containing `__`. |
+| `invokeApi(tool, input, ctx, origin, onAudit?)` | `→ Promise<result>` | The single dispatch pipeline: guard → validate input → `run` → validate output → audit. Agent-origin `forbidden` throws `JanuxIntentError`. |
+| `apiManifestTools(tools, ctx)` | `→ ManifestTool[]` | Projects api() tools into the manifest (non-`forbidden` only, with JSON Schema input). |
+| `isApi(value)` | `→ value is ApiDef` | Type guard for an `api()` result. |
+| `createFsRouter(dir)` | `→ { routes, match(pathname) }` | The file-system router. `match` returns `{ filePath, pattern, params }`, static routes preferred over dynamic. |
+| `buildLlmsTxt(config, pages, tools)` | `→ string` | Renders the `llms.txt` body — pages plus the agent tool index (`confirm` tools annotated). |
+| `createAgentAuth(config)` | `→ { policy, identify(req) }` | Web Bot Auth verifier. `identify` returns `{ verified, keyId } | { verified: false } | null` (unsigned). |
+| `htmlDocument(options)` | `ShellOptions → string` | Wraps rendered `html` into the full document shell: snapshot scripts, island module map, stylesheets, favicon, i18n payload. |

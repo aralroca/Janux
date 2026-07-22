@@ -88,6 +88,21 @@ export default defineConfig({
 
 > A `"janux"` field in `package.json` still works as a deprecated fallback; `janux.config.ts` wins over it.
 
+### All config fields
+
+Everything is optional — the defaults are the [conventional layout](#project-conventions). Override a field only to move things off-convention. The Vite plugin accepts the same shape and wins over `janux.config.ts`.
+
+| Field | Default | Purpose |
+|---|---|---|
+| `title` | — | Default document title / shell title |
+| `llmsTxt` | off | `{ title?, description? }` — opt into serving `GET /llms.txt` |
+| `output` | `'bun'` | `'bun'` or `'static'` — see [output](#output) |
+| `routesDir` | `src/routes` | File-system routing root |
+| `serverDir` | `src/server` | Where `*.api.ts` modules are discovered |
+| `clientEntry` | `src/client.ts` | Client `boot()` entry; absent → fully static app, 0 KB JS |
+| `agentModule` | `src/agent.ts` | `defineAgent()` default export; absent → the built-in default agent |
+| `storesModule` | `src/stores.ts` | Store defs available during SSR |
+
 ## output
 
 | Value | Meaning |

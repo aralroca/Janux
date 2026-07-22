@@ -65,3 +65,15 @@ The three projections, from this single definition:
 ## Using components
 
 Islands mount by using the definition as JSX inside a route: `<Cart />`. Register the definition in `src/client.ts` via `boot({ defs: [Cart] })` so the client can resume it.
+
+## Passing data in: props vs. islands
+
+Static components are plain functions, so **prop drilling works exactly as you'd expect** — pass anything down through as many layers as you like; it all runs on the server and disappears from the shipped HTML.
+
+An island is different: its `view` receives the runtime `bag`, not a props object. It accepts only a fixed set of attributes at the call site — `key`/`id` (identity), `initial` (seed its typed state), and the `persist`/`eager` behavior flags:
+
+```tsx
+<Cart key="checkout" initial={{ items: [] }} persist />
+```
+
+Any *other* attribute is silently ignored — `<Cart discount={0.1} />` compiles but never reaches the island. This is deliberate: an island's only inputs are its schema-typed `state` and the [stores](/docs/guide/stores) and [events](/docs/recipes/cross-island-events) it declares, because those are the JSON-serializable channels that resume and the agent surface depend on. To feed one island from another, share a store or emit an event — not a prop. See [Core API → Island props](/docs/reference/core-api#island-props) for the full table and the type-signature caveat.

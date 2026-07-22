@@ -47,3 +47,15 @@ Responses:
 ## Custom mounts (advanced)
 
 An `AgentMount` is `{ handle(req, deps): Promise<Response> }` where `deps` gives you `tools`, `invoke(tool, input)` and `manifestFor(path)` — enough to bring your own loop (or a full framework like Mastra) behind the same endpoint. Pass it as `createJanuxServer({ agent })`.
+
+## Low-level exports (advanced)
+
+The built-in loop is composed from these; import them to build a custom mount or reuse a piece.
+
+| Export | Signature | What it does |
+|---|---|---|
+| `resolveModel(explicit, env)` | `→ ResolvedModel \| undefined` | Runs the [resolution order](#model-resolution-order) against an env bag. `ResolvedModel` is `{ provider, model, apiKey, source }`; `undefined` means nothing was configured. |
+| `setupCard()` | `→ { type: 'setup', message }` | The exact `setup` response the endpoint returns when no model resolves — names the variables to set. |
+| `callProvider(model, system, messages, tools, fetch)` | `→ Promise<ProviderReply>` | One provider round-trip, normalized across Anthropic / OpenAI / Google into a `ProviderReply` (`text` and/or `toolCalls`). The `fetch` seam makes it testable and edge-portable. |
+
+For the **browser-side** copilot runtime (`@janux/agent/local`: `createCopilot`, `localLlm`, `serverLlm`, `defineTool`, …), see [Local-model copilot](/docs/recipes/local-model-copilot).

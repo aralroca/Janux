@@ -27,6 +27,26 @@ The `bag` passed to `view`, `run`, `ready`, lifecycle and `on` handlers:
 { state, derived, sources, intents, use, emit, ctx, input?, event? }
 ```
 
+### Island props
+
+An island is not a function of props the way a [static component](/docs/guide/components) is — its `view` receives the `bag`, never a props object. The renderer recognizes a **fixed, closed set** of attributes at the call site; everything else is ignored:
+
+| Prop | Type | Effect |
+|---|---|---|
+| `key` | `string` | Identity of this instance — the `#<key>` suffix in `ui://<name>#<key>`. As a JSX `key` it also re-keys the island (`<Cart key={locale} />` remounts on change). |
+| `id` | `string` | Alternative identity when you're not using JSX `key`. `key` wins if both are set. |
+| `initial` | matches `state` schema | Seeds this instance's state (validated against `state`). SSR `initialState` for the same uri wins over it; when neither is given, [`buildDefault(state)`](/docs/reference/schema-api#builddefaulttype) boots it. |
+| `persist` | boolean | Keep the live instance across SPA navigations (`data-jx-persist`). |
+| `eager` | boolean | Mount on load/navigation without waiting for interaction (`data-jx-eager`). |
+
+```tsx
+<Cart key="checkout" initial={{ items: [] }} persist />
+```
+
+There is **no arbitrary prop drilling into an island**: passing data down means seeding `initial`, or sharing it through a [store](/docs/guide/stores) (`use`) or [cross-island events](/docs/recipes/cross-island-events) (`emits`/`on`) — the same JSON-serializable channels the agent surface and resume rely on. Static components above the island still drill props normally.
+
+> **Caveat:** `ComponentTag` carries a phantom `(props?) => JanuxNode` call signature so TSX accepts `<Cart />` as an element. It is intentionally loose: `<Cart anything={x} />` type-checks, but any attribute outside the table above is silently dropped at runtime. If a value must reach the island, it goes through `initial`, a store or an event — not a prop.
+
 ## store(def)
 
 Same as `component` minus `view`. Projects as `store://<name>`. `scope: 'app' | 'route'` (default `'app'`).
@@ -75,3 +95,70 @@ cart.snapshot();              // plain JSON state
 cart.resource();              // the agent projection
 await cart.dispose();
 ```
+
+## Low-level exports (advanced)
+
+These come out of `janux` too. You rarely import them directly — the CLI, the Vite plugin and [`@janux/server`](/docs/reference/server-api) wire them for you — but they're the seams for embedding Janux, testing, or building your own server.
+
+### renderToString(node, options?)
+
+Renders a page (or any node) to HTML on the server. Returns a `RenderResult`:
+
+```ts
+const { html, registry, snapshots, i18nKeys } = await renderToString(<ShopPage />, { ctx });
+```
+
+| Field | Meaning |
+|---|---|
+| `html` | The rendered markup |
+| `registry` | The mounted islands + stores discovered during render |
+| `snapshots` | Per-island state snapshots (`{ uri, state }`) — what the client resumes from, no hydration replay |
+| `i18nKeys` | Exactly the i18n keys the page's islands resolved, so the page ships only those messages |
+
+`options` accepts `{ ctx, bus, storeDefs, initialState }` — the same wiring `createJanuxServer` supplies per request (`initialState` reseeds islands by uri when resuming).
+
+### buildManifest(entries, ctx?)
+
+Builds the agent-facing manifest for a set of mounted defs — the projection external MCP clients and `GET /_janux/manifest` consume:
+
+```ts
+const manifest = buildManifest([{ def: Cart, key: 'default', instance }], ctx);
+// { janux: '0.1', resources: [...], tools: [...], events: [...] }
+```
+
+`resources` are the `ui://`/`store://` snapshots (with JSON Schema for typed state), `tools` are the non-`forbidden` intents (guard, input schema, `ready`), `events` are the union of every `emits` key. `resolveGuard(def, ctx)` is the same helper it uses to collapse function guards to a concrete `'auto' | 'confirm' | 'forbidden'`.
+
+### createBus()
+
+The typed event bus that carries component, store and server events. One is created per request/client; you only construct your own for tests or a custom runtime.
+
+```ts
+const bus = createBus();
+const off = bus.on('inventory.changed', (payload) => { /* ... */ });
+bus.emit('inventory.changed', { sku: 'p1' });
+off();
+```
+
+### JanuxIntentError
+
+Thrown by intent dispatch when a call is refused. `error.code` is one of `'forbidden' | 'not_ready' | 'invalid_input' | 'unknown_intent'` — the same codes the HTTP layer maps to 4xx envelopes.
+
+### AuditEntry / Proposal
+
+The shapes the `onAudit` and `onProposal` hooks receive:
+
+```ts
+type AuditEntry = { tool: string; origin: 'human' | 'agent'; guard: GuardValue;
+                    input: unknown; ok: boolean; error?: string; at: number; agent?: string };
+type Proposal   = { id: string; tool: string; input: unknown; execute: () => Promise<unknown> };
+```
+
+`AuditEntry.agent` is the verified Web Bot Auth key id, present only for authenticated external agents. A `Proposal` is what a `confirm` guard produces; `execute()` runs it exactly once (the `/_janux/approve` endpoint calls it for you).
+
+### parseDuration(input)
+
+Parses the duration strings used by `every()` and `effect({ debounce })` into milliseconds — `'300ms'`, `'2s'`, `'5m'`, `'1h'`. Throws on anything else. Exposed mostly so custom refresh/debounce logic can share one parser.
+
+### JSX runtime
+
+`Fragment`, `jsx`, `jsxs` and the `JanuxNode` type are the automatic-runtime targets your `.tsx` compiles to (`jsxImportSource: 'janux'`). You import them only if you emit JSX calls by hand; normal components never touch them.
