@@ -1,6 +1,6 @@
 {
   "name": "@janux/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Janux CLI: dev (Vite), build (client bundle) and start (production server on Bun).",
   "repository": {
     "type": "git",

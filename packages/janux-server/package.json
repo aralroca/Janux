@@ -1,6 +1,6 @@
 {
   "name": "@janux/server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Janux fullstack server: SSR, api() RPC endpoints that double as agent tools, manifest service and MCP surface.",
   "repository": {
     "type": "git",

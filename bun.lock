@@ -11,7 +11,7 @@
     },
     "apps/docs": {
       "name": "janux-docs",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
@@ -29,7 +29,7 @@
     },
     "examples/shop": {
       "name": "janux-example-shop",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
@@ -39,14 +39,14 @@
     },
     "packages/create-janux": {
       "name": "create-janux",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "bin": {
         "create-janux": "./bin.ts",
       },
     },
     "packages/janux": {
       "name": "janux",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "diff-dom-streaming": "^0.6.6",
       },
@@ -56,7 +56,7 @@
     },
     "packages/janux-agent": {
       "name": "@janux/agent",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@janux/server": "workspace:*",
         "janux": "workspace:*",
@@ -64,7 +64,7 @@
     },
     "packages/janux-cli": {
       "name": "@janux/cli",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "bin": {
         "janux": "./bin.ts",
       },
@@ -78,7 +78,7 @@
     },
     "packages/janux-server": {
       "name": "@janux/server",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "janux": "workspace:*",
         "web-bot-auth": "^0.1.3",
@@ -86,7 +86,7 @@
     },
     "packages/janux-tailwind": {
       "name": "@janux/tailwind",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@tailwindcss/postcss": "^4.0.0",
         "tailwindcss": "^4.0.0",
@@ -94,7 +94,7 @@
     },
     "packages/janux-vite": {
       "name": "@janux/vite",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@janux/agent": "workspace:*",
         "@janux/server": "workspace:*",
