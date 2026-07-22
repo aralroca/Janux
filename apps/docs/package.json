@@ -12,8 +12,9 @@
     }
   },
   "scripts": {
-    "dev": "janux dev",
-    "build": "janux build",
+    "build:index": "bun scripts/build-search-index.ts",
+    "dev": "bun run build:index && janux dev",
+    "build": "bun run build:index && janux build",
     "start": "janux start"
   },
   "dependencies": {

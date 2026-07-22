@@ -35,6 +35,24 @@ function fillExamples(select: HTMLSelectElement): void {
   });
 }
 
+const EXPAND_CLASSES = ['expand-editor', 'expand-preview'] as const;
+
+/** ⛶ buttons: expand one pane to full width (click again to restore). */
+function wireExpand(): void {
+  const root = document.getElementById('pg-root')!;
+  const buttons = EXPAND_CLASSES.map((name) => document.getElementById(`pg-${name}`)!);
+
+  buttons.forEach((button, index) =>
+    button.addEventListener('click', () => {
+      const on = !root.classList.contains(EXPAND_CLASSES[index]!);
+
+      root.classList.remove(...EXPAND_CLASSES);
+      if (on) root.classList.add(EXPAND_CLASSES[index]!);
+      buttons.forEach((b, j) => b.setAttribute('aria-pressed', String(on && index === j)));
+    }),
+  );
+}
+
 function debounce(fn: () => void, ms: number): () => void {
   let timer: ReturnType<typeof setTimeout>;
 
@@ -51,6 +69,7 @@ export async function mountPlayground(): Promise<() => void> {
   const editor = await createEditor(els.editor, initial);
 
   fillExamples(els.example);
+  wireExpand();
 
   let frame: FrameHost;
   let pendingProposal: any;

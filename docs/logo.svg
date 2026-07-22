@@ -1,29 +1,17 @@
 <svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="jx-bg" x1="0" y1="0" x2="240" y2="240" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#1e1b4b"/>
-      <stop offset="1" stop-color="#4c1d95"/>
-    </linearGradient>
-    <linearGradient id="jx-face" x1="0" y1="40" x2="240" y2="200" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#a78bfa"/>
-      <stop offset="1" stop-color="#22d3ee"/>
-    </linearGradient>
-  </defs>
-
-  <!-- doorway / threshold -->
-  <rect x="16" y="16" width="208" height="208" rx="48" fill="url(#jx-bg)"/>
-  <rect x="30" y="30" width="180" height="180" rx="38" stroke="url(#jx-face)" stroke-opacity="0.25" stroke-width="2" fill="none"/>
+  <!-- tile -->
+  <rect x="16" y="16" width="208" height="208" rx="48" fill="#000000"/>
 
   <!-- the shared head: one column -->
-  <rect x="112" y="58" width="16" height="124" rx="8" fill="url(#jx-face)"/>
+  <rect x="112" y="58" width="16" height="124" rx="8" fill="#ffffff"/>
 
   <!-- human face, looking left: curved profile + round eye -->
   <path d="M112 70 C 74 76, 58 100, 58 120 C 58 140, 74 164, 112 170"
-        stroke="url(#jx-face)" stroke-width="12" stroke-linecap="round" fill="none"/>
-  <circle cx="84" cy="112" r="9" fill="#f5f3ff"/>
+        stroke="#ffffff" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <circle cx="84" cy="112" r="9" fill="#ffffff"/>
 
   <!-- agent face, looking right: angular profile + square eye -->
   <path d="M128 70 L 168 84 L 182 120 L 168 156 L 128 170"
-        stroke="url(#jx-face)" stroke-width="12" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
-  <rect x="148" y="104" width="17" height="17" rx="3" fill="#67e8f9"/>
+        stroke="#ffffff" stroke-width="12" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+  <rect x="148" y="104" width="17" height="17" rx="3" fill="#ffffff"/>
 </svg>

@@ -9,3 +9,4 @@ out/
 !.env.example
 coverage/
 PLAN-*.md
+apps/docs/public/search-index.json

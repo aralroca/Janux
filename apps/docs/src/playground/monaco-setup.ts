@@ -17,12 +17,35 @@ async function installTsxHighlighting(monaco: any): Promise<void> {
     grammar.name === 'tsx' ? { ...grammar, name: 'typescript', aliases: [] } : grammar,
   );
   const highlighter = await createHighlighterCore({
-    themes: [import('@shikijs/themes/one-dark-pro')],
+    themes: [import('@shikijs/themes/github-light'), import('@shikijs/themes/github-dark')],
     langs,
     engine: createOnigurumaEngine(import('shiki/wasm')),
   });
 
   shikiToMonaco(highlighter, monaco);
+}
+
+const MONACO_THEMES = { light: 'github-light', dark: 'github-dark' } as const;
+
+function currentTheme(): string {
+  const forced = document.body.dataset.theme;
+  const dark = forced ? forced === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+
+  return dark ? MONACO_THEMES.dark : MONACO_THEMES.light;
+}
+
+/** Keeps Monaco in sync with the site theme (toggle island + OS preference). */
+function followPageTheme(monaco: any, editor: any): void {
+  const apply = () => monaco.editor.setTheme(currentTheme());
+  const media = matchMedia('(prefers-color-scheme: dark)');
+  const observer = new MutationObserver(apply);
+
+  observer.observe(document.body, { attributeFilter: ['data-theme'] });
+  media.addEventListener('change', apply);
+  editor.onDidDispose(() => {
+    observer.disconnect();
+    media.removeEventListener('change', apply);
+  });
 }
 
 export async function createEditor(host: HTMLElement, initial: string) {
@@ -46,13 +69,15 @@ export async function createEditor(host: HTMLElement, initial: string) {
   const model = monaco.editor.createModel(initial, 'typescript', uri);
   const editor = monaco.editor.create(host, {
     model,
-    theme: 'one-dark-pro',
+    theme: currentTheme(),
     minimap: { enabled: false },
     fontSize: 13.5,
     automaticLayout: true,
     scrollBeyondLastLine: false,
     padding: { top: 12 },
   });
+
+  followPageTheme(monaco, editor);
 
   return editor;
 }

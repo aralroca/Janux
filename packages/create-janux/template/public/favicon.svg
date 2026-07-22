@@ -1,10 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#1e1b4b" />
-  <path d="M18.5 4 8 18h6l-1.5 10L23 14h-6z" fill="url(#g)" />
-  <defs>
-    <linearGradient id="g" x1="8" y1="4" x2="23" y2="28" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#a78bfa" />
-      <stop offset="1" stop-color="#22d3ee" />
-    </linearGradient>
-  </defs>
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    svg { color: #000000; }
+    @media (prefers-color-scheme: dark) { svg { color: #ffffff; } }
+  </style>
+
+  <!-- the shared head: one column -->
+  <rect x="112" y="46" width="16" height="148" rx="8" fill="currentColor"/>
+
+  <!-- human face, looking left: curved profile + round eye -->
+  <path d="M112 60 C 66 67, 46 96, 46 120 C 46 144, 66 173, 112 180"
+        stroke="currentColor" stroke-width="16" stroke-linecap="round" fill="none"/>
+  <circle cx="80" cy="110" r="11" fill="currentColor"/>
+
+  <!-- agent face, looking right: angular profile + square eye -->
+  <path d="M128 60 L 176 77 L 193 120 L 176 163 L 128 180"
+        stroke="currentColor" stroke-width="16" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+  <rect x="152" y="99" width="21" height="21" rx="3" fill="currentColor"/>
 </svg>
