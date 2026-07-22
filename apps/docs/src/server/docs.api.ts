@@ -16,6 +16,7 @@ export const SECTIONS: Record<string, string[]> = {
     'events-and-interactions',
     'stores',
     'ssr-and-resumability',
+    'navigation',
     'api-rpc',
     'agent-and-copilot',
     'cli-and-deployment',
