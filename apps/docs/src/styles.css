@@ -27,7 +27,7 @@
   --danger-text: light-dark(#991b1b, #fca5a5);
   --topbar-h: 57px;
   --sidebar-w: 264px;
-  /* Next.js-style centered frame: everything lives inside --frame-w. */
+  /* Centered frame: everything lives inside --frame-w. */
   --frame-w: 1400px;
   --frame-pad: max(0px, calc((100vw - var(--frame-w)) / 2));
   --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
@@ -859,6 +859,93 @@ body[data-theme='dark'] .hero-janus {
   color: var(--bg);
   font-weight: 600;
   cursor: pointer;
+}
+
+.copilot-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+}
+
+.copilot-setup p {
+  margin: 0;
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.copilot-setup button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  background: var(--heading);
+  color: var(--bg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.copilot-setup button.secondary {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--heading);
+}
+
+.copilot-setup progress {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.copilot-panel .chat li.thinking {
+  color: var(--text-soft, var(--text));
+  font-style: italic;
+}
+
+.copilot-panel .chat li.thinking::after {
+  content: '…';
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  animation: copilot-ellipsis 1.2s steps(4, end) infinite;
+  width: 0;
+}
+
+@keyframes copilot-ellipsis {
+  to {
+    width: 1.2em;
+  }
+}
+
+/* Markdown formatting inside answers (tables, code, lists). */
+.copilot-panel .chat li :is(p, ul, ol, pre, table) {
+  margin: 0 0 8px;
+}
+
+.copilot-panel .chat li :is(p, ul, ol, pre, table):last-child {
+  margin-bottom: 0;
+}
+
+.copilot-panel .chat li pre {
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--bg-soft);
+  overflow-x: auto;
+  font-size: 12.5px;
+}
+
+.copilot-panel .chat li code {
+  font-size: 12.5px;
+}
+
+.copilot-panel .chat li table {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.copilot-panel .chat li :is(th, td) {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  text-align: left;
 }
 
 /* ── Playground ─────────────────────────────────────────────────── */

@@ -8,6 +8,8 @@ import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } fro
 
 export interface AgentMount {
   handle(req: Request, deps: AgentDeps): Promise<Response>;
+  /** One-turn LLM proxy for browser-side agent loops (`serverLlm()` from `@janux/agent/local`). */
+  handleLlm?(req: Request): Promise<Response>;
 }
 
 export interface AgentDeps {
@@ -218,6 +220,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
     }
     if (pathname === '/_janux/manifest') {
       return json(await manifestFor(url.searchParams.get('path') ?? '/', await resolveCtx(req)));
+    }
+    if (pathname === '/_janux/llm' && options.agent?.handleLlm) {
+      return options.agent.handleLlm(req);
     }
     if (pathname === '/_janux/agent' && options.agent) {
       const ctx = await ctxWithAgent(req);

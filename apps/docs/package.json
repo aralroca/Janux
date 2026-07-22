@@ -18,6 +18,10 @@
     "start": "janux start"
   },
   "dependencies": {
+    "@aralroca/gui-agent": "^0.5.0",
+    "@browser-ai/transformers-js": "^2.2.2",
+    "@huggingface/transformers": "^4.2.0",
+    "ai": "^6.0.0",
     "@janux/agent": "workspace:*",
     "@janux/cli": "workspace:*",
     "@janux/server": "workspace:*",

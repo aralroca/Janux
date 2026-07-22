@@ -70,6 +70,7 @@ export const SECTIONS: SectionDef[] = [
           'cross-island-events',
           'deploying',
           'external-mcp-clients',
+          'local-model-copilot',
           'debugging-webmcp',
         ],
       },

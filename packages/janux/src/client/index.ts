@@ -16,3 +16,4 @@ export {
   type WebMCPHandle,
   type WebMCPToolDescriptor,
 } from './webmcp';
+export { collectPageLinks, createNavigateTool, type PageLink } from './navigate-tool';

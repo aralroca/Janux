@@ -14,11 +14,30 @@
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./local": "./src/local/index.ts"
   },
   "dependencies": {
     "janux": "workspace:*",
-    "@janux/server": "workspace:*"
+    "@janux/server": "workspace:*",
+    "@aralroca/gui-agent": "^0.5.0",
+    "ai": "^6.0.0"
+  },
+  "peerDependencies": {
+    "@browser-ai/transformers-js": ">=2.2.0",
+    "@huggingface/transformers": ">=3.7.0"
+  },
+  "peerDependenciesMeta": {
+    "@browser-ai/transformers-js": {
+      "optional": true
+    },
+    "@huggingface/transformers": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@browser-ai/transformers-js": "^2.2.2",
+    "@happy-dom/global-registrator": "^15.11.0"
   },
   "homepage": "https://github.com/aralroca/Janux#readme",
   "bugs": "https://github.com/aralroca/Janux/issues",

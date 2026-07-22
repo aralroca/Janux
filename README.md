@@ -139,7 +139,7 @@ Zero config — first match wins:
 
 ## Documentation
 
-The docs site is **built with Janux itself** — Next.js-docs-style light/dark theme, ⌘K full-text search, an interactive playground, `llms.txt` for agents, and an "Ask AI" copilot running on the same agent bridge every Janux app gets:
+The docs site is **built with Janux itself** — polished light/dark theme, ⌘K full-text search, an interactive playground, `llms.txt` for agents, and an "Ask AI" copilot running on the same agent bridge every Janux app gets:
 
 <p align="center">
   <picture>

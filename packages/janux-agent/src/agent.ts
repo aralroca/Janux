@@ -1,4 +1,5 @@
 import type { AgentDeps, AgentMount } from '@janux/server';
+import { createLlmHandler } from './llm-endpoint';
 import { resolveModel, setupCard, type ModelEnv } from './model';
 import { callProvider, type AgentTool, type ChatMessage, type FetchLike, type ToolCall } from './providers';
 
@@ -83,6 +84,7 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
   const maxTurns = config.maxTurns ?? 6;
 
   return {
+    handleLlm: createLlmHandler(config.model, env, fetchImpl),
     async handle(req: Request, deps: AgentDeps): Promise<Response> {
       const model = resolveModel(config.model, env);
 

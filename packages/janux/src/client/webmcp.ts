@@ -1,5 +1,6 @@
 import type { Manifest, ManifestTool } from '../manifest';
 import type { JanuxBridge } from './bridge';
+import { createNavigateTool } from './navigate-tool';
 
 export interface WebMCPToolDescriptor {
   name: string;
@@ -133,12 +134,15 @@ export function installWebMCP(bridge: JanuxBridge): WebMCPHandle {
 
   const run = async (): Promise<void> => {
     const tools = mergedTools(bridge, await routeTools());
+    // An app tool named `navigate` owns the name; the built-in steps aside.
+    const taken = tools.some((tool) => tool.name.replace(/[^\w-]/g, '_') === 'navigate');
+    const descriptors = [...(taken ? [] : [createNavigateTool()]), ...tools.map((tool) => descriptorFor(tool, bridge))];
 
     controller?.abort();
     controller = new AbortController();
-    for (const tool of tools) {
+    for (const descriptor of descriptors) {
       try {
-        await context.registerTool(descriptorFor(tool, bridge), { signal: controller.signal });
+        await context.registerTool(descriptor, { signal: controller.signal });
       } catch {
         // One rejected registration (schema quirks, duplicate names…) must not drop the rest.
       }
