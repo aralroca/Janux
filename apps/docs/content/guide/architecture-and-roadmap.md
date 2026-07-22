@@ -7,10 +7,10 @@ The design source of truth is [RFC 0001](https://github.com/aralroca/Janux/issue
 | Package | Responsibility |
 |---|---|
 | `janux` | Core: schema types, signals, reactive state (mutation gate), component/store runtime (intents, guards, effects, sources, events, `settled`), server renderer with islands, manifest builder, client resume runtime + gui-agent bridge |
-| `@janux/server` | `api()` RPC, file-system router, HTML shell (0-JS guarantee), `/_janux/*` endpoints, proposals |
+| `@janux/server` | `api()` RPC, file-system router, HTML shell (0-JS guarantee), `/_janux/*` endpoints, proposals, `llms.txt` index, Web Bot Auth (RFC 9421) agent identity |
 | `@janux/agent` | Model resolution (zero config), Anthropic/OpenAI/Google providers, the ui/api tool loop |
 | `@janux/vite` | Vite plugin: JSX config, SSR bridge, api client stubs via **SWC** |
-| `@janux/cli` | `janux dev/build/start` |
+| `@janux/cli` | `janux dev/build/start/verify/eval`; `output: "static"` prerender |
 | `create-janux` | App scaffolder |
 
 ## Design invariants
@@ -30,7 +30,7 @@ The design source of truth is [RFC 0001](https://github.com/aralroca/Janux/issue
 
 ## Testing
 
-The framework is developed test-first with `bun:test` + happy-dom (~80 tests):
+The framework is developed test-first with `bun:test` + happy-dom (~140 tests):
 
 - Resume-without-hydration is asserted (zero component code until interaction).
 - Guard semantics (auto/confirm/forbidden × human/agent) are covered at every layer: instance, HTTP, bridge, agent loop.

@@ -29,6 +29,9 @@ export declare namespace JSX {
   interface IntrinsicElements {
     [element: string]: Record<string, unknown>;
   }
+  interface IntrinsicAttributes {
+    key?: string | number;
+  }
   interface ElementChildrenAttribute {
     children: unknown;
   }

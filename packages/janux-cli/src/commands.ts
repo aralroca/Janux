@@ -79,6 +79,35 @@ export async function build({ root }: CliCommand): Promise<void> {
   else console.log('janux build: nothing to bundle — fully static app (0 KB JS).');
   if (tailwind === undefined) copyStylesheet(app.stylesheet, root);
   copyPublicDir(root);
+  if (app.output === 'static') await prerenderStatic(root);
+}
+
+async function writePage(server: { fetch(req: Request): Promise<Response> }, outDir: string, page: string): Promise<void> {
+  const response = await server.fetch(new Request(`http://localhost${page}`));
+  const dir = join(outDir, page.slice(1));
+
+  mkdirSync(dir, { recursive: true });
+  await Bun.write(join(dir, 'index.html'), await response.text());
+}
+
+/** `output: "static"`: prerenders every concrete page (dynamic routes via `staticParams`) into dist/client. */
+async function prerenderStatic(root: string): Promise<void> {
+  const server = createJanuxServer(await prodServerOptions(root));
+  const pages = await server.listPages();
+  const outDir = join(root, 'dist/client');
+  const concrete = pages.filter((page) => !page.includes('['));
+  const skipped = pages.filter((page) => page.includes('['));
+
+  skipped.forEach((page) => console.log(`janux build: skipped ${page} — dynamic route without staticParams.`));
+  await Promise.all(concrete.map((page) => writePage(server, outDir, page)));
+  await writeLlmsTxt(server, outDir);
+  console.log(`janux build: prerendered ${concrete.length} pages (output: static).`);
+}
+
+async function writeLlmsTxt(server: { fetch(req: Request): Promise<Response> }, outDir: string): Promise<void> {
+  const response = await server.fetch(new Request('http://localhost/llms.txt'));
+
+  if (response.status === 200) await Bun.write(join(outDir, 'llms.txt'), await response.text());
 }
 
 function copyStylesheet(stylesheet: string | undefined, root: string): void {
@@ -96,7 +125,7 @@ function copyPublicDir(root: string): void {
   cpSync(publicDir, join(root, 'dist/client'), { recursive: true });
 }
 
-async function prodServerOptions(root: string): Promise<ServerOptions> {
+export async function prodServerOptions(root: string): Promise<ServerOptions> {
   const app = resolveAppConfig(root);
   const apiModules = Object.fromEntries(
     await Promise.all(
@@ -114,6 +143,7 @@ async function prodServerOptions(root: string): Promise<ServerOptions> {
     runtimeUrl: existsSync(join(root, 'dist/client/client.js')) ? '/client.js' : undefined,
     stylesheets: app.stylesheet ? ['/styles.css'] : [],
     title: app.title,
+    llmsTxt: app.llmsTxt,
   };
 }
 

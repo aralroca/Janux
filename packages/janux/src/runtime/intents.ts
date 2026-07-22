@@ -10,6 +10,8 @@ export interface AuditEntry {
   ok: boolean;
   error?: string;
   at: number;
+  /** Verified Web Bot Auth key id, when the caller is an authenticated agent. */
+  agent?: string;
 }
 
 export interface Proposal {

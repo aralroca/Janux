@@ -16,7 +16,7 @@ Where Janux sits relative to the tools you already know. Every framework here is
 
 - **vs React/Next** — React made views declarative but left effects opaque and agents out entirely. Janux declares the component's whole life (state, effects, sources, intents) so both the runtime and the agent can reason about it.
 - **vs Qwik** — same resumability goal, different price. Qwik serializes closures (QRLs, `$` boundaries); Janux constrains state to schema-typed JSON and behavior to named sections, so there's nothing to serialize but data.
-- **vs Astro** — Astro perfected content sites with islands; its islands are opaque by design. Janux islands carry a second face: every island is also a resource + tools.
+- **vs Astro** — Astro perfected content sites with islands; its islands are opaque by design. Janux islands carry a second face (every island is also a resource + tools), and `output: "static"` ships to the same static hosts.
 - **vs HTMX** — shared spirit (server-first, HTML over the wire, minimal JS) — plus typed contracts, guards and an agent surface HTMX has no vocabulary for.
 - **vs CopilotKit / assistant-ui** — those add a copilot *next to* your app and you hand-write the tools. In Janux the copilot's tools **are** your components; there is no second artifact to keep in sync.
 

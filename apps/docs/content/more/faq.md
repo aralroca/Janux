@@ -32,6 +32,10 @@ i18n: your strings, your call — state or ctx. Dark mode: a store (`theme`) rea
 
 `janux start` executes TSX directly — no server build, no transpile step drift. Dev uses Vite for HMR and the client pipeline. You can still deploy anywhere a container runs.
 
+## Can I deploy without a server?
+
+Yes — set `output: "static"` in your app config and `janux build` prerenders every page (dynamic routes enumerated by `staticParams`) plus `llms.txt` into `dist/client`, ready for any static host. You keep SSR HTML and islands; you give up everything under `/_janux/*` — api tools, manifest, proposals, copilot. See [Deploying → Static export](/docs/recipes/deploying).
+
 ## Where's the Mastra/memory/RAG story?
 
 `defineAgent` is forward-compatible with a richer runtime behind the same surface (see [architecture & roadmap](/docs/guide/architecture-and-roadmap)). Today's loop is deliberately small and provider-direct.

@@ -110,7 +110,9 @@ Server ── @janux/server (SSR, api(), manifest, proposals)
 
 - **SSR**: sources load server-side; islands arrive with real content plus a JSON state snapshot.
 - **Resume**: `boot()` indexes islands, installs two delegated listeners, and mounts an island **only** on first interaction or agent call — from the snapshot, morphing the SSR DOM in place.
-- **Agents**: `GET /_janux/manifest?path=/shop` for discovery; `POST /_janux/api/*` for server tools; `window.janux.call()` for UI tools; `POST /_janux/approve` for proposals.
+- **Agents**: `GET /_janux/manifest?path=/shop` for discovery; `POST /_janux/api/*` for server tools; `window.janux.call()` for UI tools; `POST /_janux/approve` for proposals. Opt-in `GET /llms.txt` site index (dynamic routes expanded via `staticParams`) and Web Bot Auth (RFC 9421) agent identity.
+- **CI for the agent surface**: `janux verify` fails the build on undescribed agent-reachable tools; `janux eval` replays scripted agent tasks (with real human-in-the-loop approve steps) against a live app.
+- **Static export**: `output: "static"` prerenders every page into `dist/client` — deploy docs/marketing sites to any static host, no server.
 
 ## Configure the copilot model
 
@@ -126,10 +128,10 @@ Zero config — first match wins:
 | Package | What |
 |---|---|
 | [`janux`](packages/janux) | Core: schema, signals, component runtime, SSR islands, manifest, client resume + bridge |
-| [`@janux/server`](packages/janux-server) | api() RPC, router, HTML shell, `/_janux/*` endpoints |
+| [`@janux/server`](packages/janux-server) | api() RPC, router, HTML shell, `/_janux/*` endpoints, llms.txt, Web Bot Auth |
 | [`@janux/agent`](packages/janux-agent) | Model resolution, providers, tool loop |
 | [`@janux/vite`](packages/janux-vite) | Vite plugin (SWC api stubs, SSR bridge) |
-| [`@janux/cli`](packages/janux-cli) | `janux dev / build / start` |
+| [`@janux/cli`](packages/janux-cli) | `janux dev / build / start / verify / eval` |
 | [`create-janux`](packages/create-janux) | Scaffolder |
 
 ## Documentation

@@ -1,5 +1,6 @@
 import type {
   ComponentDef,
+  ComponentTag,
   EffectDef,
   IntentDef,
   RefreshPolicy,
@@ -16,13 +17,13 @@ function assertName(name: unknown, kind: string): void {
 }
 
 /** Defines a bifacial component: view for humans, resource+tools for agents. */
-export function component(def: ComponentInput): ComponentDef {
+export function component(def: ComponentInput): ComponentTag {
   assertName(def.name, 'component()');
   if (typeof def.view !== 'function') {
     throw new Error(`Janux: component "${def.name}" requires a view`);
   }
 
-  return Object.freeze({ ...def, kind: 'component' as const });
+  return Object.freeze({ ...def, kind: 'component' as const }) as ComponentTag;
 }
 
 /** Defines a shared store: a bifacial component without a view. */

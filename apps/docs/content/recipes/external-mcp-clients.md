@@ -4,8 +4,11 @@ Every Janux app is an MCP-style surface over HTTP. Your copilot uses it — but 
 
 ## Discovery
 
+Start site-wide (opt-in via the `llmsTxt` server option): `GET /llms.txt` is a markdown index of every page — dynamic routes list their real URLs via `staticParams`, not `[id]` patterns — and every server tool, with approval-gated tools annotated. From there, drill into a route for full schemas:
+
 ```bash
-curl -s 'https://your.app/_janux/manifest?path=/shop' | jq
+curl -s 'https://your.app/llms.txt'                          # pages + tools overview
+curl -s 'https://your.app/_janux/manifest?path=/shop' | jq   # full schemas for one route
 ```
 
 ```jsonc
@@ -20,6 +23,8 @@ curl -s 'https://your.app/_janux/manifest?path=/shop' | jq
 ```
 
 The manifest is **per route and per context**: tools an unauthorized context may not call simply aren't listed.
+
+To identify your client to the app (rate limits, per-agent policies, audit), sign requests with Web Bot Auth (RFC 9421) — the server verifies them into `ctx.agent` via `agents.webBotAuth`. See the [Server API](/docs/reference/server-api).
 
 ## Calling server tools
 

@@ -1,8 +1,10 @@
-import { buildManifest, renderToString, type ComponentDef, type Ctx } from 'janux';
+import { buildManifest, renderToString, type AuditEntry, type ComponentDef, type Ctx } from 'janux';
 import { assertValidInput, errorStatus, evictOldestProposal, json, type PendingApiProposal } from './http';
-import { apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
-import { createFsRouter } from './router';
+import { apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
+import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
+import { createFsRouter, type Route } from './router';
 import { htmlDocument } from './html-shell';
+import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 
 export interface AgentMount {
   handle(req: Request, deps: AgentDeps): Promise<Response>;
@@ -27,6 +29,9 @@ export interface ServerOptions {
   title?: string;
   stylesheets?: string[];
   favicon?: string;
+  llmsTxt?: LlmsTxtConfig;
+  agents?: AgentsConfig;
+  onAudit?: (entry: AuditEntry) => void;
 }
 
 async function resolveMeta(
@@ -41,6 +46,16 @@ async function resolveMeta(
   }
 }
 
+async function resolveStaticParams(rawParams: unknown): Promise<Array<Record<string, unknown>>> {
+  try {
+    const value = typeof rawParams === 'function' ? await rawParams() : rawParams;
+
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
 let proposalSeq = 0;
 
 /** The Janux fullstack server: pages, api() endpoints, manifest, proposals and the agent mount. */
@@ -51,6 +66,34 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const proposals = new Map<string, PendingApiProposal>();
 
   const resolveCtx = async (req: Request): Promise<Ctx> => (await options.ctxFor?.(req)) ?? {};
+
+  const agentAuth = options.agents ? createAgentAuth(options.agents) : undefined;
+
+  let llmsTxtBody: string | undefined;
+
+  const expandRoute = async (route: Route): Promise<string[]> => {
+    if (!route.pattern.includes('[')) return [route.pattern];
+    const module = (await loadRoute(route.filePath).catch(() => undefined)) as any;
+    const expanded = expandPattern(route.pattern, await resolveStaticParams(module?.staticParams));
+
+    return expanded.length > 0 ? expanded : [route.pattern];
+  };
+
+  const listPages = async (): Promise<string[]> => {
+    const fsPages = (await Promise.all(router?.routes.map(expandRoute) ?? [])).flat();
+
+    return [...Object.keys(options.routes ?? {}), ...fsPages];
+  };
+
+  const renderLlmsTxt = async (): Promise<string> =>
+    buildLlmsTxt({ title: options.title, ...options.llmsTxt }, await listPages(), apiManifestTools(apiTools, {}) as LlmsTxtTool[]);
+
+  const ctxWithAgent = async (req: Request): Promise<Ctx> => {
+    const ctx = await resolveCtx(req);
+    const identity = (await agentAuth?.identify(req)) ?? null;
+
+    return identity ? { ...ctx, agent: identity } : ctx;
+  };
 
   const findRoute = (pathname: string) => {
     if (options.routes?.[pathname]) {
@@ -92,7 +135,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
     if (!tool) throw Object.assign(new Error(`Unknown api tool "${name}"`), { code: 'invalid_input' });
 
-    return invokeApi(tool, input, ctx, 'agent');
+    return invokeApi(tool, input, ctx, 'agent', options.onAudit);
   };
 
   const handleApi = async (req: Request, name: string): Promise<Response> => {
@@ -101,7 +144,11 @@ export function createJanuxServer(options: ServerOptions = {}) {
     if (!tool) return json({ ok: false, error: `Unknown api "${name}"` }, 404);
     const origin = req.headers.get('x-janux-origin') === 'agent' ? 'agent' : 'human';
     const input = await req.json().catch(() => ({}));
-    const ctx = await resolveCtx(req);
+    const ctx = await ctxWithAgent(req);
+
+    if (origin === 'agent' && agentAuth?.policy === 'require' && !(ctx.agent as AgentIdentity | undefined)?.verified) {
+      return json({ ok: false, error: 'agent_required' }, 401);
+    }
 
     try {
       if (origin === 'agent' && resolveApiGuard(tool, ctx) === 'confirm') {
@@ -109,12 +156,13 @@ export function createJanuxServer(options: ServerOptions = {}) {
         const id = `prop_api_${(proposalSeq += 1)}`;
 
         evictOldestProposal(proposals);
-        proposals.set(id, { id, tool: tool.name, input: parsed, execute: () => invokeApi(tool, parsed, ctx, 'human') });
+        proposals.set(id, { id, tool: tool.name, input: parsed, execute: () => invokeApi(tool, parsed, ctx, 'human', options.onAudit) });
+        options.onAudit?.(apiAuditEntry(tool, origin, 'confirm', ctx, { input: parsed, ok: true }));
 
         return json({ ok: true, result: { status: 'proposal', id, tool: tool.name, input: parsed } });
       }
 
-      return json({ ok: true, result: await invokeApi(tool, input, ctx, origin) });
+      return json({ ok: true, result: await invokeApi(tool, input, ctx, origin, options.onAudit) });
     } catch (error) {
       return json({ ok: false, error: String(error) }, errorStatus(error));
     }
@@ -163,11 +211,16 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
       return json({ ok: id ? proposals.delete(id) : false });
     }
+    if (pathname === '/llms.txt' && options.llmsTxt) {
+      llmsTxtBody ??= await renderLlmsTxt();
+
+      return new Response(llmsTxtBody, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    }
     if (pathname === '/_janux/manifest') {
       return json(await manifestFor(url.searchParams.get('path') ?? '/', await resolveCtx(req)));
     }
     if (pathname === '/_janux/agent' && options.agent) {
-      const ctx = await resolveCtx(req);
+      const ctx = await ctxWithAgent(req);
 
       return options.agent.handle(req, {
         tools: apiTools,
@@ -179,5 +232,5 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return handlePage(req, pathname);
   };
 
-  return { fetch, apiTools, manifestFor };
+  return { fetch, apiTools, manifestFor, listPages };
 }

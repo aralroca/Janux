@@ -35,6 +35,47 @@ curl -s -X POST https://your.app/_janux/agent \
   -H 'content-type: application/json' -d '{"messages":[]}'   # text/setup, not 500
 ```
 
+## Static export (`output: "static"`)
+
+For sites whose pages don't depend on per-request state — documentation, marketing, blogs — you can skip the server entirely:
+
+```jsonc
+// package.json
+{
+  "janux": { "output": "static" }
+}
+```
+
+Now `janux build` also prerenders every page into `dist/client`:
+
+```
+dist/client/index.html                        # /
+dist/client/docs/guide/getting-started/index.html
+dist/client/llms.txt                          # agent index, emitted as a file
+dist/client/client.js, styles.css, ...        # islands still hydrate on interaction
+```
+
+Upload `dist/client` to any static host (GitHub Pages, Netlify, Cloudflare Pages, an S3 bucket) — no Bun, no Node, no server.
+
+### Dynamic routes need `staticParams`
+
+A file like `routes/docs/[section]/[slug].tsx` matches infinitely many URLs, so the build can't know which pages exist. Export `staticParams` to enumerate them — an array of param records, or a sync/async function returning one (resolved like `meta`):
+
+```tsx
+// routes/docs/[section]/[slug].tsx
+export function staticParams() {
+  return docIndex().map(({ section, slug }) => ({ section, slug }));
+}
+
+export default function DocPage({ params }) { ... }
+```
+
+Every record becomes a prerendered page (`{ section: 'guide', slug: 'getting-started' }` → `/docs/guide/getting-started`). Dynamic routes **without** `staticParams` are skipped with a build warning. The export also improves server apps: `llms.txt` lists the concrete pages instead of the raw `/docs/[section]/[slug]` pattern, so agents can navigate directly.
+
+### What you give up
+
+A static export is HTML + islands only. Everything under `/_janux/*` needs the server: `api()` endpoints, the manifest, proposals/approvals and the copilot. If your app uses those, deploy with the Dockerfile above instead — `output: "static"` is for sites, not apps.
+
 ## Scaling notes
 
 - The server is stateless per request **except** pending agent proposals (in-memory, capped at 100). Behind a load balancer, use sticky sessions for the copilot flow — or approve on the same page session, which is the normal UX anyway.

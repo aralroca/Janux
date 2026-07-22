@@ -3,6 +3,10 @@ import { DocsCopilot } from '../../../components/DocsCopilot';
 import { docContent, docIndex } from '../../../server/docs.api';
 import { renderMarkdown, type TocEntry } from '../../../server/markdown';
 
+export function staticParams() {
+  return docIndex().map(({ section, slug }) => ({ section, slug }));
+}
+
 export function meta({ params }: { params: { section: string; slug: string } }) {
   const markdown = docContent(params.section, params.slug);
   const title = markdown?.match(/^# (.+)$/m)?.[1];
