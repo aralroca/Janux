@@ -5,5 +5,13 @@ import { SearchModal } from './components/SearchModal';
 import { ThemeToggle } from './components/ThemeToggle';
 import { setupTocSpy } from './toc-spy';
 
-boot({ defs: [DocsCopilot, PlaygroundShell, SearchModal, ThemeToggle] });
+const client = boot({ defs: [DocsCopilot, PlaygroundShell, SearchModal, ThemeToggle], glow: true });
+
 setupTocSpy();
+
+document.addEventListener('keydown', function closeCopilotOnEscape(event) {
+  if (event.key !== 'Escape') return;
+  if (document.querySelector('dialog[open]')) return; // the ⌘K modal owns this Esc
+  if (!document.querySelector('.copilot.open')) return;
+  client.call('copilot.toggle').catch(console.error);
+});

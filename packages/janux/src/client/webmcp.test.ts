@@ -115,6 +115,27 @@ describe('WebMCP integration', () => {
     expect(context.listTools().map((tool) => tool.name)).toEqual(['next']);
   });
 
+  it('auto-registers the built-in navigate tool alongside manifest tools', async () => {
+    const client = await serveAndBoot();
+    const handle = installWebMCP(client);
+
+    await handle.sync();
+    expect(polyfillOf().listTools().map((tool) => tool.name)).toContain('navigate');
+  });
+
+  it('an app tool named navigate makes the built-in step aside', async () => {
+    manifestTools = [
+      { name: 'navigate', description: 'App-owned nav', guard: 'auto', input: { type: 'object', properties: { total: { type: 'number' } } } },
+    ];
+    const client = await serveAndBoot();
+    const handle = installWebMCP(client);
+
+    await handle.sync();
+    const navigate = polyfillOf().listTools().find((tool) => tool.name === 'navigate');
+
+    expect(navigate?.description).toContain('App-owned nav');
+  });
+
   it('registers route manifest tools plus live local tools, with sanitized names', async () => {
     const client = await serveAndBoot();
 

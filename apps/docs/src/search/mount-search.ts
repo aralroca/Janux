@@ -105,6 +105,10 @@ export function mountSearch(): () => void {
   refs.dialog.addEventListener('click', (event) => {
     if (event.target === refs.dialog) refs.dialog.close();
   }, { signal });
+  // Invariant: navigating (Enter, click, or an agent's navigate tool) closes the modal.
+  document.addEventListener('janux:navigate', (event) => {
+    if ((event as CustomEvent).detail?.phase === 'after' && refs.dialog.open) refs.dialog.close();
+  }, { signal });
 
   return () => controller.abort();
 }
