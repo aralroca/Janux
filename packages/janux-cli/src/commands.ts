@@ -169,6 +169,9 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
     i18n: i18nModule?.default,
     middleware: middlewareModule?.default,
     matchers: matchersModule,
+    httpHandlers: app.httpHandlersDir
+      ? { dir: app.httpHandlersDir, loadModule: (file) => import(file) as any }
+      : undefined,
     // Foreign runtime (react) resolved from the app root — see @janux/vite.
     foreignImport: (spec) => import(createRequire(join(root, 'package.json')).resolve(spec)),
   };

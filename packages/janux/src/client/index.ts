@@ -18,6 +18,7 @@ export {
 } from './webmcp';
 export { collectPageLinks, createNavigateTool, type PageLink } from './navigate-tool';
 export { persistStore, type PersistConfig, type StateStorage } from './persist';
+export { dropzone, type Dropzone, type DropzoneOptions } from './upload';
 export { urlState, type UrlStateHandle, type UrlStateOptions } from './url-state';
 export {
   query,

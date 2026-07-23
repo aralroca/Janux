@@ -43,6 +43,9 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     foreignImport: appForeignImport(vite.config.root),
     middleware: middlewareModule?.default as ServerOptions['middleware'],
     matchers: matchersModule as ServerOptions['matchers'],
+    httpHandlers: app.httpHandlersDir
+      ? { dir: app.httpHandlersDir, loadModule: (file) => vite.ssrLoadModule(file) as any }
+      : undefined,
   };
 }
 

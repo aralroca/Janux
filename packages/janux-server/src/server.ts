@@ -11,6 +11,7 @@ import {
   type RenderResult,
 } from 'janux';
 import { QueryClient } from 'janux/query';
+import { createHttpHandlers, type HandlerModule } from './http-handlers';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
 import type { ShellI18n } from './html-shell';
 import { assertValidInput, errorStatus, evictOldestProposal, json, type PendingApiProposal } from './http';
@@ -55,6 +56,8 @@ export interface ServerOptions {
   matchers?: Record<string, (value: string) => boolean>;
   /** Runs before routing; returning a Response short-circuits the request. */
   middleware?: (req: Request) => Response | undefined | Promise<Response | undefined>;
+  /** Arbitrary HTTP handlers: a `src/api/**` tree mounted (by default) at `/api`. */
+  httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
 }
 
 async function resolveMeta(
@@ -85,6 +88,9 @@ let proposalSeq = 0;
 export function createJanuxServer(options: ServerOptions = {}) {
   const apiTools = collectApis(options.apis ?? {});
   const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
+  const httpHandlers = options.httpHandlers
+    ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers })
+    : undefined;
   const loadRoute = options.loadRoute ?? ((filePath: string) => import(/* @vite-ignore */ filePath));
   const proposals = new Map<string, PendingApiProposal>();
 
@@ -310,6 +316,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const intercepted = await options.middleware?.(req);
 
     if (intercepted) return intercepted;
+    if (httpHandlers?.handles(pathname)) return httpHandlers.dispatch(req, await ctxWithAgent(req));
     if (pathname.startsWith('/_janux/api/')) return handleApi(req, pathname.slice('/_janux/api/'.length));
     if (pathname === '/_janux/approve') return handleApprove(req);
     if (pathname === '/_janux/reject') {
