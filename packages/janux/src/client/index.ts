@@ -17,3 +17,18 @@ export {
   type WebMCPToolDescriptor,
 } from './webmcp';
 export { collectPageLinks, createNavigateTool, type PageLink } from './navigate-tool';
+export { persistStore, type PersistConfig, type StateStorage } from './persist';
+export { urlState, type UrlStateHandle, type UrlStateOptions } from './url-state';
+export {
+  query,
+  useQuery,
+  mutation,
+  QueryClient,
+  getQueryClient,
+  hashKey,
+  type QueryHandle,
+  type MutationHandle,
+  type QueryKey,
+  type QueryOptions,
+  type QueryState,
+} from '../query';

@@ -21,7 +21,8 @@
     "./server": "./src/render/server.ts",
     "./client": "./src/client/index.ts",
     "./manifest": "./src/manifest/index.ts",
-    "./interop": "./src/interop/index.ts"
+    "./interop": "./src/interop/index.ts",
+    "./query": "./src/query/index.ts"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^15.11.0",

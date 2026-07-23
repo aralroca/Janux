@@ -65,7 +65,13 @@ let nativeClickAt = 0;
 
 function shouldIntercept(event: any): boolean {
   if (!event.canIntercept || event.hashChange || event.downloadRequest || event.formData) return false;
-  if (new URL(event.destination.url).origin !== location.origin) return false;
+  const destination = new URL(event.destination.url);
+
+  if (destination.origin !== location.origin) return false;
+  // Query-only changes on the same path are shallow: islands read the query
+  // reactively (urlState), so a filter/tab/dialog change never re-renders the
+  // page. Cross-path navigations still get the SPA diff.
+  if (destination.pathname === location.pathname && destination.search !== location.search) return false;
   // Prefer the precise source element; fall back to a recent data-native click.
   if (event.sourceElement) return !event.sourceElement.closest?.('[data-native]');
   const wasNative = Date.now() - nativeClickAt < 100;

@@ -38,6 +38,7 @@ export const SECTIONS: SectionDef[] = [
           'sources-effects-events',
           'events-and-interactions',
           'stores',
+          'data-cache',
           'interop',
         ],
       },

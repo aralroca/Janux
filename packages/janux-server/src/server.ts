@@ -10,6 +10,7 @@ import {
   type I18nConfig,
   type RenderResult,
 } from 'janux';
+import { QueryClient } from 'janux/query';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
 import type { ShellI18n } from './html-shell';
 import { assertValidInput, errorStatus, evictOldestProposal, json, type PendingApiProposal } from './http';
@@ -166,6 +167,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const route = findRoute(pathname);
 
     if (!route) return undefined;
+    // A fresh per-request query client keeps SSR deterministic (no cross-request
+    // cache bleed) and is the seam for future dehydrate/hydrate.
+    (ctx as any).queryClient ??= new QueryClient();
     const module = 'render' in route ? undefined : ((await loadRoute(route.load)) as any);
     const render = 'render' in route ? route.render : module.default;
     const meta = await resolveMeta(module?.meta, ctx, route.params);

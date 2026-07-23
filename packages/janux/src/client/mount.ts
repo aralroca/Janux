@@ -5,6 +5,7 @@ import type { EventBus } from '../runtime/bus';
 import { toDomNodes, type PendingIsland, type RenderPass } from './dom';
 import { mountForeign } from './foreign';
 import { morph } from './morph';
+import { persistStore } from './persist';
 import { registerDef, resolveDef, type ClientRegistry } from './registry';
 
 export interface MountContext {
@@ -49,6 +50,16 @@ export async function ensureStore(storeDef: ComponentDef, mount: MountContext): 
 
   registry.stores.set(storeDef.name, instance);
   await instance.attach();
+  // Local persistence rehydrates after attach and keeps writing back.
+  if (storeDef.persist === 'local') {
+    const stop = await persistStore(instance);
+    const dispose = instance.dispose.bind(instance);
+
+    instance.dispose = async () => {
+      stop();
+      await dispose();
+    };
+  }
 
   return instance;
 }
@@ -123,22 +134,26 @@ function sweepChildren(name: string, key: string, mount: MountContext): void {
 }
 
 function startRenderLoop(instance: JanuxInstance, root: Element, key: string, mount: MountContext): () => void {
-  return watch(() => {
-    const pass: RenderPass = {
-      parent: { name: instance.def.name, key },
-      seq: new Map(),
-      used: new Set(),
-      islands: [],
-      foreigns: [],
-    };
+  // The render runs in the instance scope so any reactive resources a view or
+  // derived creates (e.g. query subscriptions) dispose with the island.
+  return instance.runInScope(() =>
+    watch(() => {
+      const pass: RenderPass = {
+        parent: { name: instance.def.name, key },
+        seq: new Map(),
+        used: new Set(),
+        islands: [],
+        foreigns: [],
+      };
 
-    morph(root, toDomNodes(instance.def.view!(instance.bag), pass));
-    untrack(() => {
-      mountNewChildren(pass, root, mount);
-      mountPassForeigns(pass, root, mount, instance);
-      sweepChildren(instance.def.name, key, mount);
-    });
-  });
+      morph(root, toDomNodes(instance.def.view!(instance.bag), pass));
+      untrack(() => {
+        mountNewChildren(pass, root, mount);
+        mountPassForeigns(pass, root, mount, instance);
+        sweepChildren(instance.def.name, key, mount);
+      });
+    }),
+  );
 }
 
 /** Disposing an island cascades to every mounted descendant (nested islands + foreign roots). */

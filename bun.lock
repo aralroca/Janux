@@ -31,6 +31,16 @@
         "sucrase": "^3.35",
       },
     },
+    "examples/data-cache": {
+      "name": "janux-example-data-cache",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/i18n": {
       "name": "janux-example-i18n",
       "version": "0.2.1",
@@ -574,6 +584,8 @@
     "janux": ["janux@workspace:packages/janux"],
 
     "janux-docs": ["janux-docs@workspace:apps/docs"],
+
+    "janux-example-data-cache": ["janux-example-data-cache@workspace:examples/data-cache"],
 
     "janux-example-i18n": ["janux-example-i18n@workspace:examples/i18n"],
 
