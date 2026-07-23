@@ -1,9 +1,10 @@
 import { createBus } from '../runtime/bus';
 import type { ComponentDef } from '../define/types';
+import type { ForeignDef } from '../interop';
 import type { Proposal } from '../runtime/intents';
 import { createBridge, type JanuxBridge } from './bridge';
 import { listen } from './events';
-import { mountIsland, type MountContext } from './mount';
+import { mountDocumentForeigns, mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
 import { enableAgentGlow, type GlowOptions } from './glow';
 import { installI18n } from './i18n';
@@ -13,7 +14,7 @@ import { installWebMCP } from './webmcp';
 
 export interface BootOptions {
   islands?: Record<string, IslandLoader>;
-  defs?: ComponentDef[];
+  defs?: (ComponentDef | ForeignDef)[];
   ctx?: Record<string, unknown>;
   /** Highlight islands while an agent operates them. `true` or `{ duration }`. */
   glow?: boolean | GlowOptions;
@@ -154,6 +155,7 @@ export function boot(options: BootOptions = {}): JanuxClient {
   if (typeof window !== 'undefined') (window as any).janux = client;
   if (options.webmcp !== false) installWebMCP(bridge);
   mountEagerIslands(mount).catch(reportIntentError);
+  mountDocumentForeigns(mount).catch(reportIntentError);
 
   return client;
 }

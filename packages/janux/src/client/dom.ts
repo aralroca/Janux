@@ -1,5 +1,6 @@
 import { Fragment, type JanuxNode } from '../jsx-runtime';
 import { attrEntries, dedupeKey, safeKey } from '../render/html';
+import { isForeignDef, type ForeignDef } from '../interop';
 import type { ComponentDef } from '../define/types';
 
 /** A nested island found while expanding a parent view; mount.ts resolves it after the morph. */
@@ -9,12 +10,20 @@ export interface PendingIsland {
   initial?: Record<string, unknown>;
 }
 
+/** A foreign (React) leaf found while expanding a parent view. */
+export interface PendingForeign {
+  id: string;
+  def: ForeignDef;
+  props: Record<string, unknown>;
+}
+
 /** Per-render-pass context: parent identity + per-def sequence, mirroring the SSR key scheme. */
 export interface RenderPass {
   parent: { name: string; key: string };
   seq: Map<string, number>;
   used: Set<string>;
   islands: PendingIsland[];
+  foreigns: PendingForeign[];
 }
 
 function isComponentDef(type: unknown): type is ComponentDef {
@@ -67,6 +76,20 @@ function islandPlaceholder(node: JanuxNode, def: ComponentDef, pass: RenderPass)
   return el;
 }
 
+/** A foreign leaf renders as an empty host; its React root owns the content. */
+function foreignPlaceholder(node: JanuxNode, def: ForeignDef, pass: RenderPass): Element {
+  const key = islandKey(pass, def as unknown as ComponentDef, node.$k ?? node.$p.id);
+  const id = `${def.name}#${key}`;
+  const el = document.createElement('janux-foreign');
+  const { children: _children, ...props } = node.$p;
+
+  el.setAttribute('data-jx', id);
+  el.setAttribute('data-jxf-hydrate', def.options.hydrate);
+  pass.foreigns.push({ id, def, props });
+
+  return el;
+}
+
 /** Expands a client view tree (static fns inline, nested islands as hosts) into real DOM nodes. */
 export function toDomNodes(node: unknown, pass?: RenderPass): Node[] {
   if (node === null || node === undefined || typeof node === 'boolean') return [];
@@ -77,6 +100,11 @@ export function toDomNodes(node: unknown, pass?: RenderPass): Node[] {
   const jsxNode = node as JanuxNode;
 
   if (jsxNode.$t === Fragment) return toDomNodes(jsxNode.$p.children, pass);
+  if (isForeignDef(jsxNode.$t)) {
+    if (!pass) throw new Error(`Janux: foreign <${jsxNode.$t.name}> outside an island render pass`);
+
+    return [foreignPlaceholder(jsxNode, jsxNode.$t, pass)];
+  }
   if (typeof jsxNode.$t === 'function') return toDomNodes((jsxNode.$t as any)(jsxNode.$p), pass);
   if (isComponentDef(jsxNode.$t)) {
     if (!pass) {

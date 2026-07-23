@@ -37,8 +37,11 @@ function syncValue(from: Element, to: Element): void {
   if (from.value !== to.value) from.value = to.value;
 }
 
+const BOUNDARY_TAGS = new Set(['JANUX-ISLAND', 'JANUX-FOREIGN']);
+
+/** Islands and foreign roots are opaque: their own runtime owns everything inside. */
 function isIsland(node: Node): boolean {
-  return node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'JANUX-ISLAND';
+  return node.nodeType === Node.ELEMENT_NODE && BOUNDARY_TAGS.has((node as Element).tagName);
 }
 
 function sameKind(a: Node, b: Node): boolean {
