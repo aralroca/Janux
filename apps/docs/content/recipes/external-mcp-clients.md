@@ -2,6 +2,19 @@
 
 Every Janux app is an MCP-style surface over HTTP. Your copilot uses it — but so can Claude Code, a CI script, or any agent you run elsewhere.
 
+## The hosted MCP endpoint (by URL)
+
+Every app auto-serves a **real MCP server** at `/_janux/mcp` — streamable HTTP, stateless (a fresh logical server per request, safe behind a load balancer), generated from the app so it cannot drift:
+
+```bash
+# Add it to any MCP client by URL:
+claude mcp add --transport http my-app https://your.app/_janux/mcp
+```
+
+- **tools** — every `api()` function, with its JSON schema; `confirm`-guarded tools carry `annotations.requiresApproval`.
+- **resources** — every page, readable as clean **Markdown** (`janux://page/<path>`). The same projection is served over plain HTTP with the `.md` suffix (`GET /pricing.md`) — the whole site is agent-readable content, zero hand-written MCP code.
+- **auth** — configure `mcpAuth: { verify(token, req) }` in the server options and unauthenticated calls get `401` + `WWW-Authenticate` (Bearer, with optional resource-metadata URL); the verified identity lands in `ctx.mcpIdentity` for tenant scoping. Without it the endpoint is open (dev, public corpora).
+
 ## Discovery
 
 Start site-wide (opt-in via the `llmsTxt` server option): `GET /llms.txt` is a markdown index of every page — dynamic routes list their real URLs via `staticParams`, not `[id]` patterns — and every server tool, with approval-gated tools annotated. From there, drill into a route for full schemas:

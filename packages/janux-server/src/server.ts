@@ -12,6 +12,8 @@ import {
 } from 'janux';
 import { QueryClient } from 'janux/query';
 import { createHttpHandlers, type HandlerModule } from './http-handlers';
+import { createMcpEndpoint, type McpAuth } from './mcp';
+import { pageMarkdown } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
 import type { ShellI18n } from './html-shell';
 import { assertValidInput, errorStatus, evictOldestProposal, json, type PendingApiProposal } from './http';
@@ -58,6 +60,8 @@ export interface ServerOptions {
   middleware?: (req: Request) => Response | undefined | Promise<Response | undefined>;
   /** Arbitrary HTTP handlers: a `src/api/**` tree mounted (by default) at `/api`. */
   httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
+  /** Bearer verification for the hosted MCP endpoint (`/_janux/mcp`). Absent → open. */
+  mcpAuth?: McpAuth;
 }
 
 async function resolveMeta(
@@ -279,6 +283,25 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return { locale, dir: localeDir(locale), payload };
   };
 
+  /** Markdown projection of one page — `.md` suffix and content-MCP resources. */
+  const readPageMarkdown = async (pathname: string, baseCtx: Ctx): Promise<string | undefined> => {
+    const { locale, pathname: page } = localize(pathname);
+    const result = await renderPage(page, localeCtx(baseCtx, locale ?? options.i18n?.defaultLocale));
+
+    if (!result) return undefined;
+
+    return pageMarkdown(result.meta?.title ?? options.title, result.html);
+  };
+
+  const mcpEndpoint = createMcpEndpoint({
+    serverName: options.title ?? 'janux-app',
+    tools: apiTools,
+    invoke: (tool, input, ctx) => invokeTool(tool, input, ctx),
+    listPages,
+    readPage: readPageMarkdown,
+    auth: options.mcpAuth,
+  });
+
   const handlePage = async (req: Request, pathname: string): Promise<Response> => {
     const { locale, pathname: page } = localize(pathname);
 
@@ -331,6 +354,14 @@ export function createJanuxServer(options: ServerOptions = {}) {
     }
     if (pathname === '/_janux/manifest') {
       return json(await manifestFor(url.searchParams.get('path') ?? '/', await resolveCtx(req)));
+    }
+    if (pathname === '/_janux/mcp') return mcpEndpoint(req, await ctxWithAgent(req));
+    if (pathname.endsWith('.md')) {
+      const markdown = await readPageMarkdown(pathname.slice(0, -3) || '/', await resolveCtx(req));
+
+      if (markdown !== undefined) {
+        return new Response(markdown, { headers: { 'content-type': 'text/markdown; charset=utf-8' } });
+      }
     }
     if (pathname === '/_janux/llm' && options.agent?.handleLlm) {
       return options.agent.handleLlm(req);
