@@ -1,5 +1,5 @@
 export interface ResolvedModel {
-  provider: 'anthropic' | 'openai' | 'google';
+  provider: 'anthropic' | 'openai' | 'google' | 'openrouter';
   model: string;
   apiKey: string;
   source: string;
@@ -13,12 +13,15 @@ const PROVIDER_KEYS: Record<ResolvedModel['provider'], string> = {
   anthropic: 'ANTHROPIC_API_KEY',
   openai: 'OPENAI_API_KEY',
   google: 'GOOGLE_GENERATIVE_AI_API_KEY',
+  // OpenRouter: one key, hundreds of models — the aggregator the Didit assistant uses.
+  openrouter: 'OPENROUTER_API_KEY',
 };
 
 const DEFAULT_MODELS: Record<ResolvedModel['provider'], string> = {
   anthropic: 'claude-sonnet-5',
   openai: 'gpt-5.2',
   google: 'gemini-3-pro',
+  openrouter: 'anthropic/claude-sonnet-5',
 };
 
 function fromIdentifier(identifier: string, env: ModelEnv, source: string): ResolvedModel | undefined {
