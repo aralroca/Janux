@@ -19,3 +19,10 @@ export {
   type WorkflowRunner,
   type RunResult,
 } from './workflow';
+export {
+  createRateLimiter,
+  createMemoryCounterStore,
+  type RateLimitConfig,
+  type RateLimiter,
+  type CounterStore,
+} from './rate-limit';
