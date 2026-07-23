@@ -34,7 +34,7 @@ Named after **Janus**, the two-faced Roman god of doorways: one face toward the 
 - 🤖 **Zero-config copilot.** `JANUX_MODEL` or one provider API key is all it takes. Every app ships the agent endpoint, the manifest and the gui-agent bridge (`window.janux`).
 - 🧘 **Observable quiescence.** `await janux.settled()` — the `sleep(500)` idiom dies here.
 
-> ⚠️ Early/experimental (v0.1). The public contract is stable by design; see [honest deviations from the RFC](apps/docs/content/guide/architecture-and-roadmap.md).
+> **v1 — production-grade.** Foreign-UI interop (React), full routing (layouts, groups, catch-all, middleware), a client data cache + persisted stores + typed URL state, arbitrary HTTP handlers + uploads, a hosted MCP endpoint + `.md` content projection + proposal visual diffs, an embedded agent harness (memory, durable workflows, guardrails, rate limiting, outbound MCP), and path-pruned reactivity all ship. See the [architecture & roadmap](apps/docs/content/guide/architecture-and-roadmap.md) for the few remaining RFC items (streaming SSR, parallel routes, reverse interop).
 
 ## Table of Contents
 
