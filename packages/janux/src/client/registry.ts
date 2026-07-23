@@ -7,6 +7,8 @@ export interface ClientRegistry {
   defs: Map<string, ComponentDef>;
   loaders: Map<string, IslandLoader>;
   mounted: Map<string, JanuxInstance>;
+  /** In-flight mounts, so concurrent triggers (double event, unbatched writes) share one instance. */
+  mounting: Map<string, Promise<JanuxInstance>>;
   stores: Map<string, JanuxInstance>;
   snapshots: Map<string, Record<string, unknown>>;
 }
@@ -16,6 +18,7 @@ export function createClientRegistry(): ClientRegistry {
     defs: new Map(),
     loaders: new Map(),
     mounted: new Map(),
+    mounting: new Map(),
     stores: new Map(),
     snapshots: new Map(),
   };

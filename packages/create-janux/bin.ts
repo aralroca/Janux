@@ -22,9 +22,11 @@ cpSync(join(import.meta.dirname, 'template'), target, {
   filter: (source) => !SKIP.has(basename(source)),
 });
 
-const pkgPath = join(target, 'package.json');
+for (const file of ['package.json', 'README.md']) {
+  const path = join(target, file);
 
-writeFileSync(pkgPath, readFileSync(pkgPath, 'utf-8').replace(/__APP_NAME__/g, name));
+  writeFileSync(path, readFileSync(path, 'utf-8').replace(/__APP_NAME__/g, name));
+}
 console.log(`✔ ${name} created
 
   cd ${name}

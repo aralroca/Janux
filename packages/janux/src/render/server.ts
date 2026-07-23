@@ -2,7 +2,7 @@ import { Fragment, type JanuxNode } from '../jsx-runtime';
 import { createInstance, type JanuxInstance } from '../runtime/instance';
 import type { EventBus } from '../runtime/bus';
 import type { ComponentDef, Ctx } from '../define/types';
-import { escapeHtml, renderAttrs, VOID_ELEMENTS } from './html';
+import { dedupeKey, escapeHtml, renderAttrs, safeKey, VOID_ELEMENTS } from './html';
 
 export interface IslandRecord {
   def: ComponentDef;
@@ -25,18 +25,31 @@ export interface RenderOptions {
 interface RenderScope extends RenderOptions {
   registry: RenderRegistry;
   keySeq: Map<string, number>;
+  usedKeys: Set<string>;
   i18nKeys?: Set<string>;
+  /** Set while rendering inside an island's view: children become nested islands. */
+  island?: { name: string; key: string; keySeq: Map<string, number>; usedKeys: Set<string> };
 }
 
 function isComponentDef(type: unknown): type is ComponentDef {
   return typeof type === 'object' && type !== null && 'kind' in (type as any);
 }
 
+/**
+ * Nested-island keys are namespaced by parent (`Parent.parentKey.seq`) so the
+ * client recomputes the exact same id when the parent re-renders — the SSR and
+ * client traversals are both depth-first, so sequence numbers always agree.
+ */
 function nextKey(scope: RenderScope, def: ComponentDef, explicit?: string): string {
-  if (explicit) return explicit;
-  const seq = (scope.keySeq.get(def.name) ?? 0) + 1;
+  const prefix = scope.island ? `${scope.island.name}.${scope.island.key}.` : '';
+  const used = scope.island?.usedKeys ?? scope.usedKeys;
 
-  scope.keySeq.set(def.name, seq);
+  if (explicit) return dedupeKey(`${prefix}${safeKey(explicit)}`, used);
+  const seqMap = scope.island?.keySeq ?? scope.keySeq;
+  const seq = (seqMap.get(def.name) ?? 0) + 1;
+
+  seqMap.set(def.name, seq);
+  if (scope.island) return `${prefix}${seq}`;
 
   return seq === 1 ? 'default' : `n${seq}`;
 }
@@ -84,7 +97,11 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): 
 
   await loadSources(instance);
   scope.registry.islands.push({ def, key, instance });
-  const inner = await renderNode(def.view!(instance.bag), scope);
+  const childScope: RenderScope = {
+    ...scope,
+    island: { name: def.name, key, keySeq: new Map(), usedKeys: new Set() },
+  };
+  const inner = await renderNode(def.view!(instance.bag), childScope);
   const persist = props.persist ? ' data-jx-persist' : '';
   const eager = props.eager ? ' data-jx-eager' : '';
 
@@ -163,7 +180,7 @@ export interface RenderResult {
 export async function renderToString(node: unknown, options: RenderOptions = {}): Promise<RenderResult> {
   const registry: RenderRegistry = { islands: [], stores: new Map() };
   const i18nKeys = options.ctx?.i18n ? new Set<string>() : undefined;
-  const scope: RenderScope = { ...options, registry, keySeq: new Map(), i18nKeys };
+  const scope: RenderScope = { ...options, registry, keySeq: new Map(), usedKeys: new Set(), i18nKeys };
   const html = await renderNode(node, scope);
   const islandSnapshots = registry.islands
     .filter(({ def }) => def.state || def.sources)

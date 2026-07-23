@@ -85,12 +85,15 @@ describe('renderToString', () => {
     expect(plain.html).toContain('data-jx="cart#default">');
   });
 
-  it('escapes attacker-controlled island keys (XSS regression)', async () => {
+  it('sanitizes attacker-controlled island keys (XSS regression)', async () => {
     const evil = 'x"><img src=x onerror=alert(1)>';
     const result = await renderToString(jsx(cart as any, { key: evil }));
+    const id = result.html.match(/data-jx="([^"]+)"/)?.[1];
 
     expect(result.html).not.toContain('"><img');
-    expect(result.html).toContain('data-jx="cart#x&quot;&gt;&lt;img');
+    expect(result.html).not.toContain('&quot;&gt;&lt;img');
+    // Keys are reduced to a marker/selector-safe charset before rendering.
+    expect(id).toMatch(/^cart#[\w.~-]+$/);
   });
 
   it('drops invalid attribute names (attribute injection regression)', async () => {

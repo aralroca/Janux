@@ -25,7 +25,6 @@ The design source of truth is [RFC 0001](https://github.com/aralroca/Janux/issue
 - **Rendering:** views re-render per island on signal change and morph the DOM in place. The RFC's compile-time binding maps (path-level DOM writes, per-intent code splitting) are the planned compiler evolution — the public contract does not change.
 - **Agent runtime:** provider-direct loop (Anthropic/OpenAI/Google over fetch). The RFC's embedded Mastra harness (memory, workflows, observability exporters) is roadmap; `defineAgent`'s surface is forward-compatible with it.
 - **Foreign-framework views** (React/Vue adapters, Astro-style) and **proposal mode with visual state diff** are specified in the RFC and not yet implemented.
-- Nested islands (an island inside another island's view) are not supported yet.
 - **Known perf limitation:** the reactive-state path-version map grows with every distinct path ever read and scans keys on writes. Fine for UI-sized state; a long-lived store holding a very large, high-churn list will pay O(paths) per mutation. Path pruning is planned alongside the binding-map compiler.
 
 ## Testing

@@ -2,6 +2,7 @@ import { createBus } from '../runtime/bus';
 import type { ComponentDef } from '../define/types';
 import type { Proposal } from '../runtime/intents';
 import { createBridge, type JanuxBridge } from './bridge';
+import { listen } from './events';
 import { mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
 import { enableAgentGlow, type GlowOptions } from './glow';
@@ -41,56 +42,8 @@ function readSnapshots(mount: MountContext): void {
   });
 }
 
-function markerTarget(
-  event: Event,
-  attr: string,
-): { marker: string; root: Element; el: Element } | undefined {
-  const el = (event.target as Element | null)?.closest?.(`[${attr}]`);
-  const root = el?.closest('janux-island[data-jx]');
-
-  if (!el || !root) return undefined;
-
-  return { marker: el.getAttribute(attr)!, root, el };
-}
-
-function elementInput(el: Element): unknown {
-  const raw = el.getAttribute('data-input');
-
-  return raw ? JSON.parse(raw) : undefined;
-}
-
-async function invokeMarker(marker: string, root: Element, mount: MountContext, input?: unknown) {
-  const [id = '', intentName = ''] = marker.split(':');
-  const instance = await mountIsland(id, root, mount);
-
-  return instance.intents[intentName]?.(input);
-}
-
-function formInput(form: HTMLFormElement): Record<string, unknown> {
-  return Object.fromEntries(new FormData(form).entries());
-}
-
 function trackInflight(mount: MountContext, work: Promise<unknown>): void {
   awaitTracked(mount, work).catch(reportIntentError);
-}
-
-function listen(mount: MountContext): void {
-  document.addEventListener('click', (event) => {
-    const found = markerTarget(event, 'data-jxa');
-
-    if (!found) return;
-    event.preventDefault();
-    trackInflight(mount, invokeMarker(found.marker, found.root, mount, elementInput(found.el)));
-  });
-  document.addEventListener('submit', (event) => {
-    const found = markerTarget(event, 'data-jxform');
-
-    if (!found) return;
-    event.preventDefault();
-    const input = formInput(event.target as HTMLFormElement);
-
-    trackInflight(mount, invokeMarker(found.marker, found.root, mount, input));
-  });
 }
 
 function reportIntentError(error: unknown): void {
@@ -175,7 +128,7 @@ export function boot(options: BootOptions = {}): JanuxClient {
   (options.defs ?? []).forEach((def) => registerDef(registry, def));
   readSnapshots(mount);
   installI18n(mount.ctx);
-  listen(mount);
+  listen(mount, (work) => trackInflight(mount, work));
   if (options.glow) enableAgentGlow(options.glow === true ? {} : options.glow);
   if (options.navigation !== false) installNavigation(mount);
   const bridge = createBridge(mount, proposals);
