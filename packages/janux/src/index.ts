@@ -38,7 +38,8 @@ export {
   buildDefault,
   toJsonSchema,
 } from './schema';
-export { signal, computed, effect as watch, batch, untrack } from './signals';
+export { signal, computed, effect as watch, batch, untrack, createRoot, onCleanup, getOwner, runWithOwner } from './signals';
+export type { Owner } from './signals';
 export { createInstance, type JanuxInstance, type InstanceOptions } from './runtime/instance';
 export { createBus, type EventBus } from './runtime/bus';
 export { JanuxIntentError, resolveGuard, type AuditEntry, type Proposal } from './runtime/intents';

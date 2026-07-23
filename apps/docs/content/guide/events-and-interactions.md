@@ -1,6 +1,6 @@
 # Events and interactions
 
-If you come from React, this is the page to read twice: **Janux has no per-element event props**. No `onClick`, no `onDoubleClick`, no `onMouseEnter`. Interaction is declared as *intents*, and two delegated listeners on `document` do all the work.
+If you come from React, this is the page to read twice: **Janux event props resolve to intents, not closures**. There is no anonymous `onClick={() => ...}` — a handler is always a named, schema-typed, guard-checked intent, and delegated listeners on `document` do all the work. No component code runs until the first interaction.
 
 ## Coming from React
 
@@ -8,21 +8,61 @@ If you come from React, this is the page to read twice: **Janux has no per-eleme
 |---|---|---|
 | `onClick={fn}` | `<button on={intents.x} data-input='{"id":"p1"}'>` | The click *is* a tool call — same pipeline agents use |
 | `onSubmit={fn}` + controlled inputs | `<form intent={intents.x}>` — fields become the input object | Schema-validated at the boundary, works before JS loads the island |
-| `onChange` / controlled `value` | Uncontrolled inputs, read at submit | Keystroke-level state is presentational noise agents don't need |
-| `onMouseEnter` / `onFocus` for styling | CSS `:hover` / `:focus-visible` | It never needed JavaScript |
-| `onDoubleClick`, `onKeyDown`, drag… | Not built in (see below) | v0.x keeps the delegated surface tiny: click + submit |
+| `onChange` / controlled `value` | `<input value={state.q} onInput={intents.setQ} />` | Controlled inputs, IME-safe, still intent-typed |
+| `onKeyDown={fn}` | `onKeyDown={intents.onKey}` — intent receives `{ key, code, …modifiers }` | Keyboard handling without eager listeners |
+| `onMouseEnter` / hover styling | CSS `:hover` / `:focus-visible` | It never needed JavaScript |
 | Callback props (`onDone={...}`) | `emits:` + `on:` typed events | One bus, both audiences — agents can subscribe too |
 
-The deeper difference: a React handler is an anonymous closure only the human path can reach. A Janux intent is **named, schema-typed, guard-checked and audited** — and the button's click and the copilot's tool call run exactly the same code.
+The deeper difference: a React handler is an anonymous closure only the human path can reach. A Janux intent is **named, schema-typed, guard-checked and audited** — and the button's click, the keystroke and the copilot's tool call run exactly the same code.
 
-## What exists today
+## The delegated event surface
 
-- **Click**: `on={intents.x}` on any element; optional `data-input` JSON becomes the input.
+Every handler prop compiles to a `data-jxe-*` marker — an attribute, not a listener — so resumability is intact: the island mounts on first interaction.
+
+- **Click**: `on={intents.x}`; optional `data-input` JSON becomes the input.
 - **Submit**: `<form intent={intents.x}>`; form fields become the input object.
+- **Rich events** (delegated at `document` level): `onInput`, `onChange`, `onKeyDown`, `onKeyUp`, `onFocus`, `onBlur`, `onPointerDown`, `onPointerUp`.
 - **Component events**: `emits:` / `on:` (see [Sources, effects and events](/docs/guide/sources-effects-events)).
 - **Runtime DOM events**: `janux:tool-call`, `janux:proposal`, `janux:navigate`, `janux:error` (see [Client API](/docs/reference/client-api)).
 
-Need `dblclick`, `keydown` or drag today? Attach a plain listener in `lifecycle.attach` and call your own intents from it — interactions still end up as intents, you just wire the trigger yourself. Richer declarative triggers are on the roadmap.
+The intent's input is derived from the event and merged under `data-input` (which wins on conflict):
+
+| Event | Facts delivered to the intent |
+|---|---|
+| `onInput` / `onChange` | `{ value }` — the control's value (`checked` for checkbox/radio) |
+| `onKeyDown` / `onKeyUp` | `{ key, code, altKey, ctrlKey, metaKey, shiftKey }` |
+| `onPointerDown` / `onPointerUp` | `{ x, y }` (client coordinates) |
+| `onFocus` / `onBlur` | `{}` (plus your `data-input`, if any) |
+
+Unknown keys are stripped by the intent's input schema, so declare only what you consume.
+
+## Controlled inputs
+
+Bind state to `value` and write back with an intent:
+
+```tsx
+export const Search = component({
+  name: 'search',
+  state: schema({ q: str().default('') }),
+  intents: {
+    setQ: intent({
+      input: schema({ value: str() }),
+      run: ({ state, input }) => (state.q = input.value),
+    }),
+  },
+  view: ({ state, intents }) => (
+    <input value={state.q} onInput={intents.setQ} />
+  ),
+});
+```
+
+Guarantees:
+
+- **No cursor jumps** — re-renders never write to the focused control; every other binding of the same state updates live.
+- **IME-safe** — input events fired mid-composition are suppressed; the composed text commits once on `compositionend`, so multi-byte input is never clobbered.
+- **Agent-visible** — the input's value is island state: an agent reads it as a resource and can set it through the same `setQ` intent the keyboard uses.
+
+Need `dblclick` or drag today? Attach a plain listener in `lifecycle.attach` and call your own intents from it — interactions still end up as intents, you just wire the trigger yourself.
 
 ## Visualizing agent activity: the glow
 

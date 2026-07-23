@@ -18,6 +18,47 @@ export interface ReadonlySig<T> {
 
 let active: Runner | null = null;
 let batching: Set<Runner> | null = null;
+let owner: Owner | null = null;
+
+/** Disposal scope: effects/computeds created inside register here; child roots cascade. */
+export interface Owner {
+  cleanups: (() => void)[];
+  disposed: boolean;
+}
+
+export function createRoot<T>(fn: (dispose: () => void) => T): T {
+  const root: Owner = { cleanups: [], disposed: false };
+  const dispose = () => {
+    if (root.disposed) return;
+    root.disposed = true;
+    root.cleanups.splice(0).reverse().forEach((cleanup) => cleanup());
+  };
+
+  owner?.cleanups.push(dispose);
+
+  return runWithOwner(root, () => fn(dispose));
+}
+
+export function onCleanup(fn: () => void): void {
+  // On an already-disposed scope the cleanup runs immediately — never silently dropped.
+  if (owner?.disposed) return fn();
+  owner?.cleanups.push(fn);
+}
+
+export function getOwner(): Owner | null {
+  return owner;
+}
+
+export function runWithOwner<T>(scope: Owner | null, fn: () => T): T {
+  const previous = owner;
+
+  owner = scope;
+  try {
+    return fn();
+  } finally {
+    owner = previous;
+  }
+}
 
 function track(subs: Set<Runner>): void {
   if (active === null) return;
@@ -75,18 +116,30 @@ function runTracked(runner: Runner, fn: () => Cleanup): Cleanup {
 
 export function effect(fn: () => Cleanup | void): () => void {
   let cleanup: Cleanup;
+  let disposed = false;
+  const scope = owner;
   const runner: Runner = { deps: new Set(), run: () => {} };
 
+  // Re-runs restore the creation-time owner and never outlive dispose — a
+  // runner already queued in a notify/batch when its island is torn down
+  // must not re-subscribe as a zombie.
   runner.run = function runEffect() {
+    if (disposed) return;
     cleanup?.();
-    cleanup = runTracked(runner, fn as () => Cleanup) ?? undefined;
+    cleanup = runWithOwner(scope, () => runTracked(runner, fn as () => Cleanup)) ?? undefined;
   };
   runner.run();
-
-  return function dispose() {
+  const dispose = function dispose() {
+    if (disposed) return;
+    disposed = true;
     cleanup?.();
+    cleanup = undefined;
     detach(runner);
   };
+
+  owner?.cleanups.push(dispose);
+
+  return dispose;
 }
 
 export function computed<T>(fn: () => T): ReadonlySig<T> {

@@ -1,6 +1,21 @@
 import { Fragment, type JanuxNode } from '../jsx-runtime';
-import { attrEntries } from '../render/html';
+import { attrEntries, dedupeKey, safeKey } from '../render/html';
 import type { ComponentDef } from '../define/types';
+
+/** A nested island found while expanding a parent view; mount.ts resolves it after the morph. */
+export interface PendingIsland {
+  id: string;
+  def: ComponentDef;
+  initial?: Record<string, unknown>;
+}
+
+/** Per-render-pass context: parent identity + per-def sequence, mirroring the SSR key scheme. */
+export interface RenderPass {
+  parent: { name: string; key: string };
+  seq: Map<string, number>;
+  used: Set<string>;
+  islands: PendingIsland[];
+}
 
 function isComponentDef(type: unknown): type is ComponentDef {
   return typeof type === 'object' && type !== null && 'kind' in (type as any);
@@ -12,36 +27,64 @@ function setAttr(el: Element, name: string, value: unknown): void {
   el.setAttribute(name, value === true ? '' : String(value));
 }
 
-function appendChildren(el: Element, children: unknown): void {
-  toDomNodes(children).forEach((node) => el.appendChild(node));
+function appendChildren(el: Element, children: unknown, pass?: RenderPass): void {
+  toDomNodes(children, pass).forEach((node) => el.appendChild(node));
 }
 
-function elementFor(node: JanuxNode): Element {
+function elementFor(node: JanuxNode, pass?: RenderPass): Element {
   const el = document.createElement(node.$t as string);
 
   attrEntries(node.$p).forEach(([name, value]) => setAttr(el, name, value));
   if (typeof node.$p.dangerHTML === 'string') el.innerHTML = node.$p.dangerHTML;
-  else appendChildren(el, node.$p.children);
+  else appendChildren(el, node.$p.children, pass);
 
   return el;
 }
 
-/** Expands a client view tree (static fns inline) into real DOM nodes. */
-export function toDomNodes(node: unknown): Node[] {
+/** Same scheme as SSR `nextKey` for nested islands: `Parent.parentKey.(explicit|seq)`. */
+function islandKey(pass: RenderPass, def: ComponentDef, explicit: unknown): string {
+  const prefix = `${pass.parent.name}.${pass.parent.key}.`;
+
+  if (explicit) return dedupeKey(`${prefix}${safeKey(explicit)}`, pass.used);
+  const seq = (pass.seq.get(def.name) ?? 0) + 1;
+
+  pass.seq.set(def.name, seq);
+
+  return `${prefix}${seq}`;
+}
+
+/** A nested island renders as an empty host; its own render loop owns the content. */
+function islandPlaceholder(node: JanuxNode, def: ComponentDef, pass: RenderPass): Element {
+  const key = islandKey(pass, def, node.$k ?? node.$p.id);
+  const id = `${def.name}#${key}`;
+  const el = document.createElement('janux-island');
+
+  el.setAttribute('data-jx', id);
+  if (node.$p.persist) el.setAttribute('data-jx-persist', '');
+  if (node.$p.eager) el.setAttribute('data-jx-eager', '');
+  pass.islands.push({ id, def, initial: node.$p.initial as Record<string, unknown> | undefined });
+
+  return el;
+}
+
+/** Expands a client view tree (static fns inline, nested islands as hosts) into real DOM nodes. */
+export function toDomNodes(node: unknown, pass?: RenderPass): Node[] {
   if (node === null || node === undefined || typeof node === 'boolean') return [];
   if (typeof node === 'string' || typeof node === 'number') {
     return [document.createTextNode(String(node))];
   }
-  if (Array.isArray(node)) return node.flatMap(toDomNodes);
+  if (Array.isArray(node)) return node.flatMap((child) => toDomNodes(child, pass));
   const jsxNode = node as JanuxNode;
 
-  if (jsxNode.$t === Fragment) return toDomNodes(jsxNode.$p.children);
-  if (typeof jsxNode.$t === 'function') return toDomNodes((jsxNode.$t as any)(jsxNode.$p));
+  if (jsxNode.$t === Fragment) return toDomNodes(jsxNode.$p.children, pass);
+  if (typeof jsxNode.$t === 'function') return toDomNodes((jsxNode.$t as any)(jsxNode.$p), pass);
   if (isComponentDef(jsxNode.$t)) {
-    throw new Error(
-      `Janux: nested island <${jsxNode.$t.name}> inside another island is not supported yet`,
-    );
+    if (!pass) {
+      throw new Error(`Janux: nested island <${jsxNode.$t.name}> outside an island render pass`);
+    }
+
+    return [islandPlaceholder(jsxNode, jsxNode.$t, pass)];
   }
 
-  return [elementFor(jsxNode)];
+  return [elementFor(jsxNode, pass)];
 }

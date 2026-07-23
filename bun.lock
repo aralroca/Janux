@@ -41,6 +41,16 @@
         "janux": "workspace:*",
       },
     },
+    "examples/nested-islands": {
+      "name": "janux-example-nested-islands",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/shop": {
       "name": "janux-example-shop",
       "version": "0.2.1",
@@ -536,6 +546,8 @@
     "janux-docs": ["janux-docs@workspace:apps/docs"],
 
     "janux-example-i18n": ["janux-example-i18n@workspace:examples/i18n"],
+
+    "janux-example-nested-islands": ["janux-example-nested-islands@workspace:examples/nested-islands"],
 
     "janux-example-shop": ["janux-example-shop@workspace:examples/shop"],
 

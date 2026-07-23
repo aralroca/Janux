@@ -81,6 +81,8 @@ Readers expose `.value`, `.pending`, `.error`, `.refresh()`. On SSR sources load
 
 `signal(initial)`, `computed(fn)`, `watch(fn)` (effect; returns dispose), `batch(fn)`, `untrack(fn)`. You rarely need these directly — state, derived and effects cover the usual cases.
 
+**Ownership tree**: `createRoot(fn)` runs `fn(dispose)` inside a disposal scope — effects and computeds created within register automatically and are cleaned up on `dispose()` (nested roots cascade with their parent). `onCleanup(fn)` registers an arbitrary cleanup in the current scope; `getOwner()` / `runWithOwner(owner, fn)` move work between scopes (e.g. async continuations). This is the primitive behind island teardown and foreign-framework roots.
+
 ## createInstance(def, options) (advanced)
 
 The runtime beneath islands — also your unit-testing entry point. See the [Testing recipe](/docs/recipes/testing-components).

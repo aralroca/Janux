@@ -14,26 +14,69 @@ function syncAttrs(from: Element, to: Element): void {
   runtimeClasses.forEach((name) => from.classList.add(name));
 }
 
+type ValueControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
+function isValueControl(el: Element): el is ValueControl {
+  return (
+    el instanceof HTMLInputElement ||
+    el instanceof HTMLTextAreaElement ||
+    el instanceof HTMLSelectElement
+  );
+}
+
+/** Controlled inputs: state → DOM property writes, never touching the focused control. */
 function syncValue(from: Element, to: Element): void {
+  if (!isValueControl(from) || !isValueControl(to) || document.activeElement === from) return;
   if (from instanceof HTMLInputElement && to instanceof HTMLInputElement) {
-    if (from.value !== to.value && document.activeElement !== from) from.value = to.value;
+    if (from.type === 'checkbox' || from.type === 'radio') {
+      if (from.checked !== to.checked) from.checked = to.checked;
+
+      return;
+    }
   }
+  if (from.value !== to.value) from.value = to.value;
+}
+
+function isIsland(node: Node): boolean {
+  return node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'JANUX-ISLAND';
 }
 
 function sameKind(a: Node, b: Node): boolean {
   if (a.nodeType !== b.nodeType) return false;
   if (a.nodeType !== Node.ELEMENT_NODE) return true;
+  if ((a as Element).tagName !== (b as Element).tagName) return false;
+  // Different islands never morph into each other — replace, so the old one sweeps.
+  if (isIsland(a)) return (a as Element).getAttribute('data-jx') === (b as Element).getAttribute('data-jx');
 
-  return (a as Element).tagName === (b as Element).tagName;
+  return true;
 }
 
+/** Live island hosts among `from`'s children, keyed by island id. */
+function liveIslandHosts(from: Element): Map<string, Element> {
+  const hosts = [...from.childNodes].filter(isIsland) as Element[];
+
+  return new Map(hosts.map((host) => [host.getAttribute('data-jx')!, host]));
+}
+
+/**
+ * Index+tag matching for regular nodes; islands match by id (`data-jx`) so a
+ * live host survives position shifts — it is moved into place, never replaced
+ * by its empty placeholder.
+ */
 function morphChildren(from: Element, to: Element): void {
-  const fromKids = [...from.childNodes];
+  const islands = liveIslandHosts(from);
   const toKids = [...to.childNodes];
 
   toKids.forEach((toKid, index) => {
-    const fromKid = fromKids[index];
+    const fromKid = from.childNodes[index];
+    const live = isIsland(toKid) ? islands.get((toKid as Element).getAttribute('data-jx')!) : undefined;
 
+    if (live && live !== fromKid) {
+      from.insertBefore(live, fromKid ?? null);
+      morphNode(live, toKid);
+
+      return;
+    }
     if (!fromKid) {
       from.appendChild(toKid);
 
@@ -46,7 +89,7 @@ function morphChildren(from: Element, to: Element): void {
     }
     morphNode(fromKid, toKid);
   });
-  fromKids.slice(toKids.length).forEach((extra) => from.removeChild(extra));
+  while (from.childNodes.length > toKids.length) from.removeChild(from.lastChild!);
 }
 
 function morphNode(from: Node, to: Node): void {
@@ -57,6 +100,8 @@ function morphNode(from: Node, to: Node): void {
   }
   if (from.nodeType !== Node.ELEMENT_NODE) return;
   syncAttrs(from as Element, to as Element);
+  // A nested island is a boundary: its own render loop owns everything inside.
+  if (isIsland(from)) return;
   syncValue(from as Element, to as Element);
   morphChildren(from as Element, to as Element);
 }

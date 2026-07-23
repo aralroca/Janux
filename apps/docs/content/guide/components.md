@@ -66,6 +66,33 @@ The three projections, from this single definition:
 
 Islands mount by using the definition as JSX inside a route: `<Cart />`. Register the definition in `src/client.ts` via `boot({ defs: [Cart] })` so the client can resume it.
 
+## Nested islands (stateful inside stateful)
+
+An island's view can render other islands — stateful components compose to any depth:
+
+```tsx
+export const Board = component({
+  name: 'board',
+  state: schema({ cards: int().default(2) }),
+  intents: { add: intent({ run: ({ state }) => (state.cards += 1) }) },
+  view: ({ state, intents }) => (
+    <section>
+      <button on={intents.add}>+ card</button>
+      {Array.from({ length: state.cards }, (_, i) => <Card key={`c${i}`} />)}
+    </section>
+  ),
+});
+```
+
+Semantics:
+
+- **Independent updates.** Each island has its own render loop; a child re-render never touches the parent and vice versa — a live child is an opaque boundary for the parent's morph.
+- **Deterministic identity.** A nested island's id is namespaced by its parent (`card#board.default.c0`), identical on the server and on every client re-render, so SSR resume and agent reads target the exact instance.
+- **Lifecycle follows the view.** When a parent re-render drops a child (`state.cards -= 1`), the child island is disposed (its `lifecycle.detach` runs); re-adding it later mounts a **fresh** instance with default state. Disposing a parent cascades to all mounted descendants.
+- **Agent-visible at every level.** Each nested island is its own resource (`ui://card#board.default.c0`) with its own tools — the copilot operates a card directly, not through the board.
+
+Use `key` when children are conditional or reordered, exactly as you would in any framework.
+
 ## Passing data in: props vs. islands
 
 Static components are plain functions, so **prop drilling works exactly as you'd expect** — pass anything down through as many layers as you like; it all runs on the server and disappears from the shipped HTML.

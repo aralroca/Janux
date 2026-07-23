@@ -1,0 +1,17 @@
+{
+  "name": "janux-example-nested-islands",
+  "private": true,
+  "version": "0.2.1",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev",
+    "build": "janux build",
+    "start": "janux start"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*"
+  }
+}
