@@ -60,3 +60,35 @@ The surface always includes a built-in `navigate` tool, synthesized from the sam
 ## Building your own copilot UI
 
 The copilot chrome is just another Janux component (see the shop example's `Copilot.tsx`): messages in schema state, a `send` intent that runs the turn protocol, and human-only (`guard: 'forbidden'`) `approve`/`reject` intents — so the agent can never approve its own proposals.
+
+## The embedded harness (stateful agents)
+
+A production copilot is a long-lived agent, not a stateless loop. `defineAgent` grows into the harness with one opt-in config block — enable only the pieces you need:
+
+```ts
+// src/agent.ts
+import { defineAgent, createMemory, createPgStorage, unicodeNormalizer, historyTokenBudget, piiFilter, injectionGuard } from '@janux/agent';
+
+const storage = await createPgStorage({ connectionString: process.env.DATABASE_URL! });
+
+export default defineAgent({
+  instructions: 'You are the Didit console copilot…',
+  harness: {
+    memory: createMemory({ storage, lastMessages: 20, generateTitle: async (first) => titleFor(first) }),
+    processors: [unicodeNormalizer(), injectionGuard(classify), historyTokenBudget(24_000), piiFilter()],
+    rateLimit: { limit: 20, windowMs: 60_000, store: await createRedisCounterStore({ redis: REDIS_URL }) },
+    identityFor: (req) => verifyBearer(req),        // fail-closed: undefined → 401
+  },
+});
+```
+
+What each piece gives you:
+
+- **Memory** — thread-aware turns: the client sends only the new user message plus `threadId`; the bounded history comes from storage, replies are remembered, titles generate lazily, and threads are ownership-scoped (`403` on cross-identity access). Storage is an adapter: in-memory for dev/tests, `createPgStorage` for production (auto-creates `janux_*` tables).
+- **Processors** — the guardrail pipeline runs before the model: NFKC normalization, prompt-injection classification (`{type:'refusal'}` without ever calling the provider), history token budget (drops oldest first, never the system prompt or the newest turn), PII scrubbing.
+- **Rate limiting** — fixed-window per identity + optional global circuit-breaker over a pluggable counter store (`createRedisCounterStore` shares the window across instances). Fails open on store outages; `429` on exceed.
+- **Durable workflows** — `createWorkflow`/`createStep` + `createWorkflowRunner(storage)`: a step calls `suspend(payload)` and the run snapshot persists by run id — it survives restarts and resumes from another instance, with callables re-supplied via `requestContext`. The one-question-per-suspend interview pattern is first-class.
+- **Outbound MCP** — `connectMcp({ url, token, namespace })` turns any remote MCP server into `AgentTool`s (the hosted Didit MCP, a docs MCP…); `createMcpPool()` caches per user token and evicts dead connections.
+- **Attachments** — `acceptAttachments` validates type/size/count and assigns stable `att_N` refs.
+
+Without `harness`, `defineAgent` stays the zero-config stateless loop — a static site pays nothing.
