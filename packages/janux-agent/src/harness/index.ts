@@ -33,3 +33,12 @@ export {
   type McpConnection,
   type RemoteTool,
 } from './mcp-client';
+export { createPgStorage, type PgStorageOptions } from './pg-storage';
+export { createRedisCounterStore, type RedisCounterOptions } from './redis-counter';
+export {
+  acceptAttachments,
+  AttachmentError,
+  type AttachmentPolicy,
+  type IncomingAttachment,
+  type AcceptedAttachment,
+} from './attachments';
