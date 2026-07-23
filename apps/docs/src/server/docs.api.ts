@@ -38,6 +38,7 @@ export const SECTIONS: SectionDef[] = [
           'sources-effects-events',
           'events-and-interactions',
           'stores',
+          'interop',
         ],
       },
       { label: 'Rendering & navigation', slugs: ['ssr-and-resumability', 'navigation', 'i18n'] },

@@ -1,4 +1,5 @@
 import { cpSync, existsSync, mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
@@ -164,6 +165,8 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
     title: app.title,
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default,
+    // Foreign runtime (react) resolved from the app root — see @janux/vite.
+    foreignImport: (spec) => import(createRequire(join(root, 'package.json')).resolve(spec)),
   };
 }
 

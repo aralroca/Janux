@@ -48,6 +48,8 @@ export interface ServerOptions {
   agents?: AgentsConfig;
   onAudit?: (entry: AuditEntry) => void;
   i18n?: I18nConfig;
+  /** App-context resolver for the foreign runtime (react / react-dom/server). */
+  foreignImport?: (spec: string) => Promise<any>;
 }
 
 async function resolveMeta(
@@ -152,7 +154,11 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const render = 'render' in route ? route.render : module.default;
     const meta = await resolveMeta(module?.meta, ctx, route.params);
     const vnode = await render({ ctx, params: route.params });
-    const result = await renderToString(vnode, { ctx, storeDefs: options.storeDefs });
+    const result = await renderToString(vnode, {
+      ctx,
+      storeDefs: options.storeDefs,
+      foreignImport: options.foreignImport,
+    });
 
     return { ...result, meta };
   };

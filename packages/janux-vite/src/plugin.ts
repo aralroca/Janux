@@ -1,4 +1,7 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
@@ -35,7 +38,15 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     title: app.title,
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default as ServerOptions['i18n'],
+    foreignImport: appForeignImport(vite.config.root),
   };
+}
+
+/** Resolves react/react-dom from the APP root, so SSR uses the same copy the app's components do. */
+function appForeignImport(root: string): ServerOptions['foreignImport'] {
+  const appRequire = createRequire(join(root, 'package.json'));
+
+  return (spec) => import(pathToFileURL(appRequire.resolve(spec)).href);
 }
 
 function relativeToRoot(root: string, absolute: string): string {
@@ -51,7 +62,10 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       return {
         appType: 'custom',
         esbuild: { jsx: 'automatic', jsxImportSource: 'janux' },
-        resolve: { dedupe: ['janux'] },
+        // react/react-dom deduped so every browser-side import is one copy;
+        // SSR resolves them via `foreignImport` from the app root instead
+        // (externals bypass dedupe and two Reacts break hooks).
+        resolve: { dedupe: ['janux', 'react', 'react-dom'] },
         ssr: { noExternal: SSR_PACKAGES },
         optimizeDeps: { exclude: SSR_PACKAGES },
       };

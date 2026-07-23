@@ -21,6 +21,12 @@ export interface RenderOptions {
   bus?: EventBus;
   storeDefs?: Record<string, ComponentDef>;
   initialState?: Record<string, Record<string, unknown>>;
+  /**
+   * Resolves the foreign runtime (react, react-dom/server) from the APP's
+   * context. Injected by the host (vite plugin / CLI) so the SSR copy is the
+   * same one the app's own React components import — two copies break hooks.
+   */
+  foreignImport?: (spec: string) => Promise<any>;
 }
 
 interface RenderScope extends RenderOptions {
@@ -109,17 +115,22 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): 
   return `<janux-island data-jx="${escapeHtml(`${def.name}#${key}`)}"${persist}${eager}>${inner}</janux-island>`;
 }
 
-/** SSR markup for a foreign component when its runtime is installed; empty host otherwise. */
-async function foreignInner(def: ForeignDef, props: Record<string, unknown>): Promise<string> {
-  if (def.options.hydrate === 'only') return '';
-  try {
-    const [{ createElement }, { renderToString: reactRender }] = await Promise.all([
-      import('react'),
-      import('react-dom/server'),
-    ]);
-    const reactProps = def.options.props ? def.options.props(props) : props;
+/** CJS/ESM interop for a dynamically imported module. */
+function interopDefault(mod: any): any {
+  return mod?.default ?? mod;
+}
 
-    return reactRender(createElement(def.component as any, reactProps as any));
+/** SSR markup for a foreign component when its runtime is installed; empty host otherwise. */
+async function foreignInner(def: ForeignDef, props: Record<string, unknown>, scope: RenderScope): Promise<string> {
+  if (def.options.hydrate === 'only') return '';
+  const load = scope.foreignImport ?? ((spec: string) => import(/* @vite-ignore */ spec));
+
+  try {
+    const [react, reactServer] = await Promise.all([load('react'), load('react-dom/server')]);
+    const reactProps = def.options.props ? def.options.props(props) : props;
+    const element = interopDefault(react).createElement(def.component as any, reactProps as any);
+
+    return interopDefault(reactServer).renderToString(element);
   } catch {
     return '';
   }
@@ -140,7 +151,7 @@ async function renderForeign(def: ForeignDef, node: JanuxNode, scope: RenderScop
   const key = nextKey(scope, def as unknown as ComponentDef, explicit);
   const id = `${def.name}#${key}`;
   const { children: _children, ...props } = node.$p;
-  const inner = await foreignInner(def, props);
+  const inner = await foreignInner(def, props, scope);
 
   return `<janux-foreign data-jx="${escapeHtml(id)}" data-jxf-hydrate="${def.options.hydrate}"${foreignPropsAttr(props, scope)}>${inner}</janux-foreign>`;
 }
