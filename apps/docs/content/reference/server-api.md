@@ -22,7 +22,9 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 
 | Option | Type | Notes |
 |---|---|---|
-| `routesDir` | `string` | File-system routing root |
+| `routesDir` | `string` | File-system routing root (full segment grammar, `_layout` chains, `(group)` dirs) |
+| `matchers` | `Record<name, (value) => boolean>` | Custom typed-param matchers for `[param=matcher]` (built-ins: `integer`, `uuid`) |
+| `middleware` | `(req) => Response \| undefined` | Runs before routing; a returned Response short-circuits |
 | `routes` | `Record<path, renderFn>` | Inline routes (tests, embedding) |
 | `loadRoute` | `(filePath) => Promise<module>` | Injectable loader (Vite dev uses `ssrLoadModule`) |
 | `apis` | `Record<module, moduleExports>` | api() modules |

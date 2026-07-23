@@ -15,6 +15,8 @@ export interface JanuxAppConfig {
   agentModule?: string;
   storesModule?: string;
   i18nModule?: string;
+  middlewareModule?: string;
+  matchersModule?: string;
   stylesheet?: string;
   favicon?: string;
   title?: string;
@@ -59,6 +61,8 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     agentModule: options.agentModule ?? optional(resolve(root, 'src/agent.ts')),
     storesModule: options.storesModule ?? optional(resolve(root, 'src/stores.ts')),
     i18nModule: optional(resolve(root, 'src/i18n.ts')) ?? optional(resolve(root, 'src/i18n/index.ts')),
+    middlewareModule: optional(resolve(root, 'src/middleware.ts')),
+    matchersModule: optional(resolve(root, 'src/matchers.ts')),
     stylesheet: optional(resolve(root, 'src/styles.css')),
     favicon: optional(resolve(root, 'public/favicon.svg')) ? '/favicon.svg' : undefined,
     title: options.title,

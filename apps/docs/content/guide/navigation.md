@@ -2,6 +2,61 @@
 
 Janux navigates like a single-page app without you writing a router. The first page is server-rendered HTML with everything in it (as always); every *subsequent* navigation is intercepted client-side, so moving between routes is instant and the shell — a dashboard's sidebar, header, breadcrumbs — never flickers.
 
+## The route tree
+
+Routes are files under `src/routes`. `index.tsx` → `/`, `orders/[id].tsx` → `/orders/:id`. The full segment grammar:
+
+| Segment | Matches | `params` |
+|---|---|---|
+| `about.tsx` | `/about` (static) | — |
+| `[id].tsx` | `/42`, `/ana` (one segment) | `{ id }` |
+| `[id=integer].tsx` | `/42` only — a **typed matcher** gates the match | `{ id }` |
+| `[...path].tsx` | `/a/b/c` (one or more) | `{ path: "a/b/c" }` |
+| `[[...path]].tsx` | `/`, `/a/b` (zero or more, optional) | `{ path }` |
+
+Built-in matchers: `integer`, `uuid`. Add your own in `src/matchers.ts` (each export is a `(value) => boolean`):
+
+```ts
+// src/matchers.ts
+export const slug = (value: string) => /^[a-z0-9-]+$/.test(value);
+// then: routes/blog/[post=slug].tsx
+```
+
+**Route-sort spec (deterministic).** When several patterns could match, specificity is compared segment-by-segment, most-specific first: **static > typed > dynamic > catch-all > optional-catch-all**; an exact-depth route beats a rest segment that would swallow it; ties break on pattern text. Order never depends on file-system enumeration.
+
+## Layouts & route groups
+
+A `_layout.tsx` at any level wraps its subtree. Its default export receives `{ children, ctx, params }` and layouts **compose top-down** (outermost directory first):
+
+```tsx
+// routes/console/[team]/_layout.tsx
+export default function TeamLayout({ children, params }) {
+  return (
+    <div class="console-shell" data-team={params.team}>
+      <Sidebar team={params.team} />
+      <main>{children}</main>
+    </div>
+  );
+}
+```
+
+`(group)` directories organize files and attach their own layout **without appearing in the URL** — `routes/(marketing)/pricing.tsx` serves `/pricing` wrapped in `(marketing)/_layout.tsx`. Use groups to give different sections different root shells.
+
+## Middleware
+
+`src/middleware.ts` runs before routing on every request; return a `Response` to short-circuit (redirects, locale hardening, auth gates), or nothing to continue:
+
+```ts
+// src/middleware.ts
+export default function middleware(req: Request): Response | undefined {
+  const url = new URL(req.url);
+
+  if (url.pathname === '/old') return new Response(null, { status: 308, headers: { location: '/new' } });
+}
+```
+
+## SPA navigation
+
 It's on by default for any app that calls `boot()`. Pure static pages (no islands, no `boot()`) stay classic multi-page navigation, which is exactly right: with no runtime there's nothing to intercept.
 
 ## How it works

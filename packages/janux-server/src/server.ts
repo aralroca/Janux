@@ -50,6 +50,10 @@ export interface ServerOptions {
   i18n?: I18nConfig;
   /** App-context resolver for the foreign runtime (react / react-dom/server). */
   foreignImport?: (spec: string) => Promise<any>;
+  /** Custom typed-param matchers for `[param=matcher]` route segments. */
+  matchers?: Record<string, (value: string) => boolean>;
+  /** Runs before routing; returning a Response short-circuits the request. */
+  middleware?: (req: Request) => Response | undefined | Promise<Response | undefined>;
 }
 
 async function resolveMeta(
@@ -79,7 +83,7 @@ let proposalSeq = 0;
 /** The Janux fullstack server: pages, api() endpoints, manifest, proposals and the agent mount. */
 export function createJanuxServer(options: ServerOptions = {}) {
   const apiTools = collectApis(options.apis ?? {});
-  const router = options.routesDir ? createFsRouter(options.routesDir) : undefined;
+  const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
   const loadRoute = options.loadRoute ?? ((filePath: string) => import(/* @vite-ignore */ filePath));
   const proposals = new Map<string, PendingApiProposal>();
 
@@ -139,11 +143,23 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const findRoute = (pathname: string) => {
     if (options.routes?.[pathname]) {
-      return { render: options.routes[pathname]!, params: {} as Record<string, string> };
+      return { render: options.routes[pathname]!, params: {} as Record<string, string>, layouts: [] as string[] };
     }
     const match = router?.match(pathname);
 
-    return match ? { load: match.filePath, params: match.params } : undefined;
+    return match ? { load: match.filePath, params: match.params, layouts: match.layouts } : undefined;
+  };
+
+  /** Layouts compose top-down: each `_layout` default export wraps its subtree. */
+  const applyLayouts = async (vnode: unknown, layouts: string[], ctx: Ctx, params: Record<string, string>) => {
+    const wrapped = [...layouts].reverse().reduce(async (childPromise, layoutPath) => {
+      const child = await childPromise;
+      const layoutModule = (await loadRoute(layoutPath)) as any;
+
+      return layoutModule.default({ children: child, ctx, params });
+    }, Promise.resolve(vnode));
+
+    return wrapped;
   };
 
   const renderPage = async (pathname: string, ctx: Ctx) => {
@@ -153,7 +169,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const module = 'render' in route ? undefined : ((await loadRoute(route.load)) as any);
     const render = 'render' in route ? route.render : module.default;
     const meta = await resolveMeta(module?.meta, ctx, route.params);
-    const vnode = await render({ ctx, params: route.params });
+    const vnode = await applyLayouts(await render({ ctx, params: route.params }), route.layouts, ctx, route.params);
     const result = await renderToString(vnode, {
       ctx,
       storeDefs: options.storeDefs,
@@ -287,7 +303,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const fetch = async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
     const { pathname } = url;
+    const intercepted = await options.middleware?.(req);
 
+    if (intercepted) return intercepted;
     if (pathname.startsWith('/_janux/api/')) return handleApi(req, pathname.slice('/_janux/api/'.length));
     if (pathname === '/_janux/approve') return handleApprove(req);
     if (pathname === '/_janux/reject') {
