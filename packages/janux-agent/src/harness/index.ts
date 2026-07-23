@@ -26,3 +26,10 @@ export {
   type RateLimiter,
   type CounterStore,
 } from './rate-limit';
+export {
+  connectMcp,
+  createMcpPool,
+  type McpClientOptions,
+  type McpConnection,
+  type RemoteTool,
+} from './mcp-client';
