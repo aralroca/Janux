@@ -1,4 +1,5 @@
 export { defineAgent, type AgentConfig, type AgentOverrides } from './agent';
+export * from './harness';
 export { resolveModel, setupCard, type ResolvedModel, type ModelEnv } from './model';
 export {
   callProvider,
