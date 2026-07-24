@@ -22,7 +22,7 @@ The number may be fractional (`'1.5h'`, `'0.5s'`); the unit is required and must
 
 ## It throws on anything else
 
-There is no silent fallback — a typo fails loudly at definition time instead of turning into a surprise interval:
+There is no silent fallback — a typo throws instead of turning into a surprise interval. `every('5min')` fails where you wrote it; a bad `debounce` fails when the component attaches (that's when effects start):
 
 ```ts
 parseDuration('5');       // throws: invalid duration "5" (use e.g. 300ms, 2s, 5m, 1h)

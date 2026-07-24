@@ -51,16 +51,20 @@ export function source(def: SourceDef): SourceDef {
   return def;
 }
 
-/** Refresh policy builder: `every('5m').orOn('inventory.changed')`. */
-export function every(interval: string): RefreshPolicy & { orOn: (event: string) => RefreshPolicy } {
-  const policy = { everyMs: parseDuration(interval), events: [] as string[] };
+/** A refresh policy that can keep collecting event triggers: `.orOn(a).orOn(b)`. */
+export type ChainableRefreshPolicy = RefreshPolicy & { orOn: (event: string) => ChainableRefreshPolicy };
 
+/** Every `orOn` returns a new policy, so a shared base is safe to reuse. */
+function chainable(policy: RefreshPolicy): ChainableRefreshPolicy {
   return {
     ...policy,
-    orOn(event: string) {
-      return { ...policy, events: [...policy.events, event] };
-    },
+    orOn: (event: string) => chainable({ ...policy, events: [...policy.events, event] }),
   };
+}
+
+/** Refresh policy builder: `every('5m').orOn('inventory.changed')`. */
+export function every(interval: string): ChainableRefreshPolicy {
+  return chainable({ everyMs: parseDuration(interval), events: [] });
 }
 
 /** Event-only refresh policy: `on('inventory.changed')`. */
