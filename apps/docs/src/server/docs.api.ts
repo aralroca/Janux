@@ -38,6 +38,8 @@ export const SECTIONS: SectionDef[] = [
         label: 'Components & state',
         slugs: [
           'components',
+          'views-and-jsx',
+          'keys-and-lists',
           'schema',
           'intents-and-guards',
           'sources-effects-events',
