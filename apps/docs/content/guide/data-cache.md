@@ -4,7 +4,12 @@ For the server-state a console leans on — cached reads, background revalidatio
 
 ## Queries
 
-Inside a component, bind a cached read with `useQuery(bag, id, getOptions)`:
+Inside a component, bind a cached read with `useQuery(bag, id, getOptions)`. It ships with Janux — import it from the client entry:
+
+```ts
+import { useQuery } from 'janux/client';
+```
+
 
 ```tsx
 export const Sessions = component({

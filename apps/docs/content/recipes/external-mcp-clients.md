@@ -37,7 +37,7 @@ curl -s 'https://your.app/_janux/manifest?path=/shop' | jq   # full schemas for 
 
 The manifest is **per route and per context**: tools an unauthorized context may not call simply aren't listed.
 
-To identify your client to the app (rate limits, per-agent policies, audit), sign requests with Web Bot Auth (RFC 9421) — the server verifies them into `ctx.agent` via `agents.webBotAuth`. See the [Server API](/docs/reference/server-api).
+To identify your client to the app (rate limits, per-agent policies, audit), sign requests with Web Bot Auth — the server verifies them into `ctx.agent` via `agents.webBotAuth`. See the [Server API](/docs/reference/server-api).
 
 ## Calling server tools
 

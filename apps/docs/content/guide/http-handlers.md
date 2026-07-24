@@ -1,6 +1,6 @@
 # HTTP handlers & uploads
 
-Beyond pages and `api()` RPC, a real app needs arbitrary HTTP endpoints: REST routes, webhooks, OAuth authorization-server endpoints, `.well-known` documents, SSO callbacks, file downloads. Janux serves these from a `src/api/**` tree (RFC 0002 §10).
+Beyond pages and `api()` RPC, a real app needs arbitrary HTTP endpoints: REST routes, webhooks, OAuth authorization-server endpoints, `.well-known` documents, SSO callbacks, file downloads. Janux serves these from a `src/api/**` tree.
 
 ## Route handlers
 
@@ -64,4 +64,4 @@ zone.isOver.value;        // reactive drag-over state
 
 ## Streaming SSR (roadmap)
 
-Component-property Suspense (`Comp.suspense = () => <Skeleton/>`) and out-of-order streaming are specified in the RFC and not yet implemented. Today, async data reaches the UI through the reactive client cache (`useQuery`, see [Data cache](/docs/guide/data-cache)): the page ships instantly and data fills in reactively — no blocking SSR wait. Streaming SSR is a first-paint optimization tracked alongside the compiler work.
+Component-property Suspense (`Comp.suspense = () => <Skeleton/>`) and out-of-order streaming are on the roadmap. Today, async data reaches the UI through the reactive client cache (`useQuery`, see [Data cache](/docs/guide/data-cache)): the page ships instantly and data fills in reactively — no blocking SSR wait. Streaming SSR is a first-paint optimization tracked alongside the compiler work.

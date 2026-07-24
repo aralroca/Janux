@@ -1,6 +1,6 @@
 # Foreign-UI interop (React)
 
-The single biggest blocker when migrating a mature front-end is its third-party ecosystem: node-graph editors, animation libraries, data grids, PDF viewers… none of them mount on a foreign runtime. Janux's answer (RFC 0002 §1) is `janux/interop`: **mount them unchanged**, each in a real embedded React root, while everything around them stays bifacial.
+A mature front-end leans on a third-party ecosystem — node-graph editors, animation libraries, data grids, PDF viewers — that doesn't mount on a foreign runtime. `janux/interop` lets you **mount them unchanged**, each in a real embedded React root, while everything around them stays bifacial.
 
 ```tsx
 import { foreign } from 'janux/interop';
@@ -49,11 +49,37 @@ export const WorkflowEditor = component({
 });
 ```
 
-Human gestures update `state` through intents (via `on:`); the agent invokes the *same* intents. The migration turns every DOM-scraped action into a typed tool.
+Human gestures update `state` through intents (via `on:`); the agent invokes the *same* intents — every DOM-scraped action becomes a typed tool.
+
+
+## Two JSX runtimes in one project, step by step
+
+Janux compiles `.tsx` with **its own JSX runtime** by default, while your React components need **React's**. Both coexist per file — the pragma decides:
+
+1. **Install React in your app** (Janux doesn't bundle it): `bun add react react-dom` (+ `bun add -d @types/react @types/react-dom`).
+2. **Janux files need nothing**: any `.tsx` without a pragma uses the Janux runtime (components, pages, layouts).
+3. **React files start with the pragma** so TypeScript and the compiler use React's runtime for that file only:
+
+```tsx
+/** @jsxImportSource react */
+import { useState } from 'react';
+
+export function Gauge({ level }: { level: number }) {
+  const [open, setOpen] = useState(false);
+
+  return <button onClick={() => setOpen(!open)}>{level}{open ? '!' : ''}</button>;
+}
+```
+
+4. **Never mix runtimes in one file.** A file is either Janux JSX (`class`, `on={intents.x}`) or React JSX (`className`, `onClick`). Cross the boundary only with `foreign()`.
+5. **Mount it** from a Janux view via `foreign()` (see above) — Janux SSRs it, hydrates a real React root, and bridges props/events.
+6. **One React, resolved from your app.** The Vite plugin resolves `react`/`react-dom` from your project root and dedupes them, so a linked or nested dependency can never introduce a second React (the classic "invalid hook call" trap). If you see hook errors, check `bun pm ls react` for duplicates.
+
+That's the whole model: Janux owns the tree, React owns its leaves, and each file declares which language it speaks.
 
 ## Notes & current limits
 
 - Foreign components never appear in the manifest — by design. Agent capability comes from the wrapping shell.
 - A standalone foreign (outside any island) SSRs and mounts from its serialized call-site props; `on:` requires an enclosing island.
 - `react`/`react-dom` are optional peers — apps without foreign islands pay nothing.
-- Reverse interop (mounting a Janux island inside a React app) is specified in the RFC and lands when a migration needs it.
+- Reverse interop (mounting a Janux island inside a React app) is on the roadmap.

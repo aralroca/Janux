@@ -63,7 +63,7 @@ janux.subscribe('cart.checkedOut', fn);   // typed events
 janux.manifest();                         // live manifest of the mounted tree
 ```
 
-External MCP clients get the same surface over HTTP: `GET /_janux/manifest?path=/shop` for discovery, `POST /_janux/api/*` (with `x-janux-origin: agent`) for server tools. Two optional server features round this out: `llmsTxt` serves a `GET /llms.txt` index of pages and tools for agents that discover the site through the web (dynamic routes list their real pages via `staticParams`), and `agents.webBotAuth` verifies signed agent requests (RFC 9421) into `ctx.agent` — see the [Server API](/docs/reference/server-api). The contract is also testable: `janux verify` fails CI when an agent-reachable tool lacks a description, and `janux eval` replays scripted agent tasks against a live app — see the [CLI reference](/docs/reference/cli).
+External MCP clients get the same surface over HTTP: `GET /_janux/manifest?path=/shop` for discovery, `POST /_janux/api/*` (with `x-janux-origin: agent`) for server tools. Two optional server features round this out: `llmsTxt` serves a `GET /llms.txt` index of pages and tools for agents that discover the site through the web (dynamic routes list their real pages via `staticParams`), and `agents.webBotAuth` verifies signed agent requests into `ctx.agent` — see the [Server API](/docs/reference/server-api). The contract is also testable: `janux verify` fails CI when an agent-reachable tool lacks a description, and `janux eval` replays scripted agent tasks against a live app — see the [CLI reference](/docs/reference/cli).
 
 ## WebMCP — zero config
 
@@ -86,7 +86,7 @@ import { defineAgent, createMemory, createPgStorage, unicodeNormalizer, historyT
 const storage = await createPgStorage({ connectionString: process.env.DATABASE_URL! });
 
 export default defineAgent({
-  instructions: 'You are the Didit console copilot…',
+  instructions: 'You are the support copilot of this app…',
   harness: {
     memory: createMemory({ storage, lastMessages: 20, generateTitle: async (first) => titleFor(first) }),
     processors: [unicodeNormalizer(), injectionGuard(classify), historyTokenBudget(24_000), piiFilter()],
@@ -102,7 +102,7 @@ What each piece gives you:
 - **Processors** — the guardrail pipeline runs before the model: NFKC normalization, prompt-injection classification (`{type:'refusal'}` without ever calling the provider), history token budget (drops oldest first, never the system prompt or the newest turn), PII scrubbing.
 - **Rate limiting** — fixed-window per identity + optional global circuit-breaker over a pluggable counter store (`createRedisCounterStore` shares the window across instances). Fails open on store outages; `429` on exceed.
 - **Durable workflows** — `createWorkflow`/`createStep` + `createWorkflowRunner(storage)`: a step calls `suspend(payload)` and the run snapshot persists by run id — it survives restarts and resumes from another instance, with callables re-supplied via `requestContext`. The one-question-per-suspend interview pattern is first-class.
-- **Outbound MCP** — `connectMcp({ url, token, namespace })` turns any remote MCP server into `AgentTool`s (the hosted Didit MCP, a docs MCP…); `createMcpPool()` caches per user token and evicts dead connections.
+- **Outbound MCP** — `connectMcp({ url, token, namespace })` turns any remote MCP server into `AgentTool`s (a hosted MCP, a docs MCP…); `createMcpPool()` caches per user token and evicts dead connections.
 - **Attachments** — `acceptAttachments` validates type/size/count and assigns stable `att_N` refs.
 
 Without `harness`, `defineAgent` stays the zero-config stateless loop — a static site pays nothing.

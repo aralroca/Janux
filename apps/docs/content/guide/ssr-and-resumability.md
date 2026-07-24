@@ -30,7 +30,7 @@ If a route mounts no islands, the HTML document contains no `<script>` at all �
 
 ## Forms
 
-Intents bound with `<form intent={...}>` are handled by the delegated submit listener; form fields become the intent's input object. Server-side no-JS fallback (a plain POST when the runtime hasn't loaded) is specified in the RFC and on the roadmap — v0.1 requires the runtime for form intents.
+Intents bound with `<form intent={...}>` are handled by the delegated submit listener; form fields become the intent's input object. Server-side no-JS fallback (a plain POST when the runtime hasn't loaded) is on the roadmap — today the runtime is required for form intents.
 
 ## Navigation and resume are the same machinery
 
