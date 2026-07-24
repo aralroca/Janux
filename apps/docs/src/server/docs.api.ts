@@ -81,6 +81,7 @@ export const SECTIONS: SectionDef[] = [
         slugs: [
           'testing-components',
           'forms',
+          'optimistic-ui',
           'tailwind',
           'auth-and-context',
           'cross-island-events',
