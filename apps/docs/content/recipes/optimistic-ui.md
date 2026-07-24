@@ -7,13 +7,15 @@ import { component, intent, schema, str } from 'janux';
 import { getQueryClient, mutation, useQuery } from 'janux/client';
 import { addTodo, listTodos } from '../server/todos.api';
 
+type Task = { text: string; pending?: boolean };
+
 const client = getQueryClient();
 const KEY = ['todos'];
 
 export const addTask = mutation({
   mutationFn: (vars: { text: string }) => addTodo(vars),
   onMutate: (vars) => {
-    const previous = client.getQueryData<Array<{ text: string; pending?: boolean }>>(KEY) ?? [];
+    const previous = client.getQueryData<Task[]>(KEY) ?? [];
 
     client.setQueryData(KEY, [...previous, { text: vars.text, pending: true }]);
 

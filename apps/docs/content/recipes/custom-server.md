@@ -55,7 +55,8 @@ Two places, different reach:
 createJanuxServer({
   ...options,
   // Inside: runs before routing, and covers /_janux/* too. A Response short-circuits.
-  middleware: (req) => (isBlocked(req) ? new Response('Forbidden', { status: 403 }) : undefined),
+  middleware: (req) =>
+    isBlocked(req) ? new Response('Forbidden', { status: 403 }) : undefined,
 });
 ```
 

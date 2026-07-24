@@ -33,18 +33,22 @@ beforeAll(async () => {
   page = await docExample('apps/docs/content/recipes/optimistic-ui.md', 0, STUB);
 });
 
+/** What a mounted island does: the view's useQuery creates the entry, then it holds `tasks`. */
+async function seed(tasks: Array<{ text: string }>) {
+  serverTasks = tasks;
+  await renderToString(jsx(page.Todos, {}), {});
+  await client.invalidateQueries(KEY);
+}
+
 describe('recipes/optimistic-ui.md', () => {
   it('the view is what creates the cache entry the mutation writes into', async () => {
-    serverTasks = [{ text: 'ship it' }];
-    const { html } = await renderToString(jsx(page.Todos, {}), {});
-
-    expect(html).toContain('<ul>');
-    await client.invalidateQueries(KEY);
+    await seed([{ text: 'ship it' }]);
 
     expect(client.getQueryData(KEY)).toEqual([{ text: 'ship it' }]);
   });
 
   it('shows the task before the server confirms it, then settles on server truth', async () => {
+    await seed([{ text: 'ship it' }]);
     let confirm = () => {};
 
     addTodo = (vars) =>
@@ -73,8 +77,7 @@ describe('recipes/optimistic-ui.md', () => {
   });
 
   it('puts the previous value back when the mutation rejects', async () => {
-    serverTasks = [{ text: 'ship it' }];
-    client.setQueryData(KEY, [{ text: 'ship it' }]);
+    await seed([{ text: 'ship it' }]);
     addTodo = async () => {
       throw new Error('offline');
     };
