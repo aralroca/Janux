@@ -13,10 +13,12 @@ export function setupCopyCode(): void {
 }
 
 function flashCopied(button: HTMLButtonElement): void {
+  const iconOnly = button.querySelector('svg') !== null;
+
   button.classList.add('copied');
-  button.textContent = 'Copied';
+  if (!iconOnly) button.textContent = 'Copied';
   setTimeout(function resetCopyLabel() {
     button.classList.remove('copied');
-    button.textContent = 'Copy';
+    if (!iconOnly) button.textContent = 'Copy';
   }, RESET_MS);
 }

@@ -1,11 +1,13 @@
 # Examples
 
-Every example in [`examples/`](https://github.com/aralroca/Janux/tree/main/examples) is a complete, runnable app — clone the repo and start any of them:
+Every example in [`examples/`](https://github.com/aralroca/Janux/tree/main/examples) is a complete, runnable app. Scaffold any of them as your own project straight from the CLI:
 
 ```bash
-git clone https://github.com/aralroca/Janux.git && cd Janux && bun install
-bun run --cwd examples/shop dev   # http://localhost:3000
+bun create janux my-shop --example shop
+cd my-shop && bun install && bun run dev   # http://localhost:3000
 ```
+
+Or run them in place inside the monorepo: `git clone https://github.com/aralroca/Janux.git && cd Janux && bun install && bun run --cwd examples/shop dev`.
 
 | Example | What it demonstrates |
 |---|---|

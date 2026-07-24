@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
 /** Publishes all packages in dependency order, skipping versions already on npm. */
 import { $ } from 'bun';
+import { cpSync, rmSync } from 'node:fs';
+import { basename } from 'node:path';
 
 const ORDER = ['janux', 'janux-server', 'janux-agent', 'janux-vite', 'janux-tailwind', 'janux-cli', 'create-janux'];
 
@@ -31,6 +33,17 @@ function pinWorkspaceDeps(pkg: Record<string, any>): Record<string, any> {
   return { ...pkg, dependencies: deps };
 }
 
+// create-janux ships the monorepo examples as scaffolding sources (`--example`).
+const EXAMPLES_SKIP = new Set(['node_modules', 'dist', 'bun.lock', '.env']);
+
+function embedExamples(): void {
+  rmSync('packages/create-janux/examples', { recursive: true, force: true });
+  cpSync('examples', 'packages/create-janux/examples', {
+    recursive: true,
+    filter: (source) => !EXAMPLES_SKIP.has(basename(source)),
+  });
+}
+
 for (const dir of ORDER) {
   const path = `packages/${dir}/package.json`;
   const original = await Bun.file(path).text();
@@ -41,11 +54,13 @@ for (const dir of ORDER) {
     continue;
   }
   console.log(`→ publishing ${pkg.name}@${pkg.version}`);
+  if (dir === 'create-janux') embedExamples();
   await Bun.write(path, `${JSON.stringify(pinWorkspaceDeps(pkg), null, 2)}\n`);
   try {
     await $`bun publish --access public`.cwd(`packages/${dir}`);
   } finally {
     await Bun.write(path, original);
+    if (dir === 'create-janux') rmSync('packages/create-janux/examples', { recursive: true, force: true });
   }
 }
 console.log('✔ release complete');

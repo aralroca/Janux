@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -16,6 +16,30 @@ describe('create-janux', () => {
       expect(content).not.toContain('__APP_NAME__');
       expect(content).toContain('my-app');
     }
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test('scaffolds from an example with --example, rewriting workspace deps', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-shop', '--example', 'i18n'], { cwd });
+
+    expect(result.exitCode).toBe(0);
+    const pkg = JSON.parse(readFileSync(join(cwd, 'my-shop', 'package.json'), 'utf-8'));
+
+    expect(pkg.name).toBe('my-shop');
+    expect(JSON.stringify(pkg)).not.toContain('workspace:*');
+    expect(existsSync(join(cwd, 'my-shop', 'src/routes/index.tsx'))).toBe(true);
+    expect(existsSync(join(cwd, 'my-shop', 'dist'))).toBe(false);
+    expect(existsSync(join(cwd, 'my-shop', 'node_modules'))).toBe(false);
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test('unknown example fails listing the available ones', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-shop', '--example', 'nope'], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain('shop');
     rmSync(cwd, { recursive: true, force: true });
   });
 

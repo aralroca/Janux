@@ -45,7 +45,10 @@ A Bun server that:
 ## create-janux
 
 ```bash
-bunx create-janux my-app
+bun create janux my-app                    # the starter app
+bun create janux my-shop --example shop    # start from any examples/ app
 ```
 
-Scaffolds the conventional layout (routes, components, server apis, agent, client entry) with a working counter + copilot demo.
+`--example <name>` scaffolds a copy of one of the [example apps](/docs/more/examples) (`shop`, `i18n`, `interop-react`, `nested-islands`, `data-cache`) instead of the starter template; omit the name to list them. `bunx create-janux` is the same command.
+
+The starter template scaffolds the conventional layout (routes, components, agent, client entry) with a working counter + agent-panel demo.

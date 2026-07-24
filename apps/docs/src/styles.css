@@ -636,11 +636,21 @@ pre.shiki code {
 }
 
 /* ── Tables ─────────────────────────────────────────────────────── */
+/* Block + overflow keeps wide tables scrollable instead of clipped. */
 table {
+  display: block;
   width: 100%;
   margin: 18px 0;
   border-collapse: collapse;
   font-size: 14.5px;
+  overflow-x: auto;
+}
+
+/* Inside cells an inline-code token must never split mid-word — the column
+   widens (and the table scrolls) instead. */
+table code {
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 th {
@@ -724,22 +734,46 @@ body[data-theme='dark'] .hero-janus {
   border: 1px solid var(--border);
 }
 
+.install-block {
+  display: inline-flex;
+  align-items: center;
+  margin: 18px 0;
+  padding-right: 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--code-bg);
+}
+
 .install {
-  display: inline-block;
-  padding: 12px 26px;
+  margin: 0;
+  padding: 12px 8px 12px 26px;
+  border: none;
+  background: none;
   font-family: var(--mono);
   font-size: 14px;
   color: var(--heading);
 }
 
-.install-block {
-  display: inline-flex;
-  align-items: center;
-}
-
 .install-block .copy-code {
   position: static;
+  display: inline-flex;
+  padding: 6px;
+  border: none;
+  background: none;
   opacity: 1;
+}
+
+.copy-code .ic-check {
+  display: none;
+}
+
+.copy-code.copied .ic-copy {
+  display: none;
+}
+
+.copy-code.copied .ic-check {
+  display: inline;
+  color: var(--accent);
 }
 
 .two-faces h2 {
