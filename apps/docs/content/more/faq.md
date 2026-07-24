@@ -26,7 +26,7 @@ Yes, and that's fine: `human` is the default and most-privileged origin, so lyin
 
 ## How do I do i18n / dark mode / router transitions?
 
-i18n: your strings, your call — state or ctx. Dark mode: a store (`theme`) read by islands + CSS. Client-side route transitions: built in — SPA navigation is on by default (diffed HTML over the Navigation API), with `persist` islands and surviving app-scope stores. See [SPA navigation](/docs/guide/ssr-and-resumability#spa-navigation).
+i18n: your strings, your call — state or ctx. Dark mode: a store (`theme`) read by islands + CSS. Client-side route transitions: built in — SPA navigation is on by default (diffed HTML over the Navigation API), with `persist` islands and surviving app-scope stores. See [SPA navigation](/docs/guide/navigation#spa-navigation).
 
 ## Why Bun?
 
