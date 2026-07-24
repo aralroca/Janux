@@ -72,7 +72,7 @@ export default async function Home() {
   );
 
   return (
-    <Layout current="/">
+    <Layout current="/" sidebar={false}>
       <main class="home">
         <section class="hero">
           <img
@@ -125,6 +125,26 @@ export default async function Home() {
           </div>
         </section>
 
+        <section class="mission">
+          <h2>Built for how software gets written now</h2>
+          <p>
+            AI agents write the code, humans review it. Janux is shaped for exactly that loop: one
+            schema-typed definition per component — no hooks, no lifecycle traps, no hidden state to
+            hold in your head. It's the most predictable target a model can generate, and the easiest
+            diff a human will ever review: <strong>the PR is the whole truth of the component</strong>.
+          </p>
+          <p>
+            And every component you ship is already an agent surface. Janux projects the same
+            definition into typed MCP tools and live resources — in the browser via{' '}
+            <strong>WebMCP</strong>, and server-side through a hosted <strong>MCP endpoint</strong> —
+            so wiring Claude, ChatGPT or your own copilot to drive the app is a URL, not an
+            integration project. Contracts can't drift because they're generated from the code that
+            renders; guards keep a human in the loop where it matters. Write once, review fast, and
+            your app is operable by any agent on the market. <strong>No other framework gets you
+            there out of the box.</strong>
+          </p>
+        </section>
+
         <section class="features">
           {FEATURES.map(([icon, title, body]) => (
             <div key={title} class="feature-card">
@@ -141,7 +161,9 @@ export default async function Home() {
           <a href="https://github.com/aralroca/Janux/issues/1">RFC 0001</a>
           <a href="/docs/more/examples">Examples</a>
           <a href="/playground">Playground</a>
-          <span>MIT © Aral Roca</span>
+          <span>
+            MIT © Aral Roca — from the creator of <a href="https://brisa.build/" target="_blank" rel="noopener">Brisa</a>
+          </span>
         </footer>
       </main>
       <DocsCopilot persist />

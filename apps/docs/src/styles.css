@@ -356,6 +356,12 @@ body[data-theme='dark'] .theme-toggle .icon-dark {
   padding: 40px 48px 96px;
 }
 
+/* Landing (Next.js-style): no sidebar, content spans the frame. */
+.layout.no-sidebar .content {
+  margin-left: 0;
+  width: 100%;
+}
+
 /* ── Doc page grid: article + toc ───────────────────────────────── */
 .doc-grid {
   display: grid;
@@ -670,6 +676,7 @@ td {
 /* ── Home ───────────────────────────────────────────────────────── */
 .home {
   max-width: 1000px;
+  margin-inline: auto;
 }
 
 .hero {
@@ -781,6 +788,24 @@ body[data-theme='dark'] .hero-janus {
   border: none;
 }
 
+.mission {
+  max-width: 780px;
+  margin: 56px auto 8px;
+  text-align: center;
+}
+
+.mission h2 {
+  border: none;
+  text-align: center;
+}
+
+.mission p {
+  margin: 16px 0;
+  font-size: 16.5px;
+  line-height: 1.75;
+  color: var(--text);
+}
+
 .faces-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -826,6 +851,7 @@ body[data-theme='dark'] .hero-janus {
 
 .home-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 24px;
   padding: 28px 0;
@@ -1449,7 +1475,9 @@ body[data-theme='dark'] .hero-janus {
   }
 
   .doc-grid {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): a plain 1fr means minmax(auto, 1fr) and long <pre> lines
+       would widen the track (and the page) instead of scrolling inside. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .toc {
@@ -1458,7 +1486,7 @@ body[data-theme='dark'] .hero-janus {
 
   .faces-grid,
   .features {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hero h1 {
@@ -1466,8 +1494,12 @@ body[data-theme='dark'] .hero-janus {
   }
 
   .playground {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     height: auto;
+  }
+
+  .pg-hint {
+    display: none;
   }
 
   .playground .editor-pane {

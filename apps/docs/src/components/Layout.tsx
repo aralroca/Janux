@@ -69,7 +69,7 @@ function SidebarNav({ current }: { current?: string }) {
   );
 }
 
-export function Layout({ children, current }: { children: unknown; current?: string }) {
+export function Layout({ children, current, sidebar = true }: { children: unknown; current?: string; sidebar?: boolean }) {
   return (
     <div class="shell">
       <script dangerHTML={THEME_INIT}></script>
@@ -80,22 +80,26 @@ export function Layout({ children, current }: { children: unknown; current?: str
         </a>
         <SearchModal persist eager />
         <nav class="top-links">
+          <a href="/docs/guide/getting-started">Docs</a>
+          <a href="/playground" data-native>Playground</a>
           <a href="/docs/more/examples">Examples</a>
           <a href="https://github.com/aralroca/Janux" target="_blank" rel="noopener">GitHub</a>
           <a href="https://www.npmjs.com/package/janux" target="_blank" rel="noopener">npm</a>
         </nav>
         <ThemeToggle />
       </header>
-      <div class="layout">
-        <nav class="sidebar">
-          <details class="mobile-nav">
-            <summary>Menu</summary>
-            <SidebarNav current={current} />
-          </details>
-          <div class="desktop-nav">
-            <SidebarNav current={current} />
-          </div>
-        </nav>
+      <div class={sidebar ? 'layout' : 'layout no-sidebar'}>
+        {sidebar ? (
+          <nav class="sidebar">
+            <details class="mobile-nav">
+              <summary>Menu</summary>
+              <SidebarNav current={current} />
+            </details>
+            <div class="desktop-nav">
+              <SidebarNav current={current} />
+            </div>
+          </nav>
+        ) : null}
         <div class="content">{children}</div>
       </div>
     </div>
