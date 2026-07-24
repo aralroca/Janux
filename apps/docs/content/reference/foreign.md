@@ -35,7 +35,7 @@ const Flow = foreign(ReactFlow, {
 | `visible` | SSR, then mount when the host scrolls into view (IntersectionObserver) |
 | `only` | **Skip SSR** — client-render only. For components that can't render on the server |
 
-With `react`/`react-dom` installed, everything except `only` server-renders inside its host so the user sees paint before JS. The client then does a deterministic render-replace over that markup rather than a mismatch-prone hydration.
+With `react`/`react-dom` installed, everything except `only` server-renders inside its host so the user sees paint before JS. The client then does a deterministic render-replace over that markup rather than a mismatch-prone hydration. SSR here is fail-soft: if the runtime isn't installed, or your `props` mapper or the React render throws, the host ships **empty** and the client mounts it anyway — so a blank host in the HTML means "look at the mapper", not "interop is broken".
 
 ## isForeignDef(type)
 

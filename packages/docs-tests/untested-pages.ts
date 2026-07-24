@@ -13,8 +13,6 @@
 export const UNTESTED_PAGES: string[] = [
   'getting-started/project-structure.md',
   'guide/agent-and-copilot.md',
-  'guide/i18n.md',
-  'guide/interop.md',
   'reference/agent-attachments.md',
   'reference/agent-mcp-client.md',
   'reference/agent-memory.md',
@@ -24,6 +22,4 @@ export const UNTESTED_PAGES: string[] = [
   'reference/cli.md',
   'reference/client-api.md',
   'reference/client-tools.md',
-  'reference/foreign.md',
-  'reference/i18n-api.md',
 ];

@@ -33,7 +33,7 @@ t('cart.total', { count: 3 });
 Behavior worth knowing:
 
 - **Plurals via `Intl.PluralRules`** for the locale — `zero`/`one`/`two`/`few`/`many`/`other` where the language has them, not a hand-rolled `count === 1`.
-- **Interpolation recurses** through arrays and objects, so a message tree (a nested dictionary of strings) interpolates in one call.
+- **Interpolation recurses** through arrays and objects, so a message tree (a nested dictionary of strings) interpolates in one call — ask for it with `t('key', query, { returnObjects: true })`; without that flag a key whose value is an object resolves to nothing and you get the key back.
 - **`allowEmptyStrings`** defaults to `true`: an empty translation stays empty rather than falling back to the key, which is what you want for deliberately blank strings.
 
 ## selectMessages(dic, used, declared?, separator?)
