@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'bun:test';
-import { devStylesheets } from './plugin';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { devStylesheets, foreignExternals } from './plugin';
 
 /**
  * Regression: the dev shell used to link `/src/styles.css`, which Vite's
@@ -22,5 +25,25 @@ describe('devStylesheets', () => {
 
   it('is empty when the app has no stylesheet', () => {
     expect(devStylesheets('/app', undefined)).toEqual([]);
+  });
+});
+
+/**
+ * Regression: `janux build` failed on a scaffolded app with
+ * "Rollup failed to resolve import react from janux/src/client/foreign.ts".
+ * foreign() imports React dynamically, but Rollup resolves dynamic imports
+ * statically — so an app that never uses foreign islands could not build.
+ */
+describe('foreignExternals', () => {
+  it('externalizes React for an app that has not installed it', () => {
+    const bare = mkdtempSync(join(tmpdir(), 'janux-no-react-'));
+
+    expect(foreignExternals(bare)).toEqual(['react', 'react-dom', 'react-dom/client']);
+  });
+
+  it('bundles React normally for an app root that resolves it', () => {
+    const withReact = resolve(import.meta.dir, '../../../examples/interop-react');
+
+    expect(foreignExternals(withReact)).toEqual([]);
   });
 });
