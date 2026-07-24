@@ -40,9 +40,21 @@ const ENTRIES: Record<string, Record<string, unknown>> = {
 const referenceText = readdirSync(REFERENCE_DIR)
   .map((file) => readFileSync(join(REFERENCE_DIR, file), 'utf8'))
   .join('\n');
+/**
+ * Only code and headings count. An English word that happens to match an
+ * export ("every mutation is audited") documents nothing — a real API mention
+ * lives in a signature, an example or the heading that names it.
+ */
+const referenceCode = [
+  ...referenceText.matchAll(/```[^\n]*\n([\s\S]*?)```/g),
+  ...referenceText.matchAll(/`([^`\n]+)`/g),
+  ...referenceText.matchAll(/^#{1,4} (.+)$/gm),
+]
+  .map((match) => match[1])
+  .join('\n');
 
 function isDocumented(name: string): boolean {
-  return new RegExp(`\\b${name}\\b`).test(referenceText);
+  return new RegExp(`\\b${name}\\b`).test(referenceCode);
 }
 
 describe('reference docs cover the public runtime API', () => {

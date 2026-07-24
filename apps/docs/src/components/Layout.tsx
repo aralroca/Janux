@@ -80,7 +80,7 @@ export function Layout({ children, current, sidebar = true }: { children: unknow
         </a>
         <SearchModal persist eager />
         <nav class="top-links">
-          <a href="/docs/guide/getting-started">Docs</a>
+          <a href="/docs/getting-started/what-is-janux">Docs</a>
           <a href="/playground">Playground</a>
           <a href="/docs/more/examples">Examples</a>
           <a href="https://github.com/aralroca/Janux" target="_blank" rel="noopener">GitHub</a>

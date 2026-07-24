@@ -25,6 +25,11 @@ export interface SectionDef {
  */
 export const SECTIONS: SectionDef[] = [
   {
+    section: 'getting-started',
+    label: 'Getting started',
+    groups: [{ slugs: ['what-is-janux', 'quick-start', 'project-structure', 'mental-model', 'editor-setup'] }],
+  },
+  {
     section: 'guide',
     label: 'Guide',
     groups: [
@@ -57,6 +62,8 @@ export const SECTIONS: SectionDef[] = [
     label: 'Reference',
     groups: [
       { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api'] },
+      { label: 'Reactivity', slugs: ['signal', 'computed', 'watch', 'batch', 'untrack', 'owners'] },
+      { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus'] },
       { label: 'Client & CLI', slugs: ['client-api', 'cli'] },
     ],
   },

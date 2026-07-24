@@ -31,7 +31,7 @@ export const UNDOCUMENTED: Record<string, string[]> = {
     'useQuery',
   ],
   'janux/manifest': [],
-  'janux/interop': ['isForeignDef'],
+  'janux/interop': ['foreign', 'isForeignDef'],
   'janux/query': ['QueryClient', 'getQueryClient', 'hashKey', 'mutation', 'useQuery'],
   '@janux/server': ['createHttpHandlers'],
   '@janux/agent': [

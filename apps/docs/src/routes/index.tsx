@@ -90,7 +90,7 @@ export default async function Home() {
             resources for AI agents — generated from the same definition, so they can never drift.
           </p>
           <div class="hero-actions">
-            <a class="cta" href="/docs/guide/getting-started">
+            <a class="cta" href="/docs/getting-started/quick-start">
               Get started
             </a>
             <a class="cta ghost" href="https://github.com/aralroca/Janux">
