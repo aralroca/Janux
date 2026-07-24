@@ -1,3 +1,5 @@
+@charset "utf-8";
+
 /* ── Janux docs — design tokens ──────────────────────────────────────
    Every color lives here as a light-dark() pair; the rest of the sheet
    only references tokens. `body[data-theme]` (set by the ThemeToggle
@@ -216,7 +218,7 @@ body[data-theme='dark'] .theme-toggle .icon-dark {
 }
 
 #search-results:empty::after {
-  content: 'Type to search the docs — ↑↓ to move, Enter to open.';
+  content: 'Type to search the docs \2014  \2191\2193  to move, Enter to open.';
   display: block;
   padding: 18px 12px 22px;
   color: var(--muted);
@@ -293,14 +295,14 @@ body[data-theme='dark'] .theme-toggle .icon-dark {
 }
 
 .nav-section > summary.nav-label::after {
-  content: '▾';
+  content: '\25BE';
   margin-left: 6px;
   color: var(--muted);
   font-size: 9px;
 }
 
 .nav-section:not([open]) > summary.nav-label::after {
-  content: '▸';
+  content: '\25B8';
 }
 
 .nav-group-label {
@@ -930,7 +932,7 @@ body[data-theme='dark'] .hero-janus {
 }
 
 .copilot-panel .chat:empty::after {
-  content: 'Ask anything about Janux — answers are grounded in these docs.';
+  content: 'Ask anything about Janux \2014  answers are grounded in these docs.';
   display: block;
   padding-top: 34px;
   color: var(--muted);
@@ -1034,7 +1036,7 @@ body[data-theme='dark'] .hero-janus {
 }
 
 .copilot-panel .chat li.thinking::after {
-  content: '…';
+  content: '\2026';
   display: inline-block;
   overflow: hidden;
   vertical-align: bottom;
