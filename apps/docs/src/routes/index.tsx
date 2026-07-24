@@ -97,7 +97,12 @@ export default async function Home() {
               GitHub
             </a>
           </div>
-          <pre class="install">bunx create-janux my-app</pre>
+          <div class="code-block install-block">
+            <pre class="install">bun create janux my-app</pre>
+            <button class="copy-code" type="button" aria-label="Copy command">
+              Copy
+            </button>
+          </div>
         </section>
 
         <section class="two-faces">

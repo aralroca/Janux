@@ -3,11 +3,13 @@ import { DocsCopilot } from './components/DocsCopilot';
 import { PlaygroundShell } from './components/PlaygroundShell';
 import { SearchModal } from './components/SearchModal';
 import { ThemeToggle } from './components/ThemeToggle';
+import { setupCopyCode } from './copy-code';
 import { setupTocSpy } from './toc-spy';
 
 const client = boot({ defs: [DocsCopilot, PlaygroundShell, SearchModal, ThemeToggle], glow: true });
 
 setupTocSpy();
+setupCopyCode();
 
 document.addEventListener('keydown', function closeCopilotOnEscape(event) {
   if (event.key !== 'Escape') return;

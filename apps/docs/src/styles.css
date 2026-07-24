@@ -587,6 +587,41 @@ pre.shiki code {
   margin: 0;
 }
 
+.code-block {
+  position: relative;
+}
+
+.copy-code {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.code-block:hover .copy-code,
+.copy-code:focus-visible,
+.copy-code.copied {
+  opacity: 1;
+}
+
+.copy-code.copied {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.live-block .copy-code {
+  right: 156px;
+}
+
 .try-it {
   position: absolute;
   right: 12px;
@@ -695,6 +730,16 @@ body[data-theme='dark'] .hero-janus {
   font-family: var(--mono);
   font-size: 14px;
   color: var(--heading);
+}
+
+.install-block {
+  display: inline-flex;
+  align-items: center;
+}
+
+.install-block .copy-code {
+  position: static;
+  opacity: 1;
 }
 
 .two-faces h2 {
