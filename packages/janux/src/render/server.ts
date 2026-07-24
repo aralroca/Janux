@@ -153,7 +153,9 @@ async function renderForeign(def: ForeignDef, node: JanuxNode, scope: RenderScop
   const { children: _children, ...props } = node.$p;
   const inner = await foreignInner(def, props, scope);
 
-  return `<janux-foreign data-jx="${escapeHtml(id)}" data-jxf-hydrate="${def.options.hydrate}"${foreignPropsAttr(props, scope)}>${inner}</janux-foreign>`;
+  const persist = props.persist ? ' data-jx-persist' : '';
+
+  return `<janux-foreign data-jx="${escapeHtml(id)}"${persist} data-jxf-hydrate="${def.options.hydrate}"${foreignPropsAttr(props, scope)}>${inner}</janux-foreign>`;
 }
 
 /**
