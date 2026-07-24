@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-300%2B%20passing-brightgreen" alt="300+ tests passing" />
+  <img src="https://img.shields.io/badge/tests-630%2B%20passing-brightgreen" alt="630+ tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -158,7 +158,7 @@ Zero config — first match wins:
 
 Agents read the same docs at `/llms.txt` and any page as Markdown by appending `.md`.
 
-**Every example is verified.** `packages/docs-tests` compiles every snippet, checks it imports only symbols the packages really export, runs the main example of a page and asserts what the prose claims. Two coverage guards fail the build when an export has no reference page, or when a page's executable claims aren't executed.
+**Every example is verified.** `packages/docs-tests` compiles every snippet, checks it imports only symbols the packages really export, runs the main example of a page and asserts what the prose claims. Three guards fail the build when an export has no reference page, when a page's executable claims aren't executed, or when any documented link stops resolving.
 
 ## Examples
 
@@ -177,7 +177,7 @@ bun run --cwd examples/i18n dev
 
 ```bash
 bun install
-bun test packages    # 300+ tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
+bun test packages    # 630+ tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
 bun run typecheck
 ```
 
