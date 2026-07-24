@@ -207,3 +207,22 @@ describe('manifest endpoint', () => {
     expect(manifest.tools.every((tool: any) => tool.name.startsWith('api.'))).toBe(true);
   });
 });
+
+describe('staticExport', () => {
+  it('omits the manifest link, because /_janux/* will not exist on a static host', async () => {
+    const staticServer = createJanuxServer({
+      routes: { '/': () => jsx('div', { children: jsx(cart as any, {}) }) },
+      staticExport: true,
+    });
+    const html = await (await staticServer.fetch(new Request('http://test/'))).text();
+
+    expect(html).not.toContain('janux-manifest');
+    expect(html).toContain('<janux-island data-jx="cart#default">'); // the page itself is intact
+  });
+
+  it('serves it as usual otherwise', async () => {
+    const html = await (await get('/shop')).text();
+
+    expect(html).toContain('rel="janux-manifest"');
+  });
+});

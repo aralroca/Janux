@@ -110,7 +110,7 @@ export function localeRedirectStub(locales: string[], defaultLocale: string): st
 /** `output: "static"`: prerenders every concrete page (dynamic routes via `staticParams`) into dist/client. */
 async function prerenderStatic(root: string): Promise<void> {
   const options = await prodServerOptions(root);
-  const server = createJanuxServer(options);
+  const server = createJanuxServer({ ...options, staticExport: true });
   const pages = await server.listPages();
   const outDir = join(root, 'dist/client');
   const concrete = pages.filter((page) => !page.includes('['));

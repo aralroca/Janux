@@ -62,6 +62,11 @@ export interface ServerOptions {
   httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
   /** Bearer verification for the hosted MCP endpoint (`/_janux/mcp`). Absent → open. */
   mcpAuth?: McpAuth;
+  /**
+   * Prerendering for a static host: omit links to `/_janux/*`, which won't
+   * exist there. Without it every static page fetches a 404 manifest.
+   */
+  staticExport?: boolean;
 }
 
 async function resolveMeta(
@@ -341,7 +346,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       islandNames,
       islandModules: options.islandModules,
       runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
-      manifestUrl: `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
+      manifestUrl: options.staticExport ? undefined : `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
       stylesheets: options.stylesheets,
       favicon: options.favicon,
       i18n: shellI18n(locale, result),
