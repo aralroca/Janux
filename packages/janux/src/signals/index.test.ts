@@ -107,7 +107,9 @@ describe('signals', () => {
 describe('effect cleanup detection', () => {
   it('ignores a non-function return, on re-run and on dispose', () => {
     const count = signal(0);
-    const dispose = effect(() => `title ${count.value}`);
+    // TS rejects a non-void return; JS callers write this by accident all the time
+    // (an arrow with an implicit return), which is the case being pinned here.
+    const dispose = effect((() => `title ${count.value}`) as unknown as () => void);
 
     expect(() => (count.value = 1)).not.toThrow();
     expect(() => dispose()).not.toThrow();
