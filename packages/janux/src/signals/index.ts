@@ -8,6 +8,8 @@ interface Runner {
 export interface Sig<T> {
   value: T;
   peek(): T;
+  /** Live subscriber count — lets owners reclaim signals nobody reads. */
+  readers(): number;
 }
 
 export interface ReadonlySig<T> {
@@ -99,6 +101,7 @@ export function signal<T>(initial: T): Sig<T> {
       notify(subs);
     },
     peek: () => current,
+    readers: () => subs.size,
   };
 }
 

@@ -28,28 +28,37 @@ describe('collectPageLinks', () => {
 });
 
 describe('createNavigateTool', () => {
-  it('glows the pressed link, then navigates', async () => {
-    const assign = mock((path: string) => path);
+  it('glows the pressed link, then SPA-navigates', async () => {
+    const navigate = mock(async (path: string) => path);
 
-    (location as any).assign = assign;
-    const result = createNavigateTool().execute({ path: '/docs/guide/cli-and-deployment' });
+    (window as any).janux = { navigate };
+    const pending = createNavigateTool().execute({ path: '/docs/guide/cli-and-deployment' }) as Promise<any>;
     const anchor = document.querySelector('a[href="/docs/guide/cli-and-deployment"]')!;
 
-    expect(result).toEqual({ navigated: '/docs/guide/cli-and-deployment', label: 'CLI and deployment' });
     expect(anchor.classList.contains(GLOW_CLASS)).toBe(true);
-    expect(assign).not.toHaveBeenCalled();
+    const result = await pending;
 
-    await new Promise((resolve) => setTimeout(resolve, 420));
-    expect(assign).toHaveBeenCalledWith('/docs/guide/cli-and-deployment');
+    expect(result).toEqual({ navigated: '/docs/guide/cli-and-deployment', label: 'CLI and deployment' });
+    expect(navigate).toHaveBeenCalledWith('/docs/guide/cli-and-deployment');
   });
 
-  it('rejects paths not linked on the page and returns the real links', () => {
-    const assign = mock((path: string) => path);
+  it('navigates to any same-origin path, even without a matching link (route-map targets)', async () => {
+    const navigate = mock(async (path: string) => path);
 
-    (location as any).assign = assign;
-    const result = createNavigateTool().execute({ path: '/docs/made/up' }) as any;
+    (window as any).janux = { navigate };
+    const result = (await createNavigateTool().execute({ path: '/transactions?tab=settings' })) as any;
 
-    expect(assign).not.toHaveBeenCalled();
+    expect(result.navigated).toBe('/transactions?tab=settings');
+    expect(navigate).toHaveBeenCalledWith('/transactions?tab=settings');
+  });
+
+  it('rejects cross-origin paths and returns the real links', async () => {
+    const navigate = mock(async (path: string) => path);
+
+    (window as any).janux = { navigate };
+    const result = (await createNavigateTool().execute({ path: 'https://evil.test/x' })) as any;
+
+    expect(navigate).not.toHaveBeenCalled();
     expect(result.links.map((link: any) => link.path)).toContain('/docs/guide/components');
   });
 });

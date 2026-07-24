@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build:index": "bun scripts/build-search-index.ts",
-    "dev": "bun run build:index && janux dev",
+    "dev": "bun run build:index && janux dev --port 4321",
     "build": "bun run build:index && janux build",
     "start": "janux start"
   },

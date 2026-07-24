@@ -1,5 +1,5 @@
 import { buildDefault, toJsonSchema, validate } from '../schema';
-import { computed, untrack, type ReadonlySig } from '../signals';
+import { computed, createRoot, getOwner, runWithOwner, untrack, type Owner, type ReadonlySig } from '../signals';
 import { createReactiveState } from '../state/reactive-state';
 import { createGate, withGate } from '../state/mutation-gate';
 import type { ComponentDef, Ctx, Origin, RunBag, StoreHandle } from '../define/types';
@@ -30,12 +30,16 @@ export interface JanuxInstance {
   emit: (event: string, payload: unknown) => void;
   bag: RunBag;
   snapshot(): Record<string, unknown>;
+  /** Writes a state patch through the mutation gate (rehydration, external restore). */
+  patch(values: Record<string, unknown>): void;
   sourcesSnapshot(): Record<string, { value: unknown }>;
   resource(): Record<string, unknown>;
   settled(): Promise<void>;
   attach(): Promise<void>;
   dispose(): Promise<void>;
   handle(): StoreHandle;
+  /** Runs `fn` inside the instance's disposal scope (effects created there die with it). */
+  runInScope<T>(fn: () => T): T;
 }
 
 function derivedReaders(def: ComponentDef, proxy: any) {
@@ -118,6 +122,16 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     bus.on(event, (payload) => withGate(gate, () => handler({ ...bag, event: payload }))),
   );
 
+  // Disposal scope: effects/queries created during attach, render or intents
+  // register here and are torn down when the instance disposes.
+  let scope: Owner;
+  let disposeScope: () => void = () => {};
+
+  createRoot((dispose) => {
+    scope = getOwner()!;
+    disposeScope = dispose;
+  });
+
   return {
     def,
     uri,
@@ -128,6 +142,13 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     emit,
     bag,
     snapshot: () => state.snapshot(),
+    patch(values: Record<string, unknown>) {
+      withGate(gate, () => {
+        Object.entries(values).forEach(([field, value]) => {
+          if (field in state.proxy) (state.proxy as any)[field] = value;
+        });
+      });
+    },
     sourcesSnapshot() {
       return untrack(() =>
         Object.fromEntries(
@@ -151,17 +172,21 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     async attach() {
       sourcesRuntime.start();
       stopEffects = startEffects(def.effects, bag, tracker, gate);
-      await withGate(gate, () => def.lifecycle?.attach?.(bag));
+      await runWithOwner(scope, () => withGate(gate, () => def.lifecycle?.attach?.(bag)));
     },
     async dispose() {
       stopEffects?.();
       sourcesRuntime.dispose();
       disposeDerived();
+      disposeScope();
       busUnsubs.forEach((unsub) => unsub());
       await withGate(gate, () => def.lifecycle?.detach?.(bag));
     },
     handle(): StoreHandle {
       return { state: state.proxy, derived, intents: bindHumanIntents(intents) };
+    },
+    runInScope<T>(fn: () => T): T {
+      return runWithOwner(scope, fn);
     },
   };
 }

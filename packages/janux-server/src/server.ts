@@ -10,6 +10,10 @@ import {
   type I18nConfig,
   type RenderResult,
 } from 'janux';
+import { QueryClient } from 'janux/query';
+import { createHttpHandlers, type HandlerModule } from './http-handlers';
+import { createMcpEndpoint, type McpAuth } from './mcp';
+import { pageMarkdown } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
 import type { ShellI18n } from './html-shell';
 import { assertValidInput, errorStatus, evictOldestProposal, json, type PendingApiProposal } from './http';
@@ -48,6 +52,16 @@ export interface ServerOptions {
   agents?: AgentsConfig;
   onAudit?: (entry: AuditEntry) => void;
   i18n?: I18nConfig;
+  /** App-context resolver for the foreign runtime (react / react-dom/server). */
+  foreignImport?: (spec: string) => Promise<any>;
+  /** Custom typed-param matchers for `[param=matcher]` route segments. */
+  matchers?: Record<string, (value: string) => boolean>;
+  /** Runs before routing; returning a Response short-circuits the request. */
+  middleware?: (req: Request) => Response | undefined | Promise<Response | undefined>;
+  /** Arbitrary HTTP handlers: a `src/api/**` tree mounted (by default) at `/api`. */
+  httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
+  /** Bearer verification for the hosted MCP endpoint (`/_janux/mcp`). Absent → open. */
+  mcpAuth?: McpAuth;
 }
 
 async function resolveMeta(
@@ -77,7 +91,10 @@ let proposalSeq = 0;
 /** The Janux fullstack server: pages, api() endpoints, manifest, proposals and the agent mount. */
 export function createJanuxServer(options: ServerOptions = {}) {
   const apiTools = collectApis(options.apis ?? {});
-  const router = options.routesDir ? createFsRouter(options.routesDir) : undefined;
+  const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
+  const httpHandlers = options.httpHandlers
+    ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers })
+    : undefined;
   const loadRoute = options.loadRoute ?? ((filePath: string) => import(/* @vite-ignore */ filePath));
   const proposals = new Map<string, PendingApiProposal>();
 
@@ -137,22 +154,41 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const findRoute = (pathname: string) => {
     if (options.routes?.[pathname]) {
-      return { render: options.routes[pathname]!, params: {} as Record<string, string> };
+      return { render: options.routes[pathname]!, params: {} as Record<string, string>, layouts: [] as string[] };
     }
     const match = router?.match(pathname);
 
-    return match ? { load: match.filePath, params: match.params } : undefined;
+    return match ? { load: match.filePath, params: match.params, layouts: match.layouts } : undefined;
+  };
+
+  /** Layouts compose top-down: each `_layout` default export wraps its subtree. */
+  const applyLayouts = async (vnode: unknown, layouts: string[], ctx: Ctx, params: Record<string, string>) => {
+    const wrapped = [...layouts].reverse().reduce(async (childPromise, layoutPath) => {
+      const child = await childPromise;
+      const layoutModule = (await loadRoute(layoutPath)) as any;
+
+      return layoutModule.default({ children: child, ctx, params });
+    }, Promise.resolve(vnode));
+
+    return wrapped;
   };
 
   const renderPage = async (pathname: string, ctx: Ctx) => {
     const route = findRoute(pathname);
 
     if (!route) return undefined;
+    // A fresh per-request query client keeps SSR deterministic (no cross-request
+    // cache bleed) and is the seam for future dehydrate/hydrate.
+    (ctx as any).queryClient ??= new QueryClient();
     const module = 'render' in route ? undefined : ((await loadRoute(route.load)) as any);
     const render = 'render' in route ? route.render : module.default;
     const meta = await resolveMeta(module?.meta, ctx, route.params);
-    const vnode = await render({ ctx, params: route.params });
-    const result = await renderToString(vnode, { ctx, storeDefs: options.storeDefs });
+    const vnode = await applyLayouts(await render({ ctx, params: route.params }), route.layouts, ctx, route.params);
+    const result = await renderToString(vnode, {
+      ctx,
+      storeDefs: options.storeDefs,
+      foreignImport: options.foreignImport,
+    });
 
     return { ...result, meta };
   };
@@ -168,8 +204,14 @@ export function createJanuxServer(options: ServerOptions = {}) {
         ]
       : [];
     const base = buildManifest(entries, ctx);
+    // App-wide route map: the agent can target pages that are NOT mounted
+    // (ui_navigate) — patterns only, params stay for the model to fill.
+    const routes = [
+      ...Object.keys(options.routes ?? {}),
+      ...(router?.routes.map((route) => route.pattern) ?? []),
+    ];
 
-    return { ...base, tools: [...base.tools, ...apiManifestTools(apiTools, ctx)] };
+    return { ...base, routes, tools: [...base.tools, ...apiManifestTools(apiTools, ctx)] };
   };
 
   const invokeTool = async (name: string, input: unknown, ctx: Ctx): Promise<unknown> => {
@@ -247,6 +289,25 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return { locale, dir: localeDir(locale), payload };
   };
 
+  /** Markdown projection of one page — `.md` suffix and content-MCP resources. */
+  const readPageMarkdown = async (pathname: string, baseCtx: Ctx): Promise<string | undefined> => {
+    const { locale, pathname: page } = localize(pathname);
+    const result = await renderPage(page, localeCtx(baseCtx, locale ?? options.i18n?.defaultLocale));
+
+    if (!result) return undefined;
+
+    return pageMarkdown(result.meta?.title ?? options.title, result.html);
+  };
+
+  const mcpEndpoint = createMcpEndpoint({
+    serverName: options.title ?? 'janux-app',
+    tools: apiTools,
+    invoke: (tool, input, ctx) => invokeTool(tool, input, ctx),
+    listPages,
+    readPage: readPageMarkdown,
+    auth: options.mcpAuth,
+  });
+
   const handlePage = async (req: Request, pathname: string): Promise<Response> => {
     const { locale, pathname: page } = localize(pathname);
 
@@ -281,7 +342,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const fetch = async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
     const { pathname } = url;
+    const intercepted = await options.middleware?.(req);
 
+    if (intercepted) return intercepted;
+    if (httpHandlers?.handles(pathname)) return httpHandlers.dispatch(req, await ctxWithAgent(req));
     if (pathname.startsWith('/_janux/api/')) return handleApi(req, pathname.slice('/_janux/api/'.length));
     if (pathname === '/_janux/approve') return handleApprove(req);
     if (pathname === '/_janux/reject') {
@@ -296,6 +360,14 @@ export function createJanuxServer(options: ServerOptions = {}) {
     }
     if (pathname === '/_janux/manifest') {
       return json(await manifestFor(url.searchParams.get('path') ?? '/', await resolveCtx(req)));
+    }
+    if (pathname === '/_janux/mcp') return mcpEndpoint(req, await ctxWithAgent(req));
+    if (pathname.endsWith('.md')) {
+      const markdown = await readPageMarkdown(pathname.slice(0, -3) || '/', await resolveCtx(req));
+
+      if (markdown !== undefined) {
+        return new Response(markdown, { headers: { 'content-type': 'text/markdown; charset=utf-8' } });
+      }
     }
     if (pathname === '/_janux/llm' && options.agent?.handleLlm) {
       return options.agent.handleLlm(req);

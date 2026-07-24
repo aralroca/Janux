@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-138%20passing-brightgreen" alt="138 tests passing" />
+  <img src="https://img.shields.io/badge/tests-300%2B%20passing-brightgreen" alt="300+ tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -31,10 +31,11 @@ Named after **Janus**, the two-faced Roman god of doorways: one face toward the 
 - ⚡ **Structural resumability.** State is schema-typed JSON, behavior is named — the client resumes from snapshots with no hydration replay and no closure serialization. Zero component code runs until first interaction (asserted in the test suite).
 - 🛡️ **Guards as a language feature.** `auto` / `confirm` / `forbidden` on every intent and api. Agent proposals are approved by humans on the real UI, with an audit trail.
 - 🔌 **`api()` = endpoint + stub + tool.** A server function is at once a validated HTTP endpoint, a ~100-byte typed client stub (SWC transform) and an agent tool.
-- 🤖 **Zero-config copilot.** `JANUX_MODEL` or one provider API key is all it takes. Every app ships the agent endpoint, the manifest and the gui-agent bridge (`window.janux`).
+- 🤖 **Zero-config copilot.** `JANUX_MODEL` or one provider API key (Anthropic, OpenAI, Google or OpenRouter) is all it takes. Every app ships the agent endpoint, the manifest and the gui-agent bridge (`window.janux`).
+- 🗺️ **App-wide agent control.** Every turn advertises built-in client tools (`ui_navigate`, `ui_get_view_context`, `ui_read_page`, `ui_click`, `ui_fill`, `ui_wait_settled`) plus the full route map — and `ui_calls` turns resume with their results (act → observe → continue), so navigate-then-act works in one turn.
+- ⚛️ **Foreign-UI interop.** `foreign()` mounts React components unchanged — real embedded roots, tracked props, callbacks→intents — surviving SPA navigation.
 - 🧘 **Observable quiescence.** `await janux.settled()` — the `sleep(500)` idiom dies here.
 
-> ⚠️ Early/experimental (v0.1). The public contract is stable by design; see [honest deviations from the RFC](apps/docs/content/guide/architecture-and-roadmap.md).
 
 ## Table of Contents
 
@@ -67,6 +68,7 @@ bun add janux @janux/server @janux/agent @janux/cli
 
 ```tsx
 import { component, intent, schema, str, int, money, list } from 'janux';
+import { pay } from './pay.api';
 
 export const Cart = component({
   name: 'cart',
@@ -76,14 +78,18 @@ export const Cart = component({
   intents: {
     addItem: intent({
       description: 'Add a product to the cart',
-      input: schema({ productId: str(), qty: int().default(1) }),
+      input: schema({ productId: str(), qty: int().default(1), unitPrice: money().default(0) }),
       run: ({ state, input }) => state.items.push(input),
     }),
-    checkout: intent({ guard: 'confirm', run: ({ state }) => pay(state) }),
+    checkout: intent({ description: 'Pay for the cart', guard: 'confirm', run: ({ state }) => pay({ items: state.items }) }),
   },
   view: ({ state, derived, intents }) => (
     <section>
-      {state.items.map((i) => <Line key={i.productId} item={i} />)}
+      <ul>
+        {state.items.map((i) => (
+          <li key={i.productId}>{i.productId} × {i.qty}</li>
+        ))}
+      </ul>
       <button on={intents.checkout}>Pay ({derived.total}¢)</button>
     </section>
   ),
@@ -130,9 +136,9 @@ Zero config — first match wins:
 
 | Package | What |
 |---|---|
-| [`janux`](packages/janux) | Core: schema, signals, component runtime, SSR islands, manifest, client resume + bridge |
-| [`@janux/server`](packages/janux-server) | api() RPC, router, HTML shell, `/_janux/*` endpoints, llms.txt, Web Bot Auth |
-| [`@janux/agent`](packages/janux-agent) | Model resolution, providers, tool loop |
+| [`janux`](packages/janux) | Core: schema, signals, reactive state, component runtime, SSR islands, manifest, client resume + bridge, foreign interop, data cache, built-in client tools, glow |
+| [`@janux/server`](packages/janux-server) | api() RPC, file-system router (layouts, groups, matchers, middleware), HTTP handlers + uploads, HTML shell, `/_janux/*` endpoints incl. the hosted MCP + `.md` projections, llms.txt, Web Bot Auth |
+| [`@janux/agent`](packages/janux-agent) | Model resolution, providers, the tool loop with turn continuation, and the embedded harness: memory (in-memory/Postgres), durable workflows, guardrail processors, rate limiting (in-memory/Redis), attachments, outbound MCP client |
 | [`@janux/vite`](packages/janux-vite) | Vite plugin (SWC api stubs, SSR bridge) |
 | [`@janux/cli`](packages/janux-cli) | `janux dev / build / start / verify / eval` |
 | [`create-janux`](packages/create-janux) | Scaffolder |
@@ -158,6 +164,9 @@ Sources in [`apps/docs/content`](apps/docs/content), organized as **Guide** (com
 
 - [`examples/shop`](examples/shop) — full cart + copilot: catalog source, debounced persist effect, `confirm` checkout with human approval.
 - [`examples/i18n`](examples/i18n) — internationalization: locale-prefixed routing, language switcher, type-safe `t()` with plurals, and page-scoped client translations.
+- [`examples/interop-react`](examples/interop-react) — a React component (unchanged) mounted with `foreign()`: tracked props, callbacks→intents.
+- [`examples/nested-islands`](examples/nested-islands) — stateful islands inside stateful islands, with dispose semantics.
+- [`examples/data-cache`](examples/data-cache) — `useQuery`/`mutation` + persisted stores + typed URL state.
 
 ```bash
 bun run --cwd examples/shop dev
@@ -168,7 +177,7 @@ bun run --cwd examples/i18n dev
 
 ```bash
 bun install
-bun test packages    # 138 tests: schema, signals, runtime, SSR, resume, guards, agent loop, SWC stubs
+bun test packages    # 300+ tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
 bun run typecheck
 ```
 

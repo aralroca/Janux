@@ -1,4 +1,5 @@
 import { validate } from '../schema';
+import { dryRunDiff } from './dry-run';
 import { withGate, type MutationGate } from '../state/mutation-gate';
 import type { ComponentDef, Ctx, GuardValue, IntentDef, Origin, RunBag } from '../define/types';
 
@@ -18,6 +19,8 @@ export interface Proposal {
   id: string;
   tool: string;
   input: unknown;
+  /** Shadow-run before/after of the component state (pure intents only). */
+  diff?: import('./dry-run').StateDiff;
   execute: () => Promise<unknown>;
 }
 
@@ -78,12 +81,18 @@ async function execute(def: IntentDef, bag: RunBag, input: unknown, gate: Mutati
   return withGate(gate, () => def.run({ ...bag, input }));
 }
 
-function propose(tool: string, input: unknown, run: () => Promise<unknown>, hooks: IntentHooks) {
-  const proposal: Proposal = { id: nextProposalId(tool), tool, input, execute: run };
+function propose(
+  tool: string,
+  input: unknown,
+  run: () => Promise<unknown>,
+  hooks: IntentHooks,
+  diff?: Proposal['diff'],
+) {
+  const proposal: Proposal = { id: nextProposalId(tool), tool, input, diff, execute: run };
 
   hooks.onProposal?.(proposal);
 
-  return { status: 'proposal' as const, id: proposal.id, tool, input };
+  return { status: 'proposal' as const, id: proposal.id, tool, input, diff };
 }
 
 /** The single invocation pipeline shared by human clicks, agent calls and RPC. */
@@ -110,7 +119,7 @@ export async function invokeIntent(
     if (origin === 'agent' && guard === 'confirm') {
       audit(hooks, { tool, origin, guard, input: parsed, ok: true });
 
-      return propose(tool, parsed, run, hooks);
+      return propose(tool, parsed, run, hooks, dryRunDiff(def, bag, parsed));
     }
     const result = await run();
 

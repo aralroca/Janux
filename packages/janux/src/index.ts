@@ -58,3 +58,5 @@ export {
   type TranslateOptions,
   type TranslationQuery,
 } from './i18n';
+
+export { CLIENT_TOOL_SPECS, CLIENT_TOOL_NAMES, type ClientToolSpec } from './client-tools/specs';

@@ -2,6 +2,7 @@ import { Fragment, type JanuxNode } from '../jsx-runtime';
 import { createInstance, type JanuxInstance } from '../runtime/instance';
 import type { EventBus } from '../runtime/bus';
 import type { ComponentDef, Ctx } from '../define/types';
+import { isForeignDef, type ForeignDef } from '../interop';
 import { dedupeKey, escapeHtml, renderAttrs, safeKey, VOID_ELEMENTS } from './html';
 
 export interface IslandRecord {
@@ -20,6 +21,12 @@ export interface RenderOptions {
   bus?: EventBus;
   storeDefs?: Record<string, ComponentDef>;
   initialState?: Record<string, Record<string, unknown>>;
+  /**
+   * Resolves the foreign runtime (react, react-dom/server) from the APP's
+   * context. Injected by the host (vite plugin / CLI) so the SSR copy is the
+   * same one the app's own React components import — two copies break hooks.
+   */
+  foreignImport?: (spec: string) => Promise<any>;
 }
 
 interface RenderScope extends RenderOptions {
@@ -108,6 +115,49 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): 
   return `<janux-island data-jx="${escapeHtml(`${def.name}#${key}`)}"${persist}${eager}>${inner}</janux-island>`;
 }
 
+/** CJS/ESM interop for a dynamically imported module. */
+function interopDefault(mod: any): any {
+  return mod?.default ?? mod;
+}
+
+/** SSR markup for a foreign component when its runtime is installed; empty host otherwise. */
+async function foreignInner(def: ForeignDef, props: Record<string, unknown>, scope: RenderScope): Promise<string> {
+  if (def.options.hydrate === 'only') return '';
+  const load = scope.foreignImport ?? ((spec: string) => import(/* @vite-ignore */ spec));
+
+  try {
+    const [react, reactServer] = await Promise.all([load('react'), load('react-dom/server')]);
+    const reactProps = def.options.props ? def.options.props(props) : props;
+    const element = interopDefault(react).createElement(def.component as any, reactProps as any);
+
+    return interopDefault(reactServer).renderToString(element);
+  } catch {
+    return '';
+  }
+}
+
+/** Serializable call-site props travel on the host so top-level foreigns can hydrate. */
+function foreignPropsAttr(props: Record<string, unknown>, scope: RenderScope): string {
+  if (scope.island) return '';
+  try {
+    return ` data-jxf-props="${escapeHtml(JSON.stringify(props))}"`;
+  } catch {
+    return '';
+  }
+}
+
+async function renderForeign(def: ForeignDef, node: JanuxNode, scope: RenderScope): Promise<string> {
+  const explicit = node.$k !== undefined ? String(node.$k) : (node.$p.id as string | undefined);
+  const key = nextKey(scope, def as unknown as ComponentDef, explicit);
+  const id = `${def.name}#${key}`;
+  const { children: _children, ...props } = node.$p;
+  const inner = await foreignInner(def, props, scope);
+
+  const persist = props.persist ? ' data-jx-persist' : '';
+
+  return `<janux-foreign data-jx="${escapeHtml(id)}"${persist} data-jxf-hydrate="${def.options.hydrate}"${foreignPropsAttr(props, scope)}>${inner}</janux-foreign>`;
+}
+
 /**
  * Internal links get the current locale prefix (Brisa-style). Already-prefixed
  * hrefs — the language-switcher idiom — and `/_janux/*` URLs stay untouched.
@@ -149,6 +199,7 @@ export async function renderNode(node: unknown, scope: RenderScope): Promise<str
   const jsxNode = node as JanuxNode;
 
   if (jsxNode.$t === Fragment) return renderNode(jsxNode.$p.children, scope);
+  if (isForeignDef(jsxNode.$t)) return renderForeign(jsxNode.$t, jsxNode, scope);
   if (typeof jsxNode.$t === 'function') {
     return renderNode((jsxNode.$t as any)(jsxNode.$p), scope);
   }

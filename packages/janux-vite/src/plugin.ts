@@ -1,4 +1,7 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
@@ -22,6 +25,8 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
   const agentModule = app.agentModule ? await vite.ssrLoadModule(app.agentModule) : undefined;
   const storesModule = app.storesModule ? await vite.ssrLoadModule(app.storesModule) : undefined;
   const i18nModule = app.i18nModule ? await vite.ssrLoadModule(app.i18nModule) : undefined;
+  const middlewareModule = app.middlewareModule ? await vite.ssrLoadModule(app.middlewareModule) : undefined;
+  const matchersModule = app.matchersModule ? await vite.ssrLoadModule(app.matchersModule) : undefined;
 
   return {
     routesDir: app.routesDir,
@@ -35,7 +40,20 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     title: app.title,
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default as ServerOptions['i18n'],
+    foreignImport: appForeignImport(vite.config.root),
+    middleware: middlewareModule?.default as ServerOptions['middleware'],
+    matchers: matchersModule as ServerOptions['matchers'],
+    httpHandlers: app.httpHandlersDir
+      ? { dir: app.httpHandlersDir, loadModule: (file) => vite.ssrLoadModule(file) as any }
+      : undefined,
   };
+}
+
+/** Resolves react/react-dom from the APP root, so SSR uses the same copy the app's components do. */
+function appForeignImport(root: string): ServerOptions['foreignImport'] {
+  const appRequire = createRequire(join(root, 'package.json'));
+
+  return (spec) => import(pathToFileURL(appRequire.resolve(spec)).href);
 }
 
 function relativeToRoot(root: string, absolute: string): string {
@@ -51,7 +69,10 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       return {
         appType: 'custom',
         esbuild: { jsx: 'automatic', jsxImportSource: 'janux' },
-        resolve: { dedupe: ['janux'] },
+        // react/react-dom deduped so every browser-side import is one copy;
+        // SSR resolves them via `foreignImport` from the app root instead
+        // (externals bypass dedupe and two Reacts break hooks).
+        resolve: { dedupe: ['janux', 'react', 'react-dom'] },
         ssr: { noExternal: SSR_PACKAGES },
         optimizeDeps: { exclude: SSR_PACKAGES },
       };
@@ -90,8 +111,14 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
             }
             const server = await januxServer();
             const response = await server.fetch(await toFetchRequest(req));
+            // A 404 falls through to Vite only when it's a genuine page-router
+            // miss. Framework endpoints (`/_janux/*`) and `src/api/**` handlers
+            // own their responses — a handler's real 404 (e.g. a proxied
+            // upstream 404) must be sent as-is, never masked by Vite's fallback.
+            const path = req.url?.split('?')[0] ?? '/';
+            const handled = path.startsWith('/_janux/') || path.startsWith('/api/');
 
-            if (response.status === 404 && !req.url?.startsWith('/_janux/')) return next();
+            if (response.status === 404 && !handled) return next();
             await sendFetchResponse(res, response);
           };
 

@@ -25,7 +25,9 @@
   },
   "peerDependencies": {
     "@browser-ai/transformers-js": ">=2.2.0",
-    "@huggingface/transformers": ">=3.7.0"
+    "@huggingface/transformers": ">=3.7.0",
+    "pg": ">=8",
+    "ioredis": ">=5"
   },
   "peerDependenciesMeta": {
     "@browser-ai/transformers-js": {
@@ -33,11 +35,20 @@
     },
     "@huggingface/transformers": {
       "optional": true
+    },
+    "pg": {
+      "optional": true
+    },
+    "ioredis": {
+      "optional": true
     }
   },
   "devDependencies": {
     "@browser-ai/transformers-js": "^2.2.2",
-    "@happy-dom/global-registrator": "^15.11.0"
+    "@happy-dom/global-registrator": "^15.11.0",
+    "@types/pg": "^8.20.0",
+    "ioredis": "^5.11.1",
+    "pg": "^8.22.0"
   },
   "homepage": "https://github.com/aralroca/Janux#readme",
   "bugs": "https://github.com/aralroca/Janux/issues",

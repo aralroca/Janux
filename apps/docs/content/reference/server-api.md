@@ -22,7 +22,9 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 
 | Option | Type | Notes |
 |---|---|---|
-| `routesDir` | `string` | File-system routing root |
+| `routesDir` | `string` | File-system routing root (full segment grammar, `_layout` chains, `(group)` dirs) |
+| `matchers` | `Record<name, (value) => boolean>` | Custom typed-param matchers for `[param=matcher]` (built-ins: `integer`, `uuid`) |
+| `middleware` | `(req) => Response \| undefined` | Runs before routing; a returned Response short-circuits |
 | `routes` | `Record<path, renderFn>` | Inline routes (tests, embedding) |
 | `loadRoute` | `(filePath) => Promise<module>` | Injectable loader (Vite dev uses `ssrLoadModule`) |
 | `apis` | `Record<module, moduleExports>` | api() modules |
@@ -30,7 +32,7 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 | `agent` | `AgentMount` | Mounted at `/_janux/agent` |
 | `ctxFor` | `(req) => Ctx` | Auth: builds the per-request context |
 | `llmsTxt` | `{ title?, description? }` | Opt-in: serves `GET /llms.txt` — pages + agent tools index (`confirm` tools annotated "requires human approval"; dynamic routes expanded via `staticParams`) |
-| `agents` | `{ webBotAuth: { keys }, policy? }` | Web Bot Auth (RFC 9421) agent identity — see below |
+| `agents` | `{ webBotAuth: { keys }, policy? }` | Web Bot Auth agent identity — see below |
 | `onAudit` | `(entry: AuditEntry) => void` | Called for every api() dispatch: tool, origin, guard, ok, and the verified agent key |
 | `runtimeUrl`, `stylesheets`, `favicon`, `title`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
 

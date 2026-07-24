@@ -1,0 +1,16 @@
+{
+  "name": "@janux/docs-tests",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Every code example in the docs is exercised by this suite.",
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^18.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

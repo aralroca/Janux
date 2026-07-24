@@ -40,7 +40,7 @@ Responses:
 
 ## Message shape
 
-```ts
+```txt
 { role: 'user' | 'assistant' | 'tool', content: string, toolCalls?: ToolCall[], toolCallId?: string }
 ```
 

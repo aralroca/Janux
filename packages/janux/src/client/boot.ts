@@ -1,9 +1,10 @@
 import { createBus } from '../runtime/bus';
 import type { ComponentDef } from '../define/types';
+import type { ForeignDef } from '../interop';
 import type { Proposal } from '../runtime/intents';
 import { createBridge, type JanuxBridge } from './bridge';
 import { listen } from './events';
-import { mountIsland, type MountContext } from './mount';
+import { mountDocumentForeigns, mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
 import { enableAgentGlow, type GlowOptions } from './glow';
 import { installI18n } from './i18n';
@@ -13,7 +14,7 @@ import { installWebMCP } from './webmcp';
 
 export interface BootOptions {
   islands?: Record<string, IslandLoader>;
-  defs?: ComponentDef[];
+  defs?: (ComponentDef | ForeignDef)[];
   ctx?: Record<string, unknown>;
   /** Highlight islands while an agent operates them. `true` or `{ duration }`. */
   glow?: boolean | GlowOptions;
@@ -64,7 +65,13 @@ let nativeClickAt = 0;
 
 function shouldIntercept(event: any): boolean {
   if (!event.canIntercept || event.hashChange || event.downloadRequest || event.formData) return false;
-  if (new URL(event.destination.url).origin !== location.origin) return false;
+  const destination = new URL(event.destination.url);
+
+  if (destination.origin !== location.origin) return false;
+  // Query-only changes on the same path are shallow: islands read the query
+  // reactively (urlState), so a filter/tab/dialog change never re-renders the
+  // page. Cross-path navigations still get the SPA diff.
+  if (destination.pathname === location.pathname && destination.search !== location.search) return false;
   // Prefer the precise source element; fall back to a recent data-native click.
   if (event.sourceElement) return !event.sourceElement.closest?.('[data-native]');
   const wasNative = Date.now() - nativeClickAt < 100;
@@ -154,6 +161,7 @@ export function boot(options: BootOptions = {}): JanuxClient {
   if (typeof window !== 'undefined') (window as any).janux = client;
   if (options.webmcp !== false) installWebMCP(bridge);
   mountEagerIslands(mount).catch(reportIntentError);
+  mountDocumentForeigns(mount).catch(reportIntentError);
 
   return client;
 }

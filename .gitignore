@@ -10,3 +10,6 @@ out/
 coverage/
 PLAN-*.md
 apps/docs/public/search-index.json
+
+test-results/
+playwright-report/

@@ -1,4 +1,5 @@
 import { cpSync, existsSync, mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
@@ -153,6 +154,8 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
   const agentModule = app.agentModule ? await import(app.agentModule) : undefined;
   const storesModule = app.storesModule ? await import(app.storesModule) : undefined;
   const i18nModule = app.i18nModule ? await import(app.i18nModule) : undefined;
+  const middlewareModule = app.middlewareModule ? await import(app.middlewareModule) : undefined;
+  const matchersModule = app.matchersModule ? await import(app.matchersModule) : undefined;
 
   return {
     routesDir: app.routesDir,
@@ -164,6 +167,13 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
     title: app.title,
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default,
+    middleware: middlewareModule?.default,
+    matchers: matchersModule,
+    httpHandlers: app.httpHandlersDir
+      ? { dir: app.httpHandlersDir, loadModule: (file) => import(file) as any }
+      : undefined,
+    // Foreign runtime (react) resolved from the app root — see @janux/vite.
+    foreignImport: (spec) => import(createRequire(join(root, 'package.json')).resolve(spec)),
   };
 }
 

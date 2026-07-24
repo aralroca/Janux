@@ -97,6 +97,7 @@ async function callAnthropic(
 const OPENAI_COMPAT_URLS: Record<string, string> = {
   openai: 'https://api.openai.com/v1/chat/completions',
   google: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+  openrouter: 'https://openrouter.ai/api/v1/chat/completions',
 };
 
 async function callOpenAi(

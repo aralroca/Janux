@@ -16,6 +16,8 @@ const MUTATING_ARRAY_METHODS = new Set([
 export interface ReactiveState<T extends object = Record<string, unknown>> {
   proxy: T;
   snapshot(): T;
+  /** Introspection for tests/devtools: live tracked-path count. */
+  stats(): { paths: number };
 }
 
 function isPlainContainer(value: unknown): value is object {
@@ -34,12 +36,35 @@ function plainObject(value: object): Record<string, unknown> {
   return Object.fromEntries(Object.entries(value).map(([key, v]) => [key, plainify(v)]));
 }
 
+/** Writes between prune sweeps: keeps the sweep cost amortized O(1) per write. */
+const PRUNE_EVERY = 256;
+
 export function createReactiveState<T extends object>(
   initial: T,
   gate: MutationGate = createGate(),
 ): ReactiveState<T> {
   const versions = new Map<string, Sig<number>>();
+  // Direct-children index: descendant notification walks the subtree instead
+  // of scanning every tracked path (the documented O(paths)-per-write limit).
+  const children = new Map<string, Set<string>>();
+  let writesSincePrune = 0;
   let data = structuredClone(initial);
+
+  const parentOf = (path: string): string => {
+    const cut = path.lastIndexOf('.');
+
+    return cut === -1 ? '' : path.slice(0, cut);
+  };
+
+  const indexPath = (path: string): void => {
+    if (path === '') return;
+    const parent = parentOf(path);
+    const siblings = children.get(parent) ?? new Set();
+
+    siblings.add(path);
+    children.set(parent, siblings);
+    indexPath(parent);
+  };
 
   const versionOf = (path: string): Sig<number> => {
     const existing = versions.get(path);
@@ -48,18 +73,22 @@ export function createReactiveState<T extends object>(
     const created = signal(0);
 
     versions.set(path, created);
+    indexPath(path);
 
     return created;
   };
 
   const bump = (path: string): void => {
-    versionOf(path).value += 1;
+    const sig = versions.get(path);
+
+    if (sig) sig.value += 1;
   };
 
   const bumpDescendants = (path: string): void => {
-    const prefix = path === '' ? '' : `${path}.`;
-
-    [...versions.keys()].filter((key) => key !== path && key.startsWith(prefix)).forEach(bump);
+    (children.get(path) ?? []).forEach((child) => {
+      bump(child);
+      bumpDescendants(child);
+    });
   };
 
   const bumpAncestors = (path: string): void => {
@@ -69,12 +98,39 @@ export function createReactiveState<T extends object>(
     bump('');
   };
 
+  /**
+   * Path pruning: version signals with no live readers and no indexed
+   * children are reclaimed (a fresh reader restarts at version 0, which no
+   * one can observe). Bottom-up until fixpoint, amortized across writes.
+   */
+  const prune = (): void => {
+    let removed = true;
+
+    while (removed) {
+      removed = false;
+      [...versions.entries()].forEach(([path, sig]) => {
+        const kids = children.get(path);
+
+        if (path === '' || sig.readers() > 0 || (kids && kids.size > 0)) return;
+        versions.delete(path);
+        children.delete(path);
+        children.get(parentOf(path))?.delete(path);
+        removed = true;
+      });
+    }
+  };
+
   const touch = (path: string): void => {
     batch(() => {
       bump(path);
       bumpDescendants(path);
       bumpAncestors(path);
     });
+    writesSincePrune += 1;
+    if (writesSincePrune >= PRUNE_EVERY) {
+      writesSincePrune = 0;
+      prune();
+    }
   };
 
   const childPath = (path: string, key: string): string => (path === '' ? key : `${path}.${key}`);
@@ -138,5 +194,6 @@ export function createReactiveState<T extends object>(
       return proxyFor(data, '') as T;
     },
     snapshot: () => structuredClone(data),
+    stats: () => ({ paths: versions.size }),
   };
 }

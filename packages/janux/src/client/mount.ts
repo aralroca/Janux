@@ -4,6 +4,7 @@ import type { ComponentDef } from '../define/types';
 import type { EventBus } from '../runtime/bus';
 import { toDomNodes, type PendingIsland, type RenderPass } from './dom';
 import { morph } from './morph';
+import { persistStore } from './persist';
 import { registerDef, resolveDef, type ClientRegistry } from './registry';
 
 export interface MountContext {
@@ -48,6 +49,16 @@ export async function ensureStore(storeDef: ComponentDef, mount: MountContext): 
 
   registry.stores.set(storeDef.name, instance);
   await instance.attach();
+  // Local persistence rehydrates after attach and keeps writing back.
+  if (storeDef.persist === 'local') {
+    const stop = await persistStore(instance);
+    const dispose = instance.dispose.bind(instance);
+
+    instance.dispose = async () => {
+      stop();
+      await dispose();
+    };
+  }
 
   return instance;
 }
@@ -64,6 +75,43 @@ function mountNewChildren(pass: RenderPass, root: Element, mount: MountContext):
     const host = root.querySelector(`janux-island[data-jx="${id}"]`);
 
     if (host) mountIsland(id, host, mount, { def, initial }).catch(reportError);
+  });
+}
+
+/** Mount new foreign roots; live ones just receive the fresh call-site props. */
+function mountPassForeigns(pass: RenderPass, root: Element, mount: MountContext, parent: JanuxInstance): void {
+  pass.foreigns.forEach(({ id, def, props }) => {
+    const live = mount.registry.foreigns.get(id);
+
+    if (live) {
+      live.props.value = props;
+
+      return;
+    }
+    const host = root.querySelector(`janux-foreign[data-jx="${id}"]`);
+
+    if (!host) return;
+    loadForeign()
+      .then((mountForeign) => {
+        if (!mount.registry.foreigns.has(id)) {
+          mount.registry.foreigns.set(id, mountForeign(def, host, props, parent));
+        }
+      })
+      .catch(reportError);
+  });
+}
+
+/** Sweep foreign roots of this parent whose host left the DOM. */
+function sweepForeigns(prefix: string, mount: MountContext): void {
+  const gone = [...mount.registry.foreigns.entries()].filter(
+    ([id]) =>
+      keyOf(id).startsWith(prefix) &&
+      !document.querySelector(`janux-foreign[data-jx="${id}"]`)?.isConnected,
+  );
+
+  gone.forEach(([id, handle]) => {
+    handle.dispose();
+    mount.registry.foreigns.delete(id);
   });
 }
 
@@ -88,31 +136,99 @@ function sweepChildren(name: string, key: string, mount: MountContext): void {
   gone.forEach(([, instance]) => {
     instance.dispose().catch(reportError);
   });
+  sweepForeigns(prefix, mount);
 }
 
 function startRenderLoop(instance: JanuxInstance, root: Element, key: string, mount: MountContext): () => void {
-  return watch(() => {
-    const pass: RenderPass = {
-      parent: { name: instance.def.name, key },
-      seq: new Map(),
-      used: new Set(),
-      islands: [],
-    };
+  // The render runs in the instance scope so any reactive resources a view or
+  // derived creates (e.g. query subscriptions) dispose with the island.
+  return instance.runInScope(() =>
+    watch(() => {
+      const pass: RenderPass = {
+        parent: { name: instance.def.name, key },
+        seq: new Map(),
+        used: new Set(),
+        islands: [],
+        foreigns: [],
+      };
 
-    morph(root, toDomNodes(instance.def.view!(instance.bag), pass));
-    untrack(() => {
-      mountNewChildren(pass, root, mount);
-      sweepChildren(instance.def.name, key, mount);
-    });
-  });
+      morph(root, toDomNodes(instance.def.view!(instance.bag), pass));
+      untrack(() => {
+        mountNewChildren(pass, root, mount);
+        mountPassForeigns(pass, root, mount, instance);
+        sweepChildren(instance.def.name, key, mount);
+      });
+    }),
+  );
 }
 
-/** Disposing an island cascades to every mounted descendant (nested islands). */
+/** Disposing an island cascades to every mounted descendant (nested islands + foreign roots). */
 async function disposeDescendants(name: string, key: string, mount: MountContext): Promise<void> {
   const prefix = childPrefix(name, key);
   const children = [...mount.registry.mounted.entries()].filter(([id]) => keyOf(id).startsWith(prefix));
+  const foreigns = [...mount.registry.foreigns.entries()].filter(([id]) => keyOf(id).startsWith(prefix));
 
+  foreigns.forEach(([id, handle]) => {
+    handle.dispose();
+    mount.registry.foreigns.delete(id);
+  });
   await Promise.all(children.map(([, instance]) => instance.dispose()));
+}
+
+/**
+ * Document-level foreign hydration: a foreign inside an island mounts its
+ * enclosing island (the shell drives it — events need its intents); a
+ * standalone foreign hydrates from its serialized call-site props.
+ */
+async function loadForeign() {
+  // Lazy: apps without React (no foreign islands in the page) never load this
+  // module, so Vite never needs to resolve 'react' for them.
+  return (await import('./foreign')).mountForeign;
+}
+
+export async function mountDocumentForeigns(mount: MountContext): Promise<void> {
+  const hosts = [...document.querySelectorAll('janux-foreign[data-jx]')];
+  const parents = new Set<Element>();
+  const standalone = hosts.filter((host) => {
+    const island = host.closest('janux-island[data-jx]');
+
+    if (island) parents.add(island);
+
+    return !island;
+  });
+
+  await Promise.all(
+    [...parents].map((island) => mountIsland(island.getAttribute('data-jx')!, island, mount)),
+  );
+  for (const host of standalone) {
+    const id = host.getAttribute('data-jx')!;
+    const raw = host.getAttribute('data-jxf-props');
+    const next = raw ? JSON.parse(raw) : {};
+    const live = mount.registry.foreigns.get(id);
+
+    // Already mounted (navigation preserved the host): the morph synced the
+    // serialized call-site props onto the host attribute, so push them into
+    // the live root — otherwise a page-dependent prop (e.g. the sidebar's
+    // `base`) would stay frozen at its first-mount value.
+    if (live) {
+      if (JSON.stringify(live.props.value) !== JSON.stringify(next)) live.props.value = next;
+
+      continue;
+    }
+    const def = mount.registry.foreignDefs.get(id.split('#')[0]!);
+
+    if (!def) continue;
+    const mountForeign = await loadForeign();
+
+    if (!mount.registry.foreigns.has(id)) {
+      mount.registry.foreigns.set(id, mountForeign(def, host, next));
+    }
+  }
+}
+
+/** Dispose every foreign root whose host is no longer in the document (navigation sweep). */
+export function sweepDisconnectedForeigns(mount: MountContext): void {
+  sweepForeigns('', mount);
 }
 
 /** Resumes one island: instance from its SSR snapshot, reactive render loop, no replay. */

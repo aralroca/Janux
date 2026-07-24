@@ -1,5 +1,7 @@
 import type { ComponentDef } from '../define/types';
+import type { ForeignDef } from '../interop';
 import type { JanuxInstance } from '../runtime/instance';
+import type { ForeignHandle } from './foreign';
 
 export type IslandLoader = () => Promise<unknown>;
 
@@ -11,6 +13,8 @@ export interface ClientRegistry {
   mounting: Map<string, Promise<JanuxInstance>>;
   stores: Map<string, JanuxInstance>;
   snapshots: Map<string, Record<string, unknown>>;
+  foreignDefs: Map<string, ForeignDef>;
+  foreigns: Map<string, ForeignHandle>;
 }
 
 export function createClientRegistry(): ClientRegistry {
@@ -21,12 +25,19 @@ export function createClientRegistry(): ClientRegistry {
     mounting: new Map(),
     stores: new Map(),
     snapshots: new Map(),
+    foreignDefs: new Map(),
+    foreigns: new Map(),
   };
 }
 
 /** Island/store modules call this on import so boot can resolve defs by name. */
-export function registerDef(registry: ClientRegistry, def: ComponentDef): void {
-  registry.defs.set(def.name, def);
+export function registerDef(registry: ClientRegistry, def: ComponentDef | ForeignDef): void {
+  if ((def as ForeignDef).kind === 'foreign') {
+    registry.foreignDefs.set(def.name, def as ForeignDef);
+
+    return;
+  }
+  registry.defs.set(def.name, def as ComponentDef);
 }
 
 export async function resolveDef(registry: ClientRegistry, name: string): Promise<ComponentDef> {

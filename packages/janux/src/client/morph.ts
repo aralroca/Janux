@@ -37,8 +37,11 @@ function syncValue(from: Element, to: Element): void {
   if (from.value !== to.value) from.value = to.value;
 }
 
+const BOUNDARY_TAGS = new Set(['JANUX-ISLAND', 'JANUX-FOREIGN']);
+
+/** Islands and foreign roots are opaque: their own runtime owns everything inside. */
 function isIsland(node: Node): boolean {
-  return node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'JANUX-ISLAND';
+  return node.nodeType === Node.ELEMENT_NODE && BOUNDARY_TAGS.has((node as Element).tagName);
 }
 
 function sameKind(a: Node, b: Node): boolean {
@@ -59,37 +62,49 @@ function liveIslandHosts(from: Element): Map<string, Element> {
 }
 
 /**
- * Index+tag matching for regular nodes; islands match by id (`data-jx`) so a
- * live host survives position shifts — it is moved into place, never replaced
- * by its empty placeholder.
+ * The node that should occupy position `index`: a live island host reused by id
+ * (so it survives position shifts — never replaced by its empty placeholder),
+ * an index+tag-matched existing node morphed in place, or the incoming node.
+ */
+function targetNode(fromKids: ChildNode[], islands: Map<string, Element>, toKid: ChildNode, index: number): ChildNode {
+  if (isIsland(toKid)) {
+    const host = islands.get((toKid as Element).getAttribute('data-jx')!);
+
+    if (host) {
+      morphNode(host, toKid);
+
+      return host;
+    }
+
+    return toKid;
+  }
+  const fromKid = fromKids[index];
+
+  if (fromKid && !isIsland(fromKid) && sameKind(fromKid, toKid)) {
+    morphNode(fromKid, toKid);
+
+    return fromKid;
+  }
+
+  return toKid;
+}
+
+/**
+ * Two-pass reconcile: first resolve the target node for each incoming child
+ * (reusing live islands and morphing matched nodes), then order `from`'s
+ * children to that list. Snapshotting the incoming children first means the
+ * mutation of `from` never desyncs the walk.
  */
 function morphChildren(from: Element, to: Element): void {
   const islands = liveIslandHosts(from);
+  const fromKids = [...from.childNodes];
   const toKids = [...to.childNodes];
+  const targets = toKids.map((toKid, index) => targetNode(fromKids, islands, toKid, index));
 
-  toKids.forEach((toKid, index) => {
-    const fromKid = from.childNodes[index];
-    const live = isIsland(toKid) ? islands.get((toKid as Element).getAttribute('data-jx')!) : undefined;
-
-    if (live && live !== fromKid) {
-      from.insertBefore(live, fromKid ?? null);
-      morphNode(live, toKid);
-
-      return;
-    }
-    if (!fromKid) {
-      from.appendChild(toKid);
-
-      return;
-    }
-    if (!sameKind(fromKid, toKid)) {
-      from.replaceChild(toKid, fromKid);
-
-      return;
-    }
-    morphNode(fromKid, toKid);
+  targets.forEach((node, index) => {
+    if (from.childNodes[index] !== node) from.insertBefore(node, from.childNodes[index] ?? null);
   });
-  while (from.childNodes.length > toKids.length) from.removeChild(from.lastChild!);
+  while (from.childNodes.length > targets.length) from.removeChild(from.lastChild!);
 }
 
 function morphNode(from: Node, to: Node): void {

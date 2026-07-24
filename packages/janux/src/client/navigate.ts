@@ -1,6 +1,6 @@
 import diff from 'diff-dom-streaming';
 import { installI18n } from './i18n';
-import { mountIsland, type MountContext } from './mount';
+import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { consumePrefetched } from './prefetch';
 import { singleChunkStream } from './single-chunk';
 
@@ -30,8 +30,12 @@ interface PersistedIsland {
  * over whatever the incoming page rendered for them — or disposed if it's gone.
  */
 function extractPersisted(mount: MountContext): PersistedIsland[] {
-  return [...document.querySelectorAll('janux-island[data-jx-persist]')]
-    .filter((node) => mount.registry.mounted.has(node.getAttribute('data-jx') ?? ''))
+  return [...document.querySelectorAll('janux-island[data-jx-persist], janux-foreign[data-jx-persist]')]
+    .filter((node) => {
+      const id = node.getAttribute('data-jx') ?? '';
+
+      return mount.registry.mounted.has(id) || mount.registry.foreigns.has(id);
+    })
     .map((node) => {
       node.remove();
 
@@ -42,10 +46,15 @@ function extractPersisted(mount: MountContext): PersistedIsland[] {
 async function restorePersisted(mount: MountContext, kept: PersistedIsland[]): Promise<void> {
   await Promise.all(
     kept.map(async ({ id, node }) => {
-      const incoming = document.querySelector(`janux-island[data-jx="${esc(id)}"]`);
+      const incoming = document.querySelector(
+        `janux-island[data-jx="${esc(id)}"], janux-foreign[data-jx="${esc(id)}"]`,
+      );
 
       if (incoming) incoming.replaceWith(node);
-      else await mount.registry.mounted.get(id)?.dispose();
+      else if (mount.registry.foreigns.has(id)) {
+        mount.registry.foreigns.get(id)!.dispose();
+        mount.registry.foreigns.delete(id);
+      } else await mount.registry.mounted.get(id)?.dispose();
     }),
   );
 }
@@ -155,8 +164,12 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
     reindexSnapshots(mount);
     installI18n(mount.ctx);
     await sweepDisconnected(mount);
+    sweepDisconnectedForeigns(mount);
     await disposeRouteStores(mount);
     await mountEagerIslands(mount);
+    // Foreign roots after navigation: mount the new page's hosts and push the
+    // morph-synced call-site props into hosts that survived the swap.
+    await mountDocumentForeigns(mount);
     emitNavigate('after', from, url);
   } catch (error) {
     if ((error as any)?.name === 'AbortError') return;
