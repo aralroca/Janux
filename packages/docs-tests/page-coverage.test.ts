@@ -25,7 +25,7 @@ function pages(): string[] {
 function hasRunnableExample(page: string): boolean {
   const markdown = readFileSync(join(CONTENT, page), 'utf8');
 
-  return [...markdown.matchAll(/```(?:tsx?|jsx?)\n([\s\S]*?)```/g)].some((match) =>
+  return [...markdown.matchAll(/```(?:tsx?|jsx?)(?:[ \t]+[^\n]*)?\n([\s\S]*?)```/g)].some((match) =>
     /^import\s[^\n]*from '(janux|@janux\/)/m.test(match[1]!),
   );
 }

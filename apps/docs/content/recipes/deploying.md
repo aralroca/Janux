@@ -39,7 +39,7 @@ Now `janux build` also prerenders every page into `dist/client`:
 ```
 dist/client/index.html                        # /
 dist/client/docs/guide/getting-started/index.html
-dist/client/llms.txt                          # agent index, emitted as a file
+dist/client/llms.txt                          # agent index, when llmsTxt is configured
 dist/client/client.js, styles.css, ...        # islands still hydrate on interaction
 ```
 

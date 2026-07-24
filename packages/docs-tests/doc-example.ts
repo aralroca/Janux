@@ -11,7 +11,7 @@ const ROOT = resolve(import.meta.dir, '../..');
  */
 export async function docExample(page: string, index = 0, stubs: Record<string, string> = {}): Promise<any> {
   const source = readFileSync(join(ROOT, page), 'utf8');
-  const fences = [...source.matchAll(/```(?:tsx?|jsx?)\n([\s\S]*?)```/g)];
+  const fences = [...source.matchAll(/```(?:tsx?|jsx?)(?:[ \t]+[^\n]*)?\n([\s\S]*?)```/g)];
   const code = Object.entries(stubs).reduce((acc, [from, to]) => acc.replaceAll(from, to), fences[index]![1]!);
   const file = join(import.meta.dir, `.${page.replaceAll('/', '__').replace(/\.md$/, '')}-${index}.generated.tsx`);
 

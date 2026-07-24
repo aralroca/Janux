@@ -19,9 +19,6 @@ export const UNTESTED_PAGES: string[] = [
   'guide/i18n.md',
   'guide/interop.md',
   'guide/schema.md',
-  'recipes/deploying.md',
-  'recipes/local-model-copilot.md',
-  'recipes/testing-components.md',
   'reference/agent-attachments.md',
   'reference/agent-mcp-client.md',
   'reference/agent-memory.md',
@@ -37,7 +34,4 @@ export const UNTESTED_PAGES: string[] = [
   'reference/i18n-api.md',
   'reference/schema-api.md',
   'reference/watch.md',
-  'tutorial/tasks-app-part-1.md',
-  'tutorial/tasks-app-part-2.md',
-  'tutorial/tasks-app-part-3.md',
 ];

@@ -28,7 +28,8 @@ function mdFiles(path: string): string[] {
 }
 
 function snippetsOf(file: string): Snippet[] {
-  const blocks = [...readFileSync(file, 'utf8').matchAll(/```(tsx?|jsx?)\n([\s\S]*?)```/g)];
+  // Flags after the language (```tsx live) must not hide a fence from the compiler.
+  const blocks = [...readFileSync(file, 'utf8').matchAll(/```(tsx?|jsx?)(?:[ \t]+[^\n]*)?\n([\s\S]*?)```/g)];
 
   return blocks.map((match, index) => ({
     file: file.slice(ROOT.length + 1),

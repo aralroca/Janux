@@ -97,6 +97,7 @@
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
+        "@janux/tailwind": "workspace:*",
         "@janux/vite": "workspace:*",
         "janux": "workspace:*",
       },
