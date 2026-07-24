@@ -69,8 +69,8 @@ export const SECTIONS: SectionDef[] = [
         slugs: ['agent-memory', 'agent-guardrails', 'agent-workflows', 'agent-rate-limit', 'agent-mcp-client', 'agent-attachments'],
       },
       { label: 'Reactivity', slugs: ['signal', 'computed', 'watch', 'batch', 'untrack', 'owners'] },
-      { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus'] },
-      { label: 'Client & CLI', slugs: ['client-api', 'client-state', 'data-cache-api', 'foreign', 'client-runtime', 'cli'] },
+      { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus', 'i18n-api'] },
+      { label: 'Client & CLI', slugs: ['client-api', 'client-state', 'data-cache-api', 'foreign', 'client-runtime', 'client-tools', 'cli', 'build-internals'] },
     ],
   },
   {

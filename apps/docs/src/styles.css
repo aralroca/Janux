@@ -440,6 +440,15 @@ body[data-theme='dark'] .theme-toggle .icon-dark {
 }
 
 /* ── Typography ─────────────────────────────────────────────────── */
+/* API names make long unbreakable headings — wrap them instead of pushing the
+   heading (and its # anchor) past the viewport on narrow screens. */
+h1,
+h2,
+h3,
+h4 {
+  overflow-wrap: anywhere;
+}
+
 h1 {
   margin: 0 0 16px;
   font-size: 2.3rem;
