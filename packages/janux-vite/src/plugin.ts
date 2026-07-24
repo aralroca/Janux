@@ -35,7 +35,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     agent: (agentModule?.default as ServerOptions['agent']) ?? defineAgent(),
     storeDefs: (storesModule ?? {}) as ServerOptions['storeDefs'],
     runtimeUrl: app.clientEntry ? `/${relativeToRoot(vite.config.root, app.clientEntry)}` : undefined,
-    stylesheets: app.stylesheet ? [`/${relativeToRoot(vite.config.root, app.stylesheet)}`] : [],
+    stylesheets: devStylesheets(vite.config.root, app.stylesheet),
     favicon: app.favicon,
     title: app.title,
     llmsTxt: app.llmsTxt,
@@ -58,6 +58,21 @@ function appForeignImport(root: string): ServerOptions['foreignImport'] {
 
 function relativeToRoot(root: string, absolute: string): string {
   return absolute.startsWith(root) ? absolute.slice(root.length + 1) : absolute;
+}
+
+/**
+ * Dev stylesheet URLs for the HTML shell. `?direct` is Vite's contract for the
+ * compiled stylesheet itself: without it the same path is served as a JS
+ * module (`text/javascript`, how CSS HMR works), and a
+ * <link rel="stylesheet"> pointing at that is a MIME mismatch the browser may
+ * refuse — and, with no charset on the response, may decode as Latin-1,
+ * turning non-ASCII `content:` glyphs into mojibake.
+ */
+export function devStylesheets(root: string, stylesheet: string | undefined): string[] {
+  if (!stylesheet) return [];
+  const url = `/${relativeToRoot(root, stylesheet)}`;
+
+  return [`${url}${url.includes('?') ? '&' : '?'}direct`];
 }
 
 /** The Janux Vite plugin: JSX runtime config, api() client stubs (SWC) and the SSR dev bridge. */
