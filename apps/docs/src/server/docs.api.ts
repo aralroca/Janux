@@ -88,6 +88,7 @@ export const SECTIONS: SectionDef[] = [
           'cross-island-events',
           'custom-server',
           'monorepo-setup',
+          'agent-evals-in-ci',
           'deploying',
           'docker',
           'external-mcp-clients',

@@ -10,7 +10,11 @@ const PRODUCTS = [
 const savedCarts = new Map<string, unknown>();
 
 export const catalog = api({
-  description: 'List products with prices (minor units)',
+  // Descriptions say WHEN to reach for a tool, not just what it is: a small model
+  // asked "which products are there?" answered from memory until this said so.
+  description:
+    'List every product in the store with its id, name and price (minor units). ' +
+    'Call this before answering any question about products, prices or availability — never answer from memory.',
   output: schema({ products: list({ id: str(), name: str(), price: money() }) }),
   run: () => ({ products: PRODUCTS }),
 });

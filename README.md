@@ -145,7 +145,7 @@ Zero config — first match wins:
 
 ## Documentation
 
-**[janux.dev docs](https://github.com/aralroca/Janux/tree/main/apps/docs)** — 73 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.dev docs](https://github.com/aralroca/Janux/tree/main/apps/docs)** — 74 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
