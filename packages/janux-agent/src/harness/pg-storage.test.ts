@@ -4,8 +4,9 @@ import { createPgStorage } from './pg-storage';
 import { createStep, createWorkflow, createWorkflowRunner } from './workflow';
 
 const URL = process.env.JANUX_TEST_PG ?? 'postgres://assistant:assistant@localhost:5432/janux_harness_test';
+// Bun reports a refused connection as ConnectionRefused/"Unable to connect" (no ECONNREFUSED).
 const reachable = await fetch('http://localhost:5432').catch((error) =>
-  String(error.cause ?? error).includes('ECONNREFUSED') ? undefined : 'up',
+  /ECONNREFUSED|ConnectionRefused|Unable to connect/i.test(`${error?.code ?? ''} ${error.cause ?? error}`) ? undefined : 'up',
 );
 
 // Runs only when the local stack is up (didit-ai-assistant docker compose).
