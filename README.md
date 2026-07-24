@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-630%2B%20passing-brightgreen" alt="630+ tests passing" />
+  <img src="https://img.shields.io/badge/tests-850%2B%20passing-brightgreen" alt="850+ tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -177,7 +177,7 @@ bun run --cwd examples/i18n dev
 
 ```bash
 bun install
-bun test packages    # 630+ tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
+bun test packages    # 820+ tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
 bun run typecheck
 ```
 
