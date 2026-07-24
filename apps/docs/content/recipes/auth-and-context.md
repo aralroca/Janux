@@ -22,9 +22,15 @@ export const myOrders = api({
   run: ({ ctx }) => db.orders.byUser(ctx.userId),
 });
 
+```
+
+```ts
 // In a source
 sources: { profile: source({ query: ({ ctx }) => loadProfile(ctx.userId) }) },
 
+```
+
+```ts
 // In a route
 export default function Page({ ctx }) { return ctx.userId ? <Dashboard /> : <Login />; }
 ```

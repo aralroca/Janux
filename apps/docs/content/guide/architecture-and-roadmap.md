@@ -18,7 +18,7 @@
 3. **Behavior is named.** Intents/effects/sources are declared sections, never anonymous closures — so the manifest can describe them and the runtime can await them.
 4. **Guards are enforced at the invocation pipeline**, not in app code. Same pipeline for clicks, bridge calls and HTTP.
 
-## What ships in v1
+## What ships today
 
 Everything the two core app archetypes (a content site and a full console) need is implemented and tested:
 
@@ -40,7 +40,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 
 ## Testing
 
-The framework is developed test-first with `bun:test` + happy-dom (315+ tests):
+The framework is developed test-first with `bun:test` + happy-dom (300+ tests):
 
 - Resume-without-hydration is asserted (zero component code until interaction).
 - Guard semantics (auto/confirm/forbidden × human/agent) are covered at every layer: instance, HTTP, bridge, agent loop.

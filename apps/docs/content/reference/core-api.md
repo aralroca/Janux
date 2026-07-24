@@ -23,7 +23,7 @@ Defines a bifacial component. Returns a frozen `ComponentDef`.
 
 The `bag` passed to `view`, `run`, `ready`, lifecycle and `on` handlers:
 
-```ts
+```txt
 { state, derived, sources, intents, use, emit, ctx, input?, event? }
 ```
 
