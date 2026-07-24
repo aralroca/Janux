@@ -57,7 +57,28 @@ export default function middleware(req: Request): Response | undefined {
 
 ## SPA navigation
 
-It's on by default for any app that calls `boot()`. Pure static pages (no islands, no `boot()`) stay classic multi-page navigation, which is exactly right: with no runtime there's nothing to intercept.
+It's on by default for any app that calls `boot()` — and there is nothing to opt in to. No `<Link>`
+component, no router import, no special prop: **a plain anchor is the router**.
+
+```tsx
+export const MainNav = component({
+  name: 'main-nav',
+  view: () => (
+    <nav>
+      <a href="/">Home</a>
+      <a href="/orders/42">Order #42</a>
+      <a href="/settings">Settings</a>
+    </nav>
+  ),
+});
+```
+
+Every one of those links is intercepted automatically: hovering prefetches the destination, the
+click streams the next page and diffs it in place, and back/forward run through the same pipeline.
+Links that shouldn't be intercepted — external origins, downloads, anchors marked
+[`data-native`](#opting-a-link-out-data-native) — are left to the browser.
+
+Pure static pages (no islands, no `boot()`) stay classic multi-page navigation, which is exactly right: with no runtime there's nothing to intercept.
 
 ## How it works
 
