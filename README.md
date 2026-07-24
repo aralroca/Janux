@@ -145,20 +145,20 @@ Zero config — first match wins:
 
 ## Documentation
 
-The docs site is **built with Janux itself** — polished light/dark theme, ⌘K full-text search, an interactive playground, `llms.txt` for agents, and an "Ask AI" copilot running on the same agent bridge every Janux app gets:
+**[janux.dev docs](https://github.com/aralroca/Janux/tree/main/apps/docs)** — 68 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/docs-dark.png" />
-    <img src="docs/docs-light.png" width="720" alt="The Janux docs site: topbar with search, grouped sidebar, Janus engraving hero" />
-  </picture>
-</p>
+| Section | Start here |
+|---|---|
+| **Getting started** | [What is Janux?](apps/docs/content/getting-started/what-is-janux.md) · [Quick start](apps/docs/content/getting-started/quick-start.md) · [Mental model](apps/docs/content/getting-started/mental-model.md) |
+| **Guide** | [Components](apps/docs/content/guide/components.md) · [Views and JSX](apps/docs/content/guide/views-and-jsx.md) · [Intents and guards](apps/docs/content/guide/intents-and-guards.md) · [Navigation](apps/docs/content/guide/navigation.md) · [The agent and your copilot](apps/docs/content/guide/agent-and-copilot.md) |
+| **Tutorial** | [A task board with two faces](apps/docs/content/tutorial/tasks-app-part-1.md) (3 parts) |
+| **Reference** | one page per export: [reactivity](apps/docs/content/reference/signal.md), [client](apps/docs/content/reference/client-state.md), [data cache](apps/docs/content/reference/data-cache-api.md), [agent harness](apps/docs/content/reference/agent-memory.md), [CLI](apps/docs/content/reference/cli.md) |
+| **Recipes** | [Testing components](apps/docs/content/recipes/testing-components.md) · [Forms](apps/docs/content/recipes/forms.md) · [Tailwind](apps/docs/content/recipes/tailwind.md) · [Local model copilot](apps/docs/content/recipes/local-model-copilot.md) |
+| **More** | [Examples](apps/docs/content/more/examples.md) · [Comparison](apps/docs/content/more/comparison.md) · [FAQ](apps/docs/content/more/faq.md) · [Glossary](apps/docs/content/more/glossary.md) |
 
-```bash
-bun run --cwd apps/docs dev
-```
+Agents read the same docs at `/llms.txt` and any page as Markdown by appending `.md`.
 
-Sources in [`apps/docs/content`](apps/docs/content), organized as **Guide** (components & state, rendering & navigation, server & agents, shipping), **Tutorial** (a task board in 3 parts), **Reference** (per-package APIs & CLI), **Recipes** and **More**.
+**Every example is verified.** `packages/docs-tests` compiles every snippet, checks it imports only symbols the packages really export, runs the main example of a page and asserts what the prose claims. Two coverage guards fail the build when an export has no reference page, or when a page's executable claims aren't executed.
 
 ## Examples
 
