@@ -82,6 +82,7 @@ export const SECTIONS: SectionDef[] = [
           'testing-components',
           'forms',
           'optimistic-ui',
+          'error-handling',
           'tailwind',
           'auth-and-context',
           'cross-island-events',
