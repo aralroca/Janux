@@ -4,6 +4,7 @@ import type { JanuxInstance } from '../runtime/instance';
 import type { Proposal } from '../runtime/intents';
 import { ensureStore, mountIsland, type MountContext } from './mount';
 import type { ClientRegistry } from './registry';
+import { CLIENT_TOOL_NAMES, executeClientTool } from './client-tools';
 
 export interface JanuxBridge {
   read(uri: string): Promise<Record<string, unknown>>;
@@ -80,6 +81,21 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
     },
 
     async call(tool, input) {
+      // Built-in client tools (navigation, view context, DOM fallback) run
+      // before island resolution — same activity events, so the glow fires.
+      if (CLIENT_TOOL_NAMES.has(tool)) {
+        emitToolEvent(tool, input, 'start', { guard: 'auto' });
+        try {
+          const result = await executeClientTool(tool, input, () => this.settled());
+
+          emitToolEvent(tool, input, 'ok', { guard: 'auto' });
+
+          return result;
+        } catch (error) {
+          emitToolEvent(tool, input, 'error', { guard: 'auto' });
+          throw error;
+        }
+      }
       const [component = '', intentName = ''] = tool.split('.');
       const guard = guardOf(mount, component, intentName);
 

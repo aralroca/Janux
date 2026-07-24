@@ -1,6 +1,7 @@
 import type { AgentDeps, AgentMount } from '@janux/server';
 import type { HarnessMemory } from './harness/memory';
 import type { InputProcessor } from './harness/processors';
+import { CLIENT_TOOL_SPECS } from 'janux';
 import { runProcessors } from './harness/processors';
 import { createRateLimiter, type RateLimitConfig, type RateLimiter } from './harness/rate-limit';
 import { createLlmHandler } from './llm-endpoint';
@@ -143,9 +144,15 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       if (limiter && !(await limiter.allow(identity))) {
         return json({ type: 'error', error: 'rate_limited' }, 429);
       }
-      const body = (await req.json().catch(() => ({ messages: [] }))) as AgentRequestBody;
+      const body = (await req.json().catch(() => ({ messages: [] }))) as AgentRequestBody & {
+        continuation?: boolean;
+        toolResults?: { name: string; output: unknown }[];
+      };
       const manifest: any = await deps.manifestFor(body.path ?? '/');
-      const tools = manifestTools(manifest, config.tools?.include);
+      const tools = [
+        ...manifestTools(manifest, config.tools?.include),
+        ...CLIENT_TOOL_SPECS.map((spec) => ({ name: spec.name, description: spec.description, parameters: spec.parameters })),
+      ];
       const system = systemPrompt(config, manifest);
       const turn = await turnMessages(body, config.harness, identity).catch((error) => {
         if (String(error).includes('thread_forbidden')) return undefined;
@@ -153,6 +160,16 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       });
 
       if (!turn) return json({ type: 'error', error: 'thread_forbidden' }, 403);
+      // act -> observe -> continue: the client executed the returned ui_calls
+      // and re-POSTs their outputs with the (possibly new) path — the manifest
+      // above is already the destination page's, so the turn continues with
+      // the tools that exist THERE.
+      if (body.continuation && body.toolResults) {
+        turn.messages.push({
+          role: 'tool',
+          content: JSON.stringify(body.toolResults),
+        } as ChatMessage);
+      }
       const guarded = await runProcessors(config.harness?.processors ?? [], {
         messages: [{ role: 'system', content: system }, ...turn.messages],
       });

@@ -190,7 +190,7 @@ describe('foreign React interop', () => {
     globalThis.fetch = (async () =>
       new Response(`<!doctype html><html><head></head><body>${nextBody}</body></html>`, {
         headers: { 'content-type': 'text/html' },
-      })) as typeof fetch;
+      })) as unknown as typeof fetch;
     try {
       await client.navigate('http://localhost/next');
       // Not just the SSR markup: a LIVE React root must own the host again
