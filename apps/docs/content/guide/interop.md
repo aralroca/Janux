@@ -6,9 +6,9 @@ A mature front-end leans on a third-party ecosystem — node-graph editors, anim
 import { foreign } from 'janux/interop';
 import { ReactFlow } from '@xyflow/react';          // unchanged, third-party
 
-const Flow = foreign(FlowCanvas, {
+const Flow = foreign(ReactFlow, {
   props: (own) => ({ nodes: own.state.nodes }),     // Janux state → React props (tracked)
-  on: { onMove: 'moveNode' },                       // React callback → island intent
+  on: { onNodeDrag: 'moveNode' },                   // React callback → island intent
   hydrate: 'visible',                               // load | idle | visible | only
 });
 ```
