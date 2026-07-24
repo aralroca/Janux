@@ -29,9 +29,7 @@ export const UNTESTED_PAGES: string[] = [
   'reference/client-api.md',
   'reference/client-state.md',
   'reference/client-tools.md',
-  'reference/create-bus.md',
   'reference/foreign.md',
   'reference/i18n-api.md',
   'reference/schema-api.md',
-  'reference/watch.md',
 ];

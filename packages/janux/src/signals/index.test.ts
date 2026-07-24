@@ -97,3 +97,36 @@ describe('signals', () => {
     expect(runs).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * Regression: `effect`/`watch` treated ANY return value as a cleanup, so the
+ * documented one-liner `watch(() => (document.title = x))` — an arrow with an
+ * implicit string return — threw "cleanup is not a function" on the next run
+ * and on dispose.
+ */
+describe('effect cleanup detection', () => {
+  it('ignores a non-function return, on re-run and on dispose', () => {
+    const count = signal(0);
+    const dispose = effect(() => `title ${count.value}`);
+
+    expect(() => (count.value = 1)).not.toThrow();
+    expect(() => dispose()).not.toThrow();
+  });
+
+  it('still honours a function return as the cleanup', () => {
+    const count = signal(0);
+    const cleaned: number[] = [];
+    const dispose = effect(() => {
+      const current = count.value;
+
+      return () => cleaned.push(current);
+    });
+
+    count.value = 1;
+
+    expect(cleaned).toEqual([0]);
+    dispose();
+
+    expect(cleaned).toEqual([0, 1]);
+  });
+});
