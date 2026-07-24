@@ -111,8 +111,14 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
             }
             const server = await januxServer();
             const response = await server.fetch(await toFetchRequest(req));
+            // A 404 falls through to Vite only when it's a genuine page-router
+            // miss. Framework endpoints (`/_janux/*`) and `src/api/**` handlers
+            // own their responses — a handler's real 404 (e.g. a proxied
+            // upstream 404) must be sent as-is, never masked by Vite's fallback.
+            const path = req.url?.split('?')[0] ?? '/';
+            const handled = path.startsWith('/_janux/') || path.startsWith('/api/');
 
-            if (response.status === 404 && !req.url?.startsWith('/_janux/')) return next();
+            if (response.status === 404 && !handled) return next();
             await sendFetchResponse(res, response);
           };
 
