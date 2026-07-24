@@ -66,7 +66,7 @@ export const SECTIONS: SectionDef[] = [
       { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api'] },
       { label: 'Reactivity', slugs: ['signal', 'computed', 'watch', 'batch', 'untrack', 'owners'] },
       { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus'] },
-      { label: 'Client & CLI', slugs: ['client-api', 'data-cache-api', 'foreign', 'cli'] },
+      { label: 'Client & CLI', slugs: ['client-api', 'client-state', 'data-cache-api', 'foreign', 'client-runtime', 'cli'] },
     ],
   },
   {
