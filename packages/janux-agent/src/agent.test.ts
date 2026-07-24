@@ -155,3 +155,55 @@ describe('agent loop', () => {
     expect(toolNames).toContain('api__shop__search');
   });
 });
+
+describe('client tools + continuation (agentic parity)', () => {
+  const env = { ANTHROPIC_API_KEY: 'k' };
+
+  it('always advertises the built-in client tools next to the page tools', async () => {
+    const { fetchImpl, calls } = scriptedFetch([anthropicReply([{ type: 'text', text: 'ok' }])]);
+    const server = buildServer(defineAgent({}, { env, fetchImpl }));
+
+    await ask(server, { path: '/', messages: [{ role: 'user', content: 'hi' }] });
+    const names = calls[0]!.body.tools.map((tool: any) => tool.name);
+
+    expect(names).toContain('ui_navigate');
+    expect(names).toContain('ui_read_page');
+    expect(names).toContain('counter__rename');
+  });
+
+  it('injects the app-wide route map into the system prompt', async () => {
+    const { fetchImpl, calls } = scriptedFetch([anthropicReply([{ type: 'text', text: 'ok' }])]);
+    const server = buildServer(defineAgent({}, { env, fetchImpl }));
+
+    await ask(server, { path: '/', messages: [{ role: 'user', content: 'hi' }] });
+
+    expect(String(calls[0]!.body.system)).toContain('App routes');
+    expect(String(calls[0]!.body.system)).toContain('ui_navigate');
+  });
+
+  it('continues the SAME turn from re-POSTed toolResults', async () => {
+    const { fetchImpl, calls } = scriptedFetch([
+      anthropicReply([{ type: 'tool_use', id: 't1', name: 'ui_navigate', input: { path: '/shop' } }]),
+      anthropicReply([{ type: 'text', text: 'you are there' }]),
+    ]);
+    const server = buildServer(defineAgent({}, { env, fetchImpl }));
+    const first = await (await ask(server, { path: '/', messages: [{ role: 'user', content: 'go to shop' }] })).json();
+
+    expect(first.type).toBe('ui_calls');
+    expect(first.calls[0].name).toBe('ui_navigate');
+    const second = await (
+      await ask(server, {
+        path: '/shop',
+        threadId: first.threadId,
+        continuation: true,
+        toolResults: [{ name: 'ui_navigate', output: { navigated: '/shop' } }],
+        messages: [],
+      })
+    ).json();
+
+    expect(second.type).toBe('text');
+    expect(second.text).toBe('you are there');
+    // The continuation carried the tool outputs to the provider.
+    expect(JSON.stringify(calls[1]!.body.messages)).toContain('navigated');
+  });
+});

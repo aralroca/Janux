@@ -204,8 +204,14 @@ export function createJanuxServer(options: ServerOptions = {}) {
         ]
       : [];
     const base = buildManifest(entries, ctx);
+    // App-wide route map: the agent can target pages that are NOT mounted
+    // (ui_navigate) — patterns only, params stay for the model to fill.
+    const routes = [
+      ...Object.keys(options.routes ?? {}),
+      ...(router?.routes.map((route) => route.pattern) ?? []),
+    ];
 
-    return { ...base, tools: [...base.tools, ...apiManifestTools(apiTools, ctx)] };
+    return { ...base, routes, tools: [...base.tools, ...apiManifestTools(apiTools, ctx)] };
   };
 
   const invokeTool = async (name: string, input: unknown, ctx: Ctx): Promise<unknown> => {

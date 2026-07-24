@@ -69,8 +69,12 @@ function manifestTools(manifest: any, patterns: string[] | undefined): AgentTool
 
 function systemPrompt(config: AgentConfig, manifest: any): string {
   const resources = JSON.stringify(manifest.resources ?? []);
+  const routes = (manifest.routes ?? []) as string[];
+  const routeMap = routes.length
+    ? `App routes (use ui_navigate to reach any of them; fill [params] with known values): ${routes.join(', ')}`
+    : undefined;
 
-  return [config.instructions, SYSTEM_PREAMBLE, `Mounted resources: ${resources}`]
+  return [config.instructions, SYSTEM_PREAMBLE, `Mounted resources: ${resources}`, routeMap]
     .filter(Boolean)
     .join('\n\n');
 }
