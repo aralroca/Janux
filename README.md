@@ -145,7 +145,7 @@ Zero config — first match wins:
 
 ## Documentation
 
-**[janux.dev docs](https://github.com/aralroca/Janux/tree/main/apps/docs)** — 71 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.dev docs](https://github.com/aralroca/Janux/tree/main/apps/docs)** — 73 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -153,7 +153,7 @@ Zero config — first match wins:
 | **Guide** | [Components](apps/docs/content/guide/components.md) · [Views and JSX](apps/docs/content/guide/views-and-jsx.md) · [Intents and guards](apps/docs/content/guide/intents-and-guards.md) · [Navigation](apps/docs/content/guide/navigation.md) · [The agent and your copilot](apps/docs/content/guide/agent-and-copilot.md) |
 | **Tutorial** | [A task board with two faces](apps/docs/content/tutorial/tasks-app-part-1.md) (3 parts) |
 | **Reference** | one page per export: [reactivity](apps/docs/content/reference/signal.md), [client](apps/docs/content/reference/client-state.md), [data cache](apps/docs/content/reference/data-cache-api.md), [agent harness](apps/docs/content/reference/agent-memory.md), [CLI](apps/docs/content/reference/cli.md) |
-| **Recipes** | [Testing components](apps/docs/content/recipes/testing-components.md) · [Forms](apps/docs/content/recipes/forms.md) · [Optimistic UI](apps/docs/content/recipes/optimistic-ui.md) · [Error handling](apps/docs/content/recipes/error-handling.md) · [Custom server](apps/docs/content/recipes/custom-server.md) · [Tailwind](apps/docs/content/recipes/tailwind.md) · [Local model copilot](apps/docs/content/recipes/local-model-copilot.md) |
+| **Recipes** | [Testing components](apps/docs/content/recipes/testing-components.md) · [Forms](apps/docs/content/recipes/forms.md) · [Optimistic UI](apps/docs/content/recipes/optimistic-ui.md) · [Error handling](apps/docs/content/recipes/error-handling.md) · [Custom server](apps/docs/content/recipes/custom-server.md) · [Docker](apps/docs/content/recipes/docker.md) · [Monorepo](apps/docs/content/recipes/monorepo-setup.md) · [Tailwind](apps/docs/content/recipes/tailwind.md) · [Local model copilot](apps/docs/content/recipes/local-model-copilot.md) |
 | **More** | [Examples](apps/docs/content/more/examples.md) · [Comparison](apps/docs/content/more/comparison.md) · [FAQ](apps/docs/content/more/faq.md) · [Glossary](apps/docs/content/more/glossary.md) |
 
 Agents read the same docs at `/llms.txt` and any page as Markdown by appending `.md`.
