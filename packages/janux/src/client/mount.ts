@@ -188,15 +188,25 @@ export async function mountDocumentForeigns(mount: MountContext): Promise<void> 
   await Promise.all(
     [...parents].map((island) => mountIsland(island.getAttribute('data-jx')!, island, mount)),
   );
-  standalone
-    .filter((host) => !mount.registry.foreigns.has(host.getAttribute('data-jx')!))
-    .forEach((host) => {
-      const id = host.getAttribute('data-jx')!;
-      const def = mount.registry.foreignDefs.get(id.split('#')[0]!);
-      const raw = host.getAttribute('data-jxf-props');
+  standalone.forEach((host) => {
+    const id = host.getAttribute('data-jx')!;
+    const raw = host.getAttribute('data-jxf-props');
+    const next = raw ? JSON.parse(raw) : {};
+    const live = mount.registry.foreigns.get(id);
 
-      if (def) mount.registry.foreigns.set(id, mountForeign(def, host, raw ? JSON.parse(raw) : {}));
-    });
+    // Already mounted (navigation preserved the host): the morph synced the
+    // serialized call-site props onto the host attribute, so push them into
+    // the live root — otherwise a page-dependent prop (e.g. the sidebar's
+    // `base`) would stay frozen at its first-mount value.
+    if (live) {
+      if (JSON.stringify(live.props.value) !== JSON.stringify(next)) live.props.value = next;
+
+      return;
+    }
+    const def = mount.registry.foreignDefs.get(id.split('#')[0]!);
+
+    if (def) mount.registry.foreigns.set(id, mountForeign(def, host, next));
+  });
 }
 
 /** Dispose every foreign root whose host is no longer in the document (navigation sweep). */

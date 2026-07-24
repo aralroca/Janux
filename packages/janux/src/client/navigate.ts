@@ -1,6 +1,6 @@
 import diff from 'diff-dom-streaming';
 import { installI18n } from './i18n';
-import { mountIsland, type MountContext } from './mount';
+import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { consumePrefetched } from './prefetch';
 import { singleChunkStream } from './single-chunk';
 
@@ -155,8 +155,12 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
     reindexSnapshots(mount);
     installI18n(mount.ctx);
     await sweepDisconnected(mount);
+    sweepDisconnectedForeigns(mount);
     await disposeRouteStores(mount);
     await mountEagerIslands(mount);
+    // Foreign roots after navigation: mount the new page's hosts and push the
+    // morph-synced call-site props into hosts that survived the swap.
+    await mountDocumentForeigns(mount);
     emitNavigate('after', from, url);
   } catch (error) {
     if ((error as any)?.name === 'AbortError') return;

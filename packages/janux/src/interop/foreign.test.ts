@@ -1,6 +1,6 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
-import { createElement, useEffect } from 'react';
+import { createElement, useEffect, useState } from 'react';
 import { component, intent } from '../define/factories';
 import { jsx } from '../jsx-runtime';
 import { bool, int, schema, str } from '../schema';
@@ -20,7 +20,13 @@ const unmounts: string[] = [];
 
 /** A plain React component — untouched by Janux. */
 function Gauge({ level, label, onPick }: { level: number; label: string; onPick?: (input: unknown) => void }) {
+  // `live` flips only in a MOUNTED client root (effects never run in SSR), so
+  // tests can tell a live React tree from inert server markup.
+  const [live, setLive] = useState(false);
+
   useEffect(function trackUnmount() {
+    setLive(true);
+
     return () => {
       unmounts.push('gauge');
     };
@@ -30,6 +36,7 @@ function Gauge({ level, label, onPick }: { level: number; label: string; onPick?
     'div',
     { className: 'gauge' },
     createElement('output', { className: 'gauge-level' }, `${label}:${level}`),
+    createElement('output', { className: 'gauge-live' }, live ? 'yes' : 'no'),
     createElement('button', { className: 'gauge-pick', onClick: () => onPick?.({ amount: 5 }) }, 'pick'),
   );
 }
@@ -158,5 +165,44 @@ describe('foreign React interop', () => {
     document.body.innerHTML = html;
     boot({ defs: [GaugeIsland] });
     await until(() => document.querySelector('.gauge-level')?.textContent === 'top:9');
+  });
+
+  it('refreshes a preserved standalone foreign with the next page\'s call-site props', async () => {
+    const pageHtml = async (level: number, label: string) => {
+      const { html } = await renderToString(
+        jsx('main', { children: jsx(GaugeIsland as any, { state: { level, label } }) }),
+        {},
+      );
+
+      return html;
+    };
+
+    document.body.innerHTML = await pageHtml(9, 'top');
+    const client = boot({ defs: [GaugeIsland] });
+
+    await until(() => document.querySelector('.gauge-level')?.textContent === 'top:9');
+
+    // Navigation serves the same page with DIFFERENT call-site props: the host
+    // survives the morph, and the live React root must receive the new props.
+    const nextBody = await pageHtml(4, 'alt');
+    const realFetch = globalThis.fetch;
+
+    globalThis.fetch = (async () =>
+      new Response(`<!doctype html><html><head></head><body>${nextBody}</body></html>`, {
+        headers: { 'content-type': 'text/html' },
+      })) as typeof fetch;
+    try {
+      await client.navigate('http://localhost/next');
+      // Not just the SSR markup: a LIVE React root must own the host again
+      // (navigation re-runs the document foreign pass), showing the new props.
+      // `.gauge-live` flips to "yes" only from a mounted client effect.
+      await until(
+        () =>
+          document.querySelector('.gauge-level')?.textContent === 'alt:4' &&
+          document.querySelector('.gauge-live')?.textContent === 'yes',
+      );
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });
