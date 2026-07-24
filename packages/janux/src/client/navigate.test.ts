@@ -134,6 +134,61 @@ describe('SPA navigation (streamed diff)', () => {
     expect(editorAttach).toHaveBeenCalledTimes(2);
   });
 
+  it('a leaving island never leaks its imperative runtime DOM into the next page', async () => {
+    const widget = component({
+      name: 'widget',
+      lifecycle: {
+        attach: () => {
+          const host = document.querySelector('.w-host')!;
+
+          for (let i = 0; i < 30; i++) {
+            host.appendChild(Object.assign(document.createElement('div'), { textContent: `IMPERATIVE-${i}` }));
+          }
+        },
+      },
+      intents: {},
+      view: () => jsx('div', { class: 'w-host', children: 'shell' }),
+    });
+    const pageW = await pageHtml('W', [jsx('h1', { children: 'W' }), jsx(widget as any, { eager: true })]);
+    const pageD = await pageHtml('D', [
+      jsx('h1', { children: 'D' }),
+      jsx('nav', { children: [jsx('a', { href: '/x', children: 'x' }), jsx('a', { href: '/y', children: 'y' })] }),
+    ]);
+
+    document.write(pageW);
+    document.close();
+    const client = boot({ defs: [widget] });
+
+    await client.settled();
+    expect(document.querySelectorAll('.w-host div').length).toBe(30);
+
+    (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => pageD }));
+    await client.navigate('/d');
+
+    expect(document.body.innerHTML).not.toContain('IMPERATIVE');
+    expect(document.querySelector('janux-island[data-jx="widget#default"]')).toBeNull();
+    expect(document.querySelectorAll('nav a').length).toBe(2);
+  });
+
+  it('keeps runtime-injected stylesheets across navigations (lazy editors, vite dev styles)', async () => {
+    document.write(await pageHtml('A', jsx('h1', { children: 'A' })));
+    document.close();
+    const client = boot({ defs: [] });
+    const style = document.createElement('style');
+
+    style.textContent = '.monaco-editor { position: relative; }';
+    document.head.appendChild(style);
+
+    (globalThis as any).fetch = mock(async () => ({
+      ok: true,
+      text: async () => await pageHtml('B', jsx('h1', { children: 'B' })),
+    }));
+    await client.navigate('/b');
+
+    expect(document.querySelector('h1')!.textContent).toBe('B');
+    expect(style.isConnected).toBe(true);
+  });
+
   it('buffers the response into a single chunk before diffing (deterministic swap)', async () => {
     const pageA = await pageHtml('Page A', jsx('h1', { children: 'A' }));
     const pageB = await pageHtml('Page B', jsx('h1', { children: 'B' }));

@@ -16,6 +16,7 @@ export interface JanuxAppConfig {
   storesModule?: string;
   i18nModule?: string;
   middlewareModule?: string;
+  ctxModule?: string;
   matchersModule?: string;
   httpHandlersDir?: string;
   stylesheet?: string;
@@ -63,6 +64,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     storesModule: options.storesModule ?? optional(resolve(root, 'src/stores.ts')),
     i18nModule: optional(resolve(root, 'src/i18n.ts')) ?? optional(resolve(root, 'src/i18n/index.ts')),
     middlewareModule: optional(resolve(root, 'src/middleware.ts')),
+    ctxModule: optional(resolve(root, 'src/ctx.ts')),
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
     httpHandlersDir: optional(resolve(root, 'src/api')),
     stylesheet: optional(resolve(root, 'src/styles.css')),

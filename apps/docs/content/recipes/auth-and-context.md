@@ -4,14 +4,22 @@
 
 ## Building ctx
 
+`src/ctx.ts` is the convention: default-export a function of the request and every route, intent, source and `api()` receives what it returns.
+
 ```ts
-// createJanuxServer option (the CLI wires this from src/server if you export it)
-ctxFor: async (req) => {
+// src/ctx.ts
+import { verifyCookie } from './auth';
+
+export default async function ctxFor(req: Request) {
   const session = await verifyCookie(req.headers.get('cookie'));
 
   return { userId: session?.userId, role: session?.role ?? 'guest' };
-},
+}
 ```
+
+`janux dev` and `janux start` both pick it up; there is nothing to register. Running your own server? It's the `ctxFor` option of [`createJanuxServer`](/docs/recipes/custom-server) — the convention just wires that for you.
+
+No `src/ctx.ts` means `ctx` is `{}`: an app without auth pays nothing.
 
 ## Using ctx
 

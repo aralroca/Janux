@@ -6,9 +6,9 @@ A mature front-end leans on a third-party ecosystem — node-graph editors, anim
 import { foreign } from 'janux/interop';
 import { ReactFlow } from '@xyflow/react';          // unchanged, third-party
 
-const Flow = foreign(FlowCanvas, {
+const Flow = foreign(ReactFlow, {
   props: (own) => ({ nodes: own.state.nodes }),     // Janux state → React props (tracked)
-  on: { onMove: 'moveNode' },                       // React callback → island intent
+  on: { onNodeDrag: 'moveNode' },                   // React callback → island intent
   hydrate: 'visible',                               // load | idle | visible | only
 });
 ```
@@ -83,3 +83,5 @@ That's the whole model: Janux owns the tree, React owns its leaves, and each fil
 - A standalone foreign (outside any island) SSRs and mounts from its serialized call-site props; `on:` requires an enclosing island.
 - `react`/`react-dom` are optional peers — apps without foreign islands pay nothing.
 - Reverse interop (mounting a Janux island inside a React app) is on the roadmap.
+
+> **See it running**: [`examples/interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) — A React component mounted unchanged, with tracked props and callbacks bridged to intents. More in [Examples](/docs/more/examples).

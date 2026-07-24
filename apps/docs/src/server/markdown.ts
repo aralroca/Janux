@@ -47,11 +47,11 @@ function codeRenderer(highlighter: Highlighter) {
       defaultColor: 'light-dark()',
     });
 
-    if (!flags.includes('live')) return highlighted;
+    const tryIt = flags.includes('live')
+      ? `<a class="try-it" href="/playground#c=${base64url(text)}">▶ Run in playground</a>`
+      : '';
 
-    // data-native: the playground mounts Monaco imperatively — SPA-diffing into
-    // it breaks the page (pending fix upstream in diff-dom-streaming).
-    return `<div class="live-block">${highlighted}<a class="try-it" data-native href="/playground#c=${base64url(text)}">▶ Run in playground</a></div>`;
+    return `<div class="code-block">${highlighted}<div class="block-actions"><button class="copy-code" type="button" aria-label="Copy code">Copy</button>${tryIt}</div></div>`;
   };
 }
 
@@ -64,10 +64,17 @@ function calloutRenderer() {
   };
 }
 
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" };
+
+/** parseInline emits HTML — strip tags and decode entities for TOC/anchor text. */
+function plainText(html: string): string {
+  return html.replace(/<[^>]+>/g, '').replace(/&(amp|lt|gt|quot|#39);/g, (_, entity) => ENTITIES[entity]!);
+}
+
 function headingRenderer(toc: TocEntry[]) {
   return function heading(this: any, { tokens, depth }: any): string {
     const text = this.parser.parseInline(tokens);
-    const plain = text.replace(/<[^>]+>/g, '');
+    const plain = plainText(text);
     const id = slugify(plain);
 
     if (depth === 2 || depth === 3) toc.push({ depth, id, text: plain });

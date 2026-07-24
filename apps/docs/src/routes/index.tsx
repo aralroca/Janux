@@ -72,7 +72,7 @@ export default async function Home() {
   );
 
   return (
-    <Layout current="/">
+    <Layout current="/" sidebar={false}>
       <main class="home">
         <section class="hero">
           <img
@@ -90,14 +90,25 @@ export default async function Home() {
             resources for AI agents — generated from the same definition, so they can never drift.
           </p>
           <div class="hero-actions">
-            <a class="cta" href="/docs/guide/getting-started">
+            <a class="cta" href="/docs/getting-started/quick-start">
               Get started
             </a>
             <a class="cta ghost" href="https://github.com/aralroca/Janux">
               GitHub
             </a>
           </div>
-          <pre class="install">bunx create-janux my-app</pre>
+          <div class="code-block install-block">
+            <pre class="install">bun create janux my-app</pre>
+            <button class="copy-code" type="button" aria-label="Copy command">
+              <svg class="ic-copy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              <svg class="ic-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </button>
+          </div>
         </section>
 
         <section class="two-faces">
@@ -114,6 +125,43 @@ export default async function Home() {
           </div>
         </section>
 
+        <section class="mission">
+          <h2>Built for how software gets written now</h2>
+          <p class="mission-lede">
+            AI agents write the code. Humans review it. Agents operate the result. Janux is the
+            first framework designed for that whole loop — not just the rendering.
+          </p>
+          <div class="mission-grid">
+            <div>
+              <h3>😶‍🌫️ Easy for agents to write</h3>
+              <p>
+                One schema-typed definition per component — no hooks, no lifecycle traps, no hidden
+                state. The most predictable target a model can generate, right on the first try.
+              </p>
+            </div>
+            <div>
+              <h3>🔍 Easy for humans to review</h3>
+              <p>
+                State, actions, guards and view live in a single definition, so{' '}
+                <strong>the PR is the whole truth of the component</strong>. Diffs read in minutes —
+                no archaeology across files.
+              </p>
+            </div>
+            <div>
+              <h3>🤖 Easy for agents to operate</h3>
+              <p>
+                Every component ships as typed MCP tools and live resources — <strong>WebMCP</strong>{' '}
+                in the browser, a hosted <strong>MCP endpoint</strong> on the server. Connecting
+                Claude, ChatGPT or your own copilot is a URL, not an integration project.
+              </p>
+            </div>
+          </div>
+          <p class="mission-close">
+            Contracts can't drift — they're generated from the code that renders, with human approval
+            built in where it matters. <strong>No other framework ships this loop out of the box.</strong>
+          </p>
+        </section>
+
         <section class="features">
           {FEATURES.map(([icon, title, body]) => (
             <div key={title} class="feature-card">
@@ -128,8 +176,11 @@ export default async function Home() {
           <a href="https://www.npmjs.com/package/janux">npm</a>
           <a href="https://github.com/aralroca/Janux">GitHub</a>
           <a href="https://github.com/aralroca/Janux/issues/1">RFC 0001</a>
+          <a href="/docs/more/examples">Examples</a>
           <a href="/playground">Playground</a>
-          <span>MIT © Aral Roca</span>
+          <span>
+            MIT © Aral Roca — from the creator of <a href="https://brisa.build/" target="_blank" rel="noopener">Brisa</a>
+          </span>
         </footer>
       </main>
       <DocsCopilot persist />

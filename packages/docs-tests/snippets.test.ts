@@ -9,7 +9,7 @@ import { join, resolve } from 'node:path';
  */
 
 const ROOT = resolve(import.meta.dir, '../..');
-const SOURCES = [join(ROOT, 'README.md'), join(ROOT, 'apps/docs/content')];
+const SOURCES = [join(ROOT, 'README.md'), join(ROOT, 'apps/docs/content'), join(ROOT, 'examples')];
 
 interface Snippet {
   file: string;
@@ -23,12 +23,13 @@ function mdFiles(path: string): string[] {
 
   return readdirSync(path, { recursive: true })
     .map(String)
-    .filter((name) => name.endsWith('.md'))
+    .filter((name) => name.endsWith('.md') && !name.includes('node_modules'))
     .map((name) => join(path, name));
 }
 
 function snippetsOf(file: string): Snippet[] {
-  const blocks = [...readFileSync(file, 'utf8').matchAll(/```(tsx?|jsx?)\n([\s\S]*?)```/g)];
+  // Flags after the language (```tsx live) must not hide a fence from the compiler.
+  const blocks = [...readFileSync(file, 'utf8').matchAll(/```(tsx?|jsx?)(?:[ \t]+[^\n]*)?\n([\s\S]*?)```/g)];
 
   return blocks.map((match, index) => ({
     file: file.slice(ROOT.length + 1),

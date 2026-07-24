@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-300%2B%20passing-brightgreen" alt="300+ tests passing" />
+  <img src="https://img.shields.io/badge/tests-850%2B%20passing-brightgreen" alt="850+ tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -145,20 +145,20 @@ Zero config — first match wins:
 
 ## Documentation
 
-The docs site is **built with Janux itself** — polished light/dark theme, ⌘K full-text search, an interactive playground, `llms.txt` for agents, and an "Ask AI" copilot running on the same agent bridge every Janux app gets:
+**[janux.dev docs](https://github.com/aralroca/Janux/tree/main/apps/docs)** — 74 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/docs-dark.png" />
-    <img src="docs/docs-light.png" width="720" alt="The Janux docs site: topbar with search, grouped sidebar, Janus engraving hero" />
-  </picture>
-</p>
+| Section | Start here |
+|---|---|
+| **Getting started** | [What is Janux?](apps/docs/content/getting-started/what-is-janux.md) · [Quick start](apps/docs/content/getting-started/quick-start.md) · [Mental model](apps/docs/content/getting-started/mental-model.md) |
+| **Guide** | [Components](apps/docs/content/guide/components.md) · [Views and JSX](apps/docs/content/guide/views-and-jsx.md) · [Intents and guards](apps/docs/content/guide/intents-and-guards.md) · [Navigation](apps/docs/content/guide/navigation.md) · [The agent and your copilot](apps/docs/content/guide/agent-and-copilot.md) |
+| **Tutorial** | [A task board with two faces](apps/docs/content/tutorial/tasks-app-part-1.md) (3 parts) |
+| **Reference** | one page per export: [reactivity](apps/docs/content/reference/signal.md), [client](apps/docs/content/reference/client-state.md), [data cache](apps/docs/content/reference/data-cache-api.md), [agent harness](apps/docs/content/reference/agent-memory.md), [CLI](apps/docs/content/reference/cli.md) |
+| **Recipes** | [Testing components](apps/docs/content/recipes/testing-components.md) · [Forms](apps/docs/content/recipes/forms.md) · [Optimistic UI](apps/docs/content/recipes/optimistic-ui.md) · [Error handling](apps/docs/content/recipes/error-handling.md) · [Custom server](apps/docs/content/recipes/custom-server.md) · [Docker](apps/docs/content/recipes/docker.md) · [Monorepo](apps/docs/content/recipes/monorepo-setup.md) · [Tailwind](apps/docs/content/recipes/tailwind.md) · [Local model copilot](apps/docs/content/recipes/local-model-copilot.md) |
+| **More** | [Examples](apps/docs/content/more/examples.md) · [Comparison](apps/docs/content/more/comparison.md) · [FAQ](apps/docs/content/more/faq.md) · [Glossary](apps/docs/content/more/glossary.md) |
 
-```bash
-bun run --cwd apps/docs dev
-```
+Agents read the same docs at `/llms.txt` and any page as Markdown by appending `.md`.
 
-Sources in [`apps/docs/content`](apps/docs/content), organized as **Guide** (components & state, rendering & navigation, server & agents, shipping), **Tutorial** (a task board in 3 parts), **Reference** (per-package APIs & CLI), **Recipes** and **More**.
+**Every example is verified.** `packages/docs-tests` compiles every snippet, checks it imports only symbols the packages really export, runs the main example of a page and asserts what the prose claims. Three guards fail the build when an export has no reference page, when a page's executable claims aren't executed, or when any documented link stops resolving. **Both backlogs are empty**: every public export is documented, and every page that imports the framework has a test that runs it.
 
 ## Examples
 
@@ -177,7 +177,7 @@ bun run --cwd examples/i18n dev
 
 ```bash
 bun install
-bun test packages    # 300+ tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
+bun test packages    # 820+ tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
 bun run typecheck
 ```
 

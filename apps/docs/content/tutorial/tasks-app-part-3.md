@@ -30,7 +30,9 @@ Ask the copilot: *“add tasks for milk and bread, then clean up everything that
 2. `tasks.clearDone` hits `guard: 'confirm'` → the copilot gets `{ status: 'proposal' }` and your UI shows Approve/Reject.
 3. Nothing is deleted until **you** approve. Approval executes exactly once; the audit log remembers both the ask and the answer.
 
-The Copilot component in the template is ~100 lines you fully own: it POSTs `/_janux/agent`, executes `ui_calls` through `window.janux.call`, and renders proposals. Its `approve`/`reject` intents are `guard: 'forbidden'` — human-only, so a model can never approve itself.
+The starter's `AgentPanel` (150 lines you fully own) is not a chat: it's a live view of this page's agent surface — every tool with its guard, a generated example payload, `callTool` to invoke one *exactly as an agent would*, and the Approve/Reject pair when a `confirm` tool answers with a proposal. Its `approve`/`reject` intents are `guard: 'forbidden'` — human-only, so a model can never approve itself.
+
+For the chat version, [`examples/shop`](https://github.com/aralroca/Janux/tree/main/examples/shop) has a `Copilot` island (174 lines) that POSTs `/_janux/agent`, walks the `ui_calls` the model returns through `window.janux.call`, and renders the same proposal card. Both are app code, not framework code: swap either for your own UI.
 
 ## Test it all without a browser
 

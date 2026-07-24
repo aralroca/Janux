@@ -72,8 +72,13 @@ function resolveModelContext(): ModelContext {
   return (doc.modelContext = createModelContextPolyfill());
 }
 
-/** The server knows the whole route (lazy islands, api() tools); unreachable → empty, fail-soft. */
+/**
+ * The server knows the whole route (lazy islands, api() tools); unreachable →
+ * empty, fail-soft. A static export omits the shell's manifest link precisely
+ * because `/_janux/*` isn't there, so absence of the link means: don't ask.
+ */
 async function routeTools(): Promise<ManifestTool[]> {
+  if (!document.getElementById('jx-manifest')) return [];
   try {
     const url = `/_janux/manifest?path=${encodeURIComponent(location.pathname)}`;
     const response = await fetch(url, { headers: { accept: 'application/json' } });

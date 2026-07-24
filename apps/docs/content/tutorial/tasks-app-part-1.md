@@ -1,12 +1,12 @@
 # Tutorial 1/3 — A task board with two faces
 
-We'll build the exact app `create-janux` ships: a task board that is simultaneously a UI and an agent surface. Part 1: the component and its intents.
+We'll build a task board that is simultaneously a UI and an agent surface. Part 1: the component and its intents.
 
 ```bash
-bunx create-janux tasks && cd tasks && bun install && bun run dev
+bun create janux tasks && cd tasks && bun install && bun run dev
 ```
 
-You could follow along from the generated code — or delete `src/components/TaskBoard.tsx` and rebuild it with us.
+The starter ships a counter island and an agent panel — a working app to see both faces immediately. We'll add `src/components/TaskBoard.tsx` next to it and render it from `src/routes/index.tsx`; the counter can stay or go.
 
 ## State first
 

@@ -17,7 +17,8 @@
   },
   "files": [
     "bin.ts",
-    "template"
+    "template",
+    "examples"
   ],
   "homepage": "https://github.com/aralroca/Janux#readme",
   "bugs": "https://github.com/aralroca/Janux/issues",

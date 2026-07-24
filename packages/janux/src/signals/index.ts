@@ -129,7 +129,11 @@ export function effect(fn: () => Cleanup | void): () => void {
   runner.run = function runEffect() {
     if (disposed) return;
     cleanup?.();
-    cleanup = runWithOwner(scope, () => runTracked(runner, fn as () => Cleanup)) ?? undefined;
+    // Only a FUNCTION is a cleanup: `watch(() => (title.value = x))` returns a
+    // string through the arrow's implicit return, and calling that would throw.
+    const result = runWithOwner(scope, () => runTracked(runner, fn as () => Cleanup));
+
+    cleanup = typeof result === 'function' ? result : undefined;
   };
   runner.run();
   const dispose = function dispose() {

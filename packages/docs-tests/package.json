@@ -6,7 +6,10 @@
   "dependencies": {
     "janux": "workspace:*",
     "@janux/server": "workspace:*",
-    "@janux/agent": "workspace:*"
+    "@janux/agent": "workspace:*",
+    "@janux/vite": "workspace:*",
+    "@janux/cli": "workspace:*",
+    "@janux/tailwind": "workspace:*"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^18.0.0",

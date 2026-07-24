@@ -62,6 +62,11 @@ export interface ServerOptions {
   httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
   /** Bearer verification for the hosted MCP endpoint (`/_janux/mcp`). Absent → open. */
   mcpAuth?: McpAuth;
+  /**
+   * Prerendering for a static host: omit links to `/_janux/*`, which won't
+   * exist there. Without it every static page fetches a 404 manifest.
+   */
+  staticExport?: boolean;
 }
 
 async function resolveMeta(
@@ -214,10 +219,28 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return { ...base, routes, tools: [...base.tools, ...apiManifestTools(apiTools, ctx)] };
   };
 
+  /** Agent + `confirm`: register a pending proposal for a human instead of running the tool. */
+  const proposeApi = (tool: ApiTool, input: unknown, ctx: Ctx) => {
+    const parsed = tool.input ? assertValidInput(tool, input) : input;
+    const id = `prop_api_${(proposalSeq += 1)}`;
+
+    evictOldestProposal(proposals);
+    proposals.set(id, { id, tool: tool.name, input: parsed, execute: () => invokeApi(tool, parsed, ctx, 'human', options.onAudit) });
+    options.onAudit?.(apiAuditEntry(tool, 'agent', 'confirm', ctx, { input: parsed, ok: true }));
+
+    return { status: 'proposal' as const, id, tool: tool.name, input: parsed };
+  };
+
+  /**
+   * The seam every agent-side caller shares: the copilot loop and the hosted MCP
+   * endpoint. Origin is always `agent` here, so `confirm` must gate — the HTTP
+   * path is not the only door a model knocks on.
+   */
   const invokeTool = async (name: string, input: unknown, ctx: Ctx): Promise<unknown> => {
     const tool = apiTools.find((candidate) => `api.${candidate.name}` === name || candidate.name === name);
 
     if (!tool) throw Object.assign(new Error(`Unknown api tool "${name}"`), { code: 'invalid_input' });
+    if (resolveApiGuard(tool, ctx) === 'confirm') return proposeApi(tool, input, ctx);
 
     return invokeApi(tool, input, ctx, 'agent', options.onAudit);
   };
@@ -236,14 +259,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
     try {
       if (origin === 'agent' && resolveApiGuard(tool, ctx) === 'confirm') {
-        const parsed = tool.input ? assertValidInput(tool, input) : input;
-        const id = `prop_api_${(proposalSeq += 1)}`;
-
-        evictOldestProposal(proposals);
-        proposals.set(id, { id, tool: tool.name, input: parsed, execute: () => invokeApi(tool, parsed, ctx, 'human', options.onAudit) });
-        options.onAudit?.(apiAuditEntry(tool, origin, 'confirm', ctx, { input: parsed, ok: true }));
-
-        return json({ ok: true, result: { status: 'proposal', id, tool: tool.name, input: parsed } });
+        return json({ ok: true, result: proposeApi(tool, input, ctx) });
       }
 
       return json({ ok: true, result: await invokeApi(tool, input, ctx, origin, options.onAudit) });
@@ -330,7 +346,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       islandNames,
       islandModules: options.islandModules,
       runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
-      manifestUrl: `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
+      manifestUrl: options.staticExport ? undefined : `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
       stylesheets: options.stylesheets,
       favicon: options.favicon,
       i18n: shellI18n(locale, result),

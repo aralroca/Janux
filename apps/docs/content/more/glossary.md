@@ -32,6 +32,22 @@
 
 **Origin** — who's invoking: `human` (clicks, forms — most privileged) or `agent` (bridge, copilot, `x-janux-origin`).
 
-**ctx** — the per-request context built by `ctxFor` (auth, tenant, role). Flows into apis, sources, guards and routes; agents act under the end user's ctx.
+**ctx** — the per-request context built by `src/ctx.ts` (auth, tenant, role). Flows into apis, sources, guards and routes; agents act under the end user's ctx.
+
+**Foreign island** — a component from another runtime (React today) mounted with `foreign()`: a real embedded root inside a Janux island. Projects a view only — no resource, no tools, until you wrap it.
+
+**Harness** — the opt-in agent runtime around the loop: `defineAgent({ harness })` adds thread memory, guardrail processors, rate limits and identity resolution. Durable workflows, attachments and outbound MCP clients live alongside it.
+
+**WebMCP** — the browser standard for exposing a page's tools to agents (`document.modelContext`). `boot()` registers every manifest tool with it, sanitizing names (`counter.inc` → `counter_inc`), and polyfills it where it's missing.
+
+**Hosted MCP endpoint** — `/_janux/mcp`: a real, stateless MCP server generated from the app, so an external client (Claude Code, CI, any agent) drives the same tools by URL.
+
+**llms.txt** — an opt-in markdown index at `/llms.txt`: every page (dynamic routes enumerated by `staticParams`) and every server tool, with approval-gated ones annotated.
+
+**Query cache** — `useQuery` / `mutation` / `QueryClient` from `janux/query`: server state with staleness, background revalidation and optimistic rollback. Component state stays in `schema`.
+
+**urlState** — one query-string param bound to a schema-typed signal. The URL is the source of truth, so filters and tabs are deep-linkable and back/forward-correct — and query-only changes never re-render the page.
+
+**Matcher** — a named predicate behind a typed route segment (`[id=int]`), built in or exported from `src/matchers.ts`.
 
 **Zero-JS page** — a route mounting no islands: the HTML document contains no `<script>` at all.

@@ -49,4 +49,27 @@ Builds initial state: explicit defaults, `null` for nullables, `[]` for lists, f
 
 Serializes to standard JSON Schema — what the manifest publishes for every tool input and resource schema, so external MCP clients and LLMs validate against the same contract the server enforces.
 
+## JxType
+
+The value every builder returns — the runtime type object the framework carries around. You never construct it by hand (`str()`, `int()`, `obj()`… do that), but you'll name it when a helper takes a schema:
+
+```ts
+import { str, type JxType } from 'janux';
+
+function field(name: string, type: JxType) {
+  return { name, json: toJsonSchema(type) };
+}
+
+field('email', str().min(3));
+```
+
+It's **immutable**: `.optional()`, `.nullable()` and `.default(v)` return a *new* `JxType` with the extra flag, which is why a shared base type can be reused without a modifier on one field leaking into another.
+
+```ts
+const id = str();
+const maybeId = id.optional();   // `id` is unchanged
+```
+
+A type exposes `kind` (`'str'`, `'int'`, `'obj'`, `'list'`…), `flags` (optional / nullable / default) and, where relevant, `values` (enums), `item` (lists) or `shape` (objects) — the same fields [`toJsonSchema`](#tojsonschematype) and [`urlState`](/docs/reference/client-state) read.
+
 > **Note:** state must stay plain JSON. Class instances, functions or DOM nodes in state are rejected — that single constraint powers serialization, resume, diffing and the agent surface.

@@ -22,11 +22,11 @@ The island fails in isolation — other islands and the static page keep working
 
 ## Is `x-janux-origin` spoofable?
 
-Yes, and that's fine: `human` is the default and most-privileged origin, so lying about it grants nothing. Real authentication belongs in `ctxFor`; guards govern *agent* behavior, not network trust.
+Yes, and that's fine: `human` is the default and most-privileged origin, so lying about it grants nothing. Real authentication belongs in [`src/ctx.ts`](/docs/recipes/auth-and-context); guards govern *agent* behavior, not network trust.
 
 ## How do I do i18n / dark mode / router transitions?
 
-i18n: your strings, your call — state or ctx. Dark mode: a store (`theme`) read by islands + CSS. Client-side route transitions: built in — SPA navigation is on by default (diffed HTML over the Navigation API), with `persist` islands and surviving app-scope stores. See [SPA navigation](/docs/guide/ssr-and-resumability#spa-navigation).
+**i18n is built in**: a `src/i18n.ts` config turns on locale-prefixed routing (`/en`, `/es`), typed `t()` with plurals and interpolation, locale detection with a `JANUX_LOCALE` cookie, and page-scoped client messages — only the keys a page's islands use are shipped ([i18n](/docs/guide/i18n)). Dark mode: a store (`theme`) read by islands + CSS. Client-side route transitions: built in — SPA navigation is on by default (diffed HTML over the Navigation API), with `persist` islands and surviving app-scope stores. See [SPA navigation](/docs/guide/navigation#spa-navigation).
 
 ## Why Bun?
 
@@ -36,9 +36,17 @@ i18n: your strings, your call — state or ctx. Dark mode: a store (`theme`) rea
 
 Yes — set `output: "static"` in your app config and `janux build` prerenders every page (dynamic routes enumerated by `staticParams`) plus `llms.txt` into `dist/client`, ready for any static host. You keep SSR HTML and islands; you give up everything under `/_janux/*` — api tools, manifest, proposals, copilot. See [Deploying → Static export](/docs/recipes/deploying).
 
-## Where's the Mastra/memory/RAG story?
+## Where's the memory / guardrails / RAG story?
 
-`defineAgent` is forward-compatible with a richer runtime behind the same surface (see [architecture & roadmap](/docs/guide/architecture-and-roadmap)). Today's loop is deliberately small and provider-direct.
+In `defineAgent({ harness })`, opt-in and provider-direct — no extra runtime to adopt:
+
+| Field | What it adds |
+|---|---|
+| `memory` | Thread-aware turns: history read from storage, replies remembered ([agent memory](/docs/reference/agent-memory)) |
+| `processors` | A guardrail pipeline before every turn; aborting returns a typed refusal ([guardrails](/docs/reference/agent-guardrails)) |
+| `rateLimit` + `identityFor` | Per-caller limits and thread ownership ([rate limit](/docs/reference/agent-rate-limit)) |
+
+Durable [workflows](/docs/reference/agent-workflows), [attachments](/docs/reference/agent-attachments) and [outbound MCP clients](/docs/reference/agent-mcp-client) sit alongside it. RAG is not a framework feature: give the agent retrieval **tools** (`api()` functions over your index) and it retrieves — the docs site you're reading does exactly that.
 
 ## Is this production-ready?
 

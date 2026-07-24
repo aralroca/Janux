@@ -1,3 +1,5 @@
+@charset "utf-8";
+
 /* ── Janux docs — design tokens ──────────────────────────────────────
    Every color lives here as a light-dark() pair; the rest of the sheet
    only references tokens. `body[data-theme]` (set by the ThemeToggle
@@ -216,7 +218,7 @@ body[data-theme='dark'] .theme-toggle .icon-dark {
 }
 
 #search-results:empty::after {
-  content: 'Type to search the docs — ↑↓ to move, Enter to open.';
+  content: 'Type to search the docs \2014  \2191\2193  to move, Enter to open.';
   display: block;
   padding: 18px 12px 22px;
   color: var(--muted);
@@ -293,14 +295,14 @@ body[data-theme='dark'] .theme-toggle .icon-dark {
 }
 
 .nav-section > summary.nav-label::after {
-  content: '▾';
+  content: '\25BE';
   margin-left: 6px;
   color: var(--muted);
   font-size: 9px;
 }
 
 .nav-section:not([open]) > summary.nav-label::after {
-  content: '▸';
+  content: '\25B8';
 }
 
 .nav-group-label {
@@ -354,6 +356,12 @@ body[data-theme='dark'] .theme-toggle .icon-dark {
   margin-left: var(--sidebar-w);
   width: calc(100% - var(--sidebar-w));
   padding: 40px 48px 96px;
+}
+
+/* Landing (Next.js-style): no sidebar, content spans the frame. */
+.layout.no-sidebar .content {
+  margin-left: 0;
+  width: 100%;
 }
 
 /* ── Doc page grid: article + toc ───────────────────────────────── */
@@ -434,6 +442,15 @@ body[data-theme='dark'] .theme-toggle .icon-dark {
 }
 
 /* ── Typography ─────────────────────────────────────────────────── */
+/* API names make long unbreakable headings — wrap them instead of pushing the
+   heading (and its # anchor) past the viewport on narrow screens. */
+h1,
+h2,
+h3,
+h4 {
+  overflow-wrap: anywhere;
+}
+
 h1 {
   margin: 0 0 16px;
   font-size: 2.3rem;
@@ -578,19 +595,44 @@ pre.shiki code {
   color: inherit;
 }
 
-.live-block {
+.code-block {
   position: relative;
-  margin: 18px 0;
 }
 
-.live-block pre {
-  margin: 0;
+.block-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy-code {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.code-block:hover .copy-code,
+.copy-code:focus-visible,
+.copy-code.copied {
+  opacity: 1;
+}
+
+.copy-code.copied {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .try-it {
-  position: absolute;
-  right: 12px;
-  top: 12px;
   padding: 5px 12px;
   border-radius: 999px;
   background: var(--heading);
@@ -601,11 +643,21 @@ pre.shiki code {
 }
 
 /* ── Tables ─────────────────────────────────────────────────────── */
+/* Block + overflow keeps wide tables scrollable instead of clipped. */
 table {
+  display: block;
   width: 100%;
   margin: 18px 0;
   border-collapse: collapse;
   font-size: 14.5px;
+  overflow-x: auto;
+}
+
+/* Inside cells an inline-code token must never split mid-word — the column
+   widens (and the table scrolls) instead. */
+table code {
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 th {
@@ -625,6 +677,7 @@ td {
 /* ── Home ───────────────────────────────────────────────────────── */
 .home {
   max-width: 1000px;
+  margin-inline: auto;
 }
 
 .hero {
@@ -689,17 +742,97 @@ body[data-theme='dark'] .hero-janus {
   border: 1px solid var(--border);
 }
 
+.install-block {
+  display: inline-flex;
+  align-items: center;
+  margin: 18px 0;
+  padding-right: 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--code-bg);
+}
+
 .install {
-  display: inline-block;
-  padding: 12px 26px;
+  margin: 0;
+  padding: 12px 8px 12px 26px;
+  border: none;
+  background: none;
   font-family: var(--mono);
   font-size: 14px;
   color: var(--heading);
 }
 
+.install-block .copy-code {
+  display: inline-flex;
+  padding: 6px;
+  border: none;
+  background: none;
+  opacity: 1;
+}
+
+.copy-code .ic-check {
+  display: none;
+}
+
+.copy-code.copied .ic-copy {
+  display: none;
+}
+
+.copy-code.copied .ic-check {
+  display: inline;
+  color: var(--accent);
+}
+
 .two-faces h2 {
   text-align: center;
   border: none;
+}
+
+.mission {
+  max-width: 1000px;
+  margin: 56px auto 8px;
+}
+
+.mission h2 {
+  border: none;
+  text-align: center;
+}
+
+.mission-lede {
+  max-width: 640px;
+  margin: 12px auto 36px;
+  text-align: center;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.mission-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+  text-align: left;
+}
+
+.mission-grid h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.mission-grid p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.mission-close {
+  max-width: 680px;
+  margin: 36px auto 0;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
 }
 
 .faces-grid {
@@ -747,6 +880,7 @@ body[data-theme='dark'] .hero-janus {
 
 .home-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 24px;
   padding: 28px 0;
@@ -798,7 +932,7 @@ body[data-theme='dark'] .hero-janus {
 }
 
 .copilot-panel .chat:empty::after {
-  content: 'Ask anything about Janux — answers are grounded in these docs.';
+  content: 'Ask anything about Janux \2014  answers are grounded in these docs.';
   display: block;
   padding-top: 34px;
   color: var(--muted);
@@ -902,7 +1036,7 @@ body[data-theme='dark'] .hero-janus {
 }
 
 .copilot-panel .chat li.thinking::after {
-  content: '…';
+  content: '\2026';
   display: inline-block;
   overflow: hidden;
   vertical-align: bottom;
@@ -1370,7 +1504,9 @@ body[data-theme='dark'] .hero-janus {
   }
 
   .doc-grid {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): a plain 1fr means minmax(auto, 1fr) and long <pre> lines
+       would widen the track (and the page) instead of scrolling inside. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .toc {
@@ -1378,8 +1514,9 @@ body[data-theme='dark'] .hero-janus {
   }
 
   .faces-grid,
-  .features {
-    grid-template-columns: 1fr;
+  .features,
+  .mission-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hero h1 {
@@ -1387,8 +1524,12 @@ body[data-theme='dark'] .hero-janus {
   }
 
   .playground {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     height: auto;
+  }
+
+  .pg-hint {
+    display: none;
   }
 
   .playground .editor-pane {

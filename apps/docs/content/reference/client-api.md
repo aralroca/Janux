@@ -13,7 +13,7 @@ const client = boot({ defs: [Cart], ctx: {}, glow: true });
 
 `glow: true | { duration }` enables the built-in agent-activity highlight (see [Events and interactions](/docs/guide/events-and-interactions)); style it with the `--janux-glow-*` CSS variables. Lower-level: `enableAgentGlow`, `glowElement`, `injectGlowStyles`, `GLOW_CLASS`.
 
-`navigation: false` disables client-side SPA navigation (on by default — see [SSR and resumability](/docs/guide/ssr-and-resumability#spa-navigation)).
+`navigation: false` disables client-side SPA navigation (on by default — see [SPA navigation](/docs/guide/navigation#spa-navigation)).
 
 `webmcp: false` disables WebMCP registration (on by default). `boot()` registers every mounted tool with the browser's `document.modelContext` — polyfilled when the browser doesn't ship WebMCP — and re-syncs on every SPA navigation. See [Debugging agent tools with Chrome's WebMCP panel](/docs/recipes/debugging-webmcp). Lower-level: `installWebMCP(bridge)`, `createModelContextPolyfill()`.
 

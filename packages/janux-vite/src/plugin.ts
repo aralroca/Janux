@@ -26,6 +26,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
   const storesModule = app.storesModule ? await vite.ssrLoadModule(app.storesModule) : undefined;
   const i18nModule = app.i18nModule ? await vite.ssrLoadModule(app.i18nModule) : undefined;
   const middlewareModule = app.middlewareModule ? await vite.ssrLoadModule(app.middlewareModule) : undefined;
+  const ctxModule = app.ctxModule ? await vite.ssrLoadModule(app.ctxModule) : undefined;
   const matchersModule = app.matchersModule ? await vite.ssrLoadModule(app.matchersModule) : undefined;
 
   return {
@@ -35,13 +36,14 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     agent: (agentModule?.default as ServerOptions['agent']) ?? defineAgent(),
     storeDefs: (storesModule ?? {}) as ServerOptions['storeDefs'],
     runtimeUrl: app.clientEntry ? `/${relativeToRoot(vite.config.root, app.clientEntry)}` : undefined,
-    stylesheets: app.stylesheet ? [`/${relativeToRoot(vite.config.root, app.stylesheet)}`] : [],
+    stylesheets: devStylesheets(vite.config.root, app.stylesheet),
     favicon: app.favicon,
     title: app.title,
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default as ServerOptions['i18n'],
     foreignImport: appForeignImport(vite.config.root),
     middleware: middlewareModule?.default as ServerOptions['middleware'],
+    ctxFor: ctxModule?.default as ServerOptions['ctxFor'],
     matchers: matchersModule as ServerOptions['matchers'],
     httpHandlers: app.httpHandlersDir
       ? { dir: app.httpHandlersDir, loadModule: (file) => vite.ssrLoadModule(file) as any }
@@ -60,14 +62,53 @@ function relativeToRoot(root: string, absolute: string): string {
   return absolute.startsWith(root) ? absolute.slice(root.length + 1) : absolute;
 }
 
+/**
+ * Dev stylesheet URLs for the HTML shell. `?direct` is Vite's contract for the
+ * compiled stylesheet itself: without it the same path is served as a JS
+ * module (`text/javascript`, how CSS HMR works), and a
+ * <link rel="stylesheet"> pointing at that is a MIME mismatch the browser may
+ * refuse — and, with no charset on the response, may decode as Latin-1,
+ * turning non-ASCII `content:` glyphs into mojibake.
+ */
+export function devStylesheets(root: string, stylesheet: string | undefined): string[] {
+  if (!stylesheet) return [];
+  const url = `/${relativeToRoot(root, stylesheet)}`;
+
+  return [`${url}${url.includes('?') ? '&' : '?'}direct`];
+}
+
+/**
+ * `foreign()` reaches React through a dynamic import, but Rollup resolves those
+ * statically: an app that never uses foreign islands (and so never installs
+ * react) used to fail `janux build` on an import it can never execute. When the
+ * app root can't resolve them, they stay external — the expression survives in
+ * dead code instead of breaking the bundle.
+ */
+export function foreignExternals(root: string): string[] {
+  const missing = FOREIGN_PACKAGES.filter((name) => {
+    try {
+      Bun.resolveSync(name, root);
+
+      return false;
+    } catch {
+      return true;
+    }
+  });
+
+  return missing.length > 0 ? FOREIGN_PACKAGES : [];
+}
+
+const FOREIGN_PACKAGES = ['react', 'react-dom', 'react-dom/client'];
+
 /** The Janux Vite plugin: JSX runtime config, api() client stubs (SWC) and the SSR dev bridge. */
 export function janux(options: JanuxPluginOptions = {}): Plugin {
   return {
     name: 'janux',
 
-    config() {
+    config(config) {
       return {
         appType: 'custom',
+        build: { rollupOptions: { external: foreignExternals(config.root ?? process.cwd()) } },
         esbuild: { jsx: 'automatic', jsxImportSource: 'janux' },
         // react/react-dom deduped so every browser-side import is one copy;
         // SSR resolves them via `foreignImport` from the app root instead

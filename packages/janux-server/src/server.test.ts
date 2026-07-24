@@ -109,6 +109,58 @@ describe('api endpoints', () => {
     expect((await post('/_janux/approve', { id: proposal.id })).status).toBe(404);
   });
 
+  /**
+   * Regression: the copilot loop invokes api tools through `invokeTool`, which
+   * bypassed the confirm gate the HTTP path implements — a `guard: 'confirm'`
+   * charge ran unattended as soon as the model asked for it. Caught by a real
+   * model eval saying "I've paid 5999 cents" for a tool that must be approved.
+   */
+  it('the agent LOOP also gets a proposal for confirm tools, not an execution', async () => {
+    const charges: string[] = [];
+    const loopServer = createJanuxServer({
+      apis: {
+        shop: {
+          charge: api({
+            description: 'Charge the card. Irreversible.',
+            input: schema({ orderId: str() }),
+            guard: 'confirm',
+            run: ({ input }) => {
+              charges.push(input.orderId);
+
+              return { charged: input.orderId };
+            },
+          }),
+        },
+      },
+      agent: {
+        handle: async (_req, deps) =>
+          new Response(JSON.stringify(await deps.invoke('api.shop.charge', { orderId: 'o9' })), {
+            headers: { 'content-type': 'application/json' },
+          }),
+      },
+    });
+    const result: any = await (
+      await loopServer.fetch(new Request('http://test/_janux/agent', { method: 'POST', body: '{}' }))
+    ).json();
+
+    expect(result.status).toBe('proposal');
+    expect(result.tool).toBe('shop.charge');
+    expect(charges).toEqual([]); // nothing ran without a human
+
+    const approved: any = await (
+      await loopServer.fetch(
+        new Request('http://test/_janux/approve', {
+          method: 'POST',
+          body: JSON.stringify({ id: result.id }),
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+    ).json();
+
+    expect(approved.result).toEqual({ charged: 'o9' });
+    expect(charges).toEqual(['o9']);
+  });
+
   it('agent origin cannot call forbidden tools', async () => {
     const res = await post('/_janux/api/shop.internal', {}, { 'x-janux-origin': 'agent' });
 
@@ -153,5 +205,24 @@ describe('manifest endpoint', () => {
 
     expect(manifest.resources).toEqual([]);
     expect(manifest.tools.every((tool: any) => tool.name.startsWith('api.'))).toBe(true);
+  });
+});
+
+describe('staticExport', () => {
+  it('omits the manifest link, because /_janux/* will not exist on a static host', async () => {
+    const staticServer = createJanuxServer({
+      routes: { '/': () => jsx('div', { children: jsx(cart as any, {}) }) },
+      staticExport: true,
+    });
+    const html = await (await staticServer.fetch(new Request('http://test/'))).text();
+
+    expect(html).not.toContain('janux-manifest');
+    expect(html).toContain('<janux-island data-jx="cart#default">'); // the page itself is intact
+  });
+
+  it('serves it as usual otherwise', async () => {
+    const html = await (await get('/shop')).text();
+
+    expect(html).toContain('rel="janux-manifest"');
   });
 });

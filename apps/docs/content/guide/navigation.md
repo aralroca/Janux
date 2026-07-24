@@ -57,7 +57,28 @@ export default function middleware(req: Request): Response | undefined {
 
 ## SPA navigation
 
-It's on by default for any app that calls `boot()`. Pure static pages (no islands, no `boot()`) stay classic multi-page navigation, which is exactly right: with no runtime there's nothing to intercept.
+It's on by default for any app that calls `boot()` — and there is nothing to opt in to. No `<Link>`
+component, no router import, no special prop: **a plain anchor is the router**.
+
+```tsx
+export const MainNav = component({
+  name: 'main-nav',
+  view: () => (
+    <nav>
+      <a href="/">Home</a>
+      <a href="/orders/42">Order #42</a>
+      <a href="/settings">Settings</a>
+    </nav>
+  ),
+});
+```
+
+Every one of those links is intercepted automatically: hovering prefetches the destination, the
+click streams the next page and diffs it in place, and back/forward run through the same pipeline.
+Links that shouldn't be intercepted — external origins, downloads, anchors marked
+[`data-native`](#opting-a-link-out-data-native) — are left to the browser.
+
+Pure static pages (no islands, no `boot()`) stay classic multi-page navigation, which is exactly right: with no runtime there's nothing to intercept.
 
 ## How it works
 
@@ -123,7 +144,7 @@ It's a per-link escape hatch, not a workaround — reach for it whenever a diffe
 
 - **Non-Janux responses** — a file download, an API endpoint, or a route served by a different app. There's no incoming Janux page to diff against.
 - **Leaving your origin** — external links and third-party auth redirects. (Cross-origin links already aren't intercepted; `data-native` just makes the intent explicit.)
-- **A Janux page that must paint from a clean slate.** This is the non-obvious one. If a page mounts a widget that *measures the layout as it initializes* — a code editor, a canvas, a charting library — arriving via a diff can hand it a container that the new page's CSS hasn't finished applying yet, so it measures the wrong size and renders misaligned. A full load guarantees the page is laid out before the widget mounts. It's exactly why the [Playground](/playground) link in this site's sidebar is marked `data-native`: Monaco measures itself on mount, and an SPA revisit could catch it mid-layout.
+- **A Janux page that must paint from a clean slate.** This is the non-obvious one. If a page mounts a widget that *measures the layout as it initializes* — a code editor, a canvas, a charting library — and its own teardown can't restore a clean slate, a full load guarantees the page is laid out before the widget mounts. This site's [Playground](/playground) (Monaco) used to need it; since the widget tears itself down properly, plain SPA links work — the escape hatch stays for widgets you don't control.
 
 > **Rule of thumb:** if the destination isn't a Janux page, or its first paint depends on the browser having fully laid out a fresh document, use `data-native`. Everything else should stay a diffed navigation — that's what keeps the shell, scroll and focus intact.
 

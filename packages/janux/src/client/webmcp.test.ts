@@ -58,6 +58,9 @@ const fetchMock = mock(async (input: any, init?: RequestInit) => {
   return originalFetch(input, init);
 });
 
+/** What `htmlDocument` puts in every server-rendered page (a static export omits it). */
+const MANIFEST_LINK = '<link rel="janux-manifest" id="jx-manifest" href="/_janux/manifest?path=%2F">';
+
 async function serveAndBoot(): Promise<JanuxClient> {
   const { html, snapshots } = await renderToString(jsx(counter as any, {}), {
     initialState: { 'ui://counter#default': { n: 5 } },
@@ -69,7 +72,7 @@ async function serveAndBoot(): Promise<JanuxClient> {
     )
     .join('');
 
-  document.body.innerHTML = html + scripts;
+  document.body.innerHTML = MANIFEST_LINK + html + scripts;
 
   return boot({ defs: [counter], webmcp: false });
 }
@@ -213,7 +216,7 @@ describe('WebMCP integration', () => {
       initialState: { 'ui://counter#default': { n: 1 } },
     });
 
-    document.body.innerHTML = html;
+    document.body.innerHTML = MANIFEST_LINK + html;
     boot({ defs: [counter] });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(polyfillOf()).toBeDefined();

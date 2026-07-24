@@ -46,3 +46,5 @@ Client-side navigation in Janux is just resume applied to a new page: the incomi
 | Agent surface | none | none | manifest, first-class |
 
 The honest trade: Janux restricts you (typed state, no lexical capture in `run`) — the same restrictions the agent surface needs anyway. Paid once, cashed twice.
+
+> **See it running**: [`examples/nested-islands`](https://github.com/aralroca/Janux/tree/main/examples/nested-islands) — stateful islands three levels deep, resumed independently. More in [Examples](/docs/more/examples).

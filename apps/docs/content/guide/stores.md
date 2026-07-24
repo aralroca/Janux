@@ -52,3 +52,5 @@ export const Header = component({
 4. **Server-side stores** register via `src/stores.ts` (exported defs) so SSR can render store-dependent views; the client re-creates them from the serialized snapshot in `boot({ defs })`.
 
 Store events, sources and effects work exactly as in components, and `settled()` covers stores too.
+
+> **See it running**: [`examples/shop`](https://github.com/aralroca/Janux/tree/main/examples/shop) — the cart store persisted across islands with a confirm-guarded checkout. More in [Examples](/docs/more/examples).

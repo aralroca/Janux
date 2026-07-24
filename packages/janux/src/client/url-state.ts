@@ -13,6 +13,9 @@ export interface UrlStateOptions {
 }
 
 function readParam<T>(name: string, type: JxType, fallback: T): T {
+  // SSR has no query string to read: the server renders the fallback and the
+  // island corrects itself on mount (query-only state is client-side by design).
+  if (typeof location === 'undefined') return fallback;
   const raw = new URLSearchParams(location.search).get(name);
 
   if (raw === null) return fallback;

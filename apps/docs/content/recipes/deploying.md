@@ -2,21 +2,9 @@
 
 A Janux app in production is: **Bun + your source + `dist/client`**. No server bundle, no Node, no Vite at runtime.
 
-## Dockerfile
+## Containers
 
-```bash
-FROM oven/bun:1.3-slim
-WORKDIR /app
-COPY package.json bun.lock ./
-RUN bun install --production --frozen-lockfile
-COPY . .
-RUN bun run build          # client.js + styles.css + public/ → dist/client
-ENV PORT=3000
-EXPOSE 3000
-CMD ["bun", "run", "start"]
-```
-
-Works as-is on Fly.io, Railway, Render, a VPS — anything that runs a container.
+One stage: install, `bun run build`, `bun run start`. The full Dockerfile — with the `.dockerignore` it needs, a healthcheck that works without `curl`, and measured image sizes — lives in [Docker](/docs/recipes/docker). It runs as-is on Fly.io, Railway, Render, a VPS — anything that runs a container.
 
 ## Environment checklist
 
@@ -51,7 +39,7 @@ Now `janux build` also prerenders every page into `dist/client`:
 ```
 dist/client/index.html                        # /
 dist/client/docs/guide/getting-started/index.html
-dist/client/llms.txt                          # agent index, emitted as a file
+dist/client/llms.txt                          # agent index, when llmsTxt is configured
 dist/client/client.js, styles.css, ...        # islands still hydrate on interaction
 ```
 
@@ -74,7 +62,7 @@ Every record becomes a prerendered page (`{ section: 'guide', slug: 'getting-sta
 
 ### What you give up
 
-A static export is HTML + islands only. Everything under `/_janux/*` needs the server: `api()` endpoints, the manifest, proposals/approvals and the copilot. If your app uses those, deploy with the Dockerfile above instead — `output: "static"` is for sites, not apps.
+A static export is HTML + islands only. Everything under `/_janux/*` needs the server: `api()` endpoints, the manifest, proposals/approvals and the copilot. If your app uses those, ship a server instead ([Docker](/docs/recipes/docker)) — `output: "static"` is for sites, not apps.
 
 ## Scaling notes
 

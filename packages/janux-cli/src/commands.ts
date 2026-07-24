@@ -110,7 +110,7 @@ export function localeRedirectStub(locales: string[], defaultLocale: string): st
 /** `output: "static"`: prerenders every concrete page (dynamic routes via `staticParams`) into dist/client. */
 async function prerenderStatic(root: string): Promise<void> {
   const options = await prodServerOptions(root);
-  const server = createJanuxServer(options);
+  const server = createJanuxServer({ ...options, staticExport: true });
   const pages = await server.listPages();
   const outDir = join(root, 'dist/client');
   const concrete = pages.filter((page) => !page.includes('['));
@@ -155,6 +155,7 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
   const storesModule = app.storesModule ? await import(app.storesModule) : undefined;
   const i18nModule = app.i18nModule ? await import(app.i18nModule) : undefined;
   const middlewareModule = app.middlewareModule ? await import(app.middlewareModule) : undefined;
+  const ctxModule = app.ctxModule ? await import(app.ctxModule) : undefined;
   const matchersModule = app.matchersModule ? await import(app.matchersModule) : undefined;
 
   return {
@@ -168,6 +169,7 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default,
     middleware: middlewareModule?.default,
+    ctxFor: ctxModule?.default,
     matchers: matchersModule,
     httpHandlers: app.httpHandlersDir
       ? { dir: app.httpHandlersDir, loadModule: (file) => import(file) as any }

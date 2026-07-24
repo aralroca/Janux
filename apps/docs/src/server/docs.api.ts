@@ -25,6 +25,11 @@ export interface SectionDef {
  */
 export const SECTIONS: SectionDef[] = [
   {
+    section: 'getting-started',
+    label: 'Getting started',
+    groups: [{ slugs: ['what-is-janux', 'quick-start', 'project-structure', 'mental-model', 'editor-setup'] }],
+  },
+  {
     section: 'guide',
     label: 'Guide',
     groups: [
@@ -33,6 +38,8 @@ export const SECTIONS: SectionDef[] = [
         label: 'Components & state',
         slugs: [
           'components',
+          'views-and-jsx',
+          'keys-and-lists',
           'schema',
           'intents-and-guards',
           'sources-effects-events',
@@ -57,7 +64,13 @@ export const SECTIONS: SectionDef[] = [
     label: 'Reference',
     groups: [
       { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api'] },
-      { label: 'Client & CLI', slugs: ['client-api', 'cli'] },
+      {
+        label: 'Agent harness',
+        slugs: ['agent-memory', 'agent-guardrails', 'agent-workflows', 'agent-rate-limit', 'agent-mcp-client', 'agent-attachments'],
+      },
+      { label: 'Reactivity', slugs: ['signal', 'computed', 'watch', 'batch', 'untrack', 'owners'] },
+      { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus', 'i18n-api'] },
+      { label: 'Client & CLI', slugs: ['client-api', 'client-state', 'data-cache-api', 'foreign', 'client-runtime', 'client-tools', 'cli', 'build-internals'] },
     ],
   },
   {
@@ -67,10 +80,17 @@ export const SECTIONS: SectionDef[] = [
       {
         slugs: [
           'testing-components',
+          'forms',
+          'optimistic-ui',
+          'error-handling',
           'tailwind',
           'auth-and-context',
           'cross-island-events',
+          'custom-server',
+          'monorepo-setup',
+          'agent-evals-in-ci',
           'deploying',
+          'docker',
           'external-mcp-clients',
           'local-model-copilot',
           'debugging-webmcp',
@@ -78,7 +98,7 @@ export const SECTIONS: SectionDef[] = [
       },
     ],
   },
-  { section: 'more', label: 'More', groups: [{ slugs: ['comparison', 'faq', 'glossary'] }] },
+  { section: 'more', label: 'More', groups: [{ slugs: ['examples', 'comparison', 'faq', 'glossary'] }] },
 ];
 
 export interface DocRef {

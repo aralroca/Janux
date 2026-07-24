@@ -55,10 +55,13 @@ checks any of `ok` (default `true` when omitted), `status`, `error`
 ## create-janux
 
 ```bash
-bunx create-janux my-app
+bun create janux my-app                    # the starter app
+bun create janux my-shop --example shop    # start from any examples/ app
 ```
 
-Scaffolds the conventional layout with a working Tasks app: a bifacial task board, a shared theme store, an api() module, a floating copilot and an example unit test.
+`--example <name>` scaffolds a copy of one of the [example apps](/docs/more/examples) (`shop`, `i18n`, `interop-react`, `nested-islands`, `data-cache`) instead of the starter template; omit the name to list them. `bunx create-janux` is the same command.
+
+The starter template scaffolds the conventional layout with a resumable counter island, an agent panel and an example unit test.
 
 ## Project conventions
 
@@ -71,6 +74,9 @@ Everything is convention over configuration — each of these is optional:
 | `src/stores.ts` | Store defs available during SSR |
 | `src/agent.ts` | `export default defineAgent({...})` |
 | `src/i18n.ts` (or `src/i18n/index.ts`) | `export default` an `I18nConfig` — activates [internationalization](/docs/guide/i18n) |
+| `src/ctx.ts` | `export default` a `(req) => ctx` — per-request [context and auth](/docs/recipes/auth-and-context) |
+| `src/middleware.ts` | `export default` a `(req) => Response \| undefined` — runs before routing |
+| `src/matchers.ts` | Named exports = custom `[param=matcher]` matchers |
 | `src/client.ts` | `boot({ defs })` — omit for fully static apps (0 KB JS) |
 | `src/styles.css` | App stylesheet, linked automatically |
 | `public/` | Static assets served at `/` (favicon.svg auto-linked) |
@@ -111,6 +117,19 @@ Everything is optional — the defaults are the [conventional layout](#project-c
 | `"static"` | `janux build` also prerenders every page into `dist/client` (`/docs/x` → `docs/x/index.html`, plus `llms.txt`) — deploy to any static host, no server. Dynamic routes need `staticParams` ([Route modules](/docs/reference/server-api)); those without it are skipped with a warning |
 
 More output targets will come later. Full walkthrough: [Deploying → Static export](/docs/recipes/deploying).
+
+## Programmatic use
+
+`@janux/cli` is also a module: `runCli(argv)` is what `bin.ts` calls, `parseArgs(argv, cwd)` parses a command line into `{ command, root, port, … }`, and `HELP_TEXT` is the usage string.
+
+```ts
+import { createJanuxServer } from '@janux/server';
+import { prodServerOptions } from '@janux/cli';
+
+const server = createJanuxServer(await prodServerOptions(process.cwd()));
+```
+
+`prodServerOptions(root)` resolves an app's conventions into the `ServerOptions` that `janux start` uses — routes, `*.api.ts` modules, stores, agent, i18n, per-request `ctx`, middleware, matchers, `src/api/**` handlers, the built `client.js` and stylesheet. Spread it to override individual fields. It expects `janux build` to have run (that's where `dist/client/client.js` comes from) and it does **not** serve static files: see [custom server](/docs/recipes/custom-server).
 
 ## Environment
 

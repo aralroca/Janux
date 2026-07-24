@@ -72,3 +72,37 @@ describe('store persistence', () => {
     stop();
   });
 });
+
+/**
+ * Regression: a payload stored under a different `version` was applied anyway
+ * when no `migrate` was given — the docs promised it would be dropped, and
+ * booting with state the code no longer understands is the bug that promise
+ * exists to prevent.
+ */
+describe('persist versioning', () => {
+  it('drops a payload from another version when there is no migrate', async () => {
+    localStorage.setItem('v:test', JSON.stringify({ v: 0, s: { theme: 'stale' } }));
+    const instance = createInstance(prefs);
+
+    await instance.attach();
+    await persistStore(instance as any, { name: 'v:test', version: 2 } as any);
+    await Bun.sleep(5);
+
+    expect(instance.snapshot().theme).not.toBe('stale');
+  });
+
+  it('applies it through migrate when one is given', async () => {
+    localStorage.setItem('m:test', JSON.stringify({ v: 1, s: { legacy: true } }));
+    const instance = createInstance(prefs);
+
+    await instance.attach();
+    await persistStore(instance as any, {
+      name: 'm:test',
+      version: 2,
+      migrate: (stored: any) => ({ theme: stored.legacy ? 'dark' : 'light' }),
+    } as any);
+    await Bun.sleep(5);
+
+    expect(instance.snapshot().theme).toBe('dark');
+  });
+});
