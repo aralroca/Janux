@@ -15,7 +15,7 @@ Or run them in place inside the monorepo: `git clone https://github.com/aralroca
 | [`i18n`](https://github.com/aralroca/Janux/tree/main/examples/i18n) | Locale-prefixed routing (`/en`, `/es`, `/fr`), type-safe `t()` with plurals (`label_one` / `label_other`), language switcher, and page-scoped client translations — only the counter's keys ship to the browser. |
 | [`interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) | A React mixer mounted **unchanged** with `foreign()`: tracked props from island state and its `onBand` callback bridged to a `setBand` intent — the wrap-once pattern that gives a foreign component an agent surface. |
 | [`nested-islands`](https://github.com/aralroca/Janux/tree/main/examples/nested-islands) | Stateful islands three levels deep with per-island render loops, conditional mount/dispose, each level agent-visible as a `ui://` resource. |
-| [`data-cache`](https://github.com/aralroca/Janux/tree/main/examples/data-cache) | `useQuery` with a reactive key (the filter is part of `queryKey`), a deep-linkable `?tag=…` synced from the intent, and agent parity: the agent's `catalog.filter` drives the same intent as a click. |
+| [`data-cache`](https://github.com/aralroca/Janux/tree/main/examples/data-cache) | `useQuery` with a reactive key (the filter is part of `queryKey`) and typed [`urlState`](/docs/reference/client-state): `?tag=…` is deep-linkable, the Back button undoes a filter, and the agent's `catalog.filter` drives the same intent as a click. |
 
 Each folder has a README with the details. The [Playground](/playground) runs smaller, self-contained snippets directly in the browser.
 

@@ -98,12 +98,18 @@ jobs:
 
 What layers 1–2 cannot tell you: whether a model reading your `description` fields picks the right tool with the right input. That is a property of your *prose*, and it's worth measuring — but it costs tokens and it is **not deterministic**.
 
-Point it at a live app and assert **what changed**, never what the model said:
+It needs a key and a running server, so it is **not** part of the default suite — a test that can only ever skip is noise. Make it a script you run on purpose, point it at a live app, and assert **what changed**, never what the model said:
 
 ```ts
-import { describe, expect, it } from 'bun:test';
+// model-evals/run.ts
+const BASE = process.env.EVAL_URL;
+const KEY = process.env.OPENROUTER_API_KEY;
 
-const BASE = process.env.EVAL_URL ?? 'http://localhost:3000';
+if (!BASE || !KEY) {
+  console.error('model-evals: needs EVAL_URL and a provider API key.');
+  process.exit(1);           // missing inputs are a failure, never a silent pass
+}
+
 const ask = async (prompt: string, path: string) => {
   const response = await fetch(`${BASE}/_janux/agent`, {
     method: 'POST',
@@ -114,27 +120,26 @@ const ask = async (prompt: string, path: string) => {
   return response.json() as any;
 };
 
-const OFFLINE = !process.env.OPENROUTER_API_KEY || !process.env.EVAL_URL;
+/** A tool result travels as a JSON *string* — parse it, don't grep it. */
+const toolResults = (body: any): any[] =>
+  (body.messages ?? []).filter((message: any) => message.role === 'tool').map((message: any) => JSON.parse(message.content));
 
-describe.skipIf(OFFLINE)('the model can drive the cart', () => {
-  it('picks cart.addItem with the quantity the user asked for', async () => {
-    const body = await ask('Add two units of product p1 to my cart.', '/shop');
+async function picksTheRightTool(): Promise<boolean> {
+  const body = await ask('Add two units of product p1 to my cart.', '/shop');
 
-    expect(body.type).toBe('ui_calls');
-    expect(body.calls[0]).toMatchObject({ name: 'cart.addItem', input: { productId: 'p1', qty: 2 } });
-  });
+  return body.type === 'ui_calls' && body.calls[0]?.name === 'cart.addItem' && body.calls[0]?.input?.qty === 2;
+}
 
-  it('cannot pay unattended: a confirm guard comes back as a proposal', async () => {
-    const body = await ask('Pay the cart total of 5999 cents.', '/shop');
-    const results = (body.messages ?? []).filter((message: any) => message.role === 'tool');
+async function cannotPayUnattended(): Promise<boolean> {
+  const body = await ask('Pay the cart total of 5999 cents.', '/shop');
 
-    // A tool message carries its result as a JSON *string* — parse it, don't grep it.
-    expect(JSON.parse(results[0].content)).toMatchObject({ status: 'proposal', tool: 'shop.pay' });
-  });
-});
+  return toolResults(body).some((result) => result.status === 'proposal' && result.tool === 'shop.pay');
+}
 ```
 
-`describe.skipIf` is what keeps this file honest: gate it on **both** the key and the live URL, and on a PR, on a fork, or on any machine without them it skips instead of failing. A working example lives at [`examples/shop/model-evals`](https://github.com/aralroca/Janux/tree/main/examples/shop/model-evals).
+Run the scenarios, print a line each, and exit non-zero if any failed — that exit code is all the nightly workflow needs.
+
+A working runner lives at [`examples/shop/model-evals`](https://github.com/aralroca/Janux/tree/main/examples/shop/model-evals). If you'd rather keep these inside your test suite, wrap them in `describe.skipIf(!process.env.OPENROUTER_API_KEY || !process.env.EVAL_URL)` so a PR, a fork or a laptop without the key skips instead of failing — just know that every green run then hides a skip.
 
 ### Two things the shape above is built around
 
@@ -190,7 +195,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run build
       - run: bunx janux start --port 3000 &
-      - run: bun test model-evals
+      - run: bun model-evals/run.ts
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           JANUX_MODEL: openrouter/google/gemini-2.5-flash-lite

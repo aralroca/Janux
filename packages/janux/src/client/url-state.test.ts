@@ -50,3 +50,21 @@ describe('typed URL state', () => {
     expect(handle.value.value).toBe('all');
   });
 });
+
+/**
+ * Regression: `urlState()` read `location.search` eagerly, so calling it from an
+ * island's view crashed SSR with "location is not defined" — which is why an app
+ * had to hand-roll the query sync with typeof guards.
+ */
+describe('typed URL state during SSR', () => {
+  it('yields the fallback with no location instead of throwing', () => {
+    const { location: browserLocation } = globalThis as any;
+
+    delete (globalThis as any).location;
+    try {
+      expect(urlState('status', str(), 'all').value.value).toBe('all');
+    } finally {
+      (globalThis as any).location = browserLocation;
+    }
+  });
+});
