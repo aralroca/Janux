@@ -1,6 +1,6 @@
 {
   "name": "janux",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "The agent-native UI framework core. One component, two faces: a view for humans, typed MCP tools & resources for AI agents.",
   "repository": {
     "type": "git",
@@ -36,8 +36,12 @@
     "react-dom": ">=18"
   },
   "peerDependenciesMeta": {
-    "react": { "optional": true },
-    "react-dom": { "optional": true }
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
   },
   "homepage": "https://github.com/aralroca/Janux#readme",
   "bugs": "https://github.com/aralroca/Janux/issues",

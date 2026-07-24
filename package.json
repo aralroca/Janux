@@ -1,7 +1,7 @@
 {
   "name": "janux-monorepo",
-  "version": "0.2.1",
-  "description": "Janux — the agent-native fullstack UI framework. One component, two faces.",
+  "version": "0.3.0",
+  "description": "Janux \u2014 the agent-native fullstack UI framework. One component, two faces.",
   "private": true,
   "repository": {
     "type": "git",
