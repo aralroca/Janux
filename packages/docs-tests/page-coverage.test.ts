@@ -65,6 +65,11 @@ describe('every page with executable claims has a test that runs them', () => {
    * worth guarding is that the corpus really has executable claims and that
    * tests really name pages, so the two lists above can't both be vacuous.
    */
+  it('the backlog is empty: every runnable page is executed', () => {
+    expect(UNTESTED_PAGES).toEqual([]);
+    expect(runnable.every((page) => covered.has(page))).toBe(true);
+  });
+
   it('the corpus has executable claims and the tests name real pages', () => {
     expect(runnable.length).toBeGreaterThan(20);
     expect(covered.size).toBeGreaterThan(20);

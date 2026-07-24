@@ -6,15 +6,9 @@
  * `int()` coerces the "42" a form submits — it compiles, imports fine, and is
  * false. The executable test caught it.)
  *
- * `page-coverage.test.ts` fails when a page with runnable examples is neither
- * covered by a test in `pages/` nor listed here — so this list can only shrink,
- * and a NEW page can never be added without executing its examples.
+ * It is currently EMPTY: every page that imports the framework in a snippet has
+ * a test in `pages/` that runs it. `page-coverage.test.ts` fails when a new page
+ * with runnable examples appears in neither place, so adding one here is a
+ * deliberate, visible regression rather than an oversight.
  */
-export const UNTESTED_PAGES: string[] = [
-  'getting-started/project-structure.md',
-  'guide/agent-and-copilot.md',
-  'reference/build-internals.md',
-  'reference/cli.md',
-  'reference/client-api.md',
-  'reference/client-tools.md',
-];
+export const UNTESTED_PAGES: string[] = [];

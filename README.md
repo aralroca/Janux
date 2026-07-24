@@ -158,7 +158,7 @@ Zero config — first match wins:
 
 Agents read the same docs at `/llms.txt` and any page as Markdown by appending `.md`.
 
-**Every example is verified.** `packages/docs-tests` compiles every snippet, checks it imports only symbols the packages really export, runs the main example of a page and asserts what the prose claims. Three guards fail the build when an export has no reference page, when a page's executable claims aren't executed, or when any documented link stops resolving.
+**Every example is verified.** `packages/docs-tests` compiles every snippet, checks it imports only symbols the packages really export, runs the main example of a page and asserts what the prose claims. Three guards fail the build when an export has no reference page, when a page's executable claims aren't executed, or when any documented link stops resolving. **Both backlogs are empty**: every public export is documented, and every page that imports the framework has a test that runs it.
 
 ## Examples
 
