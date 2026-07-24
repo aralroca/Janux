@@ -86,6 +86,7 @@ export const SECTIONS: SectionDef[] = [
           'tailwind',
           'auth-and-context',
           'cross-island-events',
+          'custom-server',
           'deploying',
           'external-mcp-clients',
           'local-model-copilot',

@@ -115,6 +115,19 @@ Everything is optional — the defaults are the [conventional layout](#project-c
 
 More output targets will come later. Full walkthrough: [Deploying → Static export](/docs/recipes/deploying).
 
+## Programmatic use
+
+`@janux/cli` is also a module: `runCli(argv)` is what `bin.ts` calls, `parseArgs(argv, cwd)` parses a command line into `{ command, root, port, … }`, and `HELP_TEXT` is the usage string.
+
+```ts
+import { createJanuxServer } from '@janux/server';
+import { prodServerOptions } from '@janux/cli';
+
+const server = createJanuxServer(await prodServerOptions(process.cwd()));
+```
+
+`prodServerOptions(root)` resolves an app's conventions into the `ServerOptions` that `janux start` uses — routes, `*.api.ts` modules, stores, agent, i18n, middleware, matchers, `src/api/**` handlers, the built `client.js` and stylesheet. Spread it to override individual fields. It expects `janux build` to have run (that's where `dist/client/client.js` comes from) and it does **not** serve static files: see [custom server](/docs/recipes/custom-server).
+
 ## Environment
 
 | Variable | Purpose |
