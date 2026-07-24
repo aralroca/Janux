@@ -66,10 +66,17 @@ function calloutRenderer() {
   };
 }
 
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" };
+
+/** parseInline emits HTML — strip tags and decode entities for TOC/anchor text. */
+function plainText(html: string): string {
+  return html.replace(/<[^>]+>/g, '').replace(/&(amp|lt|gt|quot|#39);/g, (_, entity) => ENTITIES[entity]!);
+}
+
 function headingRenderer(toc: TocEntry[]) {
   return function heading(this: any, { tokens, depth }: any): string {
     const text = this.parser.parseInline(tokens);
-    const plain = text.replace(/<[^>]+>/g, '');
+    const plain = plainText(text);
     const id = slugify(plain);
 
     if (depth === 2 || depth === 3) toc.push({ depth, id, text: plain });
