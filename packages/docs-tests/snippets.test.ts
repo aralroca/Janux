@@ -9,7 +9,7 @@ import { join, resolve } from 'node:path';
  */
 
 const ROOT = resolve(import.meta.dir, '../..');
-const SOURCES = [join(ROOT, 'README.md'), join(ROOT, 'apps/docs/content')];
+const SOURCES = [join(ROOT, 'README.md'), join(ROOT, 'apps/docs/content'), join(ROOT, 'examples')];
 
 interface Snippet {
   file: string;
@@ -23,7 +23,7 @@ function mdFiles(path: string): string[] {
 
   return readdirSync(path, { recursive: true })
     .map(String)
-    .filter((name) => name.endsWith('.md'))
+    .filter((name) => name.endsWith('.md') && !name.includes('node_modules'))
     .map((name) => join(path, name));
 }
 
