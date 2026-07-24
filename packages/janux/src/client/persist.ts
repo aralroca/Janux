@@ -44,10 +44,12 @@ export async function persistStore(instance: JanuxInstance, config: PersistConfi
   if (raw) {
     try {
       const envelope = JSON.parse(raw) as Envelope;
-      const migrated =
-        envelope.v === version ? envelope.s : (config.migrate?.(envelope.s, envelope.v) ?? envelope.s);
+      // A payload from another version is only trustworthy through `migrate`.
+      // Without one it is dropped, not applied: booting with state this code no
+      // longer understands is worse than booting from defaults.
+      const migrated = envelope.v === version ? envelope.s : config.migrate?.(envelope.s, envelope.v);
 
-      instance.patch(migrated);
+      if (migrated) instance.patch(migrated);
     } catch {
       // Corrupt payload: ignore and start from defaults.
     }

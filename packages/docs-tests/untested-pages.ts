@@ -27,7 +27,6 @@ export const UNTESTED_PAGES: string[] = [
   'reference/build-internals.md',
   'reference/cli.md',
   'reference/client-api.md',
-  'reference/client-state.md',
   'reference/client-tools.md',
   'reference/foreign.md',
   'reference/i18n-api.md',
