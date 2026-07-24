@@ -78,7 +78,7 @@ export const SECTIONS: SectionDef[] = [
       },
     ],
   },
-  { section: 'more', label: 'More', groups: [{ slugs: ['comparison', 'faq', 'glossary'] }] },
+  { section: 'more', label: 'More', groups: [{ slugs: ['examples', 'comparison', 'faq', 'glossary'] }] },
 ];
 
 export interface DocRef {

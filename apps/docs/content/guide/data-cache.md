@@ -88,3 +88,5 @@ status.set('paid');          // writes ?status=paid; set(fallback) clears it
 **Query-only changes are shallow.** Updating a query param on the same path never re-renders the page or hits the server — islands read the param reactively through `urlState`, so a filter, tab or dialog change is instant and client-only. Cross-path navigations still get the SPA diff. `urlState` reacts to back/forward via `popstate`.
 
 > The console's filter/tab/modal state (previously a third-party URL-state library) maps directly onto `urlState`; its server-state cache (previously a separate query library) maps onto `useQuery` + `QueryClient`.
+
+> **See it running**: [`examples/data-cache`](https://github.com/aralroca/Janux/tree/main/examples/data-cache) — the cached, filterable catalog with typed URL state. More in [Examples](/docs/more/examples).

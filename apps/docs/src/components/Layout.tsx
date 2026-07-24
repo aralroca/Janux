@@ -80,6 +80,7 @@ export function Layout({ children, current }: { children: unknown; current?: str
         </a>
         <SearchModal persist eager />
         <nav class="top-links">
+          <a href="/docs/more/examples">Examples</a>
           <a href="https://github.com/aralroca/Janux" target="_blank" rel="noopener">GitHub</a>
           <a href="https://www.npmjs.com/package/janux" target="_blank" rel="noopener">npm</a>
         </nav>

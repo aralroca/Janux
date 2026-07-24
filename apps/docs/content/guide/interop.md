@@ -83,3 +83,5 @@ That's the whole model: Janux owns the tree, React owns its leaves, and each fil
 - A standalone foreign (outside any island) SSRs and mounts from its serialized call-site props; `on:` requires an enclosing island.
 - `react`/`react-dom` are optional peers — apps without foreign islands pay nothing.
 - Reverse interop (mounting a Janux island inside a React app) is on the roadmap.
+
+> **See it running**: [`examples/interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) — A React component mounted unchanged, with tracked props and callbacks bridged to intents. More in [Examples](/docs/more/examples).

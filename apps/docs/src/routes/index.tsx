@@ -133,6 +133,7 @@ export default async function Home() {
           <a href="https://www.npmjs.com/package/janux">npm</a>
           <a href="https://github.com/aralroca/Janux">GitHub</a>
           <a href="https://github.com/aralroca/Janux/issues/1">RFC 0001</a>
+          <a href="/docs/more/examples">Examples</a>
           <a href="/playground">Playground</a>
           <span>MIT © Aral Roca</span>
         </footer>
