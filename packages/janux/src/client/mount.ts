@@ -3,7 +3,6 @@ import { createInstance, type JanuxInstance } from '../runtime/instance';
 import type { ComponentDef } from '../define/types';
 import type { EventBus } from '../runtime/bus';
 import { toDomNodes, type PendingIsland, type RenderPass } from './dom';
-import { mountForeign } from './foreign';
 import { morph } from './morph';
 import { persistStore } from './persist';
 import { registerDef, resolveDef, type ClientRegistry } from './registry';
@@ -91,7 +90,14 @@ function mountPassForeigns(pass: RenderPass, root: Element, mount: MountContext,
     }
     const host = root.querySelector(`janux-foreign[data-jx="${id}"]`);
 
-    if (host) mount.registry.foreigns.set(id, mountForeign(def, host, props, parent));
+    if (!host) return;
+    loadForeign()
+      .then((mountForeign) => {
+        if (!mount.registry.foreigns.has(id)) {
+          mount.registry.foreigns.set(id, mountForeign(def, host, props, parent));
+        }
+      })
+      .catch(reportError);
   });
 }
 
@@ -174,6 +180,12 @@ async function disposeDescendants(name: string, key: string, mount: MountContext
  * enclosing island (the shell drives it — events need its intents); a
  * standalone foreign hydrates from its serialized call-site props.
  */
+async function loadForeign() {
+  // Lazy: apps without React (no foreign islands in the page) never load this
+  // module, so Vite never needs to resolve 'react' for them.
+  return (await import('./foreign')).mountForeign;
+}
+
 export async function mountDocumentForeigns(mount: MountContext): Promise<void> {
   const hosts = [...document.querySelectorAll('janux-foreign[data-jx]')];
   const parents = new Set<Element>();
@@ -188,7 +200,7 @@ export async function mountDocumentForeigns(mount: MountContext): Promise<void> 
   await Promise.all(
     [...parents].map((island) => mountIsland(island.getAttribute('data-jx')!, island, mount)),
   );
-  standalone.forEach((host) => {
+  for (const host of standalone) {
     const id = host.getAttribute('data-jx')!;
     const raw = host.getAttribute('data-jxf-props');
     const next = raw ? JSON.parse(raw) : {};
@@ -201,12 +213,17 @@ export async function mountDocumentForeigns(mount: MountContext): Promise<void> 
     if (live) {
       if (JSON.stringify(live.props.value) !== JSON.stringify(next)) live.props.value = next;
 
-      return;
+      continue;
     }
     const def = mount.registry.foreignDefs.get(id.split('#')[0]!);
 
-    if (def) mount.registry.foreigns.set(id, mountForeign(def, host, next));
-  });
+    if (!def) continue;
+    const mountForeign = await loadForeign();
+
+    if (!mount.registry.foreigns.has(id)) {
+      mount.registry.foreigns.set(id, mountForeign(def, host, next));
+    }
+  }
 }
 
 /** Dispose every foreign root whose host is no longer in the document (navigation sweep). */

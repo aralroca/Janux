@@ -44,30 +44,38 @@ function anchorFor(path: string): HTMLAnchorElement | undefined {
   return matches.find((anchor) => anchor.getClientRects().length > 0) ?? matches[0];
 }
 
-function navigateTo(path: string): unknown {
+async function navigateTo(path: string): Promise<unknown> {
   const links = collectPageLinks();
   const resolved = new URL(path, location.href);
-  const wanted = resolved.pathname + resolved.search + resolved.hash;
-  const target = links.find((link) => link.path === wanted);
-  const anchor = target ? anchorFor(target.path) : undefined;
 
-  // Models hallucinate paths; handing back the real links makes the retry self-correcting.
-  if (!target) return { error: `No link to "${path}" on this page. Current links:`, links };
+  // Models hallucinate origins; same-origin only, and the real links make the retry self-correcting.
+  if (resolved.origin !== location.origin) {
+    return { error: `"${path}" is cross-origin. Current links:`, links };
+  }
+  const wanted = resolved.pathname + resolved.search + resolved.hash;
+  const anchor = anchorFor(wanted) ?? anchorFor(resolved.pathname);
+
   if (anchor) {
     injectGlowStyles();
     glowElement(anchor);
     anchor.scrollIntoView({ block: 'nearest' });
+    await new Promise((resolve) => setTimeout(resolve, GLOW_BEFORE_NAV_MS));
   }
-  setTimeout(() => location.assign(target.path), anchor ? GLOW_BEFORE_NAV_MS : 0);
+  // SPA navigation keeps the app (and any copilot surface) alive; paths beyond
+  // the current page's links are legitimate — the manifest route map covers them.
+  const client = (window as any).janux;
 
-  return { navigated: target.path, label: target.label };
+  if (client?.navigate) await client.navigate(wanted);
+  else location.assign(wanted);
+
+  return { navigated: wanted, label: anchor?.textContent?.trim() };
 }
 
 /** The built-in `navigate` WebMCP tool `installWebMCP` registers on every page. */
 export function createNavigateTool(): WebMCPToolDescriptor {
   return {
     name: 'navigate',
-    description: 'Navigate this app to one of the links on the current page, by path.',
+    description: 'Navigate this app to any same-origin path (SPA navigation).',
     inputSchema: {
       type: 'object',
       properties: { path: { type: 'string', description: 'Target path, e.g. /docs/guide/navigation' } },

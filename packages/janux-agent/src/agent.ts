@@ -155,7 +155,7 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       const manifest: any = await deps.manifestFor(body.path ?? '/');
       const tools = [
         ...manifestTools(manifest, config.tools?.include),
-        ...CLIENT_TOOL_SPECS.map((spec) => ({ name: spec.name, description: spec.description, parameters: spec.parameters })),
+        ...CLIENT_TOOL_SPECS.map((spec) => ({ name: spec.name, description: spec.description, input: spec.parameters })),
       ];
       const system = systemPrompt(config, manifest);
       const turn = await turnMessages(body, config.harness, identity).catch((error) => {
@@ -169,9 +169,12 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       // above is already the destination page's, so the turn continues with
       // the tools that exist THERE.
       if (body.continuation && body.toolResults) {
+        // Provider-agnostic observation: OpenAI-style APIs reject bare `tool`
+        // messages without a matching tool_call id, so the executed results
+        // travel as a labeled user message inside the SAME turn.
         turn.messages.push({
-          role: 'tool',
-          content: JSON.stringify(body.toolResults),
+          role: 'user',
+          content: `[ui tool results] ${JSON.stringify(body.toolResults)}`,
         } as ChatMessage);
       }
       const guarded = await runProcessors(config.harness?.processors ?? [], {
@@ -184,7 +187,15 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       const messages = guarded.messages.filter((message) => message.role !== 'system') as ChatMessage[];
 
       for (let round = 0; round < maxTurns; round += 1) {
-        const reply = await callProvider(model, system, messages, tools, fetchImpl);
+        const reply = await callProvider(model, system, messages, tools, fetchImpl).catch((error) => ({
+          text: '',
+          toolCalls: [],
+          providerError: String(error),
+        }));
+
+        if ('providerError' in reply) {
+          return json({ type: 'error', error: 'provider_error', detail: reply.providerError, threadId: turn.threadId }, 502);
+        }
 
         messages.push({ role: 'assistant', content: reply.text, toolCalls: reply.toolCalls });
         if (reply.toolCalls.length === 0) {
