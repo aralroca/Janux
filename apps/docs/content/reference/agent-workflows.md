@@ -55,11 +55,11 @@ const runner = createWorkflowRunner(storage);
 const started = await runner.start(interview, { region: 'EU' }, { userId });
 // { runId, status: 'suspended', state, suspendPayload: { question: '…' } }
 
-const next = await runner.resume(started.runId, 'Germany', { userId });
+const next = await runner.resume(interview, started.runId, 'Germany', { userId });
 // advances from the suspending step; status: 'done' when the last step finishes
 ```
 
-`RunResult` is `{ runId, status: 'suspended' | 'done', state, suspendPayload? }`. Between the two calls the run lives **only** in storage — with [`createPgStorage`](/docs/reference/agent-memory) a deploy, a crash or a different instance answering the next request all keep working, which is exactly what an in-memory conversation state cannot do.
+`RunResult` is `{ runId, status: 'suspended' | 'done', state, suspendPayload? }`. Both calls take the definition — `resume` needs it to replay the steps, and it refuses a run that belongs to another workflow (`workflow_mismatch`) or one storage has never seen (`unknown_run`). Between the two calls the run lives **only** in storage — with [`createPgStorage`](/docs/reference/agent-memory) a deploy, a crash or a different instance answering the next request all keep working, which is exactly what an in-memory conversation state cannot do.
 
 ## Where this fits
 

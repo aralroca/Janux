@@ -39,8 +39,12 @@ function testSources(): string {
     .join('\n');
 }
 
-const covered = new Set([...testSources().matchAll(/([a-z0-9-]+\/[a-z0-9-]+\.md)/g)].map((match) => match[1]!));
 const runnable = pages().filter(hasRunnableExample);
+// Only names that are real pages count: a test hitting `http://test/pricing.md`
+// mentions the pattern without covering anything.
+const covered = new Set(
+  [...testSources().matchAll(/([a-z0-9-]+\/[a-z0-9-]+\.md)/g)].map((match) => match[1]!).filter((name) => pages().includes(name)),
+);
 
 describe('every page with executable claims has a test that runs them', () => {
   it('no runnable page is silently untested', () => {
@@ -55,8 +59,15 @@ describe('every page with executable claims has a test that runs them', () => {
     expect(stale).toEqual([]);
   });
 
-  it('at least the pages written with executable tests are covered', () => {
-    expect(covered.size).toBeGreaterThan(0);
-    expect(runnable.length).toBeGreaterThan(covered.size);
+  /**
+   * This used to assert `runnable > covered` as a "we haven't covered everything
+   * yet" sanity check. Coverage overtook it, which is the point — the invariant
+   * worth guarding is that the corpus really has executable claims and that
+   * tests really name pages, so the two lists above can't both be vacuous.
+   */
+  it('the corpus has executable claims and the tests name real pages', () => {
+    expect(runnable.length).toBeGreaterThan(20);
+    expect(covered.size).toBeGreaterThan(20);
+    expect([...covered].every((page) => pages().includes(page))).toBe(true);
   });
 });

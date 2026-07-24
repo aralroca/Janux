@@ -13,11 +13,6 @@
 export const UNTESTED_PAGES: string[] = [
   'getting-started/project-structure.md',
   'guide/agent-and-copilot.md',
-  'reference/agent-attachments.md',
-  'reference/agent-mcp-client.md',
-  'reference/agent-memory.md',
-  'reference/agent-rate-limit.md',
-  'reference/agent-workflows.md',
   'reference/build-internals.md',
   'reference/cli.md',
   'reference/client-api.md',
