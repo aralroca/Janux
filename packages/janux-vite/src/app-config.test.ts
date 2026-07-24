@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveAppConfig } from './app-config';
@@ -66,5 +66,22 @@ describe('resolveAppConfig package.json "janux" field (deprecated fallback)', ()
 
     expect((await resolveAppConfig(root)).llmsTxt).toBeUndefined();
     expect((await resolveAppConfig(appWithPackageJson({ name: 'x' }))).llmsTxt).toBeUndefined();
+  });
+});
+
+describe('resolveAppConfig src/ctx.ts', () => {
+  it('picks up the ctx convention when the file exists', async () => {
+    const root = app({ 'package.json': '{"name":"x"}' });
+
+    mkdirSync(join(root, 'src'), { recursive: true });
+    writeFileSync(join(root, 'src/ctx.ts'), 'export default (req: Request) => ({ userId: null });');
+
+    expect((await resolveAppConfig(root)).ctxModule).toBe(join(root, 'src/ctx.ts'));
+  });
+
+  it('leaves it undefined when the app has no ctx.ts (ctx stays {})', async () => {
+    const root = app({ 'package.json': '{"name":"x"}' });
+
+    expect((await resolveAppConfig(root)).ctxModule).toBeUndefined();
   });
 });

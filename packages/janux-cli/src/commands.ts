@@ -155,6 +155,7 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
   const storesModule = app.storesModule ? await import(app.storesModule) : undefined;
   const i18nModule = app.i18nModule ? await import(app.i18nModule) : undefined;
   const middlewareModule = app.middlewareModule ? await import(app.middlewareModule) : undefined;
+  const ctxModule = app.ctxModule ? await import(app.ctxModule) : undefined;
   const matchersModule = app.matchersModule ? await import(app.matchersModule) : undefined;
 
   return {
@@ -168,6 +169,7 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default,
     middleware: middlewareModule?.default,
+    ctxFor: ctxModule?.default,
     matchers: matchersModule,
     httpHandlers: app.httpHandlersDir
       ? { dir: app.httpHandlersDir, loadModule: (file) => import(file) as any }

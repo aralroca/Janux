@@ -74,6 +74,9 @@ Everything is convention over configuration — each of these is optional:
 | `src/stores.ts` | Store defs available during SSR |
 | `src/agent.ts` | `export default defineAgent({...})` |
 | `src/i18n.ts` (or `src/i18n/index.ts`) | `export default` an `I18nConfig` — activates [internationalization](/docs/guide/i18n) |
+| `src/ctx.ts` | `export default` a `(req) => ctx` — per-request [context and auth](/docs/recipes/auth-and-context) |
+| `src/middleware.ts` | `export default` a `(req) => Response \| undefined` — runs before routing |
+| `src/matchers.ts` | Named exports = custom `[param=matcher]` matchers |
 | `src/client.ts` | `boot({ defs })` — omit for fully static apps (0 KB JS) |
 | `src/styles.css` | App stylesheet, linked automatically |
 | `public/` | Static assets served at `/` (favicon.svg auto-linked) |
@@ -126,7 +129,7 @@ import { prodServerOptions } from '@janux/cli';
 const server = createJanuxServer(await prodServerOptions(process.cwd()));
 ```
 
-`prodServerOptions(root)` resolves an app's conventions into the `ServerOptions` that `janux start` uses — routes, `*.api.ts` modules, stores, agent, i18n, middleware, matchers, `src/api/**` handlers, the built `client.js` and stylesheet. Spread it to override individual fields. It expects `janux build` to have run (that's where `dist/client/client.js` comes from) and it does **not** serve static files: see [custom server](/docs/recipes/custom-server).
+`prodServerOptions(root)` resolves an app's conventions into the `ServerOptions` that `janux start` uses — routes, `*.api.ts` modules, stores, agent, i18n, per-request `ctx`, middleware, matchers, `src/api/**` handlers, the built `client.js` and stylesheet. Spread it to override individual fields. It expects `janux build` to have run (that's where `dist/client/client.js` comes from) and it does **not** serve static files: see [custom server](/docs/recipes/custom-server).
 
 ## Environment
 

@@ -12,6 +12,7 @@ my-app/
     client.ts         # boot({ defs: [...] }) — the client entry
     agent.ts          # defineAgent({...}) — the copilot
     stores.ts         # exported store defs, so SSR can render store-dependent views
+    ctx.ts            # (req) => ctx — per-request context: session, tenant, role
     middleware.ts     # runs before routing on every request
     matchers.ts       # custom typed route params: [post=slug]
     i18n.ts           # or src/i18n/index.ts — locales, messages, routing
@@ -32,6 +33,7 @@ my-app/
 | `src/client.ts` | The client runtime (`boot`). Omit it for a zero-JS site | [SSR and resumability](/docs/guide/ssr-and-resumability) |
 | `src/agent.ts` | The copilot at `/_janux/agent` + the embedded harness | [The agent and your copilot](/docs/guide/agent-and-copilot) |
 | `src/stores.ts` | Server-side store instances per request, so SSR can render views that read them | [Stores](/docs/guide/stores) |
+| `src/ctx.ts` | The per-request `ctx` every route, intent, source and `api()` receives | [Auth and request context](/docs/recipes/auth-and-context) |
 | `src/middleware.ts` | A request hook before routing — redirects, auth gates, locale hardening | [Navigation § Middleware](/docs/guide/navigation) |
 | `src/matchers.ts` | Custom param matchers (each export is `(value: string) => boolean`) | [Navigation § The route tree](/docs/guide/navigation) |
 | `src/i18n.ts` | Locale-prefixed routing, typed `t()`, page-scoped client messages | [i18n](/docs/guide/i18n) |
