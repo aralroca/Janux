@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 import { boot } from 'janux/client';
 // The page's own import line: the specs live on the janux root, not janux/client.
 import { CLIENT_TOOL_NAMES, CLIENT_TOOL_SPECS, component, int, intent, jsx, renderToString, schema } from 'janux';
+import { serveIntoDom } from './__fixtures__/serve';
 
 /**
  * reference/client-api.md, reference/client-tools.md and the bridge half of
@@ -36,18 +37,8 @@ const counter = component({
     }),
 });
 
-const MANIFEST_LINK = '<link rel="janux-manifest" id="jx-manifest" href="/_janux/manifest?path=%2Fshop">';
-
 async function booted() {
-  const { html, snapshots } = await renderToString(jsx(counter as any, {}), {});
-  const scripts = snapshots
-    .map(
-      (snapshot: any) =>
-        `<script type="application/janux+state" data-uri="${snapshot.uri}">${JSON.stringify({ state: snapshot.state, sources: {} })}</script>`,
-    )
-    .join('');
-
-  document.body.innerHTML = MANIFEST_LINK + html + scripts;
+  await serveIntoDom(jsx(counter as any, {}));
 
   return boot({ defs: [counter], webmcp: false });
 }

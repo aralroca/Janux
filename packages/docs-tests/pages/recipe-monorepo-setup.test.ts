@@ -5,6 +5,7 @@ import { boot } from 'janux/client';
 import { collectApis, invokeApi } from '@janux/server';
 import { parseArgs } from '@janux/cli';
 import { docExample } from '../doc-example';
+import { serveIntoDom } from './__fixtures__/serve';
 
 /**
  * recipes/monorepo-setup.md, executed. The claim that matters is the one a
@@ -31,25 +32,14 @@ const Toggle = component({
   view: ({ state, intents }: any) => jsx('button', { class: 'toggle', on: intents.flip, children: state.status }),
 });
 
-async function serve(): Promise<void> {
-  const { html, snapshots } = await renderToString(jsx(Toggle as any, {}), {});
-  const scripts = snapshots
-    .map(
-      (snapshot: any) =>
-        `<script type="application/janux+state" data-uri="${snapshot.uri}">${JSON.stringify({ state: snapshot.state, sources: snapshot.sources ?? {} })}</script>`,
-    )
-    .join('');
-
-  document.body.innerHTML = html + scripts;
-}
 
 beforeAll(() => GlobalRegistrator.register({ url: 'http://localhost:3000/' }));
 afterAll(() => GlobalRegistrator.unregister());
 
 describe('recipes/monorepo-setup.md — a shared island needs registering', () => {
   it('wakes up when the app boots with it in defs', async () => {
-    await serve();
-    boot({ defs: [Toggle] });
+    await serveIntoDom(jsx(Toggle as any, {}));
+    boot({ defs: [Toggle], webmcp: false });
     (document.querySelector('.toggle') as HTMLElement).click();
     await Bun.sleep(20);
 
@@ -57,10 +47,10 @@ describe('recipes/monorepo-setup.md — a shared island needs registering', () =
   });
 
   it('renders its SSR markup and stays dead when it is missing from defs', async () => {
-    await serve();
+    await serveIntoDom(jsx(Toggle as any, {}));
 
     expect(document.querySelector('janux-island[data-jx="toggle#default"]')).not.toBeNull();
-    boot({ defs: [] });
+    boot({ defs: [], webmcp: false });
     (document.querySelector('.toggle') as HTMLElement).click();
     await Bun.sleep(20);
 
