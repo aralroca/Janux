@@ -47,10 +47,8 @@ function codeRenderer(highlighter: Highlighter) {
       defaultColor: 'light-dark()',
     });
 
-    // data-native (try-it): the playground mounts Monaco imperatively — SPA-diffing into
-    // it breaks the page (pending fix upstream in diff-dom-streaming).
     const tryIt = flags.includes('live')
-      ? `<a class="try-it" data-native href="/playground#c=${base64url(text)}">▶ Run in playground</a>`
+      ? `<a class="try-it" href="/playground#c=${base64url(text)}">▶ Run in playground</a>`
       : '';
 
     return `<div class="code-block">${highlighted}<div class="block-actions"><button class="copy-code" type="button" aria-label="Copy code">Copy</button>${tryIt}</div></div>`;

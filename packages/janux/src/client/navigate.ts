@@ -114,18 +114,41 @@ async function sweepDisconnected(mount: MountContext): Promise<void> {
   await Promise.all(gone.map(([, instance]) => instance.dispose()));
 }
 
-async function fetchStream(url: string, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>> {
-  const cached = consumePrefetched(url);
+// Buffer the whole page before diffing: a navigation fetches a complete,
+// server-rendered page, so a single-chunk stream is deterministic and
+// avoids the streaming diff's chunk-boundary edge cases (a swap is not SSR).
+async function fetchPage(url: string, signal?: AbortSignal): Promise<string> {
+  const cached = await consumePrefetched(url);
 
-  if (cached) return cached;
+  if (cached !== undefined) return cached;
   const response = await fetch(url, { signal, headers: { accept: 'text/html' } });
 
   if (!response.ok) throw new Error(`navigation fetch failed (${response.status})`);
 
-  // Buffer the whole page before diffing: a navigation fetches a complete,
-  // server-rendered page, so a single-chunk stream is deterministic and
-  // avoids the streaming diff's chunk-boundary edge cases (a swap is not SSR).
-  return singleChunkStream(await response.text());
+  return response.text();
+}
+
+/**
+ * Mounted islands that don't exist on the incoming page leave BEFORE the diff:
+ * their runtime DOM (a code editor, a canvas — anything an `attach` built
+ * imperatively) must never be morphed against unrelated incoming content, or
+ * fragments of it survive misplaced. Removal here; disposal stays with the
+ * post-diff sweep, which sees them disconnected.
+ */
+function extractLeaving(mount: MountContext, incomingHtml: string): Element[] {
+  const incoming = new Set([...incomingHtml.matchAll(/data-jx="([^"]+)"/g)].map((match) => match[1]));
+
+  return [...document.querySelectorAll('janux-island:not([data-jx-persist])')]
+    .filter((node) => {
+      const id = node.getAttribute('data-jx') ?? '';
+
+      return mount.registry.mounted.has(id) && !incoming.has(id);
+    })
+    .map((node) => {
+      node.remove();
+
+      return node;
+    });
 }
 
 /**
@@ -134,20 +157,40 @@ async function fetchStream(url: string, signal?: AbortSignal): Promise<ReadableS
  * persisted nodes are re-attached, no island disposed). Disposal happens after,
  * driven by what the diff removed from the document.
  */
-async function applyPage(mount: MountContext, stream: ReadableStream<Uint8Array>, signal?: AbortSignal): Promise<void> {
+/**
+ * Runtime-injected stylesheets (a lazy-loaded editor's CSS, vite dev styles)
+ * exist only in the live <head>: the incoming page doesn't list them, so the
+ * diff drops them — and the module that injected them won't run again on a
+ * later remount. Snapshot them before the swap, resurrect whatever it removed.
+ */
+function keepRuntimeStyles(): () => void {
+  const styles = [...document.head.querySelectorAll('style, link[rel="stylesheet"]')];
+
+  return () => {
+    styles.forEach((node) => {
+      if (!node.isConnected) document.head.appendChild(node);
+    });
+  };
+}
+
+async function applyPage(mount: MountContext, html: string, signal?: AbortSignal): Promise<void> {
   const kept = extractPersisted(mount);
+  const leaving = extractLeaving(mount, html);
+  const restoreStyles = keepRuntimeStyles();
 
   try {
     throwIfAborted(signal);
     // The Navigation API drives the transition; diff directly (its own would be skipped).
-    await diff(document, stream);
+    await diff(document, singleChunkStream(html));
     await restorePersisted(mount, kept);
   } catch (error) {
-    // Aborted/failed before the swap committed: put persisted nodes back untouched.
-    kept.forEach(({ node }) => {
+    // Aborted/failed before the swap committed: put persisted and leaving nodes back untouched.
+    [...kept.map(({ node }) => node), ...leaving].forEach((node) => {
       if (!node.isConnected) document.body.appendChild(node);
     });
     throw error;
+  } finally {
+    restoreStyles();
   }
 }
 
@@ -157,10 +200,10 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
   emitNavigate('before', from, url);
   try {
     throwIfAborted(options.signal);
-    const stream = await fetchStream(url, options.signal);
+    const html = await fetchPage(url, options.signal);
 
     throwIfAborted(options.signal);
-    await applyPage(mount, stream, options.signal);
+    await applyPage(mount, html, options.signal);
     reindexSnapshots(mount);
     installI18n(mount.ctx);
     await sweepDisconnected(mount);

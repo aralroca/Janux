@@ -22,17 +22,12 @@ export function prefetch(url: string): void {
   prefetched.get(url)!.body.catch(() => prefetched.delete(url));
 }
 
-/** Returns a stream of the prefetched page if still fresh, evicting the entry either way. */
-export function consumePrefetched(url: string): ReadableStream<Uint8Array> | undefined {
+/** Returns the prefetched page's HTML if still fresh, evicting the entry either way. */
+export function consumePrefetched(url: string): Promise<string> | undefined {
   const entry = prefetched.get(url);
 
   prefetched.delete(url);
   if (!isFresh(entry)) return undefined;
 
-  return new ReadableStream({
-    async start(controller) {
-      controller.enqueue(new TextEncoder().encode(await entry.body));
-      controller.close();
-    },
-  });
+  return entry.body;
 }

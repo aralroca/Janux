@@ -59,7 +59,7 @@ function SectionNav({ def, current }: { def: SectionDef; current?: string }) {
 function SidebarNav({ current }: { current?: string }) {
   return (
     <div class="sidebar-nav">
-      <a href="/playground" data-native class={current === '/playground' ? 'tool-link active' : 'tool-link'}>
+      <a href="/playground" class={current === '/playground' ? 'tool-link active' : 'tool-link'}>
         ⚡ Playground
       </a>
       {SECTIONS.map((def) => (
@@ -81,7 +81,7 @@ export function Layout({ children, current, sidebar = true }: { children: unknow
         <SearchModal persist eager />
         <nav class="top-links">
           <a href="/docs/guide/getting-started">Docs</a>
-          <a href="/playground" data-native>Playground</a>
+          <a href="/playground">Playground</a>
           <a href="/docs/more/examples">Examples</a>
           <a href="https://github.com/aralroca/Janux" target="_blank" rel="noopener">GitHub</a>
           <a href="https://www.npmjs.com/package/janux" target="_blank" rel="noopener">npm</a>
