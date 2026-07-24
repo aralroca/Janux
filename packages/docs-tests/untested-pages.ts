@@ -15,7 +15,6 @@ export const UNTESTED_PAGES: string[] = [
   'guide/agent-and-copilot.md',
   'guide/api-rpc.md',
   'guide/components.md',
-  'guide/data-cache.md',
   'guide/http-handlers.md',
   'guide/i18n.md',
   'guide/interop.md',

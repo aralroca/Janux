@@ -138,7 +138,7 @@ export class QueryClient {
     this.queries.get(hashKey(key))?.setData(data);
   }
 
-  /** Mark matching queries stale and refetch the ones with observers. */
+  /** Refetch every entry whose key matches the prefix (observed or not); failures are swallowed. */
   async invalidateQueries(key?: QueryKey): Promise<void> {
     const prefix = key ? hashKey(key).slice(0, -1) : '';
     const matches = [...this.queries.values()].filter((query) => query.hash.startsWith(prefix));
