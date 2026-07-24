@@ -6,7 +6,7 @@ export function setupCopyCode(): void {
     const button = (event.target as Element | null)?.closest?.('button.copy-code');
 
     if (!(button instanceof HTMLButtonElement)) return;
-    const text = button.parentElement?.querySelector('pre')?.textContent ?? '';
+    const text = button.closest('.code-block')?.querySelector('pre')?.textContent ?? '';
 
     navigator.clipboard.writeText(text).then(() => flashCopied(button)).catch(console.error);
   });

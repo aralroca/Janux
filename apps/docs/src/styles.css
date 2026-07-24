@@ -584,23 +584,20 @@ pre.shiki code {
   color: inherit;
 }
 
-.live-block {
-  position: relative;
-  margin: 18px 0;
-}
-
-.live-block pre {
-  margin: 0;
-}
-
 .code-block {
   position: relative;
 }
 
-.copy-code {
+.block-actions {
   position: absolute;
   top: 12px;
   right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy-code {
   padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -624,14 +621,7 @@ pre.shiki code {
   border-color: var(--accent);
 }
 
-.live-block .copy-code {
-  right: 156px;
-}
-
 .try-it {
-  position: absolute;
-  right: 12px;
-  top: 12px;
   padding: 5px 12px;
   border-radius: 999px;
   background: var(--heading);
@@ -762,7 +752,6 @@ body[data-theme='dark'] .hero-janus {
 }
 
 .install-block .copy-code {
-  position: static;
   display: inline-flex;
   padding: 6px;
   border: none;
@@ -789,9 +778,8 @@ body[data-theme='dark'] .hero-janus {
 }
 
 .mission {
-  max-width: 780px;
+  max-width: 1000px;
   margin: 56px auto 8px;
-  text-align: center;
 }
 
 .mission h2 {
@@ -799,10 +787,40 @@ body[data-theme='dark'] .hero-janus {
   text-align: center;
 }
 
-.mission p {
-  margin: 16px 0;
-  font-size: 16.5px;
-  line-height: 1.75;
+.mission-lede {
+  max-width: 640px;
+  margin: 12px auto 36px;
+  text-align: center;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.mission-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+  text-align: left;
+}
+
+.mission-grid h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.mission-grid p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.mission-close {
+  max-width: 680px;
+  margin: 36px auto 0;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.7;
   color: var(--text);
 }
 
@@ -1485,7 +1503,8 @@ body[data-theme='dark'] .hero-janus {
   }
 
   .faces-grid,
-  .features {
+  .features,
+  .mission-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

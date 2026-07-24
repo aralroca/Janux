@@ -47,13 +47,13 @@ function codeRenderer(highlighter: Highlighter) {
       defaultColor: 'light-dark()',
     });
 
-    const block = `<div class="code-block">${highlighted}<button class="copy-code" type="button" aria-label="Copy code">Copy</button></div>`;
-
-    if (!flags.includes('live')) return block;
-
-    // data-native: the playground mounts Monaco imperatively — SPA-diffing into
+    // data-native (try-it): the playground mounts Monaco imperatively — SPA-diffing into
     // it breaks the page (pending fix upstream in diff-dom-streaming).
-    return `<div class="live-block">${block}<a class="try-it" data-native href="/playground#c=${base64url(text)}">▶ Run in playground</a></div>`;
+    const tryIt = flags.includes('live')
+      ? `<a class="try-it" data-native href="/playground#c=${base64url(text)}">▶ Run in playground</a>`
+      : '';
+
+    return `<div class="code-block">${highlighted}<div class="block-actions"><button class="copy-code" type="button" aria-label="Copy code">Copy</button>${tryIt}</div></div>`;
   };
 }
 

@@ -127,21 +127,38 @@ export default async function Home() {
 
         <section class="mission">
           <h2>Built for how software gets written now</h2>
-          <p>
-            AI agents write the code, humans review it. Janux is shaped for exactly that loop: one
-            schema-typed definition per component — no hooks, no lifecycle traps, no hidden state to
-            hold in your head. It's the most predictable target a model can generate, and the easiest
-            diff a human will ever review: <strong>the PR is the whole truth of the component</strong>.
+          <p class="mission-lede">
+            AI agents write the code. Humans review it. Agents operate the result. Janux is the
+            first framework designed for that whole loop — not just the rendering.
           </p>
-          <p>
-            And every component you ship is already an agent surface. Janux projects the same
-            definition into typed MCP tools and live resources — in the browser via{' '}
-            <strong>WebMCP</strong>, and server-side through a hosted <strong>MCP endpoint</strong> —
-            so wiring Claude, ChatGPT or your own copilot to drive the app is a URL, not an
-            integration project. Contracts can't drift because they're generated from the code that
-            renders; guards keep a human in the loop where it matters. Write once, review fast, and
-            your app is operable by any agent on the market. <strong>No other framework gets you
-            there out of the box.</strong>
+          <div class="mission-grid">
+            <div>
+              <h3>😶‍🌫️ Easy for agents to write</h3>
+              <p>
+                One schema-typed definition per component — no hooks, no lifecycle traps, no hidden
+                state. The most predictable target a model can generate, right on the first try.
+              </p>
+            </div>
+            <div>
+              <h3>🔍 Easy for humans to review</h3>
+              <p>
+                State, actions, guards and view live in a single definition, so{' '}
+                <strong>the PR is the whole truth of the component</strong>. Diffs read in minutes —
+                no archaeology across files.
+              </p>
+            </div>
+            <div>
+              <h3>🤖 Easy for agents to operate</h3>
+              <p>
+                Every component ships as typed MCP tools and live resources — <strong>WebMCP</strong>{' '}
+                in the browser, a hosted <strong>MCP endpoint</strong> on the server. Connecting
+                Claude, ChatGPT or your own copilot is a URL, not an integration project.
+              </p>
+            </div>
+          </div>
+          <p class="mission-close">
+            Contracts can't drift — they're generated from the code that renders, with human approval
+            built in where it matters. <strong>No other framework ships this loop out of the box.</strong>
           </p>
         </section>
 
