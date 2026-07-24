@@ -28,7 +28,9 @@ function examplesRoot(): string {
 
 function exampleDir(example: string | undefined): string {
   const root = examplesRoot();
-  const names = readdirSync(root).filter((entry) => !entry.includes('.'));
+  const names = readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
 
   if (!example || !names.includes(example)) {
     console.error(`create-janux: pick an example with --example <name>: ${names.join(', ')}`);
