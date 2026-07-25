@@ -103,20 +103,24 @@ function report(url: string, scores: Record<string, number>): string[] {
 }
 
 const server = Bun.spawn(['bun', 'scripts/serve-dist.ts', dist, String(PORT)], { stdout: 'ignore', stderr: 'inherit' });
+const failures: string[] = [];
 
+// `process.exit` skips `finally`, which orphaned the server on every red run and
+// left the port held by a process serving a stale directory — so the exit lives
+// outside: the server is always reaped, then the status is reported.
 try {
   await waitForServer(`http://localhost:${PORT}/`);
   console.log(`\nlighthouse: ${PAGES.length} pages × ${runs} run(s), median, mobile, light scheme\n`);
-  const failures: string[] = [];
 
   for (const page of PAGES) failures.push(...report(page, await medianScores(page)));
 
   console.log(`\n  reports: ${reportDir}\n`);
-  if (failures.length > 0) {
-    console.error(`lighthouse gate failed:\n${failures.map((line) => `  - ${line}`).join('\n')}\n`);
-    process.exit(1);
-  }
-  console.log('lighthouse gate passed.\n');
 } finally {
   server.kill();
 }
+
+if (failures.length > 0) {
+  console.error(`lighthouse gate failed:\n${failures.map((line) => `  - ${line}`).join('\n')}\n`);
+  process.exit(1);
+}
+console.log('lighthouse gate passed.\n');
