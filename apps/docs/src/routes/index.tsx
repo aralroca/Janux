@@ -117,6 +117,7 @@ export default async function Home() {
             muted
             loop
             playsinline
+            controls
             preload="metadata"
             poster="/demo-poster.jpg"
             aria-label="A console driven in natural language: the agent invites a teammate, searches users, renames a field through the DOM fallback and builds a React Flow workflow, with a status chip per tool call and an animated ring on every element it touches"

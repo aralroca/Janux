@@ -4,12 +4,14 @@ import { PlaygroundShell } from './components/PlaygroundShell';
 import { SearchModal } from './components/SearchModal';
 import { ThemeToggle } from './components/ThemeToggle';
 import { setupCopyCode } from './copy-code';
+import { setupHeroVideo } from './hero-video';
 import { setupTocSpy } from './toc-spy';
 
 const client = boot({ defs: [DocsCopilot, PlaygroundShell, SearchModal, ThemeToggle], glow: true });
 
 setupTocSpy();
 setupCopyCode();
+setupHeroVideo();
 
 document.addEventListener('keydown', function closeCopilotOnEscape(event) {
   if (event.key !== 'Escape') return;
