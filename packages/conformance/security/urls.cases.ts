@@ -47,6 +47,15 @@ const BLOCKED = [
   ['data-svg', 'data:image/svg+xml,<svg onload="alert(1)"/>'],
   ['data-xhtml', 'data:application/xhtml+xml,<html/>'],
   ['data-xml', 'data:text/xml,<x/>'],
+  // Padding attacks. A sanitizer that slices a fixed window before stripping the
+  // ignorable characters lets these through, because the colon lands outside the
+  // window while the browser removes the padding and runs the URL anyway.
+  ['pad-55-tabs', `java${'\t'.repeat(55)}script:alert(1)`],
+  ['pad-200-tabs', `java${'\t'.repeat(200)}script:alert(1)`],
+  ['pad-2000-spaces', `java${' '.repeat(2000)}script:alert(1)`],
+  ['pad-leading-500-newlines', `${'\n'.repeat(500)}javascript:alert(1)`],
+  ['pad-between-every-letter', 'j\ta\tv\ta\ts\tc\tr\ti\tp\tt\t:alert(1)'],
+  ['pad-data-html-100-tabs', `data${'\t'.repeat(100)}:text/html,<script>alert(1)</script>`],
 ] as const;
 
 const ALLOWED = [

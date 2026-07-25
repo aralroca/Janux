@@ -106,23 +106,37 @@ const EXECUTABLE_SCHEME = /^(?:javascript|vbscript|livescript|mocha):/;
 /** `data:` is only dangerous for types the browser parses as a document. */
 const EXECUTABLE_DATA = /^data:(?:text\/html|text\/xml|image\/svg\+xml|application\/xhtml\+xml|application\/xml)/;
 
-/**
- * The longest thing either pattern can match is `data:application/xhtml+xml`, so
- * only the head of the value can decide. Normalizing the whole string would copy
- * it twice — 107µs and ~400KB of garbage per render for an inline `data:` image,
- * on a path that runs for every attribute of every element.
- */
-const SCHEME_WINDOW = 64;
+/** `data:application/xhtml+xml` is the longest thing either pattern can match. */
+const MEANINGFUL_HEAD = 48;
 
 /**
- * Whether following this URL would run script.
+ * The head of the value, lowercased, with the characters browsers ignore removed.
  *
- * The browser strips control characters and ASCII whitespace before parsing the
- * scheme and compares it case-insensitively, so `JaVaScRiPt:`, `java\tscript:`
- * and a leading NUL all execute. Normalize the same way before deciding.
+ * Counts only *meaningful* characters instead of slicing a fixed window first.
+ * Slicing first is a bypass: `'java' + '\t'.repeat(60) + 'script:alert(1)'` pushes
+ * the colon past any fixed offset, and the browser strips those tabs and runs it
+ * anyway. Scanning also avoids copying the value — for a 200KB inline `data:`
+ * image it stops after 48 characters instead of allocating two full copies
+ * (107µs and ~400KB of garbage per render, on a path that runs for every
+ * attribute of every element).
+ */
+function meaningfulHead(value: string): string {
+  let head = '';
+
+  for (let index = 0; index < value.length && head.length < MEANINGFUL_HEAD; index += 1) {
+    if (value.charCodeAt(index) > 0x20) head += value[index];
+  }
+
+  return head.toLowerCase();
+}
+
+/**
+ * Whether following this URL would run script. Browsers ignore control characters
+ * and ASCII whitespace when parsing a scheme and compare it case-insensitively,
+ * so `JaVaScRiPt:`, `java\tscript:` and a leading NUL all execute.
  */
 function isExecutableUrl(value: string): boolean {
-  const head = value.slice(0, SCHEME_WINDOW).replace(SCHEME_NOISE, '').toLowerCase();
+  const head = meaningfulHead(value);
 
   return EXECUTABLE_SCHEME.test(head) || EXECUTABLE_DATA.test(head);
 }
