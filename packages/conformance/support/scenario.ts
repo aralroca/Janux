@@ -1,0 +1,38 @@
+import { expect, it } from 'bun:test';
+import type { Case } from './case';
+
+/**
+ * A scripted scenario whose observable log *is* the assertion.
+ *
+ * Most framework bugs are about ordering and how many times something ran, not
+ * about a single return value — so the corpus encodes them as a script plus the
+ * exact event sequence it must produce. Errors are logged deliberately
+ * (`log.push('threw: ...')`), never swallowed.
+ */
+export interface Scenario {
+  run: (log: string[]) => void | Promise<void>;
+  expected: string[];
+}
+
+export type ScenarioCase = Case<Scenario>;
+
+/** One test per row, named by its id. */
+export function runScenarios(table: ScenarioCase[]): void {
+  it.each(table.map((row) => [row.id, row] as const))('%s', async (_id, row) => {
+    const log: string[] = [];
+
+    await row.run(log);
+
+    expect(log).toEqual(row.expected);
+  });
+}
+
+/** Records what a throwing call did, so "throws clearly" is an assertable event. */
+export function attempt(log: string[], label: string, fn: () => unknown): void {
+  try {
+    fn();
+    log.push(`${label}:ok`);
+  } catch (error) {
+    log.push(`${label}:threw:${(error as Error).message}`);
+  }
+}

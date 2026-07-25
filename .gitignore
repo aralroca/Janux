@@ -8,6 +8,7 @@ out/
 .env.*
 !.env.example
 coverage/
+.census-junit.xml
 PLAN-*.md
 apps/docs/public/search-index.json
 
