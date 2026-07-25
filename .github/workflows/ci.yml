@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+  # Deliberately unfiltered: every pull request, whatever its base. A
+  # `branches: [main]` filter here would stop testing PRs that target anything
+  # else, which is strictly less coverage than this.
   pull_request:
 
 jobs:
@@ -12,5 +15,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - run: bun run test
-      - run: bun run typecheck
+
+      # Unit + conformance corpus + docs truth guards, then types.
+      - name: Tests
+        run: bun run test
+      - name: Typecheck
+        run: bun run typecheck
+
+      # The examples end to end, against a real server.
+      - name: End-to-end
+        run: bun run test:e2e
+
+      # Prints the per-area count and fails if total coverage slips below the
+      # floor. This is what stops the corpus growing by permutation: rows that
+      # add tests without moving coverage no longer look like progress.
+      - name: Census and coverage floor
+        run: bun run test:census --min-coverage 0.93
