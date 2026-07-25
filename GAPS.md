@@ -98,6 +98,12 @@ otherwise:
   `true` with "below min 2". List-length bounds are therefore *not supported* —
   the docs define bounds as "length for strings, value for numbers", and adding a
   new capability was out of scope. Check the length inside the intent.
+- **Interpolation is one pass, driven by the placeholders.** A query value is
+  never re-scanned, so `t('{{a}}', { a: '{{b}}', b: secret })` yields the literal
+  `{{b}}`. A placeholder whose name is not an *own* key of the query is left
+  intact, which also means `{{toString}}` does not resolve off the prototype.
+  Placeholder names match `[\w$.-]+`; a query key outside that set is inert
+  rather than compiled into a pattern.
 - **A default is validated like any other value.** `int().default('nope')` used to
   pass the string straight through into state. It now fails with
   `expected int`. A default that violates a bound added later
