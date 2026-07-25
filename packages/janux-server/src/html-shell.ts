@@ -1,3 +1,7 @@
+import type { PageMeta } from 'janux';
+import { headTags } from './head-tags';
+import { safeAttr, safeJson } from './html-escape';
+
 export interface ShellI18n {
   locale: string;
   dir: 'ltr' | 'rtl';
@@ -11,6 +15,10 @@ export interface ShellOptions {
   description?: string;
   /** Document language when the app has no i18n. Defaults to `en`. */
   lang?: string;
+  /** The route's own `meta`: social tags, canonical, JSON-LD. */
+  meta?: PageMeta;
+  /** Origin the route's relative `image`/`canonical` resolve against. */
+  siteUrl?: string;
   snapshots: { uri: string; state: Record<string, unknown>; sources?: Record<string, unknown> }[];
   islandNames: string[];
   islandModules?: Record<string, string>;
@@ -19,14 +27,6 @@ export interface ShellOptions {
   stylesheets?: string[];
   favicon?: string;
   i18n?: ShellI18n;
-}
-
-function safeJson(value: unknown): string {
-  return JSON.stringify(value).replace(/</g, '\\u003c');
-}
-
-function safeAttr(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
 function stateScripts(snapshots: ShellOptions['snapshots']): string {
@@ -82,6 +82,13 @@ export function htmlDocument(options: ShellOptions): string {
   const i18nScript = options.i18n?.payload
     ? `<script type="application/janux+i18n" id="jx-i18n">${safeJson(options.i18n.payload)}</script>`
     : '';
+  // Social tags, canonical and JSON-LD go last for the same reason the
+  // description does: they are the most page-dependent nodes in the head.
+  const social = headTags(options.meta, {
+    siteUrl: options.siteUrl,
+    title: options.title,
+    description: options.description,
+  });
 
   return [
     '<!doctype html>',
@@ -90,7 +97,7 @@ export function htmlDocument(options: ShellOptions): string {
     // links (favicon, stylesheets) sit before the conditional description meta,
     // so a page that omits the description never shifts the stylesheet's
     // position — it stays put across the diff instead of being moved/re-resolved.
-    `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${favicon}${manifestLink}${styleLinks}${description}</head>`,
+    `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${favicon}${manifestLink}${styleLinks}${description}${social}</head>`,
     '<body>',
     options.html,
     i18nScript,

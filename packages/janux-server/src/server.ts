@@ -8,6 +8,7 @@ import {
   type Ctx,
   type I18n,
   type I18nConfig,
+  type PageMeta,
   type RenderResult,
 } from 'janux';
 import { QueryClient } from 'janux/query';
@@ -47,6 +48,8 @@ export interface ServerOptions {
   islandModules?: Record<string, string>;
   title?: string;
   lang?: string;
+  /** Origin a route's relative `image`/`canonical` resolve against, and the sitemap's base. */
+  siteUrl?: string;
   stylesheets?: string[];
   favicon?: string;
   llmsTxt?: LlmsTxtConfig;
@@ -74,7 +77,7 @@ async function resolveMeta(
   rawMeta: unknown,
   ctx: Ctx,
   params: Record<string, string>,
-): Promise<{ title?: string; description?: string } | undefined> {
+): Promise<PageMeta | undefined> {
   try {
     return typeof rawMeta === 'function' ? await rawMeta({ ctx, params }) : (rawMeta as any);
   } catch {
@@ -345,6 +348,8 @@ export function createJanuxServer(options: ServerOptions = {}) {
       title: result.meta?.title ?? options.title,
       description: result.meta?.description,
       lang: options.lang,
+      meta: result.meta,
+      siteUrl: options.siteUrl,
       snapshots: result.snapshots,
       islandNames,
       islandModules: options.islandModules,

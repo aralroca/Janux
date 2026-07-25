@@ -54,10 +54,10 @@ function snapshotScripts(snapshots: any[]): string {
     .join('');
 }
 
-async function pageHtml(title: string, node: unknown): Promise<string> {
+async function pageHtml(title: string, node: unknown, head = ''): Promise<string> {
   const { html, snapshots } = await renderToString(node, { storeDefs: { theme } });
 
-  return `<!doctype html><html><head><title>${title}</title></head><body>${html}${snapshotScripts(snapshots)}</body></html>`;
+  return `<!doctype html><html><head><title>${title}</title>${head}</head><body>${html}${snapshotScripts(snapshots)}</body></html>`;
 }
 
 describe('SPA navigation (streamed diff)', () => {
@@ -227,6 +227,52 @@ describe('SPA navigation (streamed diff)', () => {
 
     expect(document.querySelector('h1')!.textContent).toBe('B');
     expect(style.isConnected).toBe(true);
+  });
+
+  /**
+   * Social tags and structured data are per-page, and a stale one is worse than
+   * a missing one: a shared link would advertise the previous page's card. They
+   * carry stable ids so the diff matches them by identity — and, unlike runtime
+   * stylesheets, nothing resurrects them, so leaving a page must drop them.
+   */
+  it('drops the previous page social tags and JSON-LD, and updates the ones that stay', async () => {
+    const socialHead =
+      '<link rel="canonical" id="jx-canonical" href="https://janux.dev/a">' +
+      '<meta property="og:title" id="jx-og-title" content="Page A">' +
+      '<meta property="og:image" id="jx-og-image" content="https://janux.dev/a.png">' +
+      '<script type="application/ld+json" id="jx-jsonld-0">{"name":"A"}</script>';
+
+    document.write(await pageHtml('A', jsx('h1', { children: 'A' }), socialHead));
+    document.close();
+    const client = boot({ defs: [] });
+
+    expect(document.querySelectorAll('script[type="application/ld+json"]').length).toBe(1);
+
+    // a page that declares none of them
+    (globalThis as any).fetch = mock(async () => ({
+      ok: true,
+      text: async () => await pageHtml('B', jsx('h1', { children: 'B' })),
+    }));
+    await client.navigate('/b');
+
+    expect(document.querySelector('link[rel="canonical"]')).toBeNull();
+    expect(document.querySelectorAll('meta[property^="og:"]').length).toBe(0);
+    expect(document.querySelectorAll('script[type="application/ld+json"]').length).toBe(0);
+
+    // and back to a page that declares its own: updated in place, not duplicated
+    (globalThis as any).fetch = mock(async () => ({
+      ok: true,
+      text: async () =>
+        await pageHtml(
+          'C',
+          jsx('h1', { children: 'C' }),
+          '<meta property="og:title" id="jx-og-title" content="Page C">',
+        ),
+    }));
+    await client.navigate('/c');
+
+    expect(document.querySelectorAll('meta[property="og:title"]').length).toBe(1);
+    expect(document.querySelector('meta[property="og:title"]')!.getAttribute('content')).toBe('Page C');
   });
 
   it('buffers the response into a single chunk before diffing (deterministic swap)', async () => {

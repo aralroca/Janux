@@ -24,6 +24,7 @@ export interface JanuxAppConfig {
   favicon?: string;
   title?: string;
   lang?: string;
+  siteUrl?: string;
   llmsTxt?: { title?: string; description?: string };
   output: JanuxOutput;
 }
@@ -73,6 +74,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     favicon: optional(resolve(root, 'public/favicon.svg')) ? '/favicon.svg' : undefined,
     title: options.title,
     lang: options.lang,
+    siteUrl: options.siteUrl,
     llmsTxt: options.llmsTxt,
     output: options.output ?? 'bun',
   };
@@ -89,8 +91,8 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
 export function shellOptions(
   app: JanuxAppConfig,
   stylesheets: string[],
-): Pick<ServerOptions, 'title' | 'lang' | 'favicon' | 'stylesheets'> {
-  return { title: app.title, lang: app.lang, favicon: app.favicon, stylesheets };
+): Pick<ServerOptions, 'title' | 'lang' | 'siteUrl' | 'favicon' | 'stylesheets'> {
+  return { title: app.title, lang: app.lang, siteUrl: app.siteUrl, favicon: app.favicon, stylesheets };
 }
 
 export function apiFiles(serverDir: string): string[] {
