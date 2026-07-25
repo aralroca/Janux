@@ -25,6 +25,7 @@ export interface JanuxAppConfig {
   title?: string;
   lang?: string;
   siteUrl?: string;
+  inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
   output: JanuxOutput;
 }
@@ -75,6 +76,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     title: options.title,
     lang: options.lang,
     siteUrl: options.siteUrl,
+    inlineStyles: options.inlineStyles,
     llmsTxt: options.llmsTxt,
     output: options.output ?? 'bun',
   };

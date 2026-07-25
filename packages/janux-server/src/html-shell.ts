@@ -25,6 +25,8 @@ export interface ShellOptions {
   runtimeUrl?: string;
   manifestUrl?: string;
   stylesheets?: string[];
+  /** CSS inlined as `<style>` instead of linked: one less render-blocking round trip. */
+  inlineStyles?: string[];
   favicon?: string;
   i18n?: ShellI18n;
 }
@@ -64,9 +66,16 @@ export function htmlDocument(options: ShellOptions): string {
   // whose head has a different node count (e.g. a description meta present on
   // one page, absent on another) shifts every following node, making the diff
   // re-resolve the stylesheet link — a brief unstyled flash. See navigate.ts.
-  const styleLinks = (options.stylesheets ?? [])
-    .map((href, index) => `<link rel="stylesheet" id="jx-style-${index}" href="${safeAttr(href)}">`)
-    .join('');
+  // Inlined CSS takes the same `jx-style-N` ids as the links it replaces: the
+  // diff keys on the id, not on the element name.
+  const styleLinks = [
+    ...(options.stylesheets ?? []).map(
+      (href, index) => `<link rel="stylesheet" id="jx-style-${index}" href="${safeAttr(href)}">`,
+    ),
+    ...(options.inlineStyles ?? []).map(
+      (css, index) => `<style id="jx-style-${(options.stylesheets ?? []).length + index}">${css}</style>`,
+    ),
+  ].join('');
   const description = options.description
     ? `<meta name="description" id="jx-description" content="${safeAttr(options.description)}">`
     : '';

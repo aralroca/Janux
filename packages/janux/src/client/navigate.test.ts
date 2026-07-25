@@ -230,6 +230,30 @@ describe('SPA navigation (streamed diff)', () => {
   });
 
   /**
+   * With `inlineStyles` the app sheet is a `<style>` in every page's HTML, not a
+   * runtime-injected one. `keepRuntimeStyles` snapshots every style in the head
+   * and re-attaches whatever the diff removed, so the inlined sheet must not
+   * come back as a second copy after the incoming page brings its own.
+   */
+  it('keeps exactly one inlined stylesheet across a navigation', async () => {
+    const sheet = '<style id="jx-style-0">body{color:red}</style>';
+
+    document.write(await pageHtml('A', jsx('h1', { children: 'A' }), sheet));
+    document.close();
+    const client = boot({ defs: [] });
+
+    (globalThis as any).fetch = mock(async () => ({
+      ok: true,
+      text: async () => await pageHtml('B', jsx('h1', { children: 'B' }), sheet),
+    }));
+    await client.navigate('/b');
+
+    expect(document.querySelector('h1')!.textContent).toBe('B');
+    expect(document.querySelectorAll('style#jx-style-0').length).toBe(1);
+    expect(document.querySelectorAll('head style').length).toBe(1);
+  });
+
+  /**
    * Social tags and structured data are per-page, and a stale one is worse than
    * a missing one: a shared link would advertise the previous page's card. They
    * carry stable ids so the diff matches them by identity — and, unlike runtime

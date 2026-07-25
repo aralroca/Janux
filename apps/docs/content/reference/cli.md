@@ -104,6 +104,7 @@ Everything is optional — the defaults are the [conventional layout](#project-c
 | `lang` | `'en'` | `<html lang>` for the whole app. An [i18n](/docs/guide/i18n) app ignores it: each page declares its own locale and direction |
 | `siteUrl` | — | Public origin (`https://janux.dev`). Resolves a route's relative `image`/`canonical` into the absolute URLs Open Graph needs (see [PageMeta](/docs/reference/server-api)), and opts into `/sitemap.xml` + `/robots.txt` |
 | `llmsTxt` | off | `{ title?, description? }` — opt into serving `GET /llms.txt` |
+| `inlineStyles` | `false` | Inline the built stylesheet into every page instead of linking it: one less render-blocking round trip before the first paint, at the cost of a cacheable request. Production only — dev keeps the link so CSS hot-reload works |
 | `output` | `'bun'` | `'bun'` or `'static'` — see [output](#output) |
 | `routesDir` | `src/routes` | File-system routing root |
 | `serverDir` | `src/server` | Where `*.api.ts` modules are discovered |

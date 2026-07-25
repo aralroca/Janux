@@ -1,12 +1,39 @@
-import { buildManifest, component, intent, schema, int } from 'janux';
+import { buildManifest, component, intent, schema, int, type PageMeta } from 'janux';
 import { Layout } from '../components/Layout';
 import { DocsCopilot } from '../components/DocsCopilot';
 import { renderMarkdown } from '../server/markdown';
+import { absolute, SOCIAL_IMAGE } from '../site';
 
-export const meta = {
+const DESCRIPTION =
+  'One component, two faces: a live view for humans, typed MCP tools & resources for AI agents — generated from the same definition.';
+
+export const meta: PageMeta = {
   title: 'Janux — the agent-native fullstack UI framework',
-  description:
-    'One component, two faces: a live view for humans, typed MCP tools & resources for AI agents — generated from the same definition.',
+  description: DESCRIPTION,
+  canonical: '/',
+  image: SOCIAL_IMAGE,
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Janux',
+      url: absolute('/'),
+      description: DESCRIPTION,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareSourceCode',
+      name: 'Janux',
+      description: DESCRIPTION,
+      codeRepository: 'https://github.com/aralroca/Janux',
+      programmingLanguage: 'TypeScript',
+      license: 'https://opensource.org/licenses/MIT',
+      author: { '@type': 'Person', name: 'Aral Roca Gómez', url: 'https://aralroca.com' },
+    },
+  ],
+  // The hero video's poster is the largest paint on this page; without the hint
+  // the browser only discovers it after parsing the <video>.
+  head: [{ tag: 'link', attrs: { rel: 'preload', as: 'image', href: SOCIAL_IMAGE, fetchpriority: 'high' } }],
 };
 
 const SAMPLE_CODE = `import { component, intent, schema, int } from 'janux';

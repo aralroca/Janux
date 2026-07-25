@@ -89,6 +89,26 @@ describe('prodServerOptions shell fields', () => {
     expect(options.title).toBe('Fixture');
     expect(options.lang).toBe('es');
     expect(options.stylesheets).toEqual(['/styles.css']);
+    expect(options.inlineStyles).toBeUndefined();
+  });
+
+  it('inlines the built sheet instead of linking it when asked', async () => {
+    const root = appRoot({ inlineStyles: true });
+
+    mkdirSync(join(root, 'dist/client'), { recursive: true });
+    writeFileSync(join(root, 'dist/client/styles.css'), 'body{color:red}');
+    const options = await prodServerOptions(root);
+
+    expect(options.inlineStyles).toEqual(['body{color:red}']);
+    expect(options.stylesheets).toEqual([]);
+  });
+
+  /** Before the first build there is no sheet to read; linking it beats shipping none. */
+  it('falls back to the link when the built sheet is not there yet', async () => {
+    const options = await prodServerOptions(appRoot({ inlineStyles: true }));
+
+    expect(options.inlineStyles).toBeUndefined();
+    expect(options.stylesheets).toEqual(['/styles.css']);
   });
 });
 

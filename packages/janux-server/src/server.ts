@@ -52,6 +52,8 @@ export interface ServerOptions {
   /** Origin a route's relative `image`/`canonical` resolve against, and the sitemap's base. */
   siteUrl?: string;
   stylesheets?: string[];
+  /** CSS inlined into every page instead of linked (see `inlineStyles` in the app config). */
+  inlineStyles?: string[];
   favicon?: string;
   llmsTxt?: LlmsTxtConfig;
   agents?: AgentsConfig;
@@ -357,6 +359,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
       manifestUrl: options.staticExport ? undefined : `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
       stylesheets: options.stylesheets,
+      inlineStyles: options.inlineStyles,
       favicon: options.favicon,
       i18n: shellI18n(locale, result),
     });

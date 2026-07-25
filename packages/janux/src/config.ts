@@ -15,6 +15,12 @@ export interface JanuxConfig {
    * base for `sitemap.xml` / `robots.txt`.
    */
   siteUrl?: string;
+  /**
+   * Inline the built stylesheet into every page instead of linking it, trading a
+   * cacheable request for one less render-blocking round trip before the first
+   * paint. Production only — dev keeps the link so CSS hot-reload still works.
+   */
+  inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
   output?: JanuxOutput;
 }
