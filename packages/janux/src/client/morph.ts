@@ -108,7 +108,11 @@ function morphChildren(from: Element, to: Element): void {
 }
 
 function morphNode(from: Node, to: Node): void {
-  if (from.nodeType === Node.TEXT_NODE) {
+  // Text *and* comments: `sameKind` reuses a comment node, so bailing out on it
+  // left the old content in place — a comment whose text changed never updated.
+  // Janux itself renders no comment markers, but `dangerHTML` and hand-written
+  // SSR markup both carry them.
+  if (from.nodeType === Node.TEXT_NODE || from.nodeType === Node.COMMENT_NODE) {
     if (from.textContent !== to.textContent) from.textContent = to.textContent;
 
     return;

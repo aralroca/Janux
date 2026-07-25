@@ -77,12 +77,38 @@ function evaluateDerived(readers: Record<string, unknown>): Record<string, unkno
   return untrack(() => JSON.parse(JSON.stringify({ ...readers })));
 }
 
+/**
+ * A snapshot is untrusted input.
+ *
+ * It travels inside the served HTML and is read back on resume, so anything that
+ * can influence that markup — a poisoned cache, a reflected value, a user editing
+ * the DOM before boot — used to become state directly. Unvalidated, an injected
+ * `isAdmin: true` was indistinguishable from declared state, wrong types survived,
+ * and an array could *replace* the state object. The same state is what a `ui://`
+ * resource shows the agent, so a poisoned snapshot lied to both faces at once.
+ *
+ * `validate` strips undeclared keys and fills defaults; a snapshot that cannot be
+ * validated at all is discarded in favour of defaults rather than half-trusted.
+ */
+function resolveInitial(def: ComponentDef, initial?: Record<string, unknown>): Record<string, unknown> {
+  if (!def.state) return initial ?? {};
+  const defaults = () => buildDefault(def.state!) as Record<string, unknown>;
+
+  if (initial === undefined) return defaults();
+  const result = validate(def.state, initial);
+
+  if (result.ok) return result.value as Record<string, unknown>;
+  console.warn(`Janux: discarded an invalid state snapshot for "${def.name}" — ${result.errors[0]?.message}`);
+
+  return defaults();
+}
+
 /** Creates a live component/store instance. Call `attach()` to start sources, effects and lifecycle. */
 export function createInstance(def: ComponentDef, options: InstanceOptions = {}): JanuxInstance {
   const ctx = options.ctx ?? {};
   const bus = options.bus ?? createBus();
   const tracker = createPendingTracker();
-  const initial = options.initial ?? (def.state ? (buildDefault(def.state) as any) : {});
+  const initial = resolveInitial(def, options.initial);
   const gate = createGate();
   const state = createReactiveState(initial as Record<string, unknown>, gate);
   const sourcesRuntime = createSources(def.sources, ctx, bus, tracker, options.initialSources);
