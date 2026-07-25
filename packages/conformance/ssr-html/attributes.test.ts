@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect } from 'bun:test';
 import { renderAttrs } from '../../janux/src/render/html';
+import { runCases } from '../support/scenario';
 import { ATTRIBUTE_CASES } from './attributes.cases';
 
-describe('attribute serialization', () => {
-  it.each(ATTRIBUTE_CASES.map((row) => [row.id, row] as const))('%s', (_id, row) => {
+describe('attribute serialization', () =>
+  runCases(ATTRIBUTE_CASES, (row) => {
     expect(renderAttrs(row.props)).toBe(row.expected);
-  });
-});
+  }));

@@ -16,9 +16,19 @@ export interface Scenario {
 
 export type ScenarioCase = Case<Scenario>;
 
-/** One test per row, named by its id. */
+/**
+ * One test per row, named by its id.
+ *
+ * Every corpus runner goes through here so the "test name is the case id"
+ * convention holds in one place — `scripts/test-census.ts` groups by it and
+ * `no-duplicate-cases.test.ts` enforces its shape.
+ */
+export function runCases<T>(table: Case<T>[], check: (row: Case<T>) => void | Promise<void>): void {
+  it.each(table.map((row) => [row.id, row] as const))('%s', (_id, row) => check(row));
+}
+
 export function runScenarios(table: ScenarioCase[]): void {
-  it.each(table.map((row) => [row.id, row] as const))('%s', async (_id, row) => {
+  runCases(table, async (row) => {
     const log: string[] = [];
 
     await row.run(log);

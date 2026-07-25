@@ -315,7 +315,7 @@ export const REACTIVE_STATE_CASES: ScenarioCase[] = [
       attempt(log, 'write', () => mutate(() => (state.proxy.x = cyclic)));
       log.push('survived');
     },
-    expected: ['write:threw:Janux: cannot store a cycle in state ("x")', 'survived'],
+    expected: ['write:threw:Janux: cannot store a cycle in state ("x.self")', 'survived'],
   },
   {
     id: 'state-a-value-shared-by-two-siblings-is-not-mistaken-for-a-cycle',
@@ -340,7 +340,7 @@ export const REACTIVE_STATE_CASES: ScenarioCase[] = [
       attempt(log, 'write', () => mutate(() => (state.proxy.deep = { wrap: inner })));
       log.push('survived');
     },
-    expected: ['write:threw:Janux: cannot store a cycle in state ("deep")', 'survived'],
+    expected: ['write:threw:Janux: cannot store a cycle in state ("deep.wrap.back.up")', 'survived'],
   },
   {
     id: 'state-a-cyclic-array-is-rejected',
@@ -353,7 +353,7 @@ export const REACTIVE_STATE_CASES: ScenarioCase[] = [
       attempt(log, 'write', () => mutate(() => (state.proxy.items = items)));
       log.push('survived');
     },
-    expected: ['write:threw:Janux: cannot store a cycle in state ("items")', 'survived'],
+    expected: ['write:threw:Janux: cannot store a cycle in state ("items.1")', 'survived'],
   },
   {
     id: 'state-pushing-a-cyclic-value-into-an-array-is-rejected',
@@ -366,7 +366,7 @@ export const REACTIVE_STATE_CASES: ScenarioCase[] = [
       attempt(log, 'push', () => mutate(() => state.proxy.items.push(cyclic)));
       log.push(`length:${state.snapshot().items.length}`);
     },
-    expected: ['push:threw:Janux: cannot store a cycle in state ("items")', 'length:0'],
+    expected: ['push:threw:Janux: cannot store a cycle in state ("items.self")', 'length:0'],
   },
   {
     id: 'state-a-dotted-key-keeps-its-own-tracking-identity',

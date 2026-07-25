@@ -45,9 +45,11 @@ export function serialize(value: unknown): string {
 
 /** The behavioural fingerprint of a row: everything except its identity. */
 export function caseKey(row: object): string {
-  const behaviour = Object.entries(row).filter(([key]) => !IDENTITY_KEYS.has(key));
-
-  return serialize(Object.fromEntries(behaviour));
+  return Object.entries(row)
+    .filter(([key]) => !IDENTITY_KEYS.has(key))
+    .sort(([left], [right]) => (left < right ? -1 : 1))
+    .map(([key, value]) => `${key}:${serialize(value)}`)
+    .join(',');
 }
 
 /** True when `value` looks like a corpus table, so the guard can walk arbitrary exports. */

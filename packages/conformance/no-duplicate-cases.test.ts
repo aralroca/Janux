@@ -50,25 +50,22 @@ describe('corpus integrity', () => {
   });
 
   it('names every id in kebab-case', () => {
-    expect(rows.filter(({ row }) => !ID_SHAPE.test(row.id)).map(({ row }) => row.id)).toEqual([]);
+    expect(offenders(ID_SHAPE, (row) => row.id)).toEqual([]);
   });
 
   it('credits a source for every case', () => {
-    expect(rows.filter(({ row }) => !SRC_SHAPE.test(row.src)).map(({ row }) => row.id)).toEqual([]);
+    expect(offenders(SRC_SHAPE, (row) => row.src)).toEqual([]);
   });
 });
 
+/** Ids of the rows whose `pick`ed field does not match `shape`. */
+function offenders(shape: RegExp, pick: (row: Case<object>) => string): string[] {
+  return rows.filter(({ row }) => !shape.test(pick(row))).map(({ row }) => row.id);
+}
+
 /** Reports collisions as `key → tables` so a failure points at both offenders. */
 function duplicatesBy(all: Row[], keyOf: (row: Row) => string): string[] {
-  const seen = new Map<string, string[]>();
-
-  all.forEach((entry) => {
-    const key = keyOf(entry);
-
-    seen.set(key, [...(seen.get(key) ?? []), entry.table]);
-  });
-
-  return [...seen.entries()]
-    .filter(([, tables]) => tables.length > 1)
-    .map(([key, tables]) => `${key.slice(0, 120)} → ${tables.join(', ')}`);
+  return [...Map.groupBy(all, keyOf)]
+    .filter(([, entries]) => entries.length > 1)
+    .map(([key, entries]) => `${key.slice(0, 120)} → ${entries.map((entry) => entry.table).join(', ')}`);
 }

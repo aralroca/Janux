@@ -1,5 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect } from 'bun:test';
 import { renderAttrs } from '../../janux/src/render/html';
+import { runCases } from '../support/scenario';
 import { URL_SCHEME_CASES } from './urls.cases';
 
 /**
@@ -22,8 +23,8 @@ afterAll(() => {
   console.warn = original;
 });
 
-describe('executable URL schemes', () => {
-  it.each(URL_SCHEME_CASES.map((row) => [row.id, row] as const))('%s', (_id, row) => {
+describe('executable URL schemes', () =>
+  runCases(URL_SCHEME_CASES, (row) => {
     warnings.length = 0;
     const rendered = renderAttrs({ [row.attr]: row.value });
 
@@ -36,5 +37,4 @@ describe('executable URL schemes', () => {
     }
     expect(rendered.startsWith(` ${row.attr}="`)).toBe(true);
     expect(warnings).toHaveLength(0);
-  });
-});
+  }));

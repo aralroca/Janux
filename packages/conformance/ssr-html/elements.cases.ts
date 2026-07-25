@@ -1,5 +1,5 @@
 import { Fragment, jsx } from 'janux';
-import type { Case } from '../support/case';
+import type { TreeRow } from '../support/html';
 
 /**
  * Element and tree serialization through `renderToString`.
@@ -11,15 +11,6 @@ import type { Case } from '../support/case';
  * allowed to bypass escaping. Cases follow `react:ReactDOMServerIntegrationElements`
  * and `vue:ssrRender`.
  */
-export interface TreeCase {
-  /** Built lazily so each row renders a fresh tree. */
-  node: () => unknown;
-  /** Exactly the HTML `renderToString` must produce. */
-  expected: string;
-}
-
-export type TreeRow = Case<TreeCase>;
-
 const el = (tag: string, props: Record<string, unknown> = {}) => jsx(tag, props);
 const text = (tag: string, children: unknown) => jsx(tag, { children });
 

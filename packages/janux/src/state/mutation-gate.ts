@@ -1,3 +1,5 @@
+import { displayPath } from './path';
+
 export interface MutationGate {
   depth: number;
 }
@@ -33,11 +35,15 @@ export function withGate<T>(gate: MutationGate, fn: () => T): T {
   return result;
 }
 
+/**
+ * `path` arrives in its escaped tracking form; it is unescaped only to build the
+ * message, so the open-gate path (every write) never pays for the replace.
+ */
 export function assertMutable(gate: MutationGate, path: string): void {
   if (gate.depth > 0) return;
 
   throw new Error(
-    `Janux: illegal mutation of "${path}" outside an intent, effect or event handler. ` +
+    `Janux: illegal mutation of "${displayPath(path)}" outside an intent, effect or event handler. ` +
       'State can only change inside declared run() bodies (RFC §4.4).',
   );
 }

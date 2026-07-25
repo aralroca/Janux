@@ -104,7 +104,7 @@ export const MATCH_CASES: MatchRow[] = [
   { id: 'route-encoded-dot-dot-is-decoded-into-a-param', src: 'janux', path: '/blog/%2E%2E', pattern: '/blog/[slug]', params: { slug: '..' } },
   { id: 'route-single-dot-is-captured-as-a-param', src: 'janux', path: '/blog/.', pattern: '/blog/[slug]', params: { slug: '.' } },
   { id: 'route-traversal-in-a-catchall-stays-in-the-param', src: 'janux', path: '/files/../../etc/passwd', pattern: '/files/[...path]', params: { path: '../../etc/passwd' } },
-  { id: 'route-nul-byte-in-a-param-is-decoded-not-truncated', src: 'janux', path: '/blog/a%00b', pattern: '/blog/[slug]', params: { slug: 'a b' } },
+  { id: 'route-nul-byte-in-a-param-is-decoded-not-truncated', src: 'janux', path: '/blog/a%00b', pattern: '/blog/[slug]', params: { slug: 'a\u0000b' } },
   { id: 'route-newline-in-a-param', src: 'janux', path: '/blog/a%0Ab', pattern: '/blog/[slug]', params: { slug: 'a\nb' } },
   { id: 'route-param-may-look-like-a-segment-pattern', src: 'janux', path: '/blog/[slug]', pattern: '/blog/[slug]', params: { slug: '[slug]' } },
   { id: 'route-param-may-be-a-very-long-string', src: 'janux', path: `/blog/${'a'.repeat(2000)}`, pattern: '/blog/[slug]', params: { slug: 'a'.repeat(2000) } },

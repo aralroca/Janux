@@ -102,6 +102,52 @@ than close a hole. `packages/conformance/security/raw-sinks.cases.ts` pins the
 behaviour so it is a known sink rather than a surprise. If Janux ever grows a
 sanitizer, `srcdoc` is where it belongs.
 
+### The corpus reaches into janux's internals for two modules
+
+`packages/conformance/ssr-html/attributes.test.ts` and `security/urls.test.ts`
+import `renderAttrs` from `../../janux/src/render/html`, and
+`state/reactive-state.cases.ts` imports `createReactiveState`/`createGate` the
+same way. Neither is a public export, so the corpus is coupled to janux's file
+layout: moving `render/html.ts` breaks conformance with no public-API change.
+
+Everything else in the corpus goes through `'janux'` / `'@janux/server'`, and
+`security/raw-sinks.cases.ts` deliberately proves the same area *can* be covered
+through public `renderToString`. The 200-odd attribute rows assert
+`renderAttrs`'s exact output (`' id="x"'`, leading space included), which is a
+sharper contract than the surrounding element HTML — routing them through
+`renderToString` would rewrite every row and blunt them. Left as-is; if the
+coupling ever bites, the honest fix is an explicit `"./internal"` subpath in
+janux's `exports` so it is declared rather than incidental.
+
+### `useDom()` is corpus-only, so ten client tests still inline the pair
+
+`packages/conformance/support/dom.ts` is described as the single Happy-DOM
+registration point, and it is — for the corpus. The ten pre-existing files under
+`packages/janux/src/client/*.test.ts` and `interop/foreign.test.ts` still inline
+their own `beforeAll(register)`/`afterAll(unregister)`, because `janux` does not
+depend on the private `@janux/conformance`. Unifying them means moving the helper
+into `packages/janux/src/test-support/` and touching ten files that this work
+otherwise has no reason to open.
+
+### `decodeSegment` is duplicated in janux-vite
+
+`packages/janux-vite/src/static-files.ts` already had the same
+`try { decodeURIComponent } catch { return undefined }` guard with the same
+"malformed escape ⇒ no match" policy. Sharing it would mean exporting a
+`safeDecode` from `@janux/server` and adding a dependency edge for five lines,
+which costs more than the duplication. Worth remembering if a third caller
+appears, or if the policy ever hardens (e.g. also rejecting a decoded `..`).
+
+### A state write costs ~16% more than before
+
+Measured on this machine: 125 → 145 ns for a scalar write, while a four-deep
+read went 235 → 222 ns (6% faster, from hoisting the duplicated `childPath`).
+The extra 20ns buys the cycle check and the path escaping — both correctness
+fixes — and reads are far more frequent than writes. Two earlier versions of the
+change cost much more and were fixed rather than accepted: a declarative fold
+over the path made `parentOf` 98x slower, and a `seen = new Set()` default
+parameter allocated a Set on every write including the scalar case.
+
 ### SVG namespaced attributes are silently dropped
 
 `VALID_ATTR_NAME` (`/^[a-zA-Z][\w-]*$/`) rejects any name containing a colon, so

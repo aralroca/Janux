@@ -107,6 +107,14 @@ const EXECUTABLE_SCHEME = /^(?:javascript|vbscript|livescript|mocha):/;
 const EXECUTABLE_DATA = /^data:(?:text\/html|text\/xml|image\/svg\+xml|application\/xhtml\+xml|application\/xml)/;
 
 /**
+ * The longest thing either pattern can match is `data:application/xhtml+xml`, so
+ * only the head of the value can decide. Normalizing the whole string would copy
+ * it twice — 107µs and ~400KB of garbage per render for an inline `data:` image,
+ * on a path that runs for every attribute of every element.
+ */
+const SCHEME_WINDOW = 64;
+
+/**
  * Whether following this URL would run script.
  *
  * The browser strips control characters and ASCII whitespace before parsing the
@@ -114,23 +122,22 @@ const EXECUTABLE_DATA = /^data:(?:text\/html|text\/xml|image\/svg\+xml|applicati
  * and a leading NUL all execute. Normalize the same way before deciding.
  */
 function isExecutableUrl(value: string): boolean {
-  const normalized = value.replace(SCHEME_NOISE, '').toLowerCase();
+  const head = value.slice(0, SCHEME_WINDOW).replace(SCHEME_NOISE, '').toLowerCase();
 
-  return EXECUTABLE_SCHEME.test(normalized) || EXECUTABLE_DATA.test(normalized);
+  return EXECUTABLE_SCHEME.test(head) || EXECUTABLE_DATA.test(head);
 }
 
 /**
- * Dropped, not escaped: entity-escaping does nothing to a scheme, and Janux is
- * agent-native — a tool call can put a value into state that a human later
- * clicks. Guards gate which intent may run, not what the value it stores says,
- * so the render is the only place this can be stopped.
+ * Entity-escaping does nothing to a scheme, so these are dropped instead. Janux
+ * is agent-native: a tool call can put a value into state that a human later
+ * clicks, and guards gate which intent may run rather than what the value it
+ * stores says — so the render is the only place this can be stopped.
+ *
+ * `typeof` is tested before the Set so an ordinary boolean or numeric attribute
+ * fails out without allocating a lowercased copy of its name.
  */
-function blockedUrl(name: string, value: unknown): boolean {
-  if (!URL_ATTRS.has(name.toLowerCase()) || typeof value !== 'string') return false;
-  if (!isExecutableUrl(value)) return false;
-  console.warn(`Janux: blocked an executable URL in "${name}" — ${value.slice(0, 40)}`);
-
-  return true;
+function isBlockedUrl(name: string, value: unknown): value is string {
+  return typeof value === 'string' && URL_ATTRS.has(name.toLowerCase()) && isExecutableUrl(value);
 }
 
 /** Maps a JSX prop to an HTML attribute pair; `on`/`intent`/`onX` become data markers for delegation. */
@@ -144,7 +151,11 @@ function propToAttr(name: string, value: unknown): [string, unknown] | undefined
   if (name === 'style' && isStyleObject(value)) return ['style', styleText(value) || undefined];
   if (typeof value === 'function') return undefined;
   if (!VALID_ATTR_NAME.test(name)) return undefined;
-  if (blockedUrl(name, value)) return undefined;
+  if (isBlockedUrl(name, value)) {
+    console.warn(`Janux: blocked an executable URL in "${name}" — ${value.slice(0, 40)}`);
+
+    return undefined;
+  }
 
   return [name, value];
 }

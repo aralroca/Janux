@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { matchRoute } from './match-segments';
 
 export interface Route {
   pattern: string;
@@ -20,7 +21,7 @@ export type Matcher = (value: string) => boolean;
 
 type SegmentKind = 'static' | 'typed' | 'dynamic' | 'catchall' | 'optional';
 
-interface Segment {
+export interface Segment {
   raw: string;
   kind: SegmentKind;
   name?: string;
@@ -116,57 +117,6 @@ function compareRoutes(a: Route, b: Route): number {
   return a.pattern.localeCompare(b.pattern);
 }
 
-/**
- * A malformed percent-escape cannot be a valid param value, so the segment
- * simply does not match. `decodeURIComponent` throws on `/%`, `/%zz` and any
- * truncated multi-byte escape — reachable by any client, so letting it escape
- * turns a 404 into a 500.
- */
-function decodeSegment(raw: string): string | undefined {
-  try {
-    return decodeURIComponent(raw);
-  } catch {
-    return undefined;
-  }
-}
-
-function matchRoute(
-  route: Route,
-  pathSegments: string[],
-  matchers: Record<string, Matcher>,
-): Record<string, string> | undefined {
-  const params: Record<string, string> = {};
-  const { segments } = route;
-  const last = segments[segments.length - 1];
-  const isRest = last?.kind === 'catchall' || last?.kind === 'optional';
-  const fixed = isRest ? segments.length - 1 : segments.length;
-  const minLength = last?.kind === 'catchall' ? fixed + 1 : fixed;
-
-  if (isRest ? pathSegments.length < minLength : pathSegments.length !== fixed) return undefined;
-  for (let index = 0; index < fixed; index += 1) {
-    const segment = segments[index]!;
-
-    // Static segments compare raw, so they never pay for a decode — and a
-    // malformed escape elsewhere in the path cannot fail a static route.
-    if (segment.kind === 'static') {
-      if (segment.raw !== pathSegments[index]) return undefined;
-      continue;
-    }
-    const value = decodeSegment(pathSegments[index]!);
-
-    if (value === undefined) return undefined;
-    if (segment.kind === 'typed' && !matchers[segment.matcher!]?.(value)) return undefined;
-    params[segment.name!] = value;
-  }
-  if (isRest) {
-    const rest = pathSegments.slice(fixed).map(decodeSegment);
-
-    if (rest.some((part) => part === undefined)) return undefined;
-    params[last!.name!] = rest.join('/');
-  }
-
-  return params;
-}
 
 /**
  * File-system router: full segment grammar (`[param]`, `[param=matcher]`,

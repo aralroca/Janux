@@ -49,17 +49,20 @@ function countByFile(xml: string): Map<string, number> {
   return counts;
 }
 
-function byArea(perFile: Map<string, number>): Map<string, { files: number; tests: number }> {
-  const areas = new Map<string, { files: number; tests: number }>();
+interface AreaStats {
+  files: number;
+  tests: number;
+}
 
-  [...perFile.entries()].forEach(([file, tests]) => {
-    const area = areaOf(file);
-    const current = areas.get(area) ?? { files: 0, tests: 0 };
+function byArea(perFile: Map<string, number>): Map<string, AreaStats> {
+  const grouped = Map.groupBy([...perFile], ([file]) => areaOf(file));
 
-    areas.set(area, { files: current.files + 1, tests: current.tests + tests });
-  });
-
-  return areas;
+  return new Map(
+    [...grouped].map(([area, files]) => [
+      area,
+      { files: files.length, tests: files.reduce((sum, [, tests]) => sum + tests, 0) },
+    ]),
+  );
 }
 
 interface Coverage {
@@ -77,7 +80,7 @@ async function collect(): Promise<{ junit: string; coverage: Coverage | undefine
 
   await run.exited;
 
-  return { junit: await Bun.file(REPORT).text(), coverage: parseCoverage(stdout + stderr) };
+  return { junit: await Bun.file(REPORT).text(), coverage: parseCoverage(stdout) ?? parseCoverage(stderr) };
 }
 
 function parseCoverage(output: string): Coverage | undefined {
@@ -88,17 +91,20 @@ function parseCoverage(output: string): Coverage | undefined {
   return { functions: Number(found[1]) / 100, lines: Number(found[2]) / 100 };
 }
 
-function render(areas: Map<string, { files: number; tests: number }>): number {
+function render(areas: Map<string, AreaStats>): number {
   const rows = [...areas.entries()].sort((a, b) => b[1].tests - a[1].tests);
-  const total = rows.reduce((sum, [, { tests }]) => sum + tests, 0);
-  const width = Math.max(...rows.map(([area]) => area.length));
-
-  rows.forEach(([area, { files, tests }]) =>
-    console.log(`${area.padEnd(width)}  ${String(files).padStart(4)} files  ${String(tests).padStart(6)} tests`),
+  const width = Math.max(...rows.map(([area]) => area.length), 'TOTAL'.length);
+  const line = (area: string, { files, tests }: AreaStats) =>
+    `${area.padEnd(width)}  ${String(files).padStart(4)} files  ${String(tests).padStart(6)} tests`;
+  const totals = rows.reduce<AreaStats>(
+    (sum, [, stats]) => ({ files: sum.files + stats.files, tests: sum.tests + stats.tests }),
+    { files: 0, tests: 0 },
   );
-  console.log(`${'TOTAL'.padEnd(width)}  ${String(rows.reduce((s, [, r]) => s + r.files, 0)).padStart(4)} files  ${String(total).padStart(6)} tests`);
 
-  return total;
+  rows.forEach(([area, stats]) => console.log(line(area, stats)));
+  console.log(line('TOTAL', totals));
+
+  return totals.tests;
 }
 
 function flag(name: string): number {

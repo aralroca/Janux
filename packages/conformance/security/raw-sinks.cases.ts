@@ -1,5 +1,5 @@
 import { jsx } from 'janux';
-import type { TreeRow } from '../ssr-html/elements.cases';
+import type { TreeRow } from '../support/html';
 
 /**
  * Sinks where HTML escaping is not a defence, pinned so they are known rather
