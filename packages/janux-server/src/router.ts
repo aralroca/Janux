@@ -116,6 +116,20 @@ function compareRoutes(a: Route, b: Route): number {
   return a.pattern.localeCompare(b.pattern);
 }
 
+/**
+ * A malformed percent-escape cannot be a valid param value, so the segment
+ * simply does not match. `decodeURIComponent` throws on `/%`, `/%zz` and any
+ * truncated multi-byte escape — reachable by any client, so letting it escape
+ * turns a 404 into a 500.
+ */
+function decodeSegment(raw: string): string | undefined {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return undefined;
+  }
+}
+
 function matchRoute(
   route: Route,
   pathSegments: string[],
@@ -131,16 +145,25 @@ function matchRoute(
   if (isRest ? pathSegments.length < minLength : pathSegments.length !== fixed) return undefined;
   for (let index = 0; index < fixed; index += 1) {
     const segment = segments[index]!;
-    const value = decodeURIComponent(pathSegments[index]!);
 
+    // Static segments compare raw, so they never pay for a decode — and a
+    // malformed escape elsewhere in the path cannot fail a static route.
     if (segment.kind === 'static') {
       if (segment.raw !== pathSegments[index]) return undefined;
       continue;
     }
+    const value = decodeSegment(pathSegments[index]!);
+
+    if (value === undefined) return undefined;
     if (segment.kind === 'typed' && !matchers[segment.matcher!]?.(value)) return undefined;
     params[segment.name!] = value;
   }
-  if (isRest) params[last!.name!] = pathSegments.slice(fixed).map(decodeURIComponent).join('/');
+  if (isRest) {
+    const rest = pathSegments.slice(fixed).map(decodeSegment);
+
+    if (rest.some((part) => part === undefined)) return undefined;
+    params[last!.name!] = rest.join('/');
+  }
 
   return params;
 }
