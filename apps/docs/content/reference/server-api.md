@@ -34,7 +34,7 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 | `llmsTxt` | `{ title?, description? }` | Opt-in: serves `GET /llms.txt` — pages + agent tools index (`confirm` tools annotated "requires human approval"; dynamic routes expanded via `staticParams`) |
 | `agents` | `{ webBotAuth: { keys }, policy? }` | Web Bot Auth agent identity — see below |
 | `onAudit` | `(entry: AuditEntry) => void` | Called for every api() dispatch: tool, origin, guard, ok, and the verified agent key |
-| `runtimeUrl`, `stylesheets`, `favicon`, `title`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
+| `runtimeUrl`, `stylesheets`, `favicon`, `title`, `lang`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
 
 Returns `{ fetch(req): Promise<Response>, apiTools, manifestFor }` — mount `fetch` on Bun.serve, or anything Request/Response-shaped.
 

@@ -101,6 +101,7 @@ Everything is optional — the defaults are the [conventional layout](#project-c
 | Field | Default | Purpose |
 |---|---|---|
 | `title` | — | Default document title / shell title |
+| `lang` | `'en'` | `<html lang>` for the whole app. An [i18n](/docs/guide/i18n) app ignores it: each page declares its own locale and direction |
 | `llmsTxt` | off | `{ title?, description? }` — opt into serving `GET /llms.txt` |
 | `output` | `'bun'` | `'bun'` or `'static'` — see [output](#output) |
 | `routesDir` | `src/routes` | File-system routing root |

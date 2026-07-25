@@ -3,7 +3,7 @@
 The plumbing the [CLI](/docs/reference/cli) and the [Vite plugin](/docs/guide/cli-and-deployment) use. You need this page to embed Janux in another build, to write a custom server, or to script the CLI — not to build an app.
 
 ```ts
-import { resolveAppConfig, apiFiles, apiStubModule, exportedApiNames, apiModuleName, toFetchRequest, sendFetchResponse } from '@janux/vite';
+import { resolveAppConfig, shellOptions, apiFiles, apiStubModule, exportedApiNames, apiModuleName, toFetchRequest, sendFetchResponse } from '@janux/vite';
 import { runCli, parseArgs, HELP_TEXT } from '@janux/cli';
 import { createHttpHandlers } from '@janux/server';
 import { renderNode } from 'janux/server';
@@ -18,6 +18,19 @@ import { renderNode } from 'janux/server';
 3. options passed to the plugin.
 
 Config files are imported with an **mtime cache-buster**, which is why editing `janux.config.ts` takes effect in dev without restarting. Discovery is by existence: `src/middleware.ts`, `src/matchers.ts`, `src/i18n.ts` (or `src/i18n/index.ts`), `src/api/`, `src/stores.ts`, `src/agent.ts`, `src/styles.css`, `public/favicon.svg`.
+
+## shellOptions(app, stylesheets)
+
+`shellOptions(app: JanuxAppConfig, stylesheets: string[])` maps a resolved app config onto the `ServerOptions` fields the [HTML shell](/docs/guide/ssr-and-resumability) reads — `title`, `lang`, `favicon` — and passes the stylesheet URLs through. Dev and production build the same shell from the same config, so they share this mapping instead of each listing the fields:
+
+```ts
+// dev: Vite serves the stylesheet with its own URL contract
+{ ...shellOptions(app, devStylesheets(root, app.stylesheet)) }
+// production: the bundler emitted /styles.css
+{ ...shellOptions(app, app.stylesheet ? ['/styles.css'] : []) }
+```
+
+The stylesheet URL is the one field that legitimately differs between the two, which is why it's a parameter. Everything else being shared is the point: the favicon was once wired in dev and forgotten in production, so every build shipped a shell with no icon link and browsers fell back to a 404 `/favicon.ico`.
 
 ## The app stylesheet
 
