@@ -357,6 +357,33 @@ describe('client boot (resume without hydration)', () => {
     expect(button.classList.contains('janux-agent-glow')).toBe(false);
   });
 
+  /**
+   * A richer feedback layer (chips + animated ring + veil) consumes the same two
+   * events as the built-in glow, so both would paint the same element at once.
+   * The built-in one stands down while another layer holds the floor — the app
+   * never has to turn `glow` off to avoid the double highlight.
+   */
+  it('suspendAgentGlow hands the painting over to another feedback layer', async () => {
+    const { suspendAgentGlow } = await import('./glow');
+
+    document.body.innerHTML = '<button id="go">Go</button>';
+    document.getElementById('janux-glow-styles')?.remove();
+    boot({ defs: [counter], glow: { duration: 10 } });
+    const button = document.getElementById('go')!;
+    const flash = () =>
+      document.dispatchEvent(
+        new CustomEvent('janux:tool-target', { detail: { element: button, action: 'click', selector: '#go' } }),
+      );
+    const resume = suspendAgentGlow();
+
+    flash();
+    expect(button.classList.contains('janux-agent-glow')).toBe(false);
+    resume();
+    flash();
+    expect(button.classList.contains('janux-agent-glow')).toBe(true);
+    button.classList.remove('janux-agent-glow');
+  });
+
   it('survives a malformed state snapshot (boot regression)', async () => {
     document.body.innerHTML =
       '<script type="application/janux+state" data-uri="ui://broken">{not json</script>';

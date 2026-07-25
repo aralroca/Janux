@@ -97,6 +97,6 @@ Two DOM events carry everything a visualization needs, and the runtime never har
 | `janux:tool-call` | Around every bridge call | `{ tool, input, phase, guard, approval }` |
 | `janux:tool-target` | Just before a DOM-fallback tool (`ui_click`, `ui_fill`) acts | `{ element, action, selector }` |
 
-The built-in glow is simply the default consumer of both. Anything richer — status chips, an animated ring, a backdrop veil — listens to the same two events instead of replacing them, which is what [`createCopilot({ visualize })`](/docs/reference/agent-api) does.
+The built-in glow is simply the default consumer of both. Anything richer — status chips, an animated ring, a backdrop veil — listens to the same two events instead of replacing them, which is what [`createCopilot({ visualize })`](/docs/recipes/local-model-copilot) does.
 
 > **Tip:** try it in the [Playground](/playground) — the agent panel has a "✨ Glow" checkbox; call any tool and watch the preview.

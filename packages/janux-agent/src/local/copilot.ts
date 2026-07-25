@@ -1,6 +1,8 @@
 import { GuiAgent, registry } from '@aralroca/gui-agent';
 import type { AgentStep, Confirm, Llm, RunResult, ToolDefinition } from '@aralroca/gui-agent';
+import type { AgentVisualizer, AgentVisualizerOptions } from '@aralroca/gui-agent/ui';
 import { createNavigateTool } from 'janux/client';
+import { startVisualization, type Visualization } from './visualize';
 
 export interface CopilotOptions {
   /** The model driving the loop: `localLlm()`, `serverLlm()`, or any custom {@link Llm}. */
@@ -17,11 +19,22 @@ export interface CopilotOptions {
   manifestTools?: boolean;
   /** Synthesize generic click/fill/read tools from the live DOM. Default false. */
   domFallback?: boolean;
+  /**
+   * Show what the agent is doing: a status chip per tool call, an animated glow
+   * ring around the element being operated and a backdrop veil over the rest of
+   * the page. `true` or gui-agent's `AgentVisualizerOptions`. The chip host is
+   * appended to `<body>` marked `data-janux-agent-steps` — position it from your
+   * CSS, or pass `container` to place it yourself. While it runs, the built-in
+   * `boot({ glow })` highlight stands down.
+   */
+  visualize?: boolean | AgentVisualizerOptions;
 }
 
 export interface Copilot {
   /** Run the agent loop toward `question`; resolves with the final answer and transcript. */
   ask(question: string, signal?: AbortSignal): Promise<RunResult>;
+  /** The visualizer driving the chips and the glow, when `visualize` was set. */
+  visualizer?: AgentVisualizer;
   /** Unregister the manifest tools this copilot bridged into gui-agent. */
   dispose(): void;
 }
@@ -83,6 +96,12 @@ function syncNavigateTool(registered: Set<string>): void {
   registered.add(tool.name);
 }
 
+function visualizationFor(visualize: CopilotOptions['visualize']): Visualization | undefined {
+  if (!visualize) return undefined;
+
+  return startVisualization(visualize === true ? {} : visualize);
+}
+
 /**
  * A browser-side copilot for a Janux app: the gui-agent loop over the app's
  * own tools (manifest intents + api() endpoints, plus anything registered with
@@ -90,8 +109,15 @@ function syncNavigateTool(registered: Set<string>): void {
  */
 export function createCopilot(options: CopilotOptions): Copilot {
   const registered = new Set<string>();
+  const visualization = visualizationFor(options.visualize);
+  // The visualizer never replaces the caller's observer — it chains onto it.
+  const onStep = (step: AgentStep): void => {
+    options.onStep?.(step);
+    visualization?.visualizer.onStep(step);
+  };
 
   return {
+    visualizer: visualization?.visualizer,
     ask(question, signal) {
       if (options.manifestTools !== false) syncManifestTools(registered);
       syncNavigateTool(registered);
@@ -101,7 +127,7 @@ export function createCopilot(options: CopilotOptions): Copilot {
         maxSteps: options.maxSteps ?? 8,
         domFallback: options.domFallback ?? false,
         confirm: options.confirm,
-        onStep: options.onStep,
+        onStep,
       });
 
       return agent.run(question, signal);
@@ -109,6 +135,7 @@ export function createCopilot(options: CopilotOptions): Copilot {
     dispose() {
       registered.forEach((name) => registry.unregister(name));
       registered.clear();
+      visualization?.dispose();
     },
   };
 }

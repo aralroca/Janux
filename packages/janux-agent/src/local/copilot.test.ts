@@ -107,6 +107,55 @@ describe('createCopilot', () => {
     expect(appExecute).toHaveBeenCalled();
   });
 
+  /**
+   * The agent's activity deserves the same visualization in every Janux app, so
+   * it is a copilot option rather than wiring each app repeats: chips, the
+   * animated ring and the veil, fed by the runtime's two feedback events.
+   */
+  it('visualize mounts an overlay that survives navigations and chains onStep', async () => {
+    installBridge();
+    const steps: string[] = [];
+    const { llm } = scriptedLlm([]);
+    const copilot = createCopilot({ llm, visualize: true, onStep: (step) => steps.push(step.type) });
+    const host = document.querySelector('[data-janux-agent-steps]')!;
+
+    expect(host.parentElement).toBe(document.body);
+    expect(host.hasAttribute('data-janux-keep')).toBe(true);
+    expect(copilot.visualizer).toBeDefined();
+    await copilot.ask('hi');
+
+    // The app's own onStep still runs — the visualizer chains onto it.
+    expect(steps).toContain('llm-request');
+    copilot.dispose();
+    expect(document.querySelector('[data-janux-agent-steps]')).toBeNull();
+  });
+
+  it('visualize takes over the built-in glow instead of painting on top of it', async () => {
+    const { enableAgentGlow } = await import('janux/client');
+
+    installBridge();
+    document.body.innerHTML = '<button id="go">Go</button>';
+    const { llm } = scriptedLlm([]);
+    const disableGlow = enableAgentGlow({ duration: 10 });
+    const button = document.getElementById('go')!;
+    const flash = () =>
+      document.dispatchEvent(
+        new CustomEvent('janux:tool-target', { detail: { element: button, action: 'click', selector: '#go' } }),
+      );
+    const copilot = createCopilot({ llm, visualize: true });
+
+    flash();
+    expect(button.classList.contains('janux-agent-glow')).toBe(false);
+    // The ring host gui-agent creates on first use must outlive a navigation too.
+    expect(document.querySelector('[data-gui-agent-highlight]')?.hasAttribute('data-janux-keep')).toBe(true);
+
+    copilot.dispose();
+    flash();
+    expect(button.classList.contains('janux-agent-glow')).toBe(true);
+    disableGlow();
+    button.classList.remove('janux-agent-glow');
+  });
+
   it('dispose unregisters the bridged tools', async () => {
     installBridge();
     const { llm } = scriptedLlm([]);

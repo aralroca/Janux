@@ -26,6 +26,26 @@ export function emitToolTarget(detail: ToolTargetDetail): void {
   document.dispatchEvent(new CustomEvent('janux:tool-target', { detail }));
 }
 
+let suspensions = 0;
+
+/**
+ * Hands the agent feedback over to a richer layer (status chips, an animated
+ * ring, a backdrop veil): the events keep flowing, but the built-in glow stops
+ * painting so the two never highlight the same element at once. Returns a
+ * resume function; nested suspensions each hold their own claim.
+ */
+export function suspendAgentGlow(): () => void {
+  let released = false;
+
+  suspensions += 1;
+
+  return () => {
+    if (released) return;
+    released = true;
+    suspensions -= 1;
+  };
+}
+
 /* !important: the glow is runtime-owned feedback and must win over inline
    view styles (e.g. a button that sets its own box-shadow). */
 const GLOW_CSS = `
@@ -80,11 +100,11 @@ export function enableAgentGlow(options: GlowOptions = {}): () => void {
   const onToolTarget = (event: Event): void => {
     const { element } = ((event as CustomEvent).detail ?? {}) as ToolTargetDetail;
 
-    if (element) glowElement(element, TARGET_GLOW_MS);
+    if (element && !suspensions) glowElement(element, TARGET_GLOW_MS);
   };
   const onToolCall = (event: Event): void => {
     const { tool, phase, guard, approval } = (event as CustomEvent).detail ?? {};
-    const target = tool ? glowTargetFor(tool) : undefined;
+    const target = tool && !suspensions ? glowTargetFor(tool) : undefined;
 
     if (!target) return;
     // confirm-guarded calls only PROPOSE — nothing executes, nothing glows.

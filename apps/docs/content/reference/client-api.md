@@ -13,7 +13,7 @@ const client = boot({ defs: [Cart], ctx: {}, glow: true });
 
 `glow: true | { duration }` enables the built-in agent-activity highlight (see [Events and interactions](/docs/guide/events-and-interactions)); style it with the `--janux-glow-*` CSS variables. Lower-level: `enableAgentGlow`, `glowElement`, `glowTargetFor`, `injectGlowStyles`, `emitToolTarget`, `GLOW_CLASS`.
 
-`glowTargetFor(tool)` resolves the element that carries an intent's delegation marker — the exact control the agent "pressed" — falling back to the whole island. `emitToolTarget({ element, action, selector })` announces the live element a DOM-fallback tool is about to operate as a `janux:tool-target` event (`ToolTargetDetail`); the built-in client tools use it and never paint by themselves, so whichever feedback layer is enabled owns what the user sees.
+`suspendAgentGlow()` hands the painting over to a richer feedback layer (the copilot's [visualizer](/docs/recipes/local-model-copilot)): the events keep flowing, the built-in glow stops painting, and the returned function resumes it. `glowTargetFor(tool)` resolves the element that carries an intent's delegation marker — the exact control the agent "pressed" — falling back to the whole island. `emitToolTarget({ element, action, selector })` announces the live element a DOM-fallback tool is about to operate as a `janux:tool-target` event (`ToolTargetDetail`); the built-in client tools use it and never paint by themselves, so whichever feedback layer is enabled owns what the user sees.
 
 `navigation: false` disables client-side SPA navigation (on by default — see [SPA navigation](/docs/guide/navigation#spa-navigation)).
 

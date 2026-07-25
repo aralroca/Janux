@@ -11,6 +11,7 @@ export {
   glowElement,
   glowTargetFor,
   emitToolTarget,
+  suspendAgentGlow,
   GLOW_CLASS,
   type GlowOptions,
   type ToolTargetDetail,
