@@ -173,6 +173,22 @@ change cost much more and were fixed rather than accepted: a declarative fold
 over the path made `parentOf` 98x slower, and a `seen = new Set()` default
 parameter allocated a Set on every write including the scalar case.
 
+### `setQueryData` on a key that was never fetched is a no-op
+
+`client.setQueryData(['k'], v)` before anything created the entry drops the write
+silently, so seeding the cache ahead of the first fetch — a normal optimistic-update
+path — leaves `getQueryData` returning `undefined`. Pinned in
+`packages/conformance/cache/client.cases.ts` so the behaviour is at least known.
+
+Not fixed because the obvious fix is worse than the bug. Creating an entry needs a
+`queryFn`, and the only one available is `async () => data` — a lie. `getQuery`
+returns the *existing* query and ignores the new options, so a real `useQuery`
+mounting later would inherit that synthetic function and never refetch: a silent
+"stale forever" bug in place of a silent dropped write. Doing it properly means
+deciding how `getQuery` reconciles the options of a second observer (TanStack lets
+the latest observer update them), which is a design decision about the observer
+model rather than a patch.
+
 ### SVG namespaced attributes are silently dropped
 
 `VALID_ATTR_NAME` (`/^[a-zA-Z][\w-]*$/`) rejects any name containing a colon, so

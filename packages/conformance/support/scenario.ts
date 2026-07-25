@@ -37,12 +37,25 @@ export function runScenarios(table: ScenarioCase[]): void {
   });
 }
 
-/** Records what a throwing call did, so "throws clearly" is an assertable event. */
-export function attempt(log: string[], label: string, fn: () => unknown): void {
+/**
+ * Records what a throwing call did, so "throws clearly" is an assertable event.
+ *
+ * Handles a rejected promise as well as a synchronous throw, and returns one when
+ * `fn` does — an `await`-less version reported `ok` before the rejection landed,
+ * which made every async "must throw" case pass without asserting anything.
+ * `await attempt(...)` is therefore required for an async `fn`.
+ */
+export function attempt(log: string[], label: string, fn: () => unknown): void | Promise<void> {
   try {
-    fn();
-    log.push(`${label}:ok`);
+    const result = fn();
+
+    if (result instanceof Promise) return result.then(() => record(log, label), (error) => record(log, label, error));
+    record(log, label);
   } catch (error) {
-    log.push(`${label}:threw:${(error as Error).message}`);
+    record(log, label, error);
   }
+}
+
+function record(log: string[], label: string, error?: unknown): void {
+  log.push(error === undefined ? `${label}:ok` : `${label}:threw:${(error as Error).message}`);
 }
