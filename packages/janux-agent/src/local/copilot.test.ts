@@ -1,10 +1,17 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { afterAll, afterEach, beforeAll, describe, expect, it, mock } from 'bun:test';
-import { registry } from '@aralroca/gui-agent';
+import { afterAll, afterEach, describe, expect, it, mock } from 'bun:test';
 import type { LlmRequest, LlmResponse } from '@aralroca/gui-agent';
-import { createCopilot } from './copilot';
 
-beforeAll(() => GlobalRegistrator.register({ url: 'https://app.test/' }));
+// Registered before gui-agent is loaded, not in `beforeAll`: its bundled WebMCP
+// polyfill resolves `class extends EventTarget` when its module body evaluates.
+// Import it first and it subclasses Bun's native EventTarget, which then
+// rejects every Happy-DOM Event — so `dispatchEvent` throws internally and the
+// toolchange path silently never runs under test.
+GlobalRegistrator.register({ url: 'https://app.test/' });
+
+const { registry } = await import('@aralroca/gui-agent');
+const { createCopilot } = await import('./copilot');
+
 afterAll(() => GlobalRegistrator.unregister());
 afterEach(() => {
   registry.clear();

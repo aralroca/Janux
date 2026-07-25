@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@browser-ai/transformers-js": "^2.2.2",
-    "@happy-dom/global-registrator": "^15.11.0",
+    "@happy-dom/global-registrator": "^18.0.0",
     "@types/pg": "^8.20.0",
     "ioredis": "^5.11.1",
     "pg": "^8.22.0"
