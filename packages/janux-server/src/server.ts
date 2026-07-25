@@ -23,7 +23,7 @@ import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-
 import { createFsRouter, type Route } from './router';
 import { htmlDocument } from './html-shell';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
-import { buildRobotsTxt, buildSitemap } from './sitemap';
+import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
 
 export interface AgentMount {
   handle(req: Request, deps: AgentDeps): Promise<Response>;
@@ -133,6 +133,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
     locale ? { ...ctx, i18n: i18nFor(locale) } : ctx;
 
   const agentAuth = options.agents ? createAgentAuth(options.agents) : undefined;
+
+  // Checked once here so a malformed value degrades to "no social URLs, no
+  // sitemap" instead of throwing on every render.
+  const siteUrl = validSiteUrl(options.siteUrl);
 
   let llmsTxtBody: string | undefined;
   // Same reason llms.txt is memoized: building it walks every route and, for a
@@ -355,7 +359,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       description: result.meta?.description,
       lang: options.lang,
       meta: result.meta,
-      siteUrl: options.siteUrl,
+      siteUrl,
       snapshots: result.snapshots,
       islandNames,
       islandModules: options.islandModules,
@@ -390,13 +394,13 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return new Response(llmsTxtBody, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
     }
     // Both need an absolute origin to be valid at all, so `siteUrl` is the opt-in.
-    if (pathname === '/sitemap.xml' && options.siteUrl) {
-      sitemapBody ??= buildSitemap(options.siteUrl, await listPages());
+    if (pathname === '/sitemap.xml' && siteUrl) {
+      sitemapBody ??= buildSitemap(siteUrl, await listPages());
 
       return new Response(sitemapBody, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
     }
-    if (pathname === '/robots.txt' && options.siteUrl) {
-      return new Response(buildRobotsTxt(options.siteUrl), {
+    if (pathname === '/robots.txt' && siteUrl) {
+      return new Response(buildRobotsTxt(siteUrl), {
         headers: { 'content-type': 'text/plain; charset=utf-8' },
       });
     }

@@ -15,6 +15,22 @@ function isConcrete(page: string): boolean {
   return !page.includes('[');
 }
 
+/**
+ * `siteUrl` feeds `new URL()` in three places — the sitemap, robots.txt and every
+ * page's social tags — so a typo like `janux.build` (no scheme) would throw on
+ * every request and take the whole site down. Checked once, at startup.
+ */
+export function validSiteUrl(siteUrl: string | undefined): string | undefined {
+  if (!siteUrl) return undefined;
+  try {
+    return new URL(siteUrl).href;
+  } catch {
+    console.warn(`Janux: ignoring siteUrl "${siteUrl}" — not an absolute URL (expected e.g. https://example.com).`);
+
+    return undefined;
+  }
+}
+
 export function buildSitemap(siteUrl: string, pages: string[]): string {
   const urls = pages
     .filter(isConcrete)

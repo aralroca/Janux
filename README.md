@@ -28,6 +28,15 @@
 
 <p align="center"><sub><a href="examples/with-web-agent">examples/with-web-agent</a> — the agent calls the same intents a human clicks, and <code>createCopilot({ visualize })</code> is the whole of the feedback: a chip per tool call, a gradient ring on the element being operated, and a backdrop veil that keeps the user's focus on the action.</sub></p>
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/lighthouse-100-dark.gif" />
+    <img src="docs/lighthouse-100-light.gif" width="640" alt="Lighthouse report for the Janux documentation: 100 in performance, accessibility, best practices and SEO, and 4/4 on the new agentic browsing check" />
+  </picture>
+</p>
+
+<p align="center"><sub>The documentation site is built with Janux (<a href="apps/docs">apps/docs</a>) — including <strong>Agentic Browsing</strong>, Lighthouse's check for whether an agent can actually read and operate the page. A CI job re-runs the audit on every pull request.</sub></p>
+
 ---
 
 Named after **Janus**, the two-faced Roman god of doorways: one face toward the human, one toward the agent, one threshold. Designed in [RFC 0001](https://github.com/aralroca/Janux/issues/1).

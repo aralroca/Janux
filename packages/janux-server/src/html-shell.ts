@@ -68,12 +68,14 @@ export function htmlDocument(options: ShellOptions): string {
   // re-resolve the stylesheet link — a brief unstyled flash. See navigate.ts.
   // Inlined CSS takes the same `jx-style-N` ids as the links it replaces: the
   // diff keys on the id, not on the element name.
+  const links = options.stylesheets ?? [];
   const styleLinks = [
-    ...(options.stylesheets ?? []).map(
-      (href, index) => `<link rel="stylesheet" id="jx-style-${index}" href="${safeAttr(href)}">`,
-    ),
+    ...links.map((href, index) => `<link rel="stylesheet" id="jx-style-${index}" href="${safeAttr(href)}">`),
+    // `</style` is the only sequence that can end the element early; a backslash
+    // before the slash is valid inside a CSS string, where such text can appear.
     ...(options.inlineStyles ?? []).map(
-      (css, index) => `<style id="jx-style-${(options.stylesheets ?? []).length + index}">${css}</style>`,
+      (css, index) =>
+        `<style id="jx-style-${links.length + index}">${css.replace(/<\/(?=style)/gi, '<\\/')}</style>`,
     ),
   ].join('');
   const description = options.description

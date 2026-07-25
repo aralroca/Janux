@@ -32,17 +32,42 @@ function playMatching(video: HTMLVideoElement, still: boolean, dark: boolean): v
   video.play().catch(() => {});
 }
 
-export function setupScoresVideo(): void {
+const stillness = matchMedia('(prefers-reduced-motion: reduce)');
+const scheme = matchMedia('(prefers-color-scheme: dark)');
+
+/** Re-armed per page: an SPA navigation installs a fresh element via the DOM diff. */
+function arm(): void {
   const video = document.querySelector<HTMLVideoElement>('.scores-video video');
 
   if (!video) return;
-  const stillness = matchMedia('(prefers-reduced-motion: reduce)');
-  const scheme = matchMedia('(prefers-color-scheme: dark)');
   const apply = (): void => playMatching(video, stillness.matches, prefersDark(scheme));
 
   apply();
-  stillness.addEventListener('change', apply);
-  scheme.addEventListener('change', apply);
-  // The theme toggle writes body[data-theme]; the recording follows it.
+  // The theme toggle writes body[data-theme]; the recording follows it. Scoped to
+  // this element, so it stops mattering once the diff drops it.
   new MutationObserver(apply).observe(document.body, { attributeFilter: ['data-theme'] });
+  stillness.addEventListener('change', apply, { signal: pageLife() });
+  scheme.addEventListener('change', apply, { signal: pageLife() });
+}
+
+let leaving: AbortController | undefined;
+
+/** A signal that fires when this page goes away, so the media listeners go with it. */
+function pageLife(): AbortSignal {
+  leaving ??= new AbortController();
+
+  return leaving.signal;
+}
+
+export function setupScoresVideo(): void {
+  arm();
+  // Same shape as toc-spy and the search island: the home page can be arrived at
+  // by client-side navigation, in which case nothing above has run for it yet.
+  // Only the `after` phase — before it, the element in the document is the old one.
+  document.addEventListener('janux:navigate', (event) => {
+    if ((event as CustomEvent).detail?.phase !== 'after') return;
+    leaving?.abort();
+    leaving = undefined;
+    arm();
+  });
 }

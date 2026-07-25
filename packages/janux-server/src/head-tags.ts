@@ -59,7 +59,9 @@ function unprefixed(entries: Record<string, string> | undefined, prefix: string)
 }
 
 function tag(attr: 'property' | 'name', prefix: string, key: string, content: string): string {
-  return `<meta ${attr}="${prefix}:${key}" id="jx-${prefix}-${key}" content="${safeAttr(content)}">`;
+  const name = safeAttr(`${prefix}:${key}`);
+
+  return `<meta ${attr}="${name}" id="jx-${safeAttr(prefix)}-${safeAttr(key)}" content="${safeAttr(content)}">`;
 }
 
 function cardTags(attr: 'property' | 'name', prefix: string, values: Record<string, string>): string {
@@ -110,15 +112,28 @@ const VOID_TAGS = new Set([
   'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr',
 ]);
 
+/**
+ * `style` and `script` are raw text: the browser does not decode entities inside
+ * them, so escaping their content corrupts it rather than protecting it — CSS
+ * nesting (`&`), a `<` in a media query, a quoted font name. Only the closing
+ * sequence can end the element, and a backslash before the slash is valid in
+ * both CSS strings and JavaScript.
+ */
+const RAW_TEXT_TAGS = new Set(['style', 'script']);
+
+function content(name: string, text: string): string {
+  return RAW_TEXT_TAGS.has(name) ? text.replace(/<\/(?=[a-z])/gi, '<\\/') : safeAttr(text);
+}
+
 function customTag({ tag: name, attrs, text }: HeadTag, index: number): string {
   const id = attrs?.id ?? `jx-head-${index}`;
   const rendered = Object.entries({ ...attrs, id })
-    .map(([key, value]) => ` ${key}="${safeAttr(value)}"`)
+    .map(([key, value]) => ` ${safeAttr(key)}="${safeAttr(value)}"`)
     .join('');
 
-  if (VOID_TAGS.has(name)) return `<${name}${rendered}>`;
+  if (VOID_TAGS.has(name)) return `<${safeAttr(name)}${rendered}>`;
 
-  return `<${name}${rendered}>${safeAttr(text ?? '')}</${name}>`;
+  return `<${safeAttr(name)}${rendered}>${content(name, text ?? '')}</${safeAttr(name)}>`;
 }
 
 /** Every head node a route's `meta` contributes beyond `<title>` and the description. */

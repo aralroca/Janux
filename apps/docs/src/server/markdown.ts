@@ -128,9 +128,18 @@ function truncate(text: string): string {
   return `${cut.slice(0, cut.lastIndexOf(' '))}…`;
 }
 
+/**
+ * Whole fenced blocks, removed before anything is split on blank lines. Skipping
+ * blocks that *start* with a fence isn't enough: a snippet containing a blank
+ * line splits into several, and every part after the first looks like prose —
+ * which is how seven reference pages ended up describing themselves with a line
+ * of their own example code.
+ */
+const FENCED_BLOCK = /^```[^\n]*\n[\s\S]*?\n```[^\n]*$/gm;
+
 /** A doc's first prose paragraph, as plain text — the page's own meta description. */
 export function summarize(markdown: string): string | undefined {
-  const blocks = markdown.replace(/^# .+$/m, '').split(/\n{2,}/);
+  const blocks = markdown.replace(/^# .+$/m, '').replace(FENCED_BLOCK, '').split(/\n{2,}/);
   // Trimmed inside `find`, not mapped first: the answer is almost always the
   // first or second block, and there is no reason to touch the rest of the page.
   const prose = blocks.find((block) => {

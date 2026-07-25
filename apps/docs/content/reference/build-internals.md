@@ -21,13 +21,13 @@ Config files are imported with an **mtime cache-buster**, which is why editing `
 
 ## shellOptions(app, stylesheets)
 
-`shellOptions(app: JanuxAppConfig, stylesheets: string[])` maps a resolved app config onto the `ServerOptions` fields the [HTML shell](/docs/guide/ssr-and-resumability) reads — `title`, `lang`, `favicon` — and passes the stylesheet URLs through. Dev and production build the same shell from the same config, so they share this mapping instead of each listing the fields:
+`shellOptions(app: JanuxAppConfig, stylesheets: string[])` maps a resolved app config onto the `ServerOptions` fields the [HTML shell](/docs/guide/ssr-and-resumability) reads — `title`, `lang`, `siteUrl`, `favicon` — and passes the stylesheet URLs through. Dev and production build the same shell from the same config, so they share this mapping instead of each listing the fields:
 
 ```ts
 // dev: Vite serves the stylesheet with its own URL contract
 { ...shellOptions(app, devStylesheets(root, app.stylesheet)) }
-// production: the bundler emitted /styles.css
-{ ...shellOptions(app, app.stylesheet ? ['/styles.css'] : []) }
+// production: the bundler emitted /styles.css — unless it is being inlined
+{ ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : []), inlineStyles }
 ```
 
 The stylesheet URL is the one field that legitimately differs between the two, which is why it's a parameter. Everything else being shared is the point: the favicon was once wired in dev and forgotten in production, so every build shipped a shell with no icon link and browsers fell back to a 404 `/favicon.ico`.

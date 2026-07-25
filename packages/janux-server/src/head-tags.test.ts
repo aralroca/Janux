@@ -119,6 +119,31 @@ describe('headTags escape hatch', () => {
     expect(html).toContain('<style id="critical">a{color:red}</style>');
   });
 
+  /**
+   * `style` and `script` are raw-text elements: entities are not decoded inside
+   * them, so escaping `&` would break CSS nesting rather than protect anything.
+   * The closing sequence is the only thing that has to be neutralised.
+   */
+  it('leaves raw-text content alone but cannot let it close the element', () => {
+    const css = '.card{color:red;& .title{color:blue}}@media (width < 600px){.card{color:green}}';
+    const html = headTags({ head: [{ tag: 'style', text: css }] }, ctx);
+
+    expect(html).toContain(css);
+    expect(html).not.toContain('&amp;');
+
+    const escape = headTags({ head: [{ tag: 'style', text: 'a{content:"</style><img src=x>"}' }] }, ctx);
+
+    expect(escape).not.toContain('</style><img');
+    expect(escape).toContain('<\\/style');
+  });
+
+  it('escapes attribute names, not just their values', () => {
+    const html = headTags({ head: [{ tag: 'meta', attrs: { 'name="x" onload="alert(1)': 'y' } }] }, ctx);
+
+    expect(html).not.toContain('onload="alert(1)"');
+    expect(html).toContain('&quot;');
+  });
+
   // `>` needs no escaping inside a quoted attribute once `"` and `<` are gone —
   // same contract as every other attribute the shell writes.
   it('escapes attribute values so they cannot close the attribute or open a tag', () => {
