@@ -19,6 +19,17 @@ import { renderNode } from 'janux/server';
 
 Config files are imported with an **mtime cache-buster**, which is why editing `janux.config.ts` takes effect in dev without restarting. Discovery is by existence: `src/middleware.ts`, `src/matchers.ts`, `src/i18n.ts` (or `src/i18n/index.ts`), `src/api/`, `src/stores.ts`, `src/agent.ts`, `src/styles.css`, `public/favicon.svg`.
 
+## The app stylesheet
+
+`src/styles.css` is always a bundler input (`bundleInputs`), so `janux build` emits it through Vite as `dist/client/styles.css` — the same pipeline dev serves it with. That means `@import` of a dependency's CSS resolves in production too:
+
+```css
+/* src/styles.css */
+@import '@xyflow/react/dist/style.css';
+```
+
+It used to be copied verbatim unless `@janux/tailwind` was installed, so anything only the bundler could resolve — bare specifiers, `url()` assets — shipped as literal text that 404'd in the browser.
+
 ## The api() stub pipeline
 
 A `*.api.ts` module runs on the server; the client gets a tiny typed stub instead of the implementation. Three functions do that:

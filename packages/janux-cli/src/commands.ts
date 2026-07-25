@@ -38,11 +38,16 @@ export async function dev({ root, port }: CliCommand): Promise<void> {
   console.log(`  → agent:    http://localhost:${port}/_janux/agent\n`);
 }
 
-function bundleInputs(app: { clientEntry: string; stylesheet?: string }, tailwind: boolean) {
+/**
+ * The stylesheet is always a bundler input, Tailwind or not: copying it verbatim
+ * shipped whatever dev resolved through Vite — `@import` of a dependency's CSS,
+ * bare specifiers, url() assets — as literal text the browser can't resolve.
+ */
+export function bundleInputs(app: { clientEntry: string; stylesheet?: string }) {
   const input: Record<string, string> = {};
 
   if (app.clientEntry) input.client = app.clientEntry;
-  if (tailwind && app.stylesheet) input.styles = app.stylesheet;
+  if (app.stylesheet) input.styles = app.stylesheet;
 
   return input;
 }
@@ -73,12 +78,10 @@ async function bundleClient(root: string, input: Record<string, string>): Promis
 
 export async function build({ root }: CliCommand): Promise<void> {
   const app = await resolveAppConfig(root);
-  const tailwind = await loadTailwindPlugin(root);
-  const input = bundleInputs(app, tailwind !== undefined);
+  const input = bundleInputs(app);
 
   if (Object.keys(input).length > 0) await bundleClient(root, input);
   else console.log('janux build: nothing to bundle — fully static app (0 KB JS).');
-  if (tailwind === undefined) copyStylesheet(app.stylesheet, root);
   copyPublicDir(root);
   if (app.output === 'static') await prerenderStatic(root);
 }
@@ -127,14 +130,6 @@ async function writeLlmsTxt(server: { fetch(req: Request): Promise<Response> }, 
   const response = await server.fetch(new Request('http://localhost/llms.txt'));
 
   if (response.status === 200) await Bun.write(join(outDir, 'llms.txt'), await response.text());
-}
-
-function copyStylesheet(stylesheet: string | undefined, root: string): void {
-  if (!stylesheet) return;
-  const outDir = join(root, 'dist/client');
-
-  mkdirSync(outDir, { recursive: true });
-  cpSync(stylesheet, join(outDir, 'styles.css'));
 }
 
 function copyPublicDir(root: string): void {
