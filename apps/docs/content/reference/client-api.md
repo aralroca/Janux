@@ -60,12 +60,13 @@ Called once in `src/client.ts`. It indexes islands and state snapshots, installs
 
 ```html
 <button on={intents.addItem} data-input='{"productId":"p1"}'>Add</button>
-<form intent={intents.send}><input name="text" /></form>
+<form intent={intents.send} reset><input name="text" /></form>
 ```
 
 - `on={intents.x}` → delegated click; the element's `data-input` JSON becomes the input.
 - `<form intent={intents.x}>` → delegated submit; form fields become the input object.
-- Compiled to `data-jxa` / `data-jxform` markers — no per-element listeners exist.
+- `reset` on that form empties it once the intent has the values — the chat-box case. State can't: a controlled write is skipped while the control has focus (no cursor jumps), and submitting with Enter never moves focus.
+- Compiled to `data-jxa` / `data-jxform` / `data-jxreset` markers — no per-element listeners exist.
 
 ## clientApi(name)
 

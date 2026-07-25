@@ -77,6 +77,8 @@ Same validation, same guard, same audit entry. If that shouldn't happen unattend
 
 ## Live feedback while typing
 
+Add `reset` to the `<form>` when the fields should empty on submit — a chat box, a "add another" form. The runtime resets it after capturing the values; doing it from state doesn't work, because a controlled write is skipped while the control has focus and Enter keeps it there.
+
 `intent={...}` fires on submit. For per-keystroke behavior (availability checks, character counters) bind `onInput` to a separate intent — it's debounced by the delegated event surface and IME-safe:
 
 ```tsx

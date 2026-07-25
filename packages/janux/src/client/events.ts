@@ -96,8 +96,12 @@ function listenForms(): void {
     if (!found) return;
     event.preventDefault();
     const { mount, track } = context();
+    const form = event.target as HTMLFormElement;
+    const input = formInput(form);
 
-    track(invokeMarker(found.marker, found.root, mount, formInput(event.target as HTMLFormElement)));
+    track(invokeMarker(found.marker, found.root, mount, input));
+    // The values are already captured, so resetting can't race the intent.
+    if (form.hasAttribute('data-jxreset')) form.reset();
   });
 }
 
