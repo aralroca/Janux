@@ -46,10 +46,15 @@ export function absoluteUrl(value: string | undefined, siteUrl: string | undefin
   return new URL(value, siteUrl).href;
 }
 
+const NO_ENTRIES: Record<string, string> = {};
+
 /** Unprefixed keys are the contract (`{ type: 'article' }`), but an already-prefixed key still works. */
 function unprefixed(entries: Record<string, string> | undefined, prefix: string): Record<string, string> {
+  if (!entries) return NO_ENTRIES;
+  const marker = `${prefix}:`;
+
   return Object.fromEntries(
-    Object.entries(entries ?? {}).map(([key, value]) => [key.replace(new RegExp(`^${prefix}:`), ''), value]),
+    Object.entries(entries).map(([key, value]) => [key.startsWith(marker) ? key.slice(marker.length) : key, value]),
   );
 }
 
@@ -64,13 +69,15 @@ function cardTags(attr: 'property' | 'name', prefix: string, values: Record<stri
     .join('');
 }
 
+// Empty values are dropped by `cardTags`, so an absent url/image needs no
+// conditional spread — `''` says the same thing and reads the same as the rest.
 function openGraph(meta: PageMeta, ctx: HeadContext, image?: string, url?: string): string {
   const derived = {
     type: 'website',
     title: meta.title ?? ctx.title ?? '',
     description: meta.description ?? ctx.description ?? '',
-    ...(url ? { url } : {}),
-    ...(image ? { image } : {}),
+    url: url ?? '',
+    image: image ?? '',
   };
 
   return cardTags('property', 'og', { ...derived, ...unprefixed(meta.og, 'og') });
@@ -81,7 +88,7 @@ function twitterCard(meta: PageMeta, ctx: HeadContext, image?: string): string {
     card: image ? 'summary_large_image' : 'summary',
     title: meta.title ?? ctx.title ?? '',
     description: meta.description ?? ctx.description ?? '',
-    ...(image ? { image } : {}),
+    image: image ?? '',
   };
 
   return cardTags('name', 'twitter', { ...derived, ...unprefixed(meta.twitter, 'twitter') });
@@ -98,7 +105,10 @@ function jsonLdScripts(jsonLd: PageMeta['jsonLd']): string {
     .join('');
 }
 
-const VOID_TAGS = new Set(['link', 'meta', 'base']);
+/** The full HTML void set, not just the head's usual three: `head` takes any tag. */
+const VOID_TAGS = new Set([
+  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr',
+]);
 
 function customTag({ tag: name, attrs, text }: HeadTag, index: number): string {
   const id = attrs?.id ?? `jx-head-${index}`;

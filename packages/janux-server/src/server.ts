@@ -135,6 +135,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const agentAuth = options.agents ? createAgentAuth(options.agents) : undefined;
 
   let llmsTxtBody: string | undefined;
+  // Same reason llms.txt is memoized: building it walks every route and, for a
+  // docs-shaped app, reads every content file off disk through `staticParams`.
+  let sitemapBody: string | undefined;
 
   const expandRoute = async (route: Route): Promise<string[]> => {
     if (!route.pattern.includes('[')) return [route.pattern];
@@ -388,9 +391,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
     }
     // Both need an absolute origin to be valid at all, so `siteUrl` is the opt-in.
     if (pathname === '/sitemap.xml' && options.siteUrl) {
-      return new Response(buildSitemap(options.siteUrl, await listPages()), {
-        headers: { 'content-type': 'application/xml; charset=utf-8' },
-      });
+      sitemapBody ??= buildSitemap(options.siteUrl, await listPages());
+
+      return new Response(sitemapBody, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
     }
     if (pathname === '/robots.txt' && options.siteUrl) {
       return new Response(buildRobotsTxt(options.siteUrl), {

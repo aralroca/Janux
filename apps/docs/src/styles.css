@@ -855,6 +855,46 @@ body[data-theme='dark'] .hero-janus {
   color: var(--text);
 }
 
+.scores {
+  max-width: 1000px;
+  margin: 56px auto 8px;
+}
+
+
+/* A 2× screen capture, so half its pixel width is its real size. The still frame
+   is the background — one image, picked by the cascade — and scores-video.ts hands
+   the single <video> the source for the same theme. Same three cases as
+   .hero-janus: explicit dark, explicit light, and no choice made yet. */
+.scores-video {
+  max-width: 504px;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background-image: url('/lighthouse-100-light.jpg');
+  background-size: cover;
+}
+
+body[data-theme='dark'] .scores-video {
+  background-image: url('/lighthouse-100-dark.jpg');
+}
+
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme]) .scores-video {
+    background-image: url('/lighthouse-100-dark.jpg');
+  }
+}
+
+/* The width/height attributes carry the ratio, so the box is reserved before
+   anything loads — no layout shift. Transparent until it has frames, which is
+   what lets the still show through. */
+.scores-video video {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: transparent;
+}
+
 .mission-close {
   max-width: 680px;
   margin: 36px auto 0;

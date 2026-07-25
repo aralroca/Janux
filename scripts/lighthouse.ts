@@ -29,7 +29,12 @@ const THRESHOLDS: Record<string, number> = {
   accessibility: 1,
   'best-practices': 1,
   seo: 1,
+  // Lighthouse's agentic-browsing category: whether an agent can read and
+  // operate the page. For this framework that is not a nice-to-have, so it is
+  // asserted at 100 like the other markup-measuring categories.
+  'agentic-browsing': 1,
 };
+const CATEGORIES = Object.keys(THRESHOLDS).join(',');
 /**
  * The colour scheme is pinned. The palette is built on `light-dark()`, so an
  * unpinned scheme means contrast is measured against whichever mode the runner
@@ -62,7 +67,7 @@ async function audit(url: string, index: number): Promise<Record<string, number>
   const output = join(reportDir, `${url.replace(/\W+/g, '-') || 'home'}-${index}.json`);
   const proc = Bun.spawn(
     ['bunx', 'lighthouse', `http://localhost:${PORT}${url}`, '--output=json', `--output-path=${output}`,
-      '--only-categories=performance,accessibility,best-practices,seo',
+      `--only-categories=${CATEGORIES}`,
       '--form-factor=mobile', '--screenEmulation.mobile', `--chrome-flags=${CHROME_FLAGS}`, '--quiet'],
     { stdout: 'ignore', stderr: 'pipe' },
   );

@@ -216,6 +216,30 @@ export default async function Home() {
           </p>
         </section>
 
+        <section class="scores">
+          {/* Barely moving, so it reads as a picture rather than a video: no
+              controls, no chrome. There is a recording per theme, but rendering
+              both `<video>`s downloaded both (a hidden video still fetches its
+              poster and metadata), so the still frame is the container's
+              background — one image, resolved by the cascade — and `setupScoresVideo`
+              gives the single element the source that matches. Without JS, or with
+              reduced motion, the still is all there is, which is the whole point. */}
+          <div class="scores-video">
+            <video
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="none"
+              width="1008"
+              height="286"
+              data-light="/lighthouse-100-light.mp4"
+              data-dark="/lighthouse-100-dark.mp4"
+              aria-label="Lighthouse report for the Janux documentation: 100 in performance, accessibility, best practices, SEO and agentic browsing"
+            ></video>
+          </div>
+        </section>
+
         <section class="features">
           {FEATURES.map(([icon, title, body]) => (
             <div key={title} class="feature-card">

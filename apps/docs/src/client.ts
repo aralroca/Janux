@@ -5,6 +5,7 @@ import { SearchModal } from './components/SearchModal';
 import { ThemeToggle } from './components/ThemeToggle';
 import { setupCopyCode } from './copy-code';
 import { setupHeroVideo } from './hero-video';
+import { setupScoresVideo } from './scores-video';
 import { setupTocSpy } from './toc-spy';
 
 const client = boot({ defs: [DocsCopilot, PlaygroundShell, SearchModal, ThemeToggle], glow: true });
@@ -12,6 +13,7 @@ const client = boot({ defs: [DocsCopilot, PlaygroundShell, SearchModal, ThemeTog
 setupTocSpy();
 setupCopyCode();
 setupHeroVideo();
+setupScoresVideo();
 
 document.addEventListener('keydown', function closeCopilotOnEscape(event) {
   if (event.key !== 'Escape') return;

@@ -97,11 +97,6 @@ function headingRenderer(toc: TocEntry[]) {
 }
 
 const DESCRIPTION_LIMIT = 155;
-/** Link text survives, its target doesn't; ticks and emphasis are markup, not prose. */
-const MARKUP = [
-  [/\[([^\]]+)\]\([^)]*\)/g, '$1'],
-  [/[`*_]/g, ''],
-] as const;
 /**
  * Headings, quotes, fences, tables, lists and raw HTML — everything that isn't a
  * sentence. The list markers need the trailing space: without it a paragraph
@@ -110,11 +105,20 @@ const MARKUP = [
  */
 const NOT_PROSE = /^(#|>|```|\||[-*+]\s|\d+\.\s|<)/;
 
-/** Markdown → prose. Distinct from `plainText` above, which turns rendered HTML into text. */
-function proseText(markdown: string): string {
-  return MARKUP.reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), markdown)
-    .replace(/\s+/g, ' ')
-    .trim();
+/**
+ * Markdown → prose: fences dropped, inline code and link text kept, heading
+ * markers and emphasis removed. Feeds both the search corpus and the meta
+ * descriptions, which is why it lives here rather than beside either one.
+ *
+ * (Distinct from `plainText` above, which turns *rendered HTML* into text.)
+ */
+export function stripMarkdown(markdown: string): string {
+  return markdown
+    .replace(/^```[^\n]*$/gm, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^#{1,6} /gm, '')
+    .replace(/[*_]/g, '');
 }
 
 function truncate(text: string): string {
@@ -127,9 +131,15 @@ function truncate(text: string): string {
 /** A doc's first prose paragraph, as plain text — the page's own meta description. */
 export function summarize(markdown: string): string | undefined {
   const blocks = markdown.replace(/^# .+$/m, '').split(/\n{2,}/);
-  const prose = blocks.map((block) => block.trim()).find((block) => block.length > 0 && !NOT_PROSE.test(block));
+  // Trimmed inside `find`, not mapped first: the answer is almost always the
+  // first or second block, and there is no reason to touch the rest of the page.
+  const prose = blocks.find((block) => {
+    const trimmed = block.trim();
 
-  return prose ? truncate(proseText(prose)) : undefined;
+    return trimmed.length > 0 && !NOT_PROSE.test(trimmed);
+  });
+
+  return prose ? truncate(stripMarkdown(prose).replace(/\s+/g, ' ').trim()) : undefined;
 }
 
 /** Renders a markdown doc with shiki highlighting, heading anchors, callouts and a TOC. */
