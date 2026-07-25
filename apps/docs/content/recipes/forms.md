@@ -77,6 +77,8 @@ Same validation, same guard, same audit entry. If that shouldn't happen unattend
 
 ## Live feedback while typing
 
+Add `reset` to the `<form>` when the fields should clear on submit — a chat box, an "add another" form. The runtime calls the platform's `form.reset()` after capturing the values, so each control goes back to its rendered `value`; leave the field uncontrolled (no `value` prop) and that is empty. Doing it from state doesn't work: a controlled write is skipped while the control has focus, and Enter keeps it there.
+
 `intent={...}` fires on submit. For per-keystroke behavior (availability checks, character counters) bind `onInput` to a separate intent — it's debounced by the delegated event surface and IME-safe:
 
 ```tsx

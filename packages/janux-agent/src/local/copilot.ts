@@ -1,6 +1,8 @@
 import { GuiAgent, registry } from '@aralroca/gui-agent';
 import type { AgentStep, Confirm, Llm, RunResult, ToolDefinition } from '@aralroca/gui-agent';
+import type { AgentVisualizer, AgentVisualizerOptions } from '@aralroca/gui-agent/ui';
 import { createNavigateTool } from 'janux/client';
+import { startVisualization, type Visualization } from './visualize';
 
 export interface CopilotOptions {
   /** The model driving the loop: `localLlm()`, `serverLlm()`, or any custom {@link Llm}. */
@@ -17,11 +19,22 @@ export interface CopilotOptions {
   manifestTools?: boolean;
   /** Synthesize generic click/fill/read tools from the live DOM. Default false. */
   domFallback?: boolean;
+  /**
+   * Show what the agent is doing: a status chip per tool call, an animated glow
+   * ring around the element being operated and a backdrop veil over the rest of
+   * the page. `true` or gui-agent's `AgentVisualizerOptions`. The chip host is
+   * appended to `<body>` marked `data-janux-agent-steps` — position it from your
+   * CSS, or pass `container` to place it yourself. While it runs, the built-in
+   * `boot({ glow })` highlight stands down.
+   */
+  visualize?: boolean | AgentVisualizerOptions;
 }
 
 export interface Copilot {
   /** Run the agent loop toward `question`; resolves with the final answer and transcript. */
   ask(question: string, signal?: AbortSignal): Promise<RunResult>;
+  /** The visualizer driving the chips and the glow — present once a run has started it. */
+  visualizer?: AgentVisualizer;
   /** Unregister the manifest tools this copilot bridged into gui-agent. */
   dispose(): void;
 }
@@ -90,9 +103,30 @@ function syncNavigateTool(registered: Set<string>): void {
  */
 export function createCopilot(options: CopilotOptions): Copilot {
   const registered = new Set<string>();
+  let visualization: Visualization | undefined;
+  // The visualizer never replaces the caller's observer — it chains onto it.
+  const onStep = (step: AgentStep): void => {
+    options.onStep?.(step);
+    visualization?.visualizer.onStep(step);
+  };
+  /**
+   * Built on the first run, not at construction: an app that wires its copilot
+   * up front but never asks anything would otherwise pay for the overlay and,
+   * worse, hold the built-in glow suspended for the whole session. Each run
+   * starts from a clean chip list.
+   */
+  const startRun = (): void => {
+    if (!options.visualize) return;
+    visualization ??= startVisualization(options.visualize, wireName);
+    visualization.visualizer.clear();
+  };
 
   return {
+    get visualizer() {
+      return visualization?.visualizer;
+    },
     ask(question, signal) {
+      startRun();
       if (options.manifestTools !== false) syncManifestTools(registered);
       syncNavigateTool(registered);
       const agent = new GuiAgent({
@@ -101,7 +135,7 @@ export function createCopilot(options: CopilotOptions): Copilot {
         maxSteps: options.maxSteps ?? 8,
         domFallback: options.domFallback ?? false,
         confirm: options.confirm,
-        onStep: options.onStep,
+        onStep,
       });
 
       return agent.run(question, signal);
@@ -109,6 +143,10 @@ export function createCopilot(options: CopilotOptions): Copilot {
     dispose() {
       registered.forEach((name) => registry.unregister(name));
       registered.clear();
+      visualization?.dispose();
+      // Cleared, not just disposed: `ask()` re-registers the tools it removed,
+      // so a run after this one must build a live overlay, not reuse a dead one.
+      visualization = undefined;
     },
   };
 }

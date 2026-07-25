@@ -1,8 +1,51 @@
+import { EVENT_ATTRS } from '../render/html';
+
 export const GLOW_CLASS = 'janux-agent-glow';
+
+/** ms a DOM-fallback target stays lit. Matches what `ui_click`/`ui_fill` used to paint themselves. */
+const TARGET_GLOW_MS = 1200;
 
 export interface GlowOptions {
   /** ms the glow lingers after the call finishes. Default 700. */
   duration?: number;
+}
+
+/**
+ * The element a DOM-fallback client tool (`ui_click` / `ui_fill`) just resolved,
+ * reported on `janux:tool-target` right before it acts. The tools never paint:
+ * whichever feedback layer is enabled decides what the user sees — the built-in
+ * glow below, or a richer visualizer.
+ */
+export interface ToolTargetDetail {
+  element: Element;
+  action: 'click' | 'fill';
+  selector: string;
+}
+
+/** Announces the live element a client tool is about to operate. */
+export function emitToolTarget(detail: ToolTargetDetail): void {
+  if (typeof document === 'undefined') return;
+  document.dispatchEvent(new CustomEvent('janux:tool-target', { detail }));
+}
+
+let suspensions = 0;
+
+/**
+ * Hands the agent feedback over to a richer layer (status chips, an animated
+ * ring, a backdrop veil): the events keep flowing, but the built-in glow stops
+ * painting so the two never highlight the same element at once. Returns a
+ * resume function; nested suspensions each hold their own claim.
+ */
+export function suspendAgentGlow(): () => void {
+  let released = false;
+
+  suspensions += 1;
+
+  return () => {
+    if (released) return;
+    released = true;
+    suspensions -= 1;
+  };
 }
 
 /* !important: the glow is runtime-owned feedback and must win over inline
@@ -31,44 +74,117 @@ export function glowElement(el: Element, duration = 700): void {
   setTimeout(() => el.classList.remove(GLOW_CLASS), duration);
 }
 
+/** Every attribute an intent's delegation marker can land on: click, submit, rich events. */
+const MARKER_ATTRS = ['data-jxa', 'data-jxform', ...Object.values(EVENT_ATTRS)];
+
 /**
- * The element that carries the intent's delegation marker (`on={intents.x}` /
- * `<form intent>`), so the glow points at the exact control the agent "pressed".
- * Falls back to the whole island when the intent has no element in the view.
+ * `display: none` is not inherited, so the chain has to be walked; the loop
+ * exits at the first hidden ancestor, which is the common case (an inactive
+ * tab panel). `checkVisibility()` and `getClientRects()` would answer this in
+ * one call, but neither is implemented by the DOM the test suite runs on.
  */
-export function glowTargetFor(tool: string, scope: ParentNode = document): Element | undefined {
+function isPainted(el: Element): boolean {
+  if (el.closest('[hidden]')) return false;
+  for (let node: Element | null = el; node; node = node.parentElement) {
+    const { display, visibility } = getComputedStyle(node);
+
+    if (display === 'none' || visibility === 'hidden') return false;
+  }
+
+  return true;
+}
+
+/**
+ * Which of several controls bound to one intent a call came through: a tab bar,
+ * a table row, a list of "add to cart" buttons all carry the same marker, and
+ * only the `data-input` they declare tells them apart. An agent may pass more
+ * than a control declares, so the declared part is what has to match.
+ */
+function declares(el: Element, input: unknown): boolean {
+  const raw = el.getAttribute('data-input');
+
+  if (!raw || !input) return false;
+  try {
+    return Object.entries(JSON.parse(raw)).every(
+      ([key, value]) => (input as Record<string, unknown>)[key] === value,
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The element that carries the intent's delegation marker (`on={intents.x}`,
+ * `<form intent>`, `onInput={intents.x}` …), so the glow points at the exact
+ * control the agent "pressed" — `input` picks between controls that share the
+ * intent. Falls back to the whole island when the intent has no element in the
+ * view, and to nothing at all when the target isn't painted — a ring around a
+ * box with no geometry lands in the page corner, with the backdrop veil over
+ * everything, which reads as a bug.
+ */
+export function glowTargetFor(tool: string, input?: unknown, scope: ParentNode = document): Element | undefined {
   const [component = '', intentName = ''] = tool.split('.');
   const island = scope.querySelector(`janux-island[data-jx^="${component}#"]`);
 
   if (!island) return undefined;
   const marker = `${island.getAttribute('data-jx')}:${intentName}`;
+  const marked = [...island.querySelectorAll(MARKER_ATTRS.map((attr) => `[${attr}="${marker}"]`).join(','))];
+  const bound = marked.find((el) => declares(el, input)) ?? marked[0];
 
-  return (
-    island.querySelector(`[data-jxa="${marker}"], [data-jxform="${marker}"]`) ?? island
-  );
+  // A painted control implies a painted island, so that is the only walk needed.
+  if (bound && isPainted(bound)) return bound;
+
+  return isPainted(island) ? island : undefined;
 }
 
 /**
- * Highlights the island an agent is operating (gui-agent style): listens to
- * `janux:tool-call` bridge events and glows the matching island. Returns a
+ * Highlights what an agent is operating (gui-agent style): listens to
+ * `janux:tool-call` bridge events and glows the matching island, plus
+ * `janux:tool-target` for the elements the DOM-fallback tools touch. Returns a
  * disposer. `boot({ glow: true })` wires this for you.
  */
 export function enableAgentGlow(options: GlowOptions = {}): () => void {
   const duration = options.duration ?? 700;
-  const onToolCall = (event: Event): void => {
-    const { tool, phase, guard, approval } = (event as CustomEvent).detail ?? {};
-    const target = tool ? glowTargetFor(tool) : undefined;
+  // What this layer painted, so the closing phase clears that exact element:
+  // re-resolving could come back empty (suspended mid-call, island no longer
+  // painted) and `morph` keeps `janux-*` classes, so the glow would never fade.
+  const lit = new Map<string, Element>();
+  const onToolTarget = (event: Event): void => {
+    const { element } = ((event as CustomEvent).detail ?? {}) as ToolTargetDetail;
 
-    if (!target) return;
+    if (suspensions) return;
+    if (element) glowElement(element, TARGET_GLOW_MS);
+  };
+  const onToolCall = (event: Event): void => {
+    const { tool, input, phase, guard, approval } = (event as CustomEvent).detail ?? {};
+
     // confirm-guarded calls only PROPOSE — nothing executes, nothing glows.
     // The glow fires on approval, when the action actually runs.
     if (guard === 'confirm' && !approval) return;
-    if (phase === 'start') target.classList.add(GLOW_CLASS);
-    else setTimeout(() => target.classList.remove(GLOW_CLASS), duration);
+    if (phase !== 'start') {
+      const painted = lit.get(tool);
+
+      lit.delete(tool);
+      if (painted) setTimeout(() => painted.classList.remove(GLOW_CLASS), duration);
+
+      return;
+    }
+    if (suspensions) return;
+    // This layer is a class toggle: it can't wait for DOM an intent creates, so
+    // it keeps lighting the island even when the call declares a `glowTarget`.
+    const target = tool ? glowTargetFor(tool, input) : undefined;
+
+    if (!target) return;
+    lit.set(tool, target);
+    target.classList.add(GLOW_CLASS);
   };
 
   injectGlowStyles();
   document.addEventListener('janux:tool-call', onToolCall);
+  document.addEventListener('janux:tool-target', onToolTarget);
 
-  return () => document.removeEventListener('janux:tool-call', onToolCall);
+  return () => {
+    document.removeEventListener('janux:tool-call', onToolCall);
+    document.removeEventListener('janux:tool-target', onToolTarget);
+  };
 }

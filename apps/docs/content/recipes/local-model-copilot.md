@@ -32,6 +32,38 @@ const { text } = await copilot.ask('add two seats to my plan');
 
 `createCopilot` exposes your manifest tools (intents + `api()` endpoints, `forbidden` excluded, `confirm` annotated) to the model automatically, plus the framework's built-in `navigate` tool — synthesized from the same-origin links already on the page, so "take me to the CLI page" works with zero authoring (define your own `navigate` tool to take the name over). Everything re-syncs on every `ask()` so SPA navigations stay current. Register extra client-side tools with `defineTool` — this site adds `search_docs` / `read_doc` over its static search index, which is how Ask AI reads *and drives* the site with zero backend. When a tool takes ids or paths, validate them and return the real options on a miss — small models hallucinate identifiers, and handing back the valid list is what turns that into a self-correcting retry (`navigate` does exactly this with the page's links).
 
+## Show what the agent is doing
+
+`visualize` turns on the interaction visualizer: a status chip per tool call (spinner → ✓, ✗ on error, blocked when denied), a "Thinking…" indicator between turns, an **animated gradient ring** around the element being operated and a **backdrop veil** that blurs the rest of the page.
+
+```ts
+const copilot = createCopilot({
+  llm,
+  domFallback: true,                                   // read_page / click / fill as a fallback
+  visualize: { backdrop: { exclude: ['assistant-panel'] } },   // or just `true`
+});
+```
+
+It covers every path an action can arrive through, without per-app wiring:
+
+| Action | How the ring finds it |
+|---|---|
+| One of your intents | `janux:tool-call` → the control it is delegated from, or the [`glowTarget`](/docs/reference/core-api) the intent declares for DOM it creates |
+| `domFallback: true` (gui-agent's `read_page` / `click` / `fill`) | the agent's own step stream, which the visualizer already consumes |
+| The framework's `ui_click` / `ui_fill` (WebMCP, a server-side agent, your own runner) | `janux:tool-target` |
+
+While it runs, the built-in `boot({ glow })` highlight stands down, so nothing is painted twice.
+
+The chip list is appended to `<body>` marked `data-janux-agent-steps` (and `data-janux-keep`, so a navigation can't take it down) — position and theme it from your CSS:
+
+```css
+[data-janux-agent-steps] { position: fixed; right: 24px; bottom: 84px; z-index: 10; }
+```
+
+Pass `container` to place it yourself, and `copilot.visualizer` gives you the underlying visualizer once a run has built it — `highlight(target)` accepts an element **or a CSS selector**, polled briefly until it mounts. Options mirror gui-agent's `AgentVisualizerOptions` (`chips`, `highlight`, `labels`, `glowDuration`, `glowDwell`, `theme`, `backdrop`); `labels` are keyed by your own tool names (`'cart.addItem'`), sanitized for the model on your behalf.
+
+The overlay is built on the **first `ask()`**, not when the copilot is created, and each run starts from a clean chip list — a copilot wired up front but never used costs nothing and leaves the built-in glow in charge.
+
 ## Picking a model
 
 `localLlm()` defaults to [`onnx-community/Qwen3-0.6B-ONNX`](https://huggingface.co/onnx-community/Qwen3-0.6B-ONNX). Swap with `localLlm({ modelId })`:

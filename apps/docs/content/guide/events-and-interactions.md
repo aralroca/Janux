@@ -86,6 +86,17 @@ janux-island {
 }
 ```
 
-Lower-level pieces are exported from `janux/client` if you want custom behavior: `enableAgentGlow(options)` (returns a disposer), `glowElement(el, duration)`, `injectGlowStyles()` and the `GLOW_CLASS` constant.
+Lower-level pieces are exported from `janux/client` if you want custom behavior: `enableAgentGlow(options)` (returns a disposer), `glowElement(el, duration)`, `glowTargetFor(tool)`, `injectGlowStyles()` and the `GLOW_CLASS` constant.
+
+### One seam, any feedback layer
+
+Two DOM events carry everything a visualization needs, and the runtime never hardcodes the pixels:
+
+| Event | Fired when | Detail |
+|---|---|---|
+| `janux:tool-call` | Around every bridge call | `{ tool, input, phase, guard, approval }`, plus `glowTargetPending` on `start` and the resolved [`glowTarget`](/docs/reference/core-api) on `ok` |
+| `janux:tool-target` | Just before a DOM-fallback tool (`ui_click`, `ui_fill`) acts | `{ element, action, selector }` |
+
+The built-in glow is simply the default consumer of both. Anything richer — status chips, an animated ring, a backdrop veil — listens to the same two events instead of replacing them, which is what [`createCopilot({ visualize })`](/docs/recipes/local-model-copilot) does.
 
 > **Tip:** try it in the [Playground](/playground) — the agent panel has a "✨ Glow" checkbox; call any tool and watch the preview.

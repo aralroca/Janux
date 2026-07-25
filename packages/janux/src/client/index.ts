@@ -5,8 +5,18 @@ export { mountIsland, type MountContext } from './mount';
 export { morph } from './morph';
 export { toDomNodes } from './dom';
 export { clientApi } from './api-stub';
-export { enableAgentGlow, injectGlowStyles, glowElement, GLOW_CLASS, type GlowOptions } from './glow';
-export { performNavigation, mountEagerIslands } from './navigate';
+export {
+  enableAgentGlow,
+  injectGlowStyles,
+  glowElement,
+  glowTargetFor,
+  emitToolTarget,
+  suspendAgentGlow,
+  GLOW_CLASS,
+  type GlowOptions,
+  type ToolTargetDetail,
+} from './glow';
+export { performNavigation, mountEagerIslands, KEEP_ATTRIBUTE } from './navigate';
 export { prefetch } from './prefetch';
 export {
   installWebMCP,

@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
 import { apiFiles, apiModuleName, janux, resolveAppConfig } from '@janux/vite';
@@ -38,22 +38,37 @@ export async function dev({ root, port }: CliCommand): Promise<void> {
   console.log(`  → agent:    http://localhost:${port}/_janux/agent\n`);
 }
 
-function bundleInputs(app: { clientEntry: string; stylesheet?: string }, tailwind: boolean) {
+/**
+ * The stylesheet is always a bundler input, Tailwind or not: copying it verbatim
+ * shipped whatever dev resolved through Vite — `@import` of a dependency's CSS,
+ * bare specifiers, url() assets — as literal text the browser can't resolve.
+ */
+export function bundleInputs(app: { clientEntry: string; stylesheet?: string }) {
   const input: Record<string, string> = {};
 
   if (app.clientEntry) input.client = app.clientEntry;
-  if (tailwind && app.stylesheet) input.styles = app.stylesheet;
+  if (app.stylesheet) input.styles = app.stylesheet;
 
   return input;
 }
 
-function cssAsStyles(info: any): string {
-  const name = info.names?.[0] ?? info.name ?? '';
+const HASHED = 'assets/[name]-[hash][extname]';
 
-  return name.endsWith('.css') ? 'styles.css' : 'assets/[name]-[hash][extname]';
+/**
+ * The HTML shell links exactly one sheet, `/styles.css`, so only the app's own
+ * stylesheet may claim that name — a dependency's CSS taking it would leave the
+ * app's sheet emitted beside it, linked by nobody. Rollup reports where an asset
+ * came from, which is what tells them apart.
+ */
+export function cssAssetName(root: string, stylesheet: string | undefined) {
+  return (info: { names?: string[]; originalFileNames?: string[] }): string => {
+    const sources = (info.originalFileNames ?? []).map((file) => resolve(root, file));
+
+    return stylesheet && sources.includes(stylesheet) ? 'styles.css' : HASHED;
+  };
 }
 
-async function bundleClient(root: string, input: Record<string, string>): Promise<void> {
+async function bundleClient(root: string, input: Record<string, string>, stylesheet?: string): Promise<void> {
   const { build: viteBuild } = await import('vite');
 
   await viteBuild({
@@ -64,7 +79,7 @@ async function bundleClient(root: string, input: Record<string, string>): Promis
         input,
         output: {
           entryFileNames: (chunk: any) => (chunk.name === 'client' ? 'client.js' : '[name].js'),
-          assetFileNames: cssAsStyles,
+          assetFileNames: cssAssetName(root, stylesheet),
         },
       },
     },
@@ -73,12 +88,10 @@ async function bundleClient(root: string, input: Record<string, string>): Promis
 
 export async function build({ root }: CliCommand): Promise<void> {
   const app = await resolveAppConfig(root);
-  const tailwind = await loadTailwindPlugin(root);
-  const input = bundleInputs(app, tailwind !== undefined);
+  const input = bundleInputs(app);
 
-  if (Object.keys(input).length > 0) await bundleClient(root, input);
+  if (Object.keys(input).length > 0) await bundleClient(root, input, app.stylesheet);
   else console.log('janux build: nothing to bundle — fully static app (0 KB JS).');
-  if (tailwind === undefined) copyStylesheet(app.stylesheet, root);
   copyPublicDir(root);
   if (app.output === 'static') await prerenderStatic(root);
 }
@@ -127,14 +140,6 @@ async function writeLlmsTxt(server: { fetch(req: Request): Promise<Response> }, 
   const response = await server.fetch(new Request('http://localhost/llms.txt'));
 
   if (response.status === 200) await Bun.write(join(outDir, 'llms.txt'), await response.text());
-}
-
-function copyStylesheet(stylesheet: string | undefined, root: string): void {
-  if (!stylesheet) return;
-  const outDir = join(root, 'dist/client');
-
-  mkdirSync(outDir, { recursive: true });
-  cpSync(stylesheet, join(outDir, 'styles.css'));
 }
 
 function copyPublicDir(root: string): void {

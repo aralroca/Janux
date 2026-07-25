@@ -159,6 +159,10 @@ function propToAttr(name: string, value: unknown): [string, unknown] | undefined
   if (name === 'children' || name === 'key' || name === 'dangerHTML') return undefined;
   if (name === 'on') return ['data-jxa', intentMarker(value)];
   if (name === 'intent') return ['data-jxform', intentMarker(value)];
+  // `<form intent reset>`: the runtime empties the form once the intent has the
+  // values, which state can't do — a controlled write is skipped while the
+  // control is focused, and submitting with Enter never moves focus.
+  if (name === 'reset') return value === true ? ['data-jxreset', ''] : undefined;
   if (EVENT_ATTRS[name]) return [EVENT_ATTRS[name], intentMarker(value)];
   if (name === 'class' || name === 'className') return ['class', value];
   // An empty style object must leave no attribute behind, so `undefined` here.

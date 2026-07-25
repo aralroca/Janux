@@ -42,6 +42,32 @@ describe('built-in client tools', () => {
     expect(value).toBe('Ada');
   });
 
+  /**
+   * The DOM-fallback tools report WHAT they touched; painting it is the feedback
+   * layer's job (`enableAgentGlow`, or a richer visualizer). They used to call
+   * `glowElement` themselves, so the built-in box-shadow was hardcoded: an app
+   * that opted out of the glow still got it, and no other visualization could
+   * take over.
+   */
+  it('ui_click and ui_fill emit janux:tool-target instead of painting', async () => {
+    const targets: any[] = [];
+    const onTarget = (event: any) => targets.push(event.detail);
+
+    document.body.innerHTML = '<button id="go">Go</button><input id="name" />';
+    document.getElementById('janux-glow-styles')?.remove();
+    document.addEventListener('janux:tool-target', onTarget);
+    await executeClientTool('ui_click', { selector: '#go' }, settled);
+    await executeClientTool('ui_fill', { selector: '#name', value: 'Ada' }, settled);
+    document.removeEventListener('janux:tool-target', onTarget);
+
+    expect(targets.map((target) => target.action)).toEqual(['click', 'fill']);
+    expect(targets[0].element).toBe(document.getElementById('go'));
+    expect(targets[1].element).toBe(document.getElementById('name'));
+    expect(targets[1].selector).toBe('#name');
+    expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(0);
+    expect(document.getElementById('janux-glow-styles')).toBeNull();
+  });
+
   it('ui_get_view_context reports path, links and mounted islands', async () => {
     document.body.innerHTML = '<a href="/x">x</a><janux-island data-jx="cart#default"></janux-island>';
     const context = (await executeClientTool('ui_get_view_context', {}, settled)) as any;

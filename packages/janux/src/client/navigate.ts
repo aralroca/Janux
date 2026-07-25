@@ -151,12 +151,28 @@ function extractLeaving(mount: MountContext, incomingHtml: string): Element[] {
     });
 }
 
+/** Marks a runtime-injected body node the whole-document diff must not own. */
+export const KEEP_ATTRIBUTE = 'data-janux-keep';
+
 /**
- * Diff-then-dispose: nothing is destroyed before the DOM actually changes, so
- * an abort before/during the diff leaves the current page fully intact (kept
- * persisted nodes are re-attached, no island disposed). Disposal happens after,
- * driven by what the diff removed from the document.
+ * Snapshots where `nodes` live and, once the diff has run, puts back whatever it
+ * removed — in place, since a node the app positioned inside its own layout must
+ * not reappear at the end of the body. A parent the diff also removed falls back
+ * to `fallback`.
  */
+function keepAttached(nodes: Element[], fallback: Element): () => void {
+  const places = nodes.map((node) => ({ node, parent: node.parentElement, next: node.nextElementSibling }));
+
+  return () =>
+    places
+      .filter(({ node }) => !node.isConnected)
+      .forEach(({ node, parent, next }) => {
+        const host = parent?.isConnected ? parent : fallback;
+
+        host.insertBefore(node, next?.isConnected && next.parentElement === host ? next : null);
+      });
+}
+
 /**
  * Runtime-injected stylesheets (a lazy-loaded editor's CSS, vite dev styles)
  * exist only in the live <head>: the incoming page doesn't list them, so the
@@ -164,19 +180,29 @@ function extractLeaving(mount: MountContext, incomingHtml: string): Element[] {
  * later remount. Snapshot them before the swap, resurrect whatever it removed.
  */
 function keepRuntimeStyles(): () => void {
-  const styles = [...document.head.querySelectorAll('style, link[rel="stylesheet"]')];
-
-  return () => {
-    styles.forEach((node) => {
-      if (!node.isConnected) document.head.appendChild(node);
-    });
-  };
+  return keepAttached([...document.head.querySelectorAll('style, link[rel="stylesheet"]')], document.head);
 }
 
+/**
+ * Same story one level down: an agent feedback overlay, a portal root or any
+ * node a runtime injected into the page belongs to the session, not to the
+ * route, so the diff would drop it for good. Opt in with `data-janux-keep`.
+ */
+function keepRuntimeNodes(): () => void {
+  return keepAttached([...document.body.querySelectorAll(`[${KEEP_ATTRIBUTE}]`)], document.body);
+}
+
+/**
+ * Diff-then-dispose: nothing is destroyed before the DOM actually changes, so
+ * an abort before/during the diff leaves the current page fully intact (kept
+ * persisted nodes are re-attached, no island disposed). Disposal happens after,
+ * driven by what the diff removed from the document.
+ */
 async function applyPage(mount: MountContext, html: string, signal?: AbortSignal): Promise<void> {
   const kept = extractPersisted(mount);
   const leaving = extractLeaving(mount, html);
   const restoreStyles = keepRuntimeStyles();
+  const restoreRuntimeNodes = keepRuntimeNodes();
 
   try {
     throwIfAborted(signal);
@@ -191,6 +217,7 @@ async function applyPage(mount: MountContext, html: string, signal?: AbortSignal
     throw error;
   } finally {
     restoreStyles();
+    restoreRuntimeNodes();
   }
 }
 

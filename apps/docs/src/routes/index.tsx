@@ -111,6 +111,33 @@ export default async function Home() {
           </div>
         </section>
 
+        <section class="demo">
+          <video
+            autoplay
+            muted
+            loop
+            playsinline
+            controls
+            preload="metadata"
+            poster="/demo-poster.jpg"
+            aria-label="A console driven in natural language: the agent invites a teammate, searches users, renames a field through the DOM fallback and builds a React Flow workflow, with a status chip per tool call and an animated ring on every element it touches"
+          >
+            <source src="/demo.webm" type="video/webm" />
+            <source src="/demo.mp4" type="video/mp4" />
+          </video>
+          <p class="demo-caption">
+            The agent calls the same intents a human clicks, and{' '}
+            <a href="/docs/recipes/local-model-copilot">
+              <code>createCopilot({'{ visualize }'})</code>
+            </a>{' '}
+            is the whole of the feedback — chips, the gradient ring, the backdrop veil. Source:{' '}
+            <a href="https://github.com/aralroca/Janux/tree/main/examples/with-web-agent">
+              examples/with-web-agent
+            </a>
+            .
+          </p>
+        </section>
+
         <section class="two-faces">
           <h2>The same definition, seen by both audiences</h2>
           <div class="faces-grid">

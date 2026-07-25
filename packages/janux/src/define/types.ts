@@ -40,6 +40,13 @@ export interface IntentDef {
   server?: boolean;
   prefetch?: 'eager' | 'visible' | 'idle';
   ready?: (bag: RunBag) => boolean;
+  /**
+   * CSS selector for the DOM this intent's effect lands on, resolved after it
+   * ran (so post-run `state` is available). Rides `janux:tool-call` so a
+   * feedback layer can highlight elements the intent CREATES — they mount a
+   * tick later, and have no delegation marker to point at.
+   */
+  glowTarget?: (bag: RunBag) => string | undefined;
   run: (bag: RunBag) => unknown;
 }
 

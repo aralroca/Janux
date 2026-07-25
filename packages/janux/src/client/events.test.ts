@@ -68,10 +68,44 @@ function fireInput(el: HTMLInputElement, value: string, isComposing = false): vo
   el.dispatchEvent(event);
 }
 
+/**
+ * A chat box, the canonical `<form intent>`: the field must empty the moment the
+ * question is sent. State can't do it — a controlled write is skipped while the
+ * control has focus (the no-cursor-jumps rule), and pressing Enter keeps focus —
+ * so apps reached for `querySelector(...).value = ''`. `reset` is the runtime
+ * doing it instead.
+ */
+const ask = component({
+  name: 'ask',
+  state: schema({ sent: str().default('') }),
+  intents: {
+    send: intent({ input: schema({ text: str() }), run: ({ state, input }) => (state.sent = input.text) }),
+  },
+  view: ({ intents }: any) =>
+    jsx('form', { intent: intents.send, reset: true, children: jsx('input', { name: 'text' }) }),
+});
+
 describe('rich delegated events', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     commits.length = 0;
+  });
+
+  it('a form marked reset empties itself once the intent has the values', async () => {
+    const { html } = await renderToString(jsx(ask as any, {}), {});
+
+    expect(html).toContain('data-jxreset');
+    document.body.innerHTML = html;
+    const client = boot({ defs: [ask] });
+    const field = document.querySelector('input[name="text"]') as HTMLInputElement;
+
+    field.value = 'invite jane@acme.com as admin';
+    field.focus();
+    document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await client.settled();
+
+    expect(((await client.read('ui://ask#default')) as any).state.sent).toBe('invite jane@acme.com as admin');
+    expect(field.value).toBe('');
   });
 
   it('SSR emits data-jxe-* markers instead of eager listeners', async () => {

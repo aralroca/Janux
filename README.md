@@ -15,12 +15,18 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-3059%20passing-brightgreen" alt="3059 tests passing" />
+  <img src="https://img.shields.io/badge/tests-3084%20passing-brightgreen" alt="3084 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" /></a>
 </p>
+
+<p align="center">
+  <img src="docs/demo.gif" width="1000" alt="Demo: a console driven in natural language — the agent invites a teammate, searches users, renames a field through the DOM fallback and builds a React Flow workflow, while status chips report each tool call and an animated gradient ring tours every element it touches, including nodes that mount asynchronously" />
+</p>
+
+<p align="center"><sub><a href="examples/with-web-agent">examples/with-web-agent</a> — the agent calls the same intents a human clicks, and <code>createCopilot({ visualize })</code> is the whole of the feedback: a chip per tool call, a gradient ring on the element being operated, and a backdrop veil that keeps the user's focus on the action.</sub></p>
 
 ---
 
@@ -167,10 +173,12 @@ Agents read the same docs at `/llms.txt` and any page as Markdown by appending `
 - [`examples/interop-react`](examples/interop-react) — a React component (unchanged) mounted with `foreign()`: tracked props, callbacks→intents.
 - [`examples/nested-islands`](examples/nested-islands) — stateful islands inside stateful islands, with dispose semantics.
 - [`examples/data-cache`](examples/data-cache) — `useQuery`/`mutation` + persisted stores + typed URL state.
+- [`examples/with-web-agent`](examples/with-web-agent) — the demo above: a console operated in natural language, `createCopilot({ visualize })` for the chips/ring/veil, `glowTarget` for React Flow nodes that mount late, and a `forbidden` intent that forces the DOM fallback.
 
 ```bash
 bun run --cwd examples/shop dev
 bun run --cwd examples/i18n dev
+bun run --cwd examples/with-web-agent dev
 ```
 
 ## Develop
