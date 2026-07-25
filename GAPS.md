@@ -84,6 +84,25 @@ otherwise:
 - **Attribute names are emitted verbatim.** `tabIndex={3}` renders
   `tabIndex="3"`, not `tabindex="3"`. HTML attribute names parse
   case-insensitively so it behaves correctly, but the markup differs from React's.
+- **String bounds count UTF-16 code units, not graphemes.** `str().max(1)`
+  rejects a single emoji (2 units) and rejects a decomposed `é` (`e` + combining
+  acute) while accepting the precomposed one. This matches `.length` and JSON
+  Schema's `maxLength`, which is the contract the agent is handed, so the
+  projection and the runtime agree — but it is not "characters as a human counts
+  them". Grapheme-aware bounds would need `Intl.Segmenter` and a different
+  keyword than `maxLength`.
+- **`min()`/`max()` are refused, not ignored, on kinds without bounds.** Building
+  `list(int()).min(2)`, `obj({}).min(1)`, `bool().min(1)` or `enums([]).min(1)`
+  now throws at construction. Previously the flag was accepted and never read:
+  `list(int()).min(2)` validated `[1]` as fine, and `bool().min(2)` rejected
+  `true` with "below min 2". List-length bounds are therefore *not supported* —
+  the docs define bounds as "length for strings, value for numbers", and adding a
+  new capability was out of scope. Check the length inside the intent.
+- **A default is validated like any other value.** `int().default('nope')` used to
+  pass the string straight through into state. It now fails with
+  `expected int`. A default that violates a bound added later
+  (`int().min(10).default(1)`) also fails, since validation happens when the
+  default is applied rather than when it is declared.
 
 ## Not fixed, and why
 

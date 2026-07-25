@@ -18,9 +18,10 @@ function primitive(value: unknown): string {
   if (typeof value === 'function') return `fn:${value.toString()}`;
   if (typeof value === 'bigint') return `${value}n`;
   if (typeof value === 'symbol' || value === undefined) return String(value);
-  // `JSON.stringify(-0)` is `"0"`, which would fingerprint two genuinely
-  // different inputs as the same case.
+  // `JSON.stringify` flattens these onto `"0"` and `"null"`, which would
+  // fingerprint genuinely different inputs as the same case.
   if (Object.is(value, -0)) return '-0';
+  if (typeof value === 'number' && !Number.isFinite(value)) return String(value);
 
   return JSON.stringify(value)!;
 }

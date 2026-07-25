@@ -28,14 +28,37 @@ function objectSchema(type: JxType): Record<string, unknown> {
   return { type: 'object', properties, required, additionalProperties: false };
 }
 
+/**
+ * A string constrains length, a number constrains value. Emitting `minimum` for a
+ * string is silently useless: every validator ignores it on a string, so the
+ * agent never sees a bound Janux will reject it for.
+ */
+function applyBounds(type: JxType, base: Record<string, unknown>): void {
+  const { min, max } = type.flags;
+  const isText = type.kind === 'string';
+
+  if (min !== undefined) base[isText ? 'minLength' : 'minimum'] = min;
+  if (max !== undefined) base[isText ? 'maxLength' : 'maximum'] = max;
+}
+
+/**
+ * An enum carries no `type`, so `[base.type, 'null'].flat()` produced the invalid
+ * `type: [null, 'null']` — a schema a strict validator refuses outright.
+ * Nullability joins the member list instead.
+ */
+function applyNullable(type: JxType, base: Record<string, unknown>): void {
+  if (!type.flags.nullable) return;
+  if (type.kind === 'enum') base.enum = [...(base.enum as unknown[]), null];
+  else base.type = [base.type, 'null'].flat();
+}
+
 /** Serializes a Janux type to standard JSON Schema (for the manifest and MCP tools). */
 export function toJsonSchema(type: JxType): Record<string, unknown> {
   const base = baseSchema(type);
 
-  if (type.flags.nullable) base.type = [base.type, 'null'].flat();
+  applyNullable(type, base);
+  applyBounds(type, base);
   if (type.flags.defaultValue !== undefined) base.default = type.flags.defaultValue;
-  if (type.flags.min !== undefined) base.minimum = type.flags.min;
-  if (type.flags.max !== undefined) base.maximum = type.flags.max;
   if (type.kind === 'money') base.format = 'money-minor-units';
 
   return base;
