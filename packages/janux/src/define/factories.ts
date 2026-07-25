@@ -16,9 +16,38 @@ function assertName(name: unknown, kind: string): void {
   throw new Error(`Janux: ${kind} needs a kebab-case "name", got ${JSON.stringify(name)}`);
 }
 
+/** An intent name becomes half of `component.intent`, and `__` is reserved for wire names. */
+const INTENT_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * An intent name is addressable: an agent calls `component.intent`, and the client
+ * bridge splits on the dot to resolve it. Left unvalidated, a name containing a dot
+ * made that namespace ambiguous — `cart` with an `auto` intent `pay` and a
+ * `forbidden` intent `pay.now` let a call to the *forbidden* `cart.pay.now` resolve
+ * to `cart.pay` and run it. The separator is rejected where the name is declared,
+ * so the ambiguity cannot exist rather than being parsed around.
+ */
+function assertIntentNames(def: { name: string; intents?: Record<string, unknown> }): void {
+  Object.keys(def.intents ?? {}).forEach((name) => {
+    if (name.includes('.')) {
+      throw new Error(
+        `Janux: intent name "${name}" in component "${def.name}" may not contain "." — ` +
+          'it separates the component from the intent in a tool name',
+      );
+    }
+    if (INTENT_NAME.test(name) && !name.includes('__')) return;
+
+    throw new Error(
+      `Janux: intent name "${name}" in component "${def.name}" must be a plain identifier — ` +
+        'it becomes part of an agent tool name',
+    );
+  });
+}
+
 /** Defines a bifacial component: view for humans, resource+tools for agents. */
 export function component(def: ComponentInput): ComponentTag {
   assertName(def.name, 'component()');
+  assertIntentNames(def);
   if (typeof def.view !== 'function') {
     throw new Error(`Janux: component "${def.name}" requires a view`);
   }
@@ -29,6 +58,7 @@ export function component(def: ComponentInput): ComponentTag {
 /** Defines a shared store: a bifacial component without a view. */
 export function store(def: StoreInput): ComponentDef {
   assertName(def.name, 'store()');
+  assertIntentNames(def);
 
   return Object.freeze({ ...def, kind: 'store' as const, scope: def.scope ?? 'app' });
 }
