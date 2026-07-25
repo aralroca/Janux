@@ -6,7 +6,7 @@ import type { Plugin, ViteDevServer } from 'vite';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
 import { mimeFor, resolvePublicFile } from './static-files';
-import { apiFiles, resolveAppConfig, type JanuxPluginOptions } from './app-config';
+import { apiFiles, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { sendFetchResponse, toFetchRequest } from './request-adapter';
 
@@ -36,10 +36,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     agent: (agentModule?.default as ServerOptions['agent']) ?? defineAgent(),
     storeDefs: (storesModule ?? {}) as ServerOptions['storeDefs'],
     runtimeUrl: app.clientEntry ? `/${relativeToRoot(vite.config.root, app.clientEntry)}` : undefined,
-    stylesheets: devStylesheets(vite.config.root, app.stylesheet),
-    favicon: app.favicon,
-    title: app.title,
-    lang: app.lang,
+    ...shellOptions(app, devStylesheets(vite.config.root, app.stylesheet)),
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default as ServerOptions['i18n'],
     foreignImport: appForeignImport(vite.config.root),

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import type { ServerOptions } from '@janux/server';
 import type { JanuxConfig, JanuxOutput } from 'janux';
 
 export type { JanuxOutput } from 'janux';
@@ -75,6 +76,21 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     llmsTxt: options.llmsTxt,
     output: options.output ?? 'bun',
   };
+}
+
+/**
+ * The `ServerOptions` fields the HTML shell reads. Dev (the Vite plugin) and
+ * prod (`janux build` / `janux start`) resolve the same app config, so they map
+ * these in one place: the favicon was wired in dev and forgotten in prod, and
+ * every build shipped a shell with no icon link — a 404 `/favicon.ico` on every
+ * page. The stylesheet URL is the one field that legitimately differs, so it
+ * comes from the caller.
+ */
+export function shellOptions(
+  app: JanuxAppConfig,
+  stylesheets: string[],
+): Pick<ServerOptions, 'title' | 'lang' | 'favicon' | 'stylesheets'> {
+  return { title: app.title, lang: app.lang, favicon: app.favicon, stylesheets };
 }
 
 export function apiFiles(serverDir: string): string[] {

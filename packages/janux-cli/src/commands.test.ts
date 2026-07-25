@@ -1,5 +1,8 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { bundleInputs, cssAssetName, localeRedirectStub } from './commands';
+import { bundleInputs, cssAssetName, localeRedirectStub, prodServerOptions } from './commands';
 
 /** Runs the stub's inline script with a fake navigator/location and returns the redirect target. */
 function redirectOf(locales: string[], defaultLocale: string, languages: string[]): string {
@@ -55,6 +58,37 @@ describe('cssAssetName', () => {
     expect(cssAssetName('/app', undefined)({ names: ['styles.css'], originalFileNames: ['src/styles.css'] })).toBe(
       'assets/[name]-[hash][extname]',
     );
+  });
+});
+
+/** An app root with the conventional files a shell field is resolved from. */
+function appRoot(config: Record<string, unknown>): string {
+  const root = mkdtempSync(join(tmpdir(), 'janux-prod-options-'));
+
+  mkdirSync(join(root, 'public'), { recursive: true });
+  mkdirSync(join(root, 'src'), { recursive: true });
+  writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'fixture' }));
+  writeFileSync(join(root, 'public/favicon.svg'), '<svg/>');
+  writeFileSync(join(root, 'src/styles.css'), 'body{}');
+  writeFileSync(join(root, 'janux.config.ts'), `export default ${JSON.stringify(config)}`);
+
+  return root;
+}
+
+/**
+ * Dev resolved the favicon and prod didn't, so every `janux build` shipped a
+ * shell with no icon link and the browser fell back to a 404 `/favicon.ico` —
+ * a console error on every page of every Janux app. The shell fields now come
+ * from one mapping, so dev and prod cannot drift apart again.
+ */
+describe('prodServerOptions shell fields', () => {
+  it('forwards every shell field the app config resolves', async () => {
+    const options = await prodServerOptions(appRoot({ title: 'Fixture', lang: 'es' }));
+
+    expect(options.favicon).toBe('/favicon.svg');
+    expect(options.title).toBe('Fixture');
+    expect(options.lang).toBe('es');
+    expect(options.stylesheets).toEqual(['/styles.css']);
   });
 });
 

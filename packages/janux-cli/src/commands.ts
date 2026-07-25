@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
-import { apiFiles, apiModuleName, janux, resolveAppConfig } from '@janux/vite';
+import { apiFiles, apiModuleName, janux, resolveAppConfig, shellOptions } from '@janux/vite';
 import type { CliCommand } from './args';
 
 /** Zero-config integrations: installing @janux/tailwind IS the configuration. */
@@ -169,9 +169,7 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
     agent: agentModule?.default ?? defineAgent(),
     storeDefs: storesModule ?? {},
     runtimeUrl: existsSync(join(root, 'dist/client/client.js')) ? '/client.js' : undefined,
-    stylesheets: app.stylesheet ? ['/styles.css'] : [],
-    title: app.title,
-    lang: app.lang,
+    ...shellOptions(app, app.stylesheet ? ['/styles.css'] : []),
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default,
     middleware: middlewareModule?.default,
