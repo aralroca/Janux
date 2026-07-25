@@ -252,6 +252,81 @@ describe('client boot (resume without hydration)', () => {
     expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(0);
   });
 
+  /**
+   * An intent that CREATES DOM (a React Flow node, a portal, a lazily rendered
+   * row) has no delegation marker to glow: the element does not exist when the
+   * call starts, and it mounts a tick after the intent returns. `glowTarget`
+   * lets the component declare where its effect lands, so the feedback layer
+   * can wait for that selector instead of the app deducing it from outside.
+   */
+  it('carries an intent’s declared glowTarget on the janux:tool-call result', async () => {
+    const board = component({
+      name: 'board',
+      state: schema({ cards: list({ id: str() }) }),
+      intents: {
+        add: intent({
+          input: schema({ id: str() }),
+          glowTarget: ({ state }: any) => `.card[data-id="${state.cards.at(-1).id}"]`,
+          run: ({ state, input }: any) => state.cards.push({ id: input.id }),
+        }),
+        touch: intent({ run: ({ state }: any) => state.cards.length }),
+      },
+      view: () => jsx('div', {}),
+    });
+    const { html } = await renderToString(jsx(board as any, {}), {
+      initialState: { 'ui://board#default': { cards: [] } },
+    });
+    const details: any[] = [];
+    const onTool = (event: any) => details.push(event.detail);
+
+    document.body.innerHTML = html;
+    const client = boot({ defs: [board] });
+
+    document.addEventListener('janux:tool-call', onTool);
+    await client.call('board.add', { id: 'c1' });
+    await client.call('board.touch');
+    document.removeEventListener('janux:tool-call', onTool);
+
+    const [start, ok, , plainOk] = details;
+
+    // The selector needs the post-run state, so it rides the resolved call only.
+    expect(start.glowTarget).toBeUndefined();
+    expect(ok.glowTarget).toBe('.card[data-id="c1"]');
+    // An intent that declares nothing adds nothing to the event.
+    expect(plainOk.glowTarget).toBeUndefined();
+  });
+
+  it('a throwing glowTarget resolver never fails the tool call', async () => {
+    const fragile = component({
+      name: 'fragile',
+      state: schema({ n: int() }),
+      intents: {
+        bump: intent({
+          glowTarget: () => {
+            throw new Error('no node yet');
+          },
+          run: ({ state }: any) => (state.n += 1),
+        }),
+      },
+      view: () => jsx('div', {}),
+    });
+    const { html } = await renderToString(jsx(fragile as any, {}), {
+      initialState: { 'ui://fragile#default': { n: 0 } },
+    });
+    const errors: string[] = [];
+    const onError = (event: any) => errors.push(String(event.detail));
+
+    document.body.innerHTML = html;
+    const client = boot({ defs: [fragile] });
+
+    document.addEventListener('janux:error', onError);
+    await client.call('fragile.bump');
+    document.removeEventListener('janux:error', onError);
+
+    expect(((await client.read('ui://fragile#default')) as any).state.n).toBe(1);
+    expect(errors.join()).toContain('no node yet');
+  });
+
   it('the enabled glow paints janux:tool-target elements (DOM-fallback feedback)', async () => {
     document.body.innerHTML = '<button id="go">Go</button>';
     document.getElementById('janux-glow-styles')?.remove();

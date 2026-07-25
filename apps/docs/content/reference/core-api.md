@@ -59,9 +59,23 @@ Same as `component` minus `view`. Projects as `store://<name>`. `scope: 'app' | 
 | `input` | `schema({...})` | Validated before `run`; errors carry paths |
 | `guard` | `'auto' \| 'confirm' \| 'forbidden'` or `({ ctx }) => guard` | Default `'auto'` |
 | `ready` | `(bag) => boolean` | Announced in the manifest; not-ready calls throw `not_ready` |
+| `glowTarget` | `(bag) => string \| undefined` | CSS selector for the DOM this intent's effect lands on |
 | `run` | `(bag) => unknown` (required) | The only place `state` may be mutated |
 
 Invocation results for agent-origin calls with `guard: 'confirm'` are proposals: `{ status: 'proposal', id, tool, input }`.
+
+`glowTarget` exists for intents that **create** DOM: a node the view renders a tick later has no delegation marker to highlight, and the element does not exist when the call starts. Declare where the effect lands and the resolved selector rides the `janux:tool-call` event, so the feedback layer waits for it to mount:
+
+```ts
+addStep: intent({
+  input: schema({ label: str() }),
+  // Resolved after `run`, so post-run state is available.
+  glowTarget: ({ state }) => `.react-flow__node[data-id="${state.nodes.at(-1).id}"]`,
+  run: ({ state, input }) => state.nodes.push({ id: `wf-${state.nodes.length}`, label: input.label }),
+}),
+```
+
+It never affects the call: a resolver that throws reports on `janux:error` and the mutation stands. Proposals carry no target — nothing ran yet.
 
 ## effect(def)
 

@@ -44,6 +44,25 @@ function liveInstances(registry: ClientRegistry): JanuxInstance[] {
 interface ToolEventExtras {
   guard?: string;
   approval?: boolean;
+  glowTarget?: string;
+}
+
+/**
+ * An intent's declared `glowTarget`, resolved with the post-run bag. A resolver
+ * that throws must not turn a mutation that already happened into a failed
+ * call, so it degrades to no hint and reports itself.
+ */
+function glowTargetOf(instance: JanuxInstance, intentName: string, input: unknown): string | undefined {
+  const resolve = instance.def.intents?.[intentName]?.glowTarget;
+
+  if (!resolve) return undefined;
+  try {
+    return resolve({ ...instance.bag, input }) ?? undefined;
+  } catch (error) {
+    document.dispatchEvent(new CustomEvent('janux:error', { detail: String(error) }));
+
+    return undefined;
+  }
 }
 
 /** Resolves an intent's guard synchronously from the registered defs (no mount needed). */
@@ -127,8 +146,13 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
 
         if (!invoke) throw new Error(`Janux: unknown tool "${tool}"`);
         const result: any = await invoke(input, { origin: 'agent' });
+        const proposed = result?.status === 'proposal';
 
-        emitToolEvent(tool, input, result?.status === 'proposal' ? 'proposal' : 'ok', { guard });
+        emitToolEvent(tool, input, proposed ? 'proposal' : 'ok', {
+          guard,
+          // Nothing ran on a proposal, so there is no effect to point at yet.
+          glowTarget: proposed ? undefined : glowTargetOf(instance, intentName, input),
+        });
 
         return result;
       } catch (error) {
