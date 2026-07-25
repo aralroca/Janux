@@ -52,7 +52,28 @@ function guardOf(mount: MountContext, component: string, intentName: string): st
     mount.registry.defs.get(component) ?? mount.registry.stores.get(component)?.def;
   const intentDef = def?.intents?.[intentName];
 
-  return intentDef ? resolveGuard(intentDef, mount.ctx) : 'auto';
+  // `unknown`, not `auto`. Anything watching `janux:tool-call` to audit agent
+  // activity was being told a tool it could not even resolve was unguarded.
+  return intentDef ? resolveGuard(intentDef, mount.ctx) : 'unknown';
+}
+
+/**
+ * A tool is addressed as exactly `component.intent`.
+ *
+ * Destructuring the first two parts of `tool.split('.')` and carrying on meant any
+ * suffix was silently ignored: `cart.pay.anything.at.all` ran `cart.pay`. So names
+ * that appear nowhere in the manifest were executable, which breaks the promise
+ * that the mounted tree *is* the agent surface — and it arrives over the wire, so
+ * validating the declaration side is not enough on its own.
+ */
+function splitTool(tool: string): [string, string] {
+  const parts = tool.split('.');
+
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    throw new Error(`Janux: malformed tool name "${tool}" — expected "component.intent"`);
+  }
+
+  return [parts[0], parts[1]];
 }
 
 /** Emits `janux:tool-call` DOM events so apps can visualize agent activity (glow, chat lines). */
@@ -96,7 +117,7 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
           throw error;
         }
       }
-      const [component = '', intentName = ''] = tool.split('.');
+      const [component, intentName] = splitTool(tool);
       const guard = guardOf(mount, component, intentName);
 
       emitToolEvent(tool, input, 'start', { guard });

@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-850%2B%20passing-brightgreen" alt="850+ tests passing" />
+  <img src="https://img.shields.io/badge/tests-3059%20passing-brightgreen" alt="3059 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -177,9 +177,17 @@ bun run --cwd examples/i18n dev
 
 ```bash
 bun install
-bun test packages    # 820+ tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
+bun test             # 3059 tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
+bun run test:census  # per-area counts and the coverage floor
 bun run typecheck
 ```
+
+[`packages/conformance`](packages/conformance) holds a behavioural corpus: the
+cases other frameworks learnt the hard way, translated to Janux's API. No test
+code was copied — each row carries the suite it came from (see
+[CREDITS.md](CREDITS.md)), a guard fails the build on a duplicate id or a repeated
+input/expected pair, and cases for features Janux does not have are recorded in
+[GAPS.md](GAPS.md) rather than padded in as empty `test.todo`s.
 
 ## Contributing
 

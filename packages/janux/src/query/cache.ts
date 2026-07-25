@@ -35,6 +35,31 @@ export function hashKey(key: QueryKey): string {
   );
 }
 
+/**
+ * Prefix match on key *segments*, not on the hash string.
+ *
+ * A string segment happens to be delimited by its closing quote, so comparing
+ * hash prefixes worked for `['todos']` vs `['todosArchive']`. A number is not:
+ * `hashKey([1])` is `"[1]"`, which is a string prefix of `"[10]"`, so
+ * `invalidateQueries(['user', 1])` also refetched `['user', 10]`.
+ */
+/** Recovers a key from its hash; a hash Janux did not write falls back to one opaque segment. */
+function parseHash(hash: string): QueryKey {
+  try {
+    const parsed = JSON.parse(hash);
+
+    return Array.isArray(parsed) ? parsed : [hash];
+  } catch {
+    return [hash];
+  }
+}
+
+function startsWithSegments(key: QueryKey, prefix: QueryKey): boolean {
+  if (key.length < prefix.length) return false;
+
+  return prefix.every((segment, index) => hashKey([segment]) === hashKey([key[index]]));
+}
+
 const DEFAULT_STALE = 0;
 const DEFAULT_GC = 5 * 60 * 1000;
 
@@ -138,10 +163,11 @@ export class QueryClient {
     this.queries.get(hashKey(key))?.setData(data);
   }
 
-  /** Refetch every entry whose key matches the prefix (observed or not); failures are swallowed. */
+  /** Refetch every entry whose key starts with this prefix (observed or not); failures are swallowed. */
   async invalidateQueries(key?: QueryKey): Promise<void> {
-    const prefix = key ? hashKey(key).slice(0, -1) : '';
-    const matches = [...this.queries.values()].filter((query) => query.hash.startsWith(prefix));
+    const matches = [...this.queries.values()].filter(
+      (query) => !key || startsWithSegments(query.options.queryKey, key),
+    );
 
     await Promise.all(matches.map((query) => query.fetch().catch(() => undefined)));
   }
@@ -174,7 +200,10 @@ export class QueryClient {
 
   hydrate(entries: Record<string, QueryState<unknown>>): void {
     Object.entries(entries).forEach(([hash, state]) => {
-      const query = new Query(hash, { queryKey: [hash], queryFn: async () => state.data } as any, (key) => this.queries.delete(key), this.now);
+      // The hash *is* the serialized key, so parsing it back keeps a hydrated
+      // entry matchable by `invalidateQueries` now that matching is segment-wise.
+      const queryKey = parseHash(hash);
+      const query = new Query(hash, { queryKey, queryFn: async () => state.data } as any, (key) => this.queries.delete(key), this.now);
 
       query.state = state;
       this.queries.set(hash, query);

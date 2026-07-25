@@ -36,6 +36,9 @@ export class AttachmentError extends Error {
   }
 }
 
+/** A storage marker is a URL. Anything longer is padding, not a location. */
+const MAX_MARKER_CHARS = 2048;
+
 function base64Bytes(data: string): number {
   const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0;
 
@@ -53,10 +56,14 @@ export function acceptAttachments(
   let total = 0;
   const accepted = incoming.map((attachment, index) => {
     if (!rules.allowedTypes.includes(attachment.mediaType)) throw new AttachmentError('bad_type');
-    const bytes = attachment.data.startsWith('s3://') ? 0 : base64Bytes(attachment.data);
+    const isMarker = attachment.data.startsWith('s3://');
+    const bytes = isMarker ? 0 : base64Bytes(attachment.data);
 
     if (bytes > rules.maxFileBytes) throw new AttachmentError('too_big');
-    total += bytes;
+    if (isMarker && attachment.data.length > MAX_MARKER_CHARS) throw new AttachmentError('too_big');
+    // A marker carries no payload, but the string is still in the request body —
+    // counting it as zero let four 50MB markers pass a 1KB request budget.
+    total += isMarker ? attachment.data.length : bytes;
 
     return { ...attachment, ref: `att_${index + 1}`, bytes };
   });

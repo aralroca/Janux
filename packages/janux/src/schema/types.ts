@@ -22,6 +22,8 @@ export interface JxExtra {
   shape?: Record<string, JxType>;
 }
 
+const BOUNDED_KINDS = new Set<JxKind>(['string', 'int', 'number', 'money']);
+
 export class JxType {
   readonly kind: JxKind;
   readonly flags: JxFlags;
@@ -56,10 +58,28 @@ export class JxType {
   }
 
   min(value: number): JxType {
+    this.assertBounded('min');
+
     return this.with({ min: value });
   }
 
   max(value: number): JxType {
+    this.assertBounded('max');
+
     return this.with({ max: value });
+  }
+
+  /**
+   * Bounds mean length for a string and value for a number. On any other kind the
+   * flag was simply never read — `list(int()).min(2)` accepted `[1]` and
+   * `bool().min(2)` rejected `true` with "below min 2". A constraint that
+   * silently does nothing is worse than one that refuses to be written.
+   */
+  private assertBounded(method: string): void {
+    if (BOUNDED_KINDS.has(this.kind)) return;
+
+    throw new Error(
+      `Janux: ${method}() is not defined for ${this.kind} — bounds are length for strings and value for numbers.`,
+    );
   }
 }

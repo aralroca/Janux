@@ -35,12 +35,16 @@ function uriFor(def: ComponentDef, key?: string): string {
 }
 
 function toolsFor(def: ComponentDef, ctx: Ctx, instance?: JanuxInstance): ManifestTool[] {
+  // The guard is resolved once and reused. Resolving it twice let a guard function
+  // that answers differently on each call pass the filter and then be advertised
+  // as `forbidden` — a tool listed for the agent that the filter meant to remove.
   return Object.entries(def.intents ?? {})
-    .filter(([, intentDef]) => resolveGuard(intentDef, ctx) !== 'forbidden')
-    .map(([name, intentDef]) => ({
+    .map(([name, intentDef]) => ({ name, intentDef, guard: resolveGuard(intentDef, ctx) }))
+    .filter(({ guard }) => guard !== 'forbidden')
+    .map(({ name, intentDef, guard }) => ({
       name: `${def.name}.${name}`,
       description: intentDef.description,
-      guard: resolveGuard(intentDef, ctx),
+      guard,
       input: intentDef.input ? toJsonSchema(intentDef.input) : undefined,
       ready: instance && intentDef.ready ? safeReady(intentDef, instance) : true,
       server: intentDef.server || undefined,

@@ -1,4 +1,4 @@
-import { buildDefault, toJsonSchema, validate } from '../schema';
+import { toJsonSchema, validate } from '../schema';
 import { computed, createRoot, getOwner, runWithOwner, untrack, type Owner, type ReadonlySig } from '../signals';
 import { createReactiveState } from '../state/reactive-state';
 import { createGate, withGate } from '../state/mutation-gate';
@@ -8,6 +8,7 @@ import { createPendingTracker } from './settled';
 import { createSources } from './sources';
 import { startEffects } from './effects';
 import { invokeIntent, type AuditEntry, type Proposal } from './intents';
+import { applyPatch, resolveInitial } from './state-intake';
 
 export interface InstanceOptions {
   key?: string;
@@ -82,7 +83,7 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
   const ctx = options.ctx ?? {};
   const bus = options.bus ?? createBus();
   const tracker = createPendingTracker();
-  const initial = options.initial ?? (def.state ? (buildDefault(def.state) as any) : {});
+  const initial = resolveInitial(def, options.initial);
   const gate = createGate();
   const state = createReactiveState(initial as Record<string, unknown>, gate);
   const sourcesRuntime = createSources(def.sources, ctx, bus, tracker, options.initialSources);
@@ -142,13 +143,7 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     emit,
     bag,
     snapshot: () => state.snapshot(),
-    patch(values: Record<string, unknown>) {
-      withGate(gate, () => {
-        Object.entries(values).forEach(([field, value]) => {
-          if (field in state.proxy) (state.proxy as any)[field] = value;
-        });
-      });
-    },
+    patch: (values: Record<string, unknown>) => applyPatch(def, state, gate, values),
     sourcesSnapshot() {
       return untrack(() =>
         Object.fromEntries(

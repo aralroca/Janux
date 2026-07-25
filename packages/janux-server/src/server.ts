@@ -16,7 +16,7 @@ import { createMcpEndpoint, type McpAuth } from './mcp';
 import { pageMarkdown } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
 import type { ShellI18n } from './html-shell';
-import { assertValidInput, errorStatus, evictOldestProposal, json, type PendingApiProposal } from './http';
+import { assertValidInput, errorStatus, evictOldestProposal, json, proposalId, type PendingApiProposal } from './http';
 import { apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 import { createFsRouter, type Route } from './router';
@@ -91,7 +91,6 @@ async function resolveStaticParams(rawParams: unknown): Promise<Array<Record<str
   }
 }
 
-let proposalSeq = 0;
 
 /** The Janux fullstack server: pages, api() endpoints, manifest, proposals and the agent mount. */
 export function createJanuxServer(options: ServerOptions = {}) {
@@ -222,11 +221,13 @@ export function createJanuxServer(options: ServerOptions = {}) {
   /** Agent + `confirm`: register a pending proposal for a human instead of running the tool. */
   const proposeApi = (tool: ApiTool, input: unknown, ctx: Ctx) => {
     const parsed = tool.input ? assertValidInput(tool, input) : input;
-    const id = `prop_api_${(proposalSeq += 1)}`;
+    const id = proposalId('api');
 
     evictOldestProposal(proposals);
     proposals.set(id, { id, tool: tool.name, input: parsed, execute: () => invokeApi(tool, parsed, ctx, 'human', options.onAudit) });
-    options.onAudit?.(apiAuditEntry(tool, 'agent', 'confirm', ctx, { input: parsed, ok: true }));
+    // `proposed`, not `ok` — nothing ran yet, and an audit trail that records an
+    // unapproved proposal as a success is worse than no trail at all.
+    options.onAudit?.(apiAuditEntry(tool, 'agent', 'confirm', ctx, { input: parsed, ok: true, proposed: true }));
 
     return { status: 'proposal' as const, id, tool: tool.name, input: parsed };
   };

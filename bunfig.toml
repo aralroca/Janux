@@ -1,0 +1,26 @@
+# There is deliberately no `preload` here.
+#
+# Registering Happy-DOM globally would hand `document` to the server-side suites
+# too and flip every `typeof document !== 'undefined'` branch in Janux, and Bun
+# has open issues about `GlobalRegistrator.register()` hanging when it runs for
+# a whole session. DOM tests register per file via
+# `packages/conformance/support/dom.ts` instead.
+[test]
+# Route fixtures exist to be *matched*, not executed — they would otherwise sit
+# at 0% and drag the number down without meaning anything.
+coveragePathIgnorePatterns = ["**/__fixtures__/**"]
+coverageSkipTestFiles = true
+
+# `coverageThreshold` is NOT set here, on purpose. Two Bun 1.3.14 behaviours make
+# it a trap, both verified by raising a form above the real number and checking
+# the exit code:
+#   1. It is enforced PER FILE, not on the total — so one uncovered module
+#      (today: client/api-stub.ts, client/upload.ts, config.ts and
+#      janux-vite/request-adapter.ts, all at 0%) makes even `0.01` fail and the
+#      gate is permanently red instead of meaningful.
+#   2. The singular keys `{ line, function }` parse but are silently ignored;
+#      only the plural `{ lines, functions }` are honoured. A gate written the
+#      obvious way is decorative and nobody notices.
+# The total-coverage floor lives in `scripts/test-census.ts` instead
+# (`bun run test:census --min-coverage 0.90`), where it sits next to the count it
+# is meant to keep honest and can be ratcheted per wave.

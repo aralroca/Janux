@@ -13,6 +13,12 @@ export interface AuditEntry {
   at: number;
   /** Verified Web Bot Auth key id, when the caller is an authenticated agent. */
   agent?: string;
+  /**
+   * The call was recorded as a pending proposal, not run. Without it a `confirm`
+   * guard logged `ok: true` the moment an agent asked, so the trail claimed a
+   * success for something a human may never approve.
+   */
+  proposed?: boolean;
 }
 
 export interface Proposal {
@@ -43,15 +49,24 @@ export class JanuxIntentError extends Error {
 export function resolveGuard(def: IntentDef, ctx: Ctx): GuardValue {
   const guard = def.guard ?? 'auto';
 
-  return typeof guard === 'function' ? guard({ ctx }) : guard;
+  if (typeof guard !== 'function') return guard;
+  try {
+    return guard({ ctx });
+  } catch {
+    // A guard that cannot decide denies. Letting the throw escape took the whole
+    // manifest down with it, so one bad guard blanked the entire agent surface —
+    // and any other recovery would have to fail open.
+    return 'forbidden';
+  }
 }
 
-let proposalSeq = 0;
-
+/**
+ * Unguessable, like the server's. A proposal id is the only thing standing between
+ * a pending `confirm` call and its execution, so a shared counter made one
+ * approvable by anyone who could count.
+ */
 function nextProposalId(tool: string): string {
-  proposalSeq += 1;
-
-  return `prop_${tool.replace(/\W/g, '_')}_${proposalSeq}`;
+  return `prop_${tool.replace(/\W/g, '_')}_${crypto.randomUUID()}`;
 }
 
 function checkInvocable(tool: string, def: IntentDef, bag: RunBag): void {
@@ -117,7 +132,7 @@ export async function invokeIntent(
     const run = () => hooks.trackPending(execute(def, bag, parsed, hooks.gate));
 
     if (origin === 'agent' && guard === 'confirm') {
-      audit(hooks, { tool, origin, guard, input: parsed, ok: true });
+      audit(hooks, { tool, origin, guard, input: parsed, ok: true, proposed: true });
 
       return propose(tool, parsed, run, hooks, dryRunDiff(def, bag, parsed));
     }

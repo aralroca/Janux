@@ -8,31 +8,56 @@ function escapeRegex(text: string): string {
   return text.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
-/** Replaces `{{variable}}` and `{{variable, format}}` occurrences with query values. */
+/** Placeholder name: the realistic key shapes, and never a regex the caller supplied. */
+const NAME = '([\\w$.-]+)';
+
+/**
+ * Replaces `{{variable}}` and `{{variable, format}}` occurrences with query values.
+ *
+ * One pass over the template, driven by the placeholders rather than by the query
+ * keys. Looping over the keys and replacing each in turn had two defects: a
+ * substituted value was re-scanned by every later key, so
+ * `{ a: '{{b}}', b: secret }` resolved `{{a}}` to the secret; and the key was
+ * interpolated into a `RegExp`, so `{ '.*': x }` replaced every placeholder in the
+ * string and `{ '(a+)+$': x }` spent 739ms backtracking on a single call.
+ */
 function interpolation(text: string | undefined, query: Query, config: I18nConfig, locale: string): string {
   const { format = null, prefix = '{{', suffix = '}}' } = config.interpolation ?? {};
-  const suffixPattern = suffix === '' ? '' : `(?:[\\s,]+([\\w-]*))?\\s*${escapeRegex(suffix)}`;
 
   if (!text || !query) return text ?? '';
+  const suffixPattern = suffix === '' ? '' : `(?:[\\s,]+([\\w-]*))?\\s*${escapeRegex(suffix)}`;
+  const pattern = new RegExp(`${escapeRegex(prefix)}\\s*${NAME}${suffixPattern}`, 'gm');
 
-  return Object.keys(query).reduce((all, varKey) => {
-    const regex = new RegExp(`${escapeRegex(prefix)}\\s*${varKey}${suffixPattern}`, 'gm');
+  return text.replace(pattern, (match: string, varKey: string, formatName?: string) => {
+    // `hasOwn`, not `in`: otherwise `{{toString}}` would resolve off the prototype.
+    if (!Object.hasOwn(query, varKey)) return match;
 
-    return all.replace(regex, (_match, formatName) =>
-      formatName && format ? format(query[varKey], formatName, locale) : String(query[varKey]),
-    );
-  }, text);
+    return formatName && format ? format(query[varKey], formatName, locale) : String(query[varKey]);
+  });
 }
 
+/** Dispatches by shape; anything not a string or container is returned untouched. */
+function interpolateValue(value: unknown, query: Query, config: I18nConfig, locale: string): unknown {
+  if (Array.isArray(value)) return value.map((item) => interpolateValue(item, query, config, locale));
+  if (typeof value === 'string') return interpolation(value, query, config, locale);
+  if (value instanceof Object) return objectInterpolation(value as Dictionary, query, config, locale);
+
+  return value;
+}
+
+/**
+ * Returns a new object rather than interpolating in place.
+ *
+ * Dictionary values arrive deep-cloned, but `options.default` does not — and a
+ * default is typically a module constant, so mutating it baked the first caller's
+ * values into every later request on the server.
+ */
 function objectInterpolation(obj: Dictionary, query: Query, config: I18nConfig, locale: string): Dictionary {
   if (!query || Object.keys(query).length === 0) return obj;
 
-  Object.keys(obj).forEach((key) => {
-    if (obj[key] instanceof Object) objectInterpolation(obj[key] as Dictionary, query, config, locale);
-    if (typeof obj[key] === 'string') obj[key] = interpolation(obj[key] as string, query, config, locale);
-  });
-
-  return obj;
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [key, interpolateValue(value, query, config, locale)]),
+  );
 }
 
 /** Gets a value from the dictionary, resolving nested keys ("parent.child") via keySeparator. */
@@ -81,12 +106,8 @@ export function translateCore(locale: string, config: I18nConfig): Translate {
   const { allowEmptyStrings = true } = config;
   const pluralRules = new Intl.PluralRules(locale);
 
-  const interpolateUnknown = (value: unknown, query: Query): unknown => {
-    if (Array.isArray(value)) return value.map((item) => interpolateUnknown(item, query));
-    if (value instanceof Object) return objectInterpolation(value as Dictionary, query, config, locale);
-
-    return interpolation(value as string, query, config, locale);
-  };
+  const interpolateUnknown = (value: unknown, query: Query): unknown =>
+    interpolateValue(value, query, config, locale);
 
   const translate = (key: string, query: Query, options?: TranslateOptions): unknown => {
     const dic = (config.messages?.[locale] ?? {}) as Dictionary;

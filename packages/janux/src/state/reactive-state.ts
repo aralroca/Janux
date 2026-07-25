@@ -1,5 +1,7 @@
-import { batch, signal, untrack, type Sig } from '../signals';
+import { batch, signal, type Sig } from '../signals';
 import { assertMutable, createGate, type MutationGate } from './mutation-gate';
+import { ancestorsOf, childPath, parentOf } from './path';
+import { isPlainContainer, plainify } from './plainify';
 
 const MUTATING_ARRAY_METHODS = new Set([
   'push',
@@ -20,22 +22,6 @@ export interface ReactiveState<T extends object = Record<string, unknown>> {
   stats(): { paths: number };
 }
 
-function isPlainContainer(value: unknown): value is object {
-  return typeof value === 'object' && value !== null;
-}
-
-/** Deep-clones through proxies into plain JSON data (state is JSON-safe by schema). */
-function plainify<T>(value: T): T {
-  if (Array.isArray(value)) return untrack(() => value.map(plainify)) as T;
-  if (isPlainContainer(value)) return untrack(() => plainObject(value)) as T;
-
-  return value;
-}
-
-function plainObject(value: object): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(value).map(([key, v]) => [key, plainify(v)]));
-}
-
 /** Writes between prune sweeps: keeps the sweep cost amortized O(1) per write. */
 const PRUNE_EVERY = 256;
 
@@ -49,12 +35,6 @@ export function createReactiveState<T extends object>(
   const children = new Map<string, Set<string>>();
   let writesSincePrune = 0;
   let data = structuredClone(initial);
-
-  const parentOf = (path: string): string => {
-    const cut = path.lastIndexOf('.');
-
-    return cut === -1 ? '' : path.slice(0, cut);
-  };
 
   const indexPath = (path: string): void => {
     if (path === '') return;
@@ -92,9 +72,7 @@ export function createReactiveState<T extends object>(
   };
 
   const bumpAncestors = (path: string): void => {
-    const parts = path.split('.').slice(0, -1);
-
-    parts.forEach((_, index) => bump(parts.slice(0, index + 1).join('.')));
+    ancestorsOf(path).forEach(bump);
     bump('');
   };
 
@@ -133,12 +111,10 @@ export function createReactiveState<T extends object>(
     }
   };
 
-  const childPath = (path: string, key: string): string => (path === '' ? key : `${path}.${key}`);
-
   const wrapArrayMethod = (target: unknown[], path: string, method: string) => {
     return (...args: unknown[]) => {
       assertMutable(gate, path);
-      const result = (target as any)[method](...args.map(plainify));
+      const result = (target as any)[method](...args.map((arg) => plainify(arg, path)));
 
       touch(path);
 
@@ -162,9 +138,12 @@ export function createReactiveState<T extends object>(
     const value = Reflect.get(raw, key);
 
     if (typeof value === 'function') return value.bind(proxyFor(raw, path));
-    versionOf(childPath(path, key)).value;
+    // The hottest line in the state system: one `childPath` for both uses.
+    const target = childPath(path, key);
 
-    return isPlainContainer(value) ? proxyFor(value, childPath(path, key)) : value;
+    versionOf(target).value;
+
+    return isPlainContainer(value) ? proxyFor(value, target) : value;
   };
 
   const writeTrap = (raw: object, path: string, key: string | symbol, value: unknown): boolean => {
@@ -172,7 +151,7 @@ export function createReactiveState<T extends object>(
     const target = childPath(path, key);
 
     assertMutable(gate, target);
-    Reflect.set(raw, key, plainify(value));
+    Reflect.set(raw, key, plainify(value, target));
     touch(target);
 
     return true;

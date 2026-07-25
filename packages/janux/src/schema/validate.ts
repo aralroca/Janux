@@ -56,7 +56,9 @@ function validateEnum(type: JxType, value: unknown, path: string): JxResult {
 function validateList(type: JxType, value: unknown, path: string): JxResult {
   if (!Array.isArray(value)) return fail(path, 'expected list');
 
-  const results = value.map((item, i) => validate(type.item!, item, `${path}[${i}]`));
+  // `Array.from` visits holes as `undefined`; `.map` skips them, so `[1, , 3]`
+  // would pass a non-nullable list and leave a hole where an item is required.
+  const results = Array.from(value, (item, i) => validate(type.item!, item, `${path}[${i}]`));
   const errors = results.flatMap((r) => r.errors);
 
   if (errors.length > 0) return { ok: false, value: undefined, errors };
@@ -92,7 +94,11 @@ function validatePresent(type: JxType, value: unknown, path: string): JxResult {
 /** Validates a value against a schema, applying defaults. Unknown object keys are stripped. */
 export function validate(type: JxType, value: unknown, path = ''): JxResult {
   if (value === undefined) {
-    if (type.flags.defaultValue !== undefined) return pass(type.flags.defaultValue);
+    // A default is validated like any other value. An unchecked one puts a value
+    // into state that the schema says is impossible — and hands the agent a JSON
+    // Schema contradicting what it will actually receive. Recursion terminates
+    // because a default of `undefined` never reaches here.
+    if (type.flags.defaultValue !== undefined) return validate(type, type.flags.defaultValue, path);
     if (type.flags.optional) return pass(undefined);
     if (type.flags.nullable) return pass(null);
 

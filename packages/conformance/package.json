@@ -1,0 +1,17 @@
+{
+  "name": "@janux/conformance",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Behavioural conformance corpus: the cases other frameworks learnt the hard way, translated to Janux.",
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*",
+    "@janux/vite": "workspace:*",
+    "@janux/cli": "workspace:*",
+    "@janux/tailwind": "workspace:*"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^18.0.0"
+  }
+}

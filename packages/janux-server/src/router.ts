@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { matchRoute } from './match-segments';
 
 export interface Route {
   pattern: string;
@@ -20,7 +21,7 @@ export type Matcher = (value: string) => boolean;
 
 type SegmentKind = 'static' | 'typed' | 'dynamic' | 'catchall' | 'optional';
 
-interface Segment {
+export interface Segment {
   raw: string;
   kind: SegmentKind;
   name?: string;
@@ -116,34 +117,6 @@ function compareRoutes(a: Route, b: Route): number {
   return a.pattern.localeCompare(b.pattern);
 }
 
-function matchRoute(
-  route: Route,
-  pathSegments: string[],
-  matchers: Record<string, Matcher>,
-): Record<string, string> | undefined {
-  const params: Record<string, string> = {};
-  const { segments } = route;
-  const last = segments[segments.length - 1];
-  const isRest = last?.kind === 'catchall' || last?.kind === 'optional';
-  const fixed = isRest ? segments.length - 1 : segments.length;
-  const minLength = last?.kind === 'catchall' ? fixed + 1 : fixed;
-
-  if (isRest ? pathSegments.length < minLength : pathSegments.length !== fixed) return undefined;
-  for (let index = 0; index < fixed; index += 1) {
-    const segment = segments[index]!;
-    const value = decodeURIComponent(pathSegments[index]!);
-
-    if (segment.kind === 'static') {
-      if (segment.raw !== pathSegments[index]) return undefined;
-      continue;
-    }
-    if (segment.kind === 'typed' && !matchers[segment.matcher!]?.(value)) return undefined;
-    params[segment.name!] = value;
-  }
-  if (isRest) params[last!.name!] = pathSegments.slice(fixed).map(decodeURIComponent).join('/');
-
-  return params;
-}
 
 /**
  * File-system router: full segment grammar (`[param]`, `[param=matcher]`,
