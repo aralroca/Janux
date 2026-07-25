@@ -87,6 +87,21 @@ otherwise:
 
 ## Not fixed, and why
 
+### `srcdoc` is a raw-HTML sink that does not look like one
+
+`dangerHTML` announces itself. `srcdoc` does not: its value is correctly escaped
+into the attribute, and the browser then un-escapes it and parses the result as
+an HTML document **in the parent's origin**. So escaping is the intended way to
+pass markup through `srcdoc` and offers no protection whatsoever —
+`<iframe srcdoc={userInput}>` is same-origin XSS.
+
+Left working deliberately. Unlike a `javascript:` URL, where the scheme is an
+unambiguous signal, there is nothing in a `srcdoc` value that separates a safe
+document from a hostile one, so blocking it would remove a real capability rather
+than close a hole. `packages/conformance/security/raw-sinks.cases.ts` pins the
+behaviour so it is a known sink rather than a surprise. If Janux ever grows a
+sanitizer, `srcdoc` is where it belongs.
+
 ### SVG namespaced attributes are silently dropped
 
 `VALID_ATTR_NAME` (`/^[a-zA-Z][\w-]*$/`) rejects any name containing a colon, so

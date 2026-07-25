@@ -99,6 +99,40 @@ export const EVENT_ATTRS: Record<string, string> = {
   onPointerUp: 'data-jxe-pointerup',
 };
 
+/** Attributes whose value the browser resolves as a URL, so its scheme executes. */
+const URL_ATTRS = new Set(['href', 'src', 'action', 'formaction', 'poster', 'cite', 'data', 'ping', 'background']);
+const SCHEME_NOISE = /[\u0000-\u0020]/g;
+const EXECUTABLE_SCHEME = /^(?:javascript|vbscript|livescript|mocha):/;
+/** `data:` is only dangerous for types the browser parses as a document. */
+const EXECUTABLE_DATA = /^data:(?:text\/html|text\/xml|image\/svg\+xml|application\/xhtml\+xml|application\/xml)/;
+
+/**
+ * Whether following this URL would run script.
+ *
+ * The browser strips control characters and ASCII whitespace before parsing the
+ * scheme and compares it case-insensitively, so `JaVaScRiPt:`, `java\tscript:`
+ * and a leading NUL all execute. Normalize the same way before deciding.
+ */
+function isExecutableUrl(value: string): boolean {
+  const normalized = value.replace(SCHEME_NOISE, '').toLowerCase();
+
+  return EXECUTABLE_SCHEME.test(normalized) || EXECUTABLE_DATA.test(normalized);
+}
+
+/**
+ * Dropped, not escaped: entity-escaping does nothing to a scheme, and Janux is
+ * agent-native — a tool call can put a value into state that a human later
+ * clicks. Guards gate which intent may run, not what the value it stores says,
+ * so the render is the only place this can be stopped.
+ */
+function blockedUrl(name: string, value: unknown): boolean {
+  if (!URL_ATTRS.has(name.toLowerCase()) || typeof value !== 'string') return false;
+  if (!isExecutableUrl(value)) return false;
+  console.warn(`Janux: blocked an executable URL in "${name}" — ${value.slice(0, 40)}`);
+
+  return true;
+}
+
 /** Maps a JSX prop to an HTML attribute pair; `on`/`intent`/`onX` become data markers for delegation. */
 function propToAttr(name: string, value: unknown): [string, unknown] | undefined {
   if (name === 'children' || name === 'key' || name === 'dangerHTML') return undefined;
@@ -110,6 +144,7 @@ function propToAttr(name: string, value: unknown): [string, unknown] | undefined
   if (name === 'style' && isStyleObject(value)) return ['style', styleText(value) || undefined];
   if (typeof value === 'function') return undefined;
   if (!VALID_ATTR_NAME.test(name)) return undefined;
+  if (blockedUrl(name, value)) return undefined;
 
   return [name, value];
 }
