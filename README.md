@@ -182,13 +182,6 @@ bun run test:census  # per-area counts and the coverage floor
 bun run typecheck
 ```
 
-[`packages/conformance`](packages/conformance) holds a behavioural corpus: the
-cases other frameworks learnt the hard way, translated to Janux's API. No test
-code was copied — each row carries the suite it came from (see
-[CREDITS.md](CREDITS.md)), a guard fails the build on a duplicate id or a repeated
-input/expected pair, and cases for features Janux does not have are recorded in
-[GAPS.md](GAPS.md) rather than padded in as empty `test.todo`s.
-
 ## Contributing
 
 PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md).
