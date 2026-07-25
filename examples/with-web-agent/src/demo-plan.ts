@@ -15,6 +15,14 @@ export interface PlannedCall {
 /** The placeholder `fill` ref, resolved from the live page snapshot at call time. */
 export const PENDING_REF = 'e?';
 
+/** What this planner knows how to do — the panel's suggestions and its greeting. */
+export const EXAMPLE_GOALS = [
+  'invite jane@acme.com as admin',
+  'search Kenji',
+  'change my display name to Neo',
+  'build a workflow',
+];
+
 const WORKFLOW_STEPS = ['Trigger', 'Fetch data', 'Transform', 'Send notification'];
 const BUILD_FLOW = /\b(build|create)\b/i;
 const FLOW_WORDS = /\b(workflow|flow|pipeline)\b/i;
@@ -61,12 +69,12 @@ function search(goal: string): PlannedCall[] | undefined {
 
 /** Nothing exposes the display name, so the agent reads the page and fills it. */
 function rename(goal: string): PlannedCall[] | undefined {
-  const match = /\bname\b/i.test(goal) ? RENAME.exec(goal) : null;
+  const match = RENAME.exec(goal);
 
   if (!match) return undefined;
 
   return [
-    { name: 'console_goToTab', arguments: { tab: 'profile' } },
+    open('profile'),
     { name: 'read_page', arguments: {} },
     { name: 'fill', arguments: { ref: PENDING_REF, value: match[1]!.trim() } },
   ];
@@ -75,10 +83,7 @@ function rename(goal: string): PlannedCall[] | undefined {
 function goToTab(goal: string): PlannedCall[] | undefined {
   const match = TAB.exec(goal);
 
-  if (!match) return undefined;
-  const tab = match[1]!.toLowerCase().replace(/^workflow$/, 'workflows');
-
-  return [{ name: 'console_goToTab', arguments: { tab } }];
+  return match ? [open(match[1]!.toLowerCase().replace(/^workflow$/, 'workflows'))] : undefined;
 }
 
 const RULES = [buildWorkflow, addStep, invite, search, rename, goToTab];

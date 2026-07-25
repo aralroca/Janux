@@ -28,6 +28,27 @@ describe('glowTargetFor', () => {
     expect(glowTargetFor('users.search')).toBeUndefined();
   });
 
+  /**
+   * A tab bar, a table of rows, a list of "add to cart" buttons: several controls
+   * delegate to ONE intent and only their `data-input` tells them apart. Marker
+   * alone lit the first one — "go to the Workflows tab" glowed the Users tab.
+   */
+  it('picks the control whose data-input matches the call, not just the first marked one', () => {
+    document.body.innerHTML = `
+      <janux-island data-jx="console#default">
+        <button data-jxa="console#default:goToTab" data-input='{"tab":"users"}'>Users</button>
+        <button data-jxa="console#default:goToTab" data-input='{"tab":"workflows"}'>Workflows</button>
+      </janux-island>`;
+
+    expect(glowTargetFor('console.goToTab', { tab: 'workflows' })!.textContent).toBe('Workflows');
+    expect(glowTargetFor('console.goToTab', { tab: 'users' })!.textContent).toBe('Users');
+    // An agent may pass more than the control declares: the declared part must match.
+    expect(glowTargetFor('console.goToTab', { tab: 'workflows', from: 'chat' })!.textContent).toBe('Workflows');
+    // No input to disambiguate with → the first marked control, as before.
+    expect(glowTargetFor('console.goToTab')!.textContent).toBe('Users');
+    expect(glowTargetFor('console.goToTab', { tab: 'nope' })!.textContent).toBe('Users');
+  });
+
   it('falls back to the island when the intent has no element in the view', () => {
     document.body.innerHTML = ISLAND;
 

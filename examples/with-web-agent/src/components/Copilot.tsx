@@ -1,24 +1,14 @@
 import { bool, component, enums, intent, list, schema, str } from 'janux';
+import { EXAMPLE_GOALS } from '../demo-plan';
 
-const GREETING =
-  'Hi! Try: "invite jane@acme.com as admin", "search Kenji", "change my display name to Neo", ' +
-  'or "build a workflow" (watch the glow follow each React Flow node).';
-
-const SUGGESTIONS = [
-  'invite jane@acme.com as admin',
-  'search Kenji',
-  'change my display name to Neo',
-  'build a workflow',
-];
+const GREETING = `Hi! Try: ${EXAMPLE_GOALS.map((goal) => `“${goal}”`).join(', ')} — watch the glow follow each React Flow node.`;
 
 /** The agent runtime loads on first use, and only once (dynamic imports are cached). */
-async function converse(state: any, question: string): Promise<void> {
-  const { ask, clearSteps } = await import('../copilot');
-
-  clearSteps();
+async function answerFor(question: string): Promise<string> {
+  const { ask } = await import('../copilot');
   const answer = await ask(question).catch((error: unknown) => ({ text: `Something went wrong: ${error}` }));
 
-  state.messages.push({ role: 'assistant', text: answer.text });
+  return answer.text;
 }
 
 export const Copilot = component({
@@ -40,9 +30,11 @@ export const Copilot = component({
       run: async ({ state, input }: any) => {
         state.messages.push({ role: 'user', text: input.text });
         state.busy = true;
-        await converse(state, input.text).finally(() => {
+        const text = await answerFor(input.text).finally(() => {
           state.busy = false;
         });
+
+        state.messages.push({ role: 'assistant', text });
       },
     }),
   },
@@ -58,7 +50,7 @@ export const Copilot = component({
       </div>
       {state.messages.length === 1 ? (
         <div class="chips">
-          {SUGGESTIONS.map((text) => (
+          {EXAMPLE_GOALS.map((text) => (
             <button key={text} class="chip" on={intents.send} data-input={JSON.stringify({ text })}>
               {text}
             </button>

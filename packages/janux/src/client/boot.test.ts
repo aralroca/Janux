@@ -287,13 +287,49 @@ describe('client boot (resume without hydration)', () => {
     await client.call('board.touch');
     document.removeEventListener('janux:tool-call', onTool);
 
-    const [start, ok, , plainOk] = details;
+    const [start, ok, plainStart, plainOk] = details;
 
     // The selector needs the post-run state, so it rides the resolved call only.
     expect(start.glowTarget).toBeUndefined();
     expect(ok.glowTarget).toBe('.card[data-id="c1"]');
-    // An intent that declares nothing adds nothing to the event.
+    // …but the start says one is coming, so a feedback layer doesn't guess a
+    // target from the view and then get overridden a moment later.
+    expect(start.glowTargetPending).toBe(true);
+    // An intent that declares nothing adds nothing to either event.
+    expect(plainStart.glowTargetPending).toBeUndefined();
     expect(plainOk.glowTarget).toBeUndefined();
+  });
+
+  /** For a confirm-guarded intent the approval IS the execution, so that's when its effect exists. */
+  it('resolves glowTarget on approval too, not only on direct calls', async () => {
+    const gated = component({
+      name: 'gated',
+      state: schema({ cards: list({ id: str() }) }),
+      intents: {
+        add: intent({
+          guard: 'confirm',
+          input: schema({ id: str() }),
+          glowTarget: ({ state }: any) => `.card[data-id="${state.cards.at(-1).id}"]`,
+          run: ({ state, input }: any) => state.cards.push({ id: input.id }),
+        }),
+      },
+      view: () => jsx('div', {}),
+    });
+    const { html } = await renderToString(jsx(gated as any, {}), { initialState: { 'ui://gated#default': { cards: [] } } });
+    const details: any[] = [];
+    const onTool = (event: any) => details.push(event.detail);
+
+    document.body.innerHTML = html;
+    const client = boot({ defs: [gated] });
+    const proposal: any = await client.call('gated.add', { id: 'c9' });
+
+    document.addEventListener('janux:tool-call', onTool);
+    await client.approve(proposal.id);
+    document.removeEventListener('janux:tool-call', onTool);
+
+    expect(details.map((detail) => detail.phase)).toEqual(['start', 'ok']);
+    expect(details[0].glowTargetPending).toBe(true);
+    expect(details[1].glowTarget).toBe('.card[data-id="c9"]');
   });
 
   it('a throwing glowTarget resolver never fails the tool call', async () => {
@@ -382,6 +418,40 @@ describe('client boot (resume without hydration)', () => {
     flash();
     expect(button.classList.contains('janux-agent-glow')).toBe(true);
     button.classList.remove('janux-agent-glow');
+  });
+
+  /**
+   * The glow is a class, and `morph` deliberately preserves `janux-*` classes
+   * across re-renders — so whatever paints one has to be the one that clears it.
+   * Resolving the target again on the closing phase could come back empty (a
+   * suspension started mid-call, the island stopped being painted) and leave the
+   * element lit for the rest of the session.
+   */
+  it('clears the glow it painted even when the target can no longer be resolved', async () => {
+    const { suspendAgentGlow } = await import('./glow');
+
+    document.body.innerHTML = '<button id="go">Go</button>';
+    boot({ defs: [counter], glow: { duration: 5 } });
+    const button = document.getElementById('go')!;
+    const fire = (phase: string) =>
+      document.dispatchEvent(
+        new CustomEvent('janux:tool-call', { detail: { tool: 'counter.inc', phase, guard: 'auto' } }),
+      );
+
+    // The island the tool belongs to isn't even in this DOM: the painted element
+    // is what must be remembered, not the query that found it.
+    document.body.innerHTML = '<janux-island data-jx="counter#default"><button>+1</button></janux-island>';
+    const island = document.querySelector('janux-island')!;
+
+    fire('start');
+    expect(island.classList.contains('janux-agent-glow')).toBe(true);
+    const resume = suspendAgentGlow();
+
+    fire('ok');
+    resume();
+    await new Promise((done) => setTimeout(done, 30));
+    expect(island.classList.contains('janux-agent-glow')).toBe(false);
+    button.remove();
   });
 
   it('survives a malformed state snapshot (boot regression)', async () => {

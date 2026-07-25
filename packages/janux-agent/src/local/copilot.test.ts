@@ -112,18 +112,22 @@ describe('createCopilot', () => {
    * it is a copilot option rather than wiring each app repeats: chips, the
    * animated ring and the veil, fed by the runtime's two feedback events.
    */
-  it('visualize mounts an overlay that survives navigations and chains onStep', async () => {
+  it('visualize mounts an overlay on the first run that survives navigations, and chains onStep', async () => {
     installBridge();
     const steps: string[] = [];
     const { llm } = scriptedLlm([]);
     const copilot = createCopilot({ llm, visualize: true, onStep: (step) => steps.push(step.type) });
+
+    // Nothing is built until a question is asked: a copilot wired up front but
+    // never used must not hold the built-in glow suspended all session.
+    expect(document.querySelector('[data-janux-agent-steps]')).toBeNull();
+    expect(copilot.visualizer).toBeUndefined();
+    await copilot.ask('hi');
     const host = document.querySelector('[data-janux-agent-steps]')!;
 
     expect(host.parentElement).toBe(document.body);
     expect(host.hasAttribute('data-janux-keep')).toBe(true);
     expect(copilot.visualizer).toBeDefined();
-    await copilot.ask('hi');
-
     // The app's own onStep still runs — the visualizer chains onto it.
     expect(steps).toContain('llm-request');
     copilot.dispose();
@@ -144,6 +148,12 @@ describe('createCopilot', () => {
       );
     const copilot = createCopilot({ llm, visualize: true });
 
+    // Before the first run the built-in glow is still the one painting.
+    flash();
+    expect(button.classList.contains('janux-agent-glow')).toBe(true);
+    button.classList.remove('janux-agent-glow');
+    await copilot.ask('hi');
+
     flash();
     expect(button.classList.contains('janux-agent-glow')).toBe(false);
     // The ring host gui-agent creates on first use must outlive a navigation too.
@@ -154,6 +164,67 @@ describe('createCopilot', () => {
     expect(button.classList.contains('janux-agent-glow')).toBe(true);
     disableGlow();
     button.classList.remove('janux-agent-glow');
+  });
+
+  /**
+   * The ring host is created by gui-agent on its first highlight — and for a
+   * selector target that happens a frame later, once the element mounts. Unmarked,
+   * the next navigation deletes it and the ring stops working for good.
+   */
+  it('claims the ring host even when the first highlight waits for its target', async () => {
+    installBridge();
+    document.body.innerHTML = '';
+    const { llm } = scriptedLlm([]);
+    const copilot = createCopilot({ llm, visualize: true });
+
+    await copilot.ask('hi');
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-call', {
+        detail: { tool: 'wf.add', phase: 'ok', guard: 'auto', glowTarget: '.late-node' },
+      }),
+    );
+    // The node the agent created shows up on a later tick, and so does the host.
+    document.body.insertAdjacentHTML('beforeend', '<div class="late-node">node</div>');
+    await new Promise((done) => setTimeout(done, 150));
+    const ring = document.querySelector('[data-gui-agent-highlight]');
+
+    expect(ring?.hasAttribute('data-janux-keep')).toBe(true);
+    // An id too: the document diff patches anonymous divs in place, markers and all.
+    expect(ring?.id).toBe('janux-agent-ring');
+    expect(document.querySelector('[data-janux-agent-steps]')?.id).toBe('janux-agent-steps');
+    copilot.dispose();
+  });
+
+  /** dispose() unregisters the tools ask() re-registers, so ask-after-dispose is a shape apps hit. */
+  it('rebuilds the overlay when asked again after dispose', async () => {
+    installBridge();
+    const { llm } = scriptedLlm([]);
+    const copilot = createCopilot({ llm, visualize: true });
+
+    await copilot.ask('one');
+    copilot.dispose();
+    expect(copilot.visualizer).toBeUndefined();
+    await copilot.ask('two');
+
+    expect(document.querySelector('[data-janux-agent-steps]')).not.toBeNull();
+    expect(copilot.visualizer).toBeDefined();
+    copilot.dispose();
+  });
+
+  it('labels are written with the app’s tool names, sanitized for the model', async () => {
+    installBridge();
+    const { llm } = scriptedLlm([]);
+    const copilot = createCopilot({
+      llm,
+      visualize: { labels: { 'cart.addItem': 'Adding to the cart' } },
+    });
+
+    await copilot.ask('hi');
+    const chips = document.querySelector('[data-janux-agent-steps]')!.shadowRoot!;
+
+    copilot.visualizer!.onStep({ type: 'tool-call', call: { id: '1', name: 'cart_addItem', arguments: {} } } as any);
+    expect(chips.textContent).toContain('Adding to the cart');
+    copilot.dispose();
   });
 
   it('dispose unregisters the bridged tools', async () => {

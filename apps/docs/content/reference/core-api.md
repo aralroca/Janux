@@ -75,7 +75,7 @@ addStep: intent({
 }),
 ```
 
-It never affects the call: a resolver that throws reports on `janux:error` and the mutation stands. Proposals carry no target — nothing ran yet.
+It never affects the call: a resolver that throws reports on `janux:error` and the mutation stands. Proposals carry no target — nothing ran yet. The `start` event of such a call carries `glowTargetPending: true`, so a feedback layer knows not to guess a target from the view and be overridden a moment later.
 
 ## effect(def)
 

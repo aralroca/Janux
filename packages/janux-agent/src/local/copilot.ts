@@ -33,7 +33,7 @@ export interface CopilotOptions {
 export interface Copilot {
   /** Run the agent loop toward `question`; resolves with the final answer and transcript. */
   ask(question: string, signal?: AbortSignal): Promise<RunResult>;
-  /** The visualizer driving the chips and the glow, when `visualize` was set. */
+  /** The visualizer driving the chips and the glow — present once a run has started it. */
   visualizer?: AgentVisualizer;
   /** Unregister the manifest tools this copilot bridged into gui-agent. */
   dispose(): void;
@@ -96,12 +96,6 @@ function syncNavigateTool(registered: Set<string>): void {
   registered.add(tool.name);
 }
 
-function visualizationFor(visualize: CopilotOptions['visualize']): Visualization | undefined {
-  if (!visualize) return undefined;
-
-  return startVisualization(visualize === true ? {} : visualize);
-}
-
 /**
  * A browser-side copilot for a Janux app: the gui-agent loop over the app's
  * own tools (manifest intents + api() endpoints, plus anything registered with
@@ -109,16 +103,30 @@ function visualizationFor(visualize: CopilotOptions['visualize']): Visualization
  */
 export function createCopilot(options: CopilotOptions): Copilot {
   const registered = new Set<string>();
-  const visualization = visualizationFor(options.visualize);
+  let visualization: Visualization | undefined;
   // The visualizer never replaces the caller's observer — it chains onto it.
   const onStep = (step: AgentStep): void => {
     options.onStep?.(step);
     visualization?.visualizer.onStep(step);
   };
+  /**
+   * Built on the first run, not at construction: an app that wires its copilot
+   * up front but never asks anything would otherwise pay for the overlay and,
+   * worse, hold the built-in glow suspended for the whole session. Each run
+   * starts from a clean chip list.
+   */
+  const startRun = (): void => {
+    if (!options.visualize) return;
+    visualization ??= startVisualization(options.visualize, wireName);
+    visualization.visualizer.clear();
+  };
 
   return {
-    visualizer: visualization?.visualizer,
+    get visualizer() {
+      return visualization?.visualizer;
+    },
     ask(question, signal) {
+      startRun();
       if (options.manifestTools !== false) syncManifestTools(registered);
       syncNavigateTool(registered);
       const agent = new GuiAgent({
@@ -136,6 +144,9 @@ export function createCopilot(options: CopilotOptions): Copilot {
       registered.forEach((name) => registry.unregister(name));
       registered.clear();
       visualization?.dispose();
+      // Cleared, not just disposed: `ask()` re-registers the tools it removed,
+      // so a run after this one must build a live overlay, not reuse a dead one.
+      visualization = undefined;
     },
   };
 }

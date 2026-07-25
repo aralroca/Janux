@@ -45,6 +45,14 @@ interface ToolEventExtras {
   guard?: string;
   approval?: boolean;
   glowTarget?: string;
+  glowTargetPending?: boolean;
+}
+
+/** The intent's definition, straight from the registry — no mount needed. */
+function intentDefOf(mount: MountContext, component: string, intentName: string) {
+  const def = mount.registry.defs.get(component) ?? mount.registry.stores.get(component)?.def;
+
+  return def?.intents?.[intentName];
 }
 
 /**
@@ -67,9 +75,7 @@ function glowTargetOf(instance: JanuxInstance, intentName: string, input: unknow
 
 /** Resolves an intent's guard synchronously from the registered defs (no mount needed). */
 function guardOf(mount: MountContext, component: string, intentName: string): string {
-  const def =
-    mount.registry.defs.get(component) ?? mount.registry.stores.get(component)?.def;
-  const intentDef = def?.intents?.[intentName];
+  const intentDef = intentDefOf(mount, component, intentName);
 
   // `unknown`, not `auto`. Anything watching `janux:tool-call` to audit agent
   // activity was being told a tool it could not even resolve was unguarded.
@@ -139,7 +145,12 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
       const [component, intentName] = splitTool(tool);
       const guard = guardOf(mount, component, intentName);
 
-      emitToolEvent(tool, input, 'start', { guard });
+      emitToolEvent(tool, input, 'start', {
+        guard,
+        // Announced up front so a feedback layer doesn't guess a target from the
+        // view and get overridden by the declared one a moment later.
+        glowTargetPending: intentDefOf(mount, component, intentName)?.glowTarget ? true : undefined,
+      });
       try {
         const instance = await instanceFor(component, mount);
         const invoke = instance.intents[intentName];
@@ -150,7 +161,7 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
 
         emitToolEvent(tool, input, proposed ? 'proposal' : 'ok', {
           guard,
-          // Nothing ran on a proposal, so there is no effect to point at yet.
+          // Nothing ran on a proposal — the target comes with the approval.
           glowTarget: proposed ? undefined : glowTargetOf(instance, intentName, input),
         });
 
@@ -166,12 +177,23 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
 
       if (!proposal) throw new Error(`Janux: unknown proposal "${id}"`);
       proposals.delete(id);
-      // The approval IS the execution — this is when activity feedback fires.
-      emitToolEvent(proposal.tool, proposal.input, 'start', { guard: 'confirm', approval: true });
+      const [component, intentName] = splitTool(proposal.tool);
+      const extras = { guard: 'confirm', approval: true };
+
+      // The approval IS the execution — this is when activity feedback fires,
+      // and when a declared glowTarget finally has an effect to point at.
+      emitToolEvent(proposal.tool, proposal.input, 'start', {
+        ...extras,
+        glowTargetPending: intentDefOf(mount, component, intentName)?.glowTarget ? true : undefined,
+      });
       try {
         const result = await proposal.execute();
+        const instance = await instanceFor(component, mount);
 
-        emitToolEvent(proposal.tool, proposal.input, 'ok', { guard: 'confirm', approval: true });
+        emitToolEvent(proposal.tool, proposal.input, 'ok', {
+          ...extras,
+          glowTarget: glowTargetOf(instance, intentName, proposal.input),
+        });
 
         return result;
       } catch (error) {

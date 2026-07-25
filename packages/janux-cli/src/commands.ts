@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
 import { apiFiles, apiModuleName, janux, resolveAppConfig } from '@janux/vite';
@@ -52,13 +52,23 @@ export function bundleInputs(app: { clientEntry: string; stylesheet?: string }) 
   return input;
 }
 
-function cssAsStyles(info: any): string {
-  const name = info.names?.[0] ?? info.name ?? '';
+const HASHED = 'assets/[name]-[hash][extname]';
 
-  return name.endsWith('.css') ? 'styles.css' : 'assets/[name]-[hash][extname]';
+/**
+ * The HTML shell links exactly one sheet, `/styles.css`, so only the app's own
+ * stylesheet may claim that name — a dependency's CSS taking it would leave the
+ * app's sheet emitted beside it, linked by nobody. Rollup reports where an asset
+ * came from, which is what tells them apart.
+ */
+export function cssAssetName(root: string, stylesheet: string | undefined) {
+  return (info: { names?: string[]; originalFileNames?: string[] }): string => {
+    const sources = (info.originalFileNames ?? []).map((file) => resolve(root, file));
+
+    return stylesheet && sources.includes(stylesheet) ? 'styles.css' : HASHED;
+  };
 }
 
-async function bundleClient(root: string, input: Record<string, string>): Promise<void> {
+async function bundleClient(root: string, input: Record<string, string>, stylesheet?: string): Promise<void> {
   const { build: viteBuild } = await import('vite');
 
   await viteBuild({
@@ -69,7 +79,7 @@ async function bundleClient(root: string, input: Record<string, string>): Promis
         input,
         output: {
           entryFileNames: (chunk: any) => (chunk.name === 'client' ? 'client.js' : '[name].js'),
-          assetFileNames: cssAsStyles,
+          assetFileNames: cssAssetName(root, stylesheet),
         },
       },
     },
@@ -80,7 +90,7 @@ export async function build({ root }: CliCommand): Promise<void> {
   const app = await resolveAppConfig(root);
   const input = bundleInputs(app);
 
-  if (Object.keys(input).length > 0) await bundleClient(root, input);
+  if (Object.keys(input).length > 0) await bundleClient(root, input, app.stylesheet);
   else console.log('janux build: nothing to bundle — fully static app (0 KB JS).');
   copyPublicDir(root);
   if (app.output === 'static') await prerenderStatic(root);

@@ -44,7 +44,15 @@ const copilot = createCopilot({
 });
 ```
 
-It feeds on the runtime's two feedback events, so it covers everything without per-app wiring: `janux:tool-call` rings the control an intent is delegated from (and any [`glowTarget`](/docs/reference/core-api) the intent declares, for DOM it creates), `janux:tool-target` rings whatever the DOM-fallback tools touch. While it runs, the built-in `boot({ glow })` highlight stands down, so nothing is painted twice.
+It covers every path an action can arrive through, without per-app wiring:
+
+| Action | How the ring finds it |
+|---|---|
+| One of your intents | `janux:tool-call` → the control it is delegated from, or the [`glowTarget`](/docs/reference/core-api) the intent declares for DOM it creates |
+| `domFallback: true` (gui-agent's `read_page` / `click` / `fill`) | the agent's own step stream, which the visualizer already consumes |
+| The framework's `ui_click` / `ui_fill` (WebMCP, a server-side agent, your own runner) | `janux:tool-target` |
+
+While it runs, the built-in `boot({ glow })` highlight stands down, so nothing is painted twice.
 
 The chip list is appended to `<body>` marked `data-janux-agent-steps` (and `data-janux-keep`, so a navigation can't take it down) — position and theme it from your CSS:
 
@@ -52,7 +60,9 @@ The chip list is appended to `<body>` marked `data-janux-agent-steps` (and `data
 [data-janux-agent-steps] { position: fixed; right: 24px; bottom: 84px; z-index: 10; }
 ```
 
-Pass `container` to place it yourself, and `copilot.visualizer` gives you the underlying visualizer — `highlight(target)` accepts an element **or a CSS selector**, polled briefly until it mounts. Options mirror gui-agent's `AgentVisualizerOptions` (`chips`, `highlight`, `labels`, `glowDuration`, `glowDwell`, `theme`, `backdrop`).
+Pass `container` to place it yourself, and `copilot.visualizer` gives you the underlying visualizer once a run has built it — `highlight(target)` accepts an element **or a CSS selector**, polled briefly until it mounts. Options mirror gui-agent's `AgentVisualizerOptions` (`chips`, `highlight`, `labels`, `glowDuration`, `glowDwell`, `theme`, `backdrop`); `labels` are keyed by your own tool names (`'cart.addItem'`), sanitized for the model on your behalf.
+
+The overlay is built on the **first `ask()`**, not when the copilot is created, and each run starts from a clean chip list — a copilot wired up front but never used costs nothing and leaves the built-in glow in charge.
 
 ## Picking a model
 

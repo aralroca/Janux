@@ -114,7 +114,7 @@ describe('SPA navigation (streamed diff)', () => {
    * `keepRuntimeStyles` already solves this for the <head>; body-level runtime
    * nodes need the same treatment, opted into with `data-janux-keep`.
    */
-  it('keeps runtime-injected body nodes marked data-janux-keep across a navigation', async () => {
+  it('keeps runtime-injected nodes marked data-janux-keep across a navigation', async () => {
     const pageA = await pageHtml('Page A', jsx('h1', { children: 'A' }));
     const pageB = await pageHtml('Page B', jsx('h1', { children: 'B' }));
 
@@ -123,17 +123,26 @@ describe('SPA navigation (streamed diff)', () => {
     const client = boot({ defs: [counter] });
     const overlay = document.createElement('div');
     const plain = document.createElement('div');
+    // A host the app asked to place inside its own layout, not at body level.
+    const panel = document.createElement('section');
+    const nested = document.createElement('div');
 
     overlay.id = 'agent-overlay';
     overlay.setAttribute('data-janux-keep', '');
     plain.id = 'plain-node';
-    document.body.append(overlay, plain);
+    nested.id = 'nested-overlay';
+    nested.setAttribute('data-janux-keep', '');
+    panel.id = 'panel';
+    panel.appendChild(nested);
+    document.body.append(overlay, plain, panel);
 
     (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => pageB }));
     await client.navigate('/b');
 
     expect(document.querySelector('h1')!.textContent).toBe('B');
     expect(document.getElementById('agent-overlay')).toBe(overlay);
+    // Marking it is a promise the runtime keeps wherever the node lives.
+    expect(document.getElementById('nested-overlay')).toBe(nested);
     // Unmarked nodes still belong to the page: the diff owns them.
     expect(document.getElementById('plain-node')).toBeNull();
   });

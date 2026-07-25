@@ -13,7 +13,7 @@ const client = boot({ defs: [Cart], ctx: {}, glow: true });
 
 `glow: true | { duration }` enables the built-in agent-activity highlight (see [Events and interactions](/docs/guide/events-and-interactions)); style it with the `--janux-glow-*` CSS variables. Lower-level: `enableAgentGlow`, `glowElement`, `glowTargetFor`, `injectGlowStyles`, `emitToolTarget`, `GLOW_CLASS`.
 
-`suspendAgentGlow()` hands the painting over to a richer feedback layer (the copilot's [visualizer](/docs/recipes/local-model-copilot)): the events keep flowing, the built-in glow stops painting, and the returned function resumes it. `glowTargetFor(tool)` resolves the element that carries an intent's delegation marker — the exact control the agent "pressed", whether it is bound through `on`, `<form intent>` or a rich event like `onInput` — falling back to the whole island, and to nothing when the target isn't painted (a ring around a box with no geometry would land in the page corner). `emitToolTarget({ element, action, selector })` announces the live element a DOM-fallback tool is about to operate as a `janux:tool-target` event (`ToolTargetDetail`); the built-in client tools use it and never paint by themselves, so whichever feedback layer is enabled owns what the user sees.
+`suspendAgentGlow()` hands the painting over to a richer feedback layer (the copilot's [visualizer](/docs/recipes/local-model-copilot)): the events keep flowing, the built-in glow stops painting, and the returned function resumes it. `glowTargetFor(tool, input?)` resolves the element that carries an intent's delegation marker — the exact control the agent "pressed", whether it is bound through `on`, `<form intent>` or a rich event like `onInput`. Pass the call's `input` and it picks between controls that share one intent by the `data-input` each declares (a tab bar, a table row), instead of always the first. It falls back to the whole island, and to nothing when the target isn't painted (a ring around a box with no geometry would land in the page corner). `emitToolTarget({ element, action, selector })` announces the live element a DOM-fallback tool is about to operate as a `janux:tool-target` event (`ToolTargetDetail`); the built-in client tools use it and never paint by themselves, so whichever feedback layer is enabled owns what the user sees.
 
 `navigation: false` disables client-side SPA navigation (on by default — see [SPA navigation](/docs/guide/navigation#spa-navigation)).
 
@@ -31,7 +31,7 @@ const client = boot({ defs: [Cart], ctx: {}, glow: true });
 
 DOM events: `janux:navigate` fires with `{ phase: 'before' | 'after', from, to }` around each SPA navigation. `janux.navigate()` and link navigations both count toward `settled()`.
 
-A navigation diffs the whole document, so a node some runtime appended to `<body>` — an agent feedback overlay, a portal root — would be dropped for good: no incoming page lists it, and the module that created it doesn't run again. Mark it with `data-janux-keep` (exported as `KEEP_ATTRIBUTE`) and the navigation puts it back. Runtime `<head>` styles are kept unconditionally.
+A navigation diffs the whole document, so a node some runtime appended to `<body>` — an agent feedback overlay, a portal root — would be dropped for good: no incoming page lists it, and the module that created it doesn't run again. Mark it with `data-janux-keep` (exported as `KEEP_ATTRIBUTE`) and the navigation puts it back where it was — same parent, same position — wherever in the page it lives. Runtime `<head>` styles are kept unconditionally.
 
 Called once in `src/client.ts`. It indexes islands and state snapshots, installs two delegated listeners (click, submit) and exposes the bridge as `window.janux`. **No component code runs** until first interaction or agent call — that's the resume guarantee.
 
@@ -65,7 +65,7 @@ Called once in `src/client.ts`. It indexes islands and state snapshots, installs
 
 - `on={intents.x}` → delegated click; the element's `data-input` JSON becomes the input.
 - `<form intent={intents.x}>` → delegated submit; form fields become the input object.
-- `reset` on that form empties it once the intent has the values — the chat-box case. State can't: a controlled write is skipped while the control has focus (no cursor jumps), and submitting with Enter never moves focus.
+- `reset` on that form restores its controls once the intent has the values — the chat-box case. State can't: a controlled write is skipped while the control has focus (no cursor jumps), and submitting with Enter never moves focus. It is the platform's `form.reset()`, so a field goes back to its rendered `value`: leave the field uncontrolled and that is the empty string.
 - Compiled to `data-jxa` / `data-jxform` / `data-jxreset` markers — no per-element listeners exist.
 
 ## clientApi(name)

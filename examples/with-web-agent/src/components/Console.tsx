@@ -5,12 +5,7 @@ import { Users } from './Users';
 import { Workflow } from './Workflow';
 
 const TABS = ['users', 'team', 'profile', 'workflows'];
-const LABELS: Record<string, string> = {
-  users: 'Users',
-  team: 'Team',
-  profile: 'Profile',
-  workflows: 'Workflows',
-};
+const label = (tab: string) => tab[0]!.toUpperCase() + tab.slice(1);
 
 export const Console = component({
   name: 'console',
@@ -36,7 +31,7 @@ export const Console = component({
             on={intents.goToTab}
             data-input={JSON.stringify({ tab })}
           >
-            {LABELS[tab]}
+            {label(tab)}
           </button>
         ))}
       </nav>

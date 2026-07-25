@@ -151,19 +151,26 @@ function extractLeaving(mount: MountContext, incomingHtml: string): Element[] {
     });
 }
 
-/**
- * Diff-then-dispose: nothing is destroyed before the DOM actually changes, so
- * an abort before/during the diff leaves the current page fully intact (kept
- * persisted nodes are re-attached, no island disposed). Disposal happens after,
- * driven by what the diff removed from the document.
- */
 /** Marks a runtime-injected body node the whole-document diff must not own. */
 export const KEEP_ATTRIBUTE = 'data-janux-keep';
 
-/** Snapshots `nodes` and, once the diff has run, puts back whatever it removed. */
-function keepAttached(nodes: Element[], parent: Element): () => void {
+/**
+ * Snapshots where `nodes` live and, once the diff has run, puts back whatever it
+ * removed — in place, since a node the app positioned inside its own layout must
+ * not reappear at the end of the body. A parent the diff also removed falls back
+ * to `fallback`.
+ */
+function keepAttached(nodes: Element[], fallback: Element): () => void {
+  const places = nodes.map((node) => ({ node, parent: node.parentElement, next: node.nextElementSibling }));
+
   return () =>
-    nodes.filter((node) => !node.isConnected).forEach((node) => parent.appendChild(node));
+    places
+      .filter(({ node }) => !node.isConnected)
+      .forEach(({ node, parent, next }) => {
+        const host = parent?.isConnected ? parent : fallback;
+
+        host.insertBefore(node, next?.isConnected && next.parentElement === host ? next : null);
+      });
 }
 
 /**
@@ -178,16 +185,19 @@ function keepRuntimeStyles(): () => void {
 
 /**
  * Same story one level down: an agent feedback overlay, a portal root or any
- * host a runtime appended to <body> belongs to the session, not to the page, so
- * the diff would drop it for good. Opt in with `data-janux-keep`.
+ * node a runtime injected into the page belongs to the session, not to the
+ * route, so the diff would drop it for good. Opt in with `data-janux-keep`.
  */
 function keepRuntimeNodes(): () => void {
-  return keepAttached(
-    [...document.body.children].filter((node) => node.hasAttribute(KEEP_ATTRIBUTE)),
-    document.body,
-  );
+  return keepAttached([...document.body.querySelectorAll(`[${KEEP_ATTRIBUTE}]`)], document.body);
 }
 
+/**
+ * Diff-then-dispose: nothing is destroyed before the DOM actually changes, so
+ * an abort before/during the diff leaves the current page fully intact (kept
+ * persisted nodes are re-attached, no island disposed). Disposal happens after,
+ * driven by what the diff removed from the document.
+ */
 async function applyPage(mount: MountContext, html: string, signal?: AbortSignal): Promise<void> {
   const kept = extractPersisted(mount);
   const leaving = extractLeaving(mount, html);

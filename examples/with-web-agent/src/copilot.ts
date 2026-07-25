@@ -8,14 +8,12 @@
  * `llm: supportsLocalLlm() ? localLlm() : serverLlm()`.
  */
 import { createCopilot, type Copilot, type Llm, type LlmRequest, type LlmResponse } from '@janux/agent/local';
-import { PENDING_REF, planFor } from './demo-plan';
+import { EXAMPLE_GOALS, PENDING_REF, planFor } from './demo-plan';
 
 /** A real model takes a moment; the pause is what makes "Thinking…" visible. */
 const THINKING_MS = 350;
 const REF = /\[(e\d+)\]/;
-const NO_MATCH =
-  "I couldn't map that to an action. Try 'invite jane@acme.com as admin', 'search Kenji', " +
-  "'change my display name to Neo' or 'build a workflow'.";
+const NO_MATCH = `I couldn't map that to an action. Try ${EXAMPLE_GOALS.map((goal) => `“${goal}”`).join(', ')}.`;
 
 let copilot: Copilot | undefined;
 
@@ -25,39 +23,39 @@ function turnOf(messages: LlmRequest['messages']): number {
 }
 
 /**
- * A real model reads the page snapshot and picks the ref itself. The scripted
- * planner can't, so resolve its placeholder from the snapshot in the transcript.
+ * Reading the page snapshot and picking the ref is the model's job; standing in
+ * for one, the planner emits a placeholder and this resolves it from the
+ * snapshot already in the transcript.
  */
-function resolveRef(response: LlmResponse, messages: LlmRequest['messages']): LlmResponse {
-  const call = response.toolCalls?.find((candidate) => candidate.arguments.ref === PENDING_REF);
-
-  if (!call) return response;
+function resolveRef(call: { arguments: Record<string, unknown> }, messages: LlmRequest['messages']): void {
+  if (call.arguments.ref !== PENDING_REF) return;
   const line = messages
     .flatMap((message) => message.content.split('\n'))
     .find((text) => text.includes('Display name'));
 
   call.arguments.ref = REF.exec(line ?? '')?.[1] ?? PENDING_REF;
-
-  return response;
 }
 
-const demoLlm: Llm = async ({ messages }) => {
+const demoLlm: Llm = async ({ messages }): Promise<LlmResponse> => {
   const goal = messages.find((message) => message.role === 'user')?.content.split('\n')[0] ?? '';
   const plan = planFor(goal);
   const turn = turnOf(messages);
 
   await new Promise((resolve) => setTimeout(resolve, THINKING_MS));
   if (turn >= plan.length) return { text: plan.length ? 'Done — completed your request.' : NO_MATCH };
+  const call = { id: String(turn), ...plan[turn]! };
 
-  return resolveRef({ toolCalls: [{ id: String(turn), ...plan[turn]! }] }, messages);
+  resolveRef(call, messages);
+
+  return { toolCalls: [call] };
 };
 
 /** What each chip says while its tool runs; anything unlisted is humanized from its name. */
 const LABELS = {
-  console_goToTab: (call: any) => `Opening ${call.arguments.tab}`,
-  users_search: (call: any) => `Searching “${call.arguments.value}”`,
-  team_invite: (call: any) => `Inviting ${call.arguments.email}`,
-  workflow_addStep: (call: any) => `Adding “${call.arguments.label}”`,
+  'console.goToTab': (call: any) => `Opening ${call.arguments.tab}`,
+  'users.search': (call: any) => `Searching “${call.arguments.value}”`,
+  'team.invite': (call: any) => `Inviting ${call.arguments.email}`,
+  'workflow.addStep': (call: any) => `Adding “${call.arguments.label}”`,
   read_page: 'Reading the page',
   fill: 'Filling the field',
 };
@@ -71,9 +69,4 @@ export function ask(question: string): Promise<{ text: string }> {
   });
 
   return copilot.ask(question);
-}
-
-/** Clears the chips between questions, like gui-agent's demo does. */
-export function clearSteps(): void {
-  copilot?.visualizer?.clear();
 }
