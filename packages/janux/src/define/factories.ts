@@ -19,6 +19,18 @@ function assertName(name: unknown, kind: string): void {
 /** An intent name becomes half of `component.intent`, and `__` is reserved for wire names. */
 const INTENT_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
+const NAME_PROBLEM = {
+  separator: 'may not contain "." — it separates the component from the intent in a tool name',
+  identifier: 'must be a plain identifier — it becomes part of an agent tool name',
+};
+
+function intentNameProblem(name: string): keyof typeof NAME_PROBLEM | undefined {
+  if (name.includes('.')) return 'separator';
+  if (!INTENT_NAME.test(name) || name.includes('__')) return 'identifier';
+
+  return undefined;
+}
+
 /**
  * An intent name is addressable: an agent calls `component.intent`, and the client
  * bridge splits on the dot to resolve it. Left unvalidated, a name containing a dot
@@ -29,18 +41,9 @@ const INTENT_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
  */
 function assertIntentNames(def: { name: string; intents?: Record<string, unknown> }): void {
   Object.keys(def.intents ?? {}).forEach((name) => {
-    if (name.includes('.')) {
-      throw new Error(
-        `Janux: intent name "${name}" in component "${def.name}" may not contain "." — ` +
-          'it separates the component from the intent in a tool name',
-      );
-    }
-    if (INTENT_NAME.test(name) && !name.includes('__')) return;
+    const problem = intentNameProblem(name);
 
-    throw new Error(
-      `Janux: intent name "${name}" in component "${def.name}" must be a plain identifier — ` +
-        'it becomes part of an agent tool name',
-    );
+    if (problem) throw new Error(`Janux: intent name "${name}" in component "${def.name}" ${NAME_PROBLEM[problem]}`);
   });
 }
 
@@ -94,7 +97,14 @@ function chainable(policy: RefreshPolicy): ChainableRefreshPolicy {
 
 /** Refresh policy builder: `every('5m').orOn('inventory.changed')`. */
 export function every(interval: string): ChainableRefreshPolicy {
-  return chainable({ everyMs: parseDuration(interval), events: [] });
+  const everyMs = parseDuration(interval);
+
+  // `sources.ts` hands this straight to `setInterval`, so zero is an unbounded
+  // request flood from every client that mounts the island — and `every('0s')` is
+  // a reachable way to write "no delay".
+  if (everyMs <= 0) throw new Error(`Janux: refresh interval "${interval}" must be greater than zero`);
+
+  return chainable({ everyMs, events: [] });
 }
 
 /** Event-only refresh policy: `on('inventory.changed')`. */

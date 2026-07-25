@@ -127,6 +127,24 @@ export const BRIDGE_CALL_CASES: ScenarioCase[] = [
     expected: ['call:threw:Intent "cart.look" is not available'],
   },
   {
+    // Pinned, not fixed: a tool is named `component.intent` with no key, so two
+    // mounted instances of the same component share one addressable name and the
+    // agent always reaches the first in document order. Giving the agent a way to
+    // target the second means putting the island key in the tool name — a wire
+    // format change, not a hardening fix. See GAPS.md.
+    id: 'bridge-two-instances-of-a-component-resolve-to-the-first-in-document-order',
+    src: 'janux',
+    run: async (log) => {
+      const bridge = mounted();
+
+      document.body.innerHTML =
+        '<janux-island data-jx="cart#first"></janux-island><janux-island data-jx="cart#second"></janux-island>';
+      log.push(String(await bridge.call('cart.pay', {})));
+      log.push(`reached=${document.querySelector('janux-island')!.getAttribute('data-jx')}`);
+    },
+    expected: ['PAY-RAN', 'reached=cart#first'],
+  },
+  {
     id: 'bridge-an-unresolvable-tool-reports-an-unknown-guard-not-auto',
     src: 'janux',
     run: async (log) => {

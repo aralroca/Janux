@@ -1,4 +1,4 @@
-import { buildDefault, toJsonSchema, validate } from '../schema';
+import { toJsonSchema, validate } from '../schema';
 import { computed, createRoot, getOwner, runWithOwner, untrack, type Owner, type ReadonlySig } from '../signals';
 import { createReactiveState } from '../state/reactive-state';
 import { createGate, withGate } from '../state/mutation-gate';
@@ -8,6 +8,7 @@ import { createPendingTracker } from './settled';
 import { createSources } from './sources';
 import { startEffects } from './effects';
 import { invokeIntent, type AuditEntry, type Proposal } from './intents';
+import { applyPatch, resolveInitial } from './state-intake';
 
 export interface InstanceOptions {
   key?: string;
@@ -77,32 +78,6 @@ function evaluateDerived(readers: Record<string, unknown>): Record<string, unkno
   return untrack(() => JSON.parse(JSON.stringify({ ...readers })));
 }
 
-/**
- * A snapshot is untrusted input.
- *
- * It travels inside the served HTML and is read back on resume, so anything that
- * can influence that markup — a poisoned cache, a reflected value, a user editing
- * the DOM before boot — used to become state directly. Unvalidated, an injected
- * `isAdmin: true` was indistinguishable from declared state, wrong types survived,
- * and an array could *replace* the state object. The same state is what a `ui://`
- * resource shows the agent, so a poisoned snapshot lied to both faces at once.
- *
- * `validate` strips undeclared keys and fills defaults; a snapshot that cannot be
- * validated at all is discarded in favour of defaults rather than half-trusted.
- */
-function resolveInitial(def: ComponentDef, initial?: Record<string, unknown>): Record<string, unknown> {
-  if (!def.state) return initial ?? {};
-  const defaults = () => buildDefault(def.state!) as Record<string, unknown>;
-
-  if (initial === undefined) return defaults();
-  const result = validate(def.state, initial);
-
-  if (result.ok) return result.value as Record<string, unknown>;
-  console.warn(`Janux: discarded an invalid state snapshot for "${def.name}" — ${result.errors[0]?.message}`);
-
-  return defaults();
-}
-
 /** Creates a live component/store instance. Call `attach()` to start sources, effects and lifecycle. */
 export function createInstance(def: ComponentDef, options: InstanceOptions = {}): JanuxInstance {
   const ctx = options.ctx ?? {};
@@ -168,13 +143,7 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     emit,
     bag,
     snapshot: () => state.snapshot(),
-    patch(values: Record<string, unknown>) {
-      withGate(gate, () => {
-        Object.entries(values).forEach(([field, value]) => {
-          if (field in state.proxy) (state.proxy as any)[field] = value;
-        });
-      });
-    },
+    patch: (values: Record<string, unknown>) => applyPatch(def, state, gate, values),
     sourcesSnapshot() {
       return untrack(() =>
         Object.fromEntries(

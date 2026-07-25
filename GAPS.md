@@ -173,6 +173,22 @@ change cost much more and were fixed rather than accepted: a declarative fold
 over the path made `parentOf` 98x slower, and a `seen = new Set()` default
 parameter allocated a Set on every write including the scalar case.
 
+### Two instances of one component share a single addressable tool name
+
+A tool is named `component.intent`, with no island key. Mount two `card` islands and
+the manifest lists `card.inc` twice, while `islandIdFor` resolves it with
+`document.querySelector` — always the first island in document order. So the second
+instance is unreachable by an agent, and a call the agent believes targets card #2
+acts on card #1. Observed live in `examples/nested-islands`, where the manifest
+really does list `card.inc` and `badge.toggle` twice.
+
+Not fixed here. Giving the agent a way to name an instance means putting the key in
+the tool name (`card#2.inc`), which changes the wire format the manifest, the WebMCP
+descriptors, the copilot loop and the docs all agree on — a design decision, not a
+hardening fix. The resolution rule is pinned in
+`packages/conformance/security/bridge-call.cases.ts` so it is a known contract
+rather than an accident.
+
 ### A proposal is not bound to whoever it was created for
 
 `POST /_janux/approve` looks a pending proposal up by id in a server-wide map and
