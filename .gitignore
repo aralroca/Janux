@@ -14,3 +14,4 @@ apps/docs/public/search-index.json
 
 test-results/
 playwright-report/
+lighthouse-reports/

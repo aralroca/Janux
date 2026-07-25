@@ -1,7 +1,7 @@
 {
   "name": "janux-monorepo",
   "version": "0.3.0",
-  "description": "Janux \u2014 the agent-native fullstack UI framework. One component, two faces.",
+  "description": "Janux — the agent-native fullstack UI framework. One component, two faces.",
   "private": true,
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
     "test:e2e": "bun test e2e",
     "test:coverage": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/conformance packages/docs-tests apps/docs --coverage",
     "test:census": "bun scripts/test-census.ts",
+    "test:lighthouse": "bun run --cwd apps/docs build && bun scripts/lighthouse.ts",
     "typecheck": "for p in janux janux-server janux-agent janux-vite janux-cli conformance; do bunx tsc --noEmit -p packages/$p || exit 1; done",
     "dev:shop": "bun run --cwd examples/shop dev",
     "dev:i18n": "bun run --cwd examples/i18n dev",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
+    "lighthouse": "^13.4.1",
     "typescript": "^5.6.0"
   }
 }
