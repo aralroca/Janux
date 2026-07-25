@@ -35,6 +35,24 @@ function acceptsGzip(request: Request): boolean {
   return (request.headers.get('accept-encoding') ?? '').includes('gzip');
 }
 
+/**
+ * Compressed once per file, not once per request: a real host serves compressed
+ * bytes it already has, and re-gzipping on a single-threaded server would add
+ * latency to the very measurement this exists to make.
+ */
+const compressed = new Map<string, Uint8Array>();
+
+async function gzipped(file: string): Promise<Uint8Array> {
+  const cached = compressed.get(file);
+
+  if (cached) return cached;
+  const fresh = Bun.gzipSync(new Uint8Array(await Bun.file(file).arrayBuffer()));
+
+  compressed.set(file, fresh);
+
+  return fresh;
+}
+
 async function respond(file: string, pathname: string, request: Request): Promise<Response> {
   const blob = Bun.file(file);
   const headers = new Headers({ 'content-type': blob.type, 'cache-control': cacheControl(pathname) });
@@ -42,7 +60,7 @@ async function respond(file: string, pathname: string, request: Request): Promis
   if (!TEXT_FILE.test(file) || !acceptsGzip(request)) return new Response(blob, { headers });
   headers.set('content-encoding', 'gzip');
 
-  return new Response(Bun.gzipSync(new Uint8Array(await blob.arrayBuffer())), { headers });
+  return new Response(await gzipped(file), { headers });
 }
 
 if (!existsSync(root)) {

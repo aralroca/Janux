@@ -9,12 +9,20 @@ export function staticParams() {
   return docIndex().map(({ section, slug }) => ({ section, slug }));
 }
 
+interface DocMeta {
+  title: string;
+  path: string;
+  section: string;
+  slug: string;
+  description?: string;
+}
+
 /**
  * The breadcrumb trail mirrors the visible one, but only where it is navigable:
  * sections and groups are sidebar labels with no page of their own, so they ride
  * on `articleSection` rather than becoming URL-less crumbs a validator rejects.
  */
-function docJsonLd(title: string, path: string, section: string, slug: string, description?: string) {
+function docJsonLd({ title, path, section, slug, description }: DocMeta) {
   const trail = [sectionLabel(section), groupLabel(section, slug)].filter(Boolean).join(' / ');
 
   return [
@@ -52,7 +60,7 @@ export function meta({ params }: { params: { section: string; slug: string } }):
     canonical: path,
     image: SOCIAL_IMAGE,
     og: { type: 'article' },
-    jsonLd: docJsonLd(title, path, params.section, params.slug, description),
+    jsonLd: docJsonLd({ title, path, section: params.section, slug: params.slug, description }),
   };
 }
 

@@ -34,7 +34,7 @@ function luminance(hex: string): number {
   return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
 }
 
-export function contrast(a: string, b: string): number {
+function contrast(a: string, b: string): number {
   const [lighter, darker] = [luminance(a), luminance(b)].sort((x, y) => y - x);
 
   return (lighter! + 0.05) / (darker! + 0.05);
@@ -42,13 +42,11 @@ export function contrast(a: string, b: string): number {
 
 const SURFACES = ['bg', 'bg-soft'] as const;
 const TEXT_TOKENS = ['text', 'heading', 'muted'] as const;
-const SCHEMES = [
-  { name: 'light', index: 0 },
-  { name: 'dark', index: 1 },
-] as const;
+/** Position is the index: `token()` returns each pair in scheme order. */
+const SCHEMES = ['light', 'dark'] as const;
 
 describe('palette contrast (WCAG AA, normal text)', () => {
-  for (const { name, index } of SCHEMES) {
+  for (const [index, name] of SCHEMES.entries()) {
     for (const text of TEXT_TOKENS) {
       for (const surface of SURFACES) {
         test(`${name}: --${text} on --${surface}`, () => {
