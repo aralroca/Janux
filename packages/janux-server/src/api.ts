@@ -54,7 +54,14 @@ export function collectApis(modules: Record<string, Record<string, unknown>>): A
 export function resolveApiGuard(tool: ApiTool, ctx: Ctx): GuardValue {
   const guard = tool.guard ?? 'auto';
 
-  return typeof guard === 'function' ? guard({ ctx }) : guard;
+  if (typeof guard !== 'function') return guard;
+  try {
+    return guard({ ctx });
+  } catch {
+    // Denies when it cannot decide, like the component-side `resolveGuard`.
+    // Propagating took the whole api manifest down with one bad guard.
+    return 'forbidden';
+  }
 }
 
 function parseApiInput(tool: ApiTool, input: unknown): unknown {
@@ -128,12 +135,15 @@ export async function invokeApi(
 }
 
 export function apiManifestTools(tools: ApiTool[], ctx: Ctx) {
+  // Resolved once, like `toolsFor`: two resolutions let a guard that answers
+  // differently per call pass the filter and then be advertised as `forbidden`.
   return tools
-    .filter((tool) => resolveApiGuard(tool, ctx) !== 'forbidden')
-    .map((tool) => ({
+    .map((tool) => ({ tool, guard: resolveApiGuard(tool, ctx) }))
+    .filter(({ guard }) => guard !== 'forbidden')
+    .map(({ tool, guard }) => ({
       name: `api.${tool.name}`,
       description: tool.description,
-      guard: resolveApiGuard(tool, ctx),
+      guard,
       input: tool.input ? toJsonSchema(tool.input) : undefined,
     }));
 }
