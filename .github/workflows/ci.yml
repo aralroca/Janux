@@ -11,6 +11,38 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    # The Postgres memory store and the Redis counter store are production
+    # adapters whose suites skip themselves when the service is unreachable — so
+    # without these they were silently never exercised on CI, and coverage came in
+    # ~1.1pp lower than on a machine with the local stack. Credentials match the
+    # defaults the suites probe for, so no env override is needed for Postgres.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: assistant
+          POSTGRES_PASSWORD: assistant
+          POSTGRES_DB: janux_harness_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # The default URL carries a password; this service runs without auth.
+      JANUX_TEST_REDIS: redis://localhost:6379/15
+
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -27,7 +59,7 @@ jobs:
         run: bun run test:e2e
 
       # Prints the per-area count and fails if total coverage slips below the
-      # floor. This is what stops the corpus growing by permutation: rows that
-      # add tests without moving coverage no longer look like progress.
+      # floor. This is what stops the corpus growing by permutation: rows that add
+      # tests without moving coverage no longer look like progress.
       - name: Census and coverage floor
         run: bun run test:census --min-coverage 0.93
