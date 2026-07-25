@@ -31,6 +31,8 @@ const client = boot({ defs: [Cart], ctx: {}, glow: true });
 
 DOM events: `janux:navigate` fires with `{ phase: 'before' | 'after', from, to }` around each SPA navigation. `janux.navigate()` and link navigations both count toward `settled()`.
 
+A navigation diffs the whole document, so a node some runtime appended to `<body>` — an agent feedback overlay, a portal root — would be dropped for good: no incoming page lists it, and the module that created it doesn't run again. Mark it with `data-janux-keep` (exported as `KEEP_ATTRIBUTE`) and the navigation puts it back. Runtime `<head>` styles are kept unconditionally.
+
 Called once in `src/client.ts`. It indexes islands and state snapshots, installs two delegated listeners (click, submit) and exposes the bridge as `window.janux`. **No component code runs** until first interaction or agent call — that's the resume guarantee.
 
 `client.mount('name#key')` mounts an island eagerly (e.g. an editor page where the island IS the page).

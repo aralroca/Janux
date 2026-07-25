@@ -15,7 +15,7 @@ export {
   type GlowOptions,
   type ToolTargetDetail,
 } from './glow';
-export { performNavigation, mountEagerIslands } from './navigate';
+export { performNavigation, mountEagerIslands, KEEP_ATTRIBUTE } from './navigate';
 export { prefetch } from './prefetch';
 export {
   installWebMCP,

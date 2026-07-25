@@ -157,6 +157,15 @@ function extractLeaving(mount: MountContext, incomingHtml: string): Element[] {
  * persisted nodes are re-attached, no island disposed). Disposal happens after,
  * driven by what the diff removed from the document.
  */
+/** Marks a runtime-injected body node the whole-document diff must not own. */
+export const KEEP_ATTRIBUTE = 'data-janux-keep';
+
+/** Snapshots `nodes` and, once the diff has run, puts back whatever it removed. */
+function keepAttached(nodes: Element[], parent: Element): () => void {
+  return () =>
+    nodes.filter((node) => !node.isConnected).forEach((node) => parent.appendChild(node));
+}
+
 /**
  * Runtime-injected stylesheets (a lazy-loaded editor's CSS, vite dev styles)
  * exist only in the live <head>: the incoming page doesn't list them, so the
@@ -164,19 +173,26 @@ function extractLeaving(mount: MountContext, incomingHtml: string): Element[] {
  * later remount. Snapshot them before the swap, resurrect whatever it removed.
  */
 function keepRuntimeStyles(): () => void {
-  const styles = [...document.head.querySelectorAll('style, link[rel="stylesheet"]')];
+  return keepAttached([...document.head.querySelectorAll('style, link[rel="stylesheet"]')], document.head);
+}
 
-  return () => {
-    styles.forEach((node) => {
-      if (!node.isConnected) document.head.appendChild(node);
-    });
-  };
+/**
+ * Same story one level down: an agent feedback overlay, a portal root or any
+ * host a runtime appended to <body> belongs to the session, not to the page, so
+ * the diff would drop it for good. Opt in with `data-janux-keep`.
+ */
+function keepRuntimeNodes(): () => void {
+  return keepAttached(
+    [...document.body.children].filter((node) => node.hasAttribute(KEEP_ATTRIBUTE)),
+    document.body,
+  );
 }
 
 async function applyPage(mount: MountContext, html: string, signal?: AbortSignal): Promise<void> {
   const kept = extractPersisted(mount);
   const leaving = extractLeaving(mount, html);
   const restoreStyles = keepRuntimeStyles();
+  const restoreRuntimeNodes = keepRuntimeNodes();
 
   try {
     throwIfAborted(signal);
@@ -191,6 +207,7 @@ async function applyPage(mount: MountContext, html: string, signal?: AbortSignal
     throw error;
   } finally {
     restoreStyles();
+    restoreRuntimeNodes();
   }
 }
 

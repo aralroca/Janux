@@ -107,6 +107,37 @@ describe('SPA navigation (streamed diff)', () => {
     expect(document.querySelector('janux-island[data-jx="counter#default"]')).toBeNull();
   });
 
+  /**
+   * A feedback layer's overlay (status chips, a glow ring host) is injected into
+   * the body at runtime, so the incoming page never lists it and the diff drops
+   * it — and the module that injected it does not run again on a later page.
+   * `keepRuntimeStyles` already solves this for the <head>; body-level runtime
+   * nodes need the same treatment, opted into with `data-janux-keep`.
+   */
+  it('keeps runtime-injected body nodes marked data-janux-keep across a navigation', async () => {
+    const pageA = await pageHtml('Page A', jsx('h1', { children: 'A' }));
+    const pageB = await pageHtml('Page B', jsx('h1', { children: 'B' }));
+
+    document.write(pageA);
+    document.close();
+    const client = boot({ defs: [counter] });
+    const overlay = document.createElement('div');
+    const plain = document.createElement('div');
+
+    overlay.id = 'agent-overlay';
+    overlay.setAttribute('data-janux-keep', '');
+    plain.id = 'plain-node';
+    document.body.append(overlay, plain);
+
+    (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => pageB }));
+    await client.navigate('/b');
+
+    expect(document.querySelector('h1')!.textContent).toBe('B');
+    expect(document.getElementById('agent-overlay')).toBe(overlay);
+    // Unmarked nodes still belong to the page: the diff owns them.
+    expect(document.getElementById('plain-node')).toBeNull();
+  });
+
   it('re-mounts an eager island when its page is revisited after navigating away', async () => {
     const pageEditor = await pageHtml('Editor', [jsx('h1', { children: 'E' }), jsx(editor as any, { eager: true })]);
     const pageDoc = await pageHtml('Doc', [jsx('h1', { children: 'D' })]);

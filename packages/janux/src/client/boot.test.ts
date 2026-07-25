@@ -327,6 +327,21 @@ describe('client boot (resume without hydration)', () => {
     expect(errors.join()).toContain('no node yet');
   });
 
+  // Guard, not a new behavior: morph is island-scoped, and an overlay host lives
+  // outside every island precisely so re-renders can't take it down.
+  it('island re-renders never touch runtime nodes outside the island', async () => {
+    const client = await serveAndBoot();
+    const overlay = document.createElement('div');
+
+    overlay.id = 'agent-overlay';
+    document.body.appendChild(overlay);
+    await client.call('counter.inc');
+    await client.call('counter.inc');
+    await client.settled();
+
+    expect(document.getElementById('agent-overlay')).toBe(overlay);
+  });
+
   it('the enabled glow paints janux:tool-target elements (DOM-fallback feedback)', async () => {
     document.body.innerHTML = '<button id="go">Go</button>';
     document.getElementById('janux-glow-styles')?.remove();
