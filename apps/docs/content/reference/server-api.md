@@ -104,6 +104,8 @@ Every head node the shell writes carries a stable `id` (`jx-og-title`, `jx-jsonl
 | `/_janux/reject` | POST `{id}` | Discard a pending proposal |
 | `/_janux/manifest?path=/shop` | GET | Manifest for that route: mounted components + stores + api tools |
 | `/_janux/agent` | POST | The copilot turn protocol (see [Agent API](/docs/reference/agent-api)) |
+| `/sitemap.xml` | GET | Every page the router knows, absolute — when `siteUrl` is set (dynamic routes expanded via `staticParams`) |
+| `/robots.txt` | GET | `Allow: /` plus the sitemap link — when `siteUrl` is set |
 
 Error envelope: `{ ok: false, error }` with 400 (invalid input), 401 (`agent_required`), 403 (forbidden), 404, 500.
 

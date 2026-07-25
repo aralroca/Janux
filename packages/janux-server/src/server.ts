@@ -23,6 +23,7 @@ import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-
 import { createFsRouter, type Route } from './router';
 import { htmlDocument } from './html-shell';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
+import { buildRobotsTxt, buildSitemap } from './sitemap';
 
 export interface AgentMount {
   handle(req: Request, deps: AgentDeps): Promise<Response>;
@@ -381,6 +382,17 @@ export function createJanuxServer(options: ServerOptions = {}) {
       llmsTxtBody ??= await renderLlmsTxt();
 
       return new Response(llmsTxtBody, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    }
+    // Both need an absolute origin to be valid at all, so `siteUrl` is the opt-in.
+    if (pathname === '/sitemap.xml' && options.siteUrl) {
+      return new Response(buildSitemap(options.siteUrl, await listPages()), {
+        headers: { 'content-type': 'application/xml; charset=utf-8' },
+      });
+    }
+    if (pathname === '/robots.txt' && options.siteUrl) {
+      return new Response(buildRobotsTxt(options.siteUrl), {
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
     }
     if (pathname === '/_janux/manifest') {
       return json(await manifestFor(url.searchParams.get('path') ?? '/', await resolveCtx(req)));

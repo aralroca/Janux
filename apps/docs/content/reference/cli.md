@@ -102,7 +102,7 @@ Everything is optional — the defaults are the [conventional layout](#project-c
 |---|---|---|
 | `title` | — | Default document title / shell title |
 | `lang` | `'en'` | `<html lang>` for the whole app. An [i18n](/docs/guide/i18n) app ignores it: each page declares its own locale and direction |
-| `siteUrl` | — | Public origin (`https://janux.dev`). Resolves a route's relative `image`/`canonical` into the absolute URLs Open Graph needs — see [PageMeta](/docs/reference/server-api) |
+| `siteUrl` | — | Public origin (`https://janux.dev`). Resolves a route's relative `image`/`canonical` into the absolute URLs Open Graph needs (see [PageMeta](/docs/reference/server-api)), and opts into `/sitemap.xml` + `/robots.txt` |
 | `llmsTxt` | off | `{ title?, description? }` — opt into serving `GET /llms.txt` |
 | `output` | `'bun'` | `'bun'` or `'static'` — see [output](#output) |
 | `routesDir` | `src/routes` | File-system routing root |

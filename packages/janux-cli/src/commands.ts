@@ -131,15 +131,29 @@ async function prerenderStatic(root: string): Promise<void> {
 
   skipped.forEach((page) => console.log(`janux build: skipped ${page} — dynamic route without staticParams.`));
   await Promise.all(concrete.map((page) => writePage(server, outDir, page)));
-  await writeLlmsTxt(server, outDir);
+  await writeGeneratedFiles(server, outDir);
   if (options.i18n) await Bun.write(join(outDir, 'index.html'), localeRedirectStub(options.i18n.locales, options.i18n.defaultLocale));
   console.log(`janux build: prerendered ${concrete.length} pages (output: static).`);
 }
 
-async function writeLlmsTxt(server: { fetch(req: Request): Promise<Response> }, outDir: string): Promise<void> {
-  const response = await server.fetch(new Request('http://localhost/llms.txt'));
+/**
+ * Files the server generates rather than routes: a static host has no server to
+ * ask, so the build asks for it. Each is opt-in server-side (`llmsTxt`,
+ * `siteUrl`), and a 404 simply means the app didn't ask for it.
+ */
+const GENERATED_FILES = ['llms.txt', 'sitemap.xml', 'robots.txt'];
 
-  if (response.status === 200) await Bun.write(join(outDir, 'llms.txt'), await response.text());
+async function writeGeneratedFiles(
+  server: { fetch(req: Request): Promise<Response> },
+  outDir: string,
+): Promise<void> {
+  await Promise.all(
+    GENERATED_FILES.map(async (file) => {
+      const response = await server.fetch(new Request(`http://localhost/${file}`));
+
+      if (response.status === 200) await Bun.write(join(outDir, file), await response.text());
+    }),
+  );
 }
 
 function copyPublicDir(root: string): void {
