@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
-import { apiFiles, apiModuleName, janux, resolveAppConfig } from '@janux/vite';
+import { apiFiles, apiModuleName, janux, resolveAppConfig, shellOptions } from '@janux/vite';
 import type { CliCommand } from './args';
 
 /** Zero-config integrations: installing @janux/tailwind IS the configuration. */
@@ -131,15 +131,29 @@ async function prerenderStatic(root: string): Promise<void> {
 
   skipped.forEach((page) => console.log(`janux build: skipped ${page} — dynamic route without staticParams.`));
   await Promise.all(concrete.map((page) => writePage(server, outDir, page)));
-  await writeLlmsTxt(server, outDir);
+  await writeGeneratedFiles(server, outDir);
   if (options.i18n) await Bun.write(join(outDir, 'index.html'), localeRedirectStub(options.i18n.locales, options.i18n.defaultLocale));
   console.log(`janux build: prerendered ${concrete.length} pages (output: static).`);
 }
 
-async function writeLlmsTxt(server: { fetch(req: Request): Promise<Response> }, outDir: string): Promise<void> {
-  const response = await server.fetch(new Request('http://localhost/llms.txt'));
+/**
+ * Files the server generates rather than routes: a static host has no server to
+ * ask, so the build asks for it. Each is opt-in server-side (`llmsTxt`,
+ * `siteUrl`), and a 404 simply means the app didn't ask for it.
+ */
+const GENERATED_FILES = ['llms.txt', 'sitemap.xml', 'robots.txt'];
 
-  if (response.status === 200) await Bun.write(join(outDir, 'llms.txt'), await response.text());
+async function writeGeneratedFiles(
+  server: { fetch(req: Request): Promise<Response> },
+  outDir: string,
+): Promise<void> {
+  await Promise.all(
+    GENERATED_FILES.map(async (file) => {
+      const response = await server.fetch(new Request(`http://localhost/${file}`));
+
+      if (response.status === 200) await Bun.write(join(outDir, file), await response.text());
+    }),
+  );
 }
 
 function copyPublicDir(root: string): void {
@@ -149,8 +163,20 @@ function copyPublicDir(root: string): void {
   cpSync(publicDir, join(root, 'dist/client'), { recursive: true });
 }
 
+/**
+ * `inlineStyles`: the sheet the bundler just emitted, read back so the shell can
+ * embed it. Absent before the first build — the shell falls back to the link.
+ */
+async function builtStyles(root: string, app: { inlineStyles?: boolean }): Promise<string[] | undefined> {
+  if (!app.inlineStyles) return undefined;
+  const sheet = Bun.file(join(root, 'dist/client/styles.css'));
+
+  return (await sheet.exists()) ? [await sheet.text()] : undefined;
+}
+
 export async function prodServerOptions(root: string): Promise<ServerOptions> {
   const app = await resolveAppConfig(root);
+  const inlineStyles = await builtStyles(root, app);
   const apiModules = Object.fromEntries(
     await Promise.all(
       apiFiles(app.serverDir).map(async (file) => [apiModuleName(file), await import(file)]),
@@ -169,8 +195,8 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
     agent: agentModule?.default ?? defineAgent(),
     storeDefs: storesModule ?? {},
     runtimeUrl: existsSync(join(root, 'dist/client/client.js')) ? '/client.js' : undefined,
-    stylesheets: app.stylesheet ? ['/styles.css'] : [],
-    title: app.title,
+    ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : []),
+    inlineStyles,
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default,
     middleware: middlewareModule?.default,

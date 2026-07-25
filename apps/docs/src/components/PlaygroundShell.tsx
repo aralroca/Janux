@@ -26,7 +26,9 @@ export const PlaygroundShell = component({
   },
 
   view: () => (
-    <div>
+    // <main>, not a div: this island IS the page's primary content, and a
+    // document with no main landmark leaves screen readers no way to skip to it.
+    <main>
       <div class="playground-bar">
         <h1>⚡ Playground</h1>
         <select id="pg-example" aria-label="Load example"></select>
@@ -64,6 +66,6 @@ export const PlaygroundShell = component({
         <div class="agent-pane" id="pg-agent"></div>
       </div>
       <div class="error-overlay" id="pg-error" hidden></div>
-    </div>
+    </main>
   ),
 });

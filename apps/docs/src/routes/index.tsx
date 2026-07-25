@@ -1,12 +1,39 @@
-import { buildManifest, component, intent, schema, int } from 'janux';
+import { buildManifest, component, intent, schema, int, type PageMeta } from 'janux';
 import { Layout } from '../components/Layout';
 import { DocsCopilot } from '../components/DocsCopilot';
 import { renderMarkdown } from '../server/markdown';
+import { absolute, SOCIAL_IMAGE } from '../site';
 
-export const meta = {
+const DESCRIPTION =
+  'One component, two faces: a live view for humans, typed MCP tools & resources for AI agents — generated from the same definition.';
+
+export const meta: PageMeta = {
   title: 'Janux — the agent-native fullstack UI framework',
-  description:
-    'One component, two faces: a live view for humans, typed MCP tools & resources for AI agents — generated from the same definition.',
+  description: DESCRIPTION,
+  canonical: '/',
+  image: SOCIAL_IMAGE,
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Janux',
+      url: absolute('/'),
+      description: DESCRIPTION,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareSourceCode',
+      name: 'Janux',
+      description: DESCRIPTION,
+      codeRepository: 'https://github.com/aralroca/Janux',
+      programmingLanguage: 'TypeScript',
+      license: 'https://opensource.org/licenses/MIT',
+      author: { '@type': 'Person', name: 'Aral Roca Gómez', url: 'https://aralroca.com' },
+    },
+  ],
+  // The hero video's poster is the largest paint on this page; without the hint
+  // the browser only discovers it after parsing the <video>.
+  head: [{ tag: 'link', attrs: { rel: 'preload', as: 'image', href: SOCIAL_IMAGE, fetchpriority: 'high' } }],
 };
 
 const SAMPLE_CODE = `import { component, intent, schema, int } from 'janux';
@@ -187,6 +214,30 @@ export default async function Home() {
             Contracts can't drift — they're generated from the code that renders, with human approval
             built in where it matters. <strong>No other framework ships this loop out of the box.</strong>
           </p>
+        </section>
+
+        <section class="scores">
+          {/* Barely moving, so it reads as a picture rather than a video: no
+              controls, no chrome. There is a recording per theme, but rendering
+              both `<video>`s downloaded both (a hidden video still fetches its
+              poster and metadata), so the still frame is the container's
+              background — one image, resolved by the cascade — and `setupScoresVideo`
+              gives the single element the source that matches. Without JS, or with
+              reduced motion, the still is all there is, which is the whole point. */}
+          <div class="scores-video">
+            <video
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="none"
+              width="1008"
+              height="286"
+              data-light="/lighthouse-100-light.mp4"
+              data-dark="/lighthouse-100-dark.mp4"
+              aria-label="Lighthouse report for the Janux documentation: 100 in performance, accessibility, best practices, SEO and agentic browsing"
+            ></video>
+          </div>
         </section>
 
         <section class="features">

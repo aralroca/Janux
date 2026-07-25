@@ -63,3 +63,37 @@ jobs:
       # tests without moving coverage no longer look like progress.
       - name: Census and coverage floor
         run: bun run test:census --min-coverage 0.93
+
+  # The docs site is the framework's own dogfood, so its audit scores are a claim
+  # about Janux, not about the docs. Separate job: it builds the site and drives
+  # headless Chrome, which has nothing to do with the unit suite and would only
+  # make that job slower to report.
+  lighthouse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      # Accessibility, best practices and SEO are asserted at a flat 100 —
+      # they measure markup, so less is a defect. Performance is asserted at 99:
+      # the score is a function of the machine, and a gate that reddens on its own
+      # is one people learn to ignore. Three runs per page, median asserted.
+      #
+      # Only three pages are audited, one of each kind (home, a docs page, the
+      # playground) — not all 76. Green here is not a claim about every page.
+      - name: Build the docs site
+        run: bun run --cwd apps/docs build
+
+      - name: Lighthouse (docs site)
+        run: bun scripts/lighthouse.ts --reports lighthouse-reports
+
+      # A red run is only actionable with the reports.
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: lighthouse-reports/
+          if-no-files-found: ignore

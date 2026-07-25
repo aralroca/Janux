@@ -1,17 +1,67 @@
+import type { PageMeta } from 'janux';
 import { Layout } from '../../../components/Layout';
 import { DocsCopilot } from '../../../components/DocsCopilot';
 import { docContent, docIndex, groupLabel, sectionLabel } from '../../../server/docs.api';
-import { renderMarkdown, type TocEntry } from '../../../server/markdown';
+import { renderMarkdown, summarize, type TocEntry } from '../../../server/markdown';
+import { absolute, SOCIAL_IMAGE } from '../../../site';
 
 export function staticParams() {
   return docIndex().map(({ section, slug }) => ({ section, slug }));
 }
 
-export function meta({ params }: { params: { section: string; slug: string } }) {
-  const markdown = docContent(params.section, params.slug);
-  const title = markdown?.match(/^# (.+)$/m)?.[1];
+interface DocMeta {
+  title: string;
+  path: string;
+  section: string;
+  slug: string;
+  description?: string;
+}
 
-  return { title: title ? `${title} — Janux docs` : 'Janux docs' };
+/**
+ * The breadcrumb trail mirrors the visible one, but only where it is navigable:
+ * sections and groups are sidebar labels with no page of their own, so they ride
+ * on `articleSection` rather than becoming URL-less crumbs a validator rejects.
+ */
+function docJsonLd({ title, path, section, slug, description }: DocMeta) {
+  const trail = [sectionLabel(section), groupLabel(section, slug)].filter(Boolean).join(' / ');
+
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Docs', item: absolute('/') },
+        { '@type': 'ListItem', position: 2, name: title, item: absolute(path) },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'TechArticle',
+      headline: title,
+      description,
+      articleSection: trail,
+      url: absolute(path),
+      isPartOf: { '@type': 'WebSite', name: 'Janux', url: absolute('/') },
+    },
+  ];
+}
+
+export function meta({ params }: { params: { section: string; slug: string } }): PageMeta {
+  const markdown = docContent(params.section, params.slug);
+
+  if (!markdown) return { title: 'Janux docs', robots: 'noindex' };
+  const title = markdown.match(/^# (.+)$/m)?.[1] ?? 'Janux docs';
+  const path = `/docs/${params.section}/${params.slug}`;
+  const description = summarize(markdown);
+
+  return {
+    title: `${title} — Janux docs`,
+    description,
+    canonical: path,
+    image: SOCIAL_IMAGE,
+    og: { type: 'article' },
+    jsonLd: docJsonLd({ title, path, section: params.section, slug: params.slug, description }),
+  };
 }
 
 function Breadcrumb({ section, slug }: { section: string; slug: string }) {

@@ -34,7 +34,7 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 | `llmsTxt` | `{ title?, description? }` | Opt-in: serves `GET /llms.txt` — pages + agent tools index (`confirm` tools annotated "requires human approval"; dynamic routes expanded via `staticParams`) |
 | `agents` | `{ webBotAuth: { keys }, policy? }` | Web Bot Auth agent identity — see below |
 | `onAudit` | `(entry: AuditEntry) => void` | Called for every api() dispatch: tool, origin, guard, ok, and the verified agent key |
-| `runtimeUrl`, `stylesheets`, `favicon`, `title`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
+| `runtimeUrl`, `stylesheets`, `favicon`, `title`, `lang`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
 
 Returns `{ fetch(req): Promise<Response>, apiTools, manifestFor }` — mount `fetch` on Bun.serve, or anything Request/Response-shaped.
 
@@ -54,6 +54,47 @@ export default async function Page({ ctx, params }) { ... }         // async sup
 
 `staticParams` enumerates the concrete pages of a dynamic route: `llms.txt` lists `/orders/1`, `/orders/2` instead of the raw `/orders/[id]` pattern, and with `output: "static"` they become the prerendered pages. Without it, the pattern is listed as-is (and the route is skipped in static builds). See [Deploying → Static export](/docs/recipes/deploying).
 
+### The document head (`PageMeta`)
+
+`meta` returns a `PageMeta`. `title` and `description` fall back to the app config; everything else is per-page:
+
+```ts
+import type { PageMeta } from 'janux';
+
+export function meta({ params }): PageMeta {
+  return {
+    title: 'What is Janux? — Janux docs',
+    description: 'The agent-native fullstack UI framework.',
+    image: '/og/what-is-janux.png',   // og:image + twitter:image
+    canonical: `/docs/${params.section}/${params.slug}`,
+    robots: 'index,follow',
+    jsonLd: { '@context': 'https://schema.org', '@type': 'TechArticle', headline: 'What is Janux?' },
+  };
+}
+```
+
+| Field | Emits |
+|---|---|
+| `title`, `description` | `<title>` and the description meta |
+| `image` | `og:image` + `twitter:image`, and switches the card to `summary_large_image` |
+| `canonical` | `<link rel="canonical">` + `og:url` |
+| `robots` | `<meta name="robots">` |
+| `og`, `twitter` | `og:*` / `twitter:*` with **unprefixed keys** (`{ type: 'article' }`), overriding the derived values key by key |
+| `jsonLd` | One `<script type="application/ld+json">` per entry (an object or an array) |
+| `head` | `{ tag, attrs?, text? }[]` — anything the fields above don't cover |
+
+`og:*` and `twitter:*` are **derived** from `title`, `description`, `image` and `canonical`, so a page that sets those four already has a correct social card; you only reach for `og`/`twitter` to override.
+
+`image` and `canonical` may be root-relative — Open Graph requires absolute URLs, so the shell resolves them against [`siteUrl`](/docs/reference/cli). Without a `siteUrl` a relative value is dropped rather than emitted broken, with a warning.
+
+The escape hatch covers the rest — a preload hint, an alternate link, a domain verification tag:
+
+```ts
+head: [{ tag: 'link', attrs: { rel: 'preload', as: 'image', href: '/demo-poster.jpg' } }];
+```
+
+Every head node the shell writes carries a stable `id` (`jx-og-title`, `jx-jsonld-0`, `jx-head-0`, …). That is what lets [SPA navigation](/docs/guide/navigation) match them by identity across the document diff: leaving a page drops its social tags instead of stranding the previous page's card, and a tag both pages declare is updated in place.
+
 ## HTTP surface
 
 | Endpoint | Method | Purpose |
@@ -63,6 +104,8 @@ export default async function Page({ ctx, params }) { ... }         // async sup
 | `/_janux/reject` | POST `{id}` | Discard a pending proposal |
 | `/_janux/manifest?path=/shop` | GET | Manifest for that route: mounted components + stores + api tools |
 | `/_janux/agent` | POST | The copilot turn protocol (see [Agent API](/docs/reference/agent-api)) |
+| `/sitemap.xml` | GET | Every page the router knows, absolute — when `siteUrl` is set (dynamic routes expanded via `staticParams`) |
+| `/robots.txt` | GET | `Allow: /` plus the sitemap link — when `siteUrl` is set |
 
 Error envelope: `{ ok: false, error }` with 400 (invalid input), 401 (`agent_required`), 403 (forbidden), 404, 500.
 

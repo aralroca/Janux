@@ -4,6 +4,18 @@ import { createHighlighter, type Highlighter } from 'shiki';
 const THEMES = { light: 'github-light', dark: 'github-dark' } as const;
 const LANGS = ['typescript', 'tsx', 'bash', 'json', 'jsonc', 'css', 'html'];
 
+/**
+ * Two token colors in GitHub's themes don't clear 4.5:1 as body-sized code text,
+ * measured against both the block background and the page's: the light orange
+ * (3.49 on white — it lands on `state`, `input`, `intents`) and the dark comment
+ * grey (3.05 on the page background). Darkened/lightened in place, same hue, so
+ * the themes still read as GitHub's.
+ */
+const CONTRAST_FIXES = {
+  'github-light': { '#e36209': '#bd4b00' },
+  'github-dark': { '#6a737d': '#8b949e' },
+} as const;
+
 let highlighterPromise: Promise<Highlighter> | undefined;
 
 function getHighlighter(): Promise<Highlighter> {
@@ -44,6 +56,7 @@ function codeRenderer(highlighter: Highlighter) {
     const highlighted = highlighter.codeToHtml(text, {
       lang: known,
       themes: THEMES,
+      colorReplacements: CONTRAST_FIXES,
       defaultColor: 'light-dark()',
     });
 
@@ -81,6 +94,61 @@ function headingRenderer(toc: TocEntry[]) {
 
     return `<h${depth} id="${id}">${text}<a class="anchor" href="#${id}" aria-label="Link to ${plain}">#</a></h${depth}>`;
   };
+}
+
+const DESCRIPTION_LIMIT = 155;
+/**
+ * Headings, quotes, fences, tables, lists and raw HTML — everything that isn't a
+ * sentence. The list markers need the trailing space: without it a paragraph
+ * opening in bold (`**Bifacial component** — …`, the glossary) reads as a list
+ * item, and that page ends up with no description at all.
+ */
+const NOT_PROSE = /^(#|>|```|\||[-*+]\s|\d+\.\s|<)/;
+
+/**
+ * Markdown → prose: fences dropped, inline code and link text kept, heading
+ * markers and emphasis removed. Feeds both the search corpus and the meta
+ * descriptions, which is why it lives here rather than beside either one.
+ *
+ * (Distinct from `plainText` above, which turns *rendered HTML* into text.)
+ */
+export function stripMarkdown(markdown: string): string {
+  return markdown
+    .replace(/^```[^\n]*$/gm, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^#{1,6} /gm, '')
+    .replace(/[*_]/g, '');
+}
+
+function truncate(text: string): string {
+  if (text.length <= DESCRIPTION_LIMIT) return text;
+  const cut = text.slice(0, DESCRIPTION_LIMIT);
+
+  return `${cut.slice(0, cut.lastIndexOf(' '))}…`;
+}
+
+/**
+ * Whole fenced blocks, removed before anything is split on blank lines. Skipping
+ * blocks that *start* with a fence isn't enough: a snippet containing a blank
+ * line splits into several, and every part after the first looks like prose —
+ * which is how seven reference pages ended up describing themselves with a line
+ * of their own example code.
+ */
+const FENCED_BLOCK = /^```[^\n]*\n[\s\S]*?\n```[^\n]*$/gm;
+
+/** A doc's first prose paragraph, as plain text — the page's own meta description. */
+export function summarize(markdown: string): string | undefined {
+  const blocks = markdown.replace(/^# .+$/m, '').replace(FENCED_BLOCK, '').split(/\n{2,}/);
+  // Trimmed inside `find`, not mapped first: the answer is almost always the
+  // first or second block, and there is no reason to touch the rest of the page.
+  const prose = blocks.find((block) => {
+    const trimmed = block.trim();
+
+    return trimmed.length > 0 && !NOT_PROSE.test(trimmed);
+  });
+
+  return prose ? truncate(stripMarkdown(prose).replace(/\s+/g, ' ').trim()) : undefined;
 }
 
 /** Renders a markdown doc with shiki highlighting, heading anchors, callouts and a TOC. */

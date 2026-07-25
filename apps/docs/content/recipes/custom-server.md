@@ -41,6 +41,7 @@ Anything you don't intercept before it. These paths belong to the framework:
 | `/_janux/mcp` | hosted MCP endpoint (JSON-RPC) |
 | `/_janux/agent`, `/_janux/llm` | the copilot mount, when an agent is configured |
 | `/llms.txt` | when `llmsTxt` is configured |
+| `/sitemap.xml`, `/robots.txt` | when `siteUrl` is configured |
 | `<page>.md` | markdown projection of a page |
 | `/api/**` | `src/api/**` HTTP handlers (`httpHandlers.prefix` to move them) |
 | anything else | a page render, or `404` |

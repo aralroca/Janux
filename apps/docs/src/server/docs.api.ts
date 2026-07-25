@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { api } from '@janux/server';
 import { schema, str, list } from 'janux';
 import { searchPages, type SearchPage } from '../search/score';
-import { slugify } from './markdown';
+import { slugify, stripMarkdown } from './markdown';
 
 const CONTENT_DIR = join(import.meta.dirname, '../../content');
 
@@ -160,21 +160,12 @@ function headingsOf(markdown: string): { id: string; text: string }[] {
   }));
 }
 
-function plainText(markdown: string): string {
-  return markdown
-    .replace(/^```[^\n]*$/gm, '')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/^#{1,6} /gm, '')
-    .replace(/[*_]/g, '');
-}
-
 /** The pages the shared scorer runs over — also serialized to search-index.json at build. */
 export function searchCorpus(): SearchPage[] {
   return docIndex().map(({ section, slug, title }) => {
     const markdown = docContent(section, slug) ?? '';
 
-    return { section, slug, title, headings: headingsOf(markdown), text: plainText(markdown) };
+    return { section, slug, title, headings: headingsOf(markdown), text: stripMarkdown(markdown) };
   });
 }
 

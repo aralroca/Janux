@@ -8,6 +8,7 @@ import {
   type Ctx,
   type I18n,
   type I18nConfig,
+  type PageMeta,
   type RenderResult,
 } from 'janux';
 import { QueryClient } from 'janux/query';
@@ -22,6 +23,7 @@ import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-
 import { createFsRouter, type Route } from './router';
 import { htmlDocument } from './html-shell';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
+import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
 
 export interface AgentMount {
   handle(req: Request, deps: AgentDeps): Promise<Response>;
@@ -46,7 +48,12 @@ export interface ServerOptions {
   runtimeUrl?: string;
   islandModules?: Record<string, string>;
   title?: string;
+  lang?: string;
+  /** Origin a route's relative `image`/`canonical` resolve against, and the sitemap's base. */
+  siteUrl?: string;
   stylesheets?: string[];
+  /** CSS inlined into every page instead of linked (see `inlineStyles` in the app config). */
+  inlineStyles?: string[];
   favicon?: string;
   llmsTxt?: LlmsTxtConfig;
   agents?: AgentsConfig;
@@ -73,7 +80,7 @@ async function resolveMeta(
   rawMeta: unknown,
   ctx: Ctx,
   params: Record<string, string>,
-): Promise<{ title?: string; description?: string } | undefined> {
+): Promise<PageMeta | undefined> {
   try {
     return typeof rawMeta === 'function' ? await rawMeta({ ctx, params }) : (rawMeta as any);
   } catch {
@@ -127,7 +134,14 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const agentAuth = options.agents ? createAgentAuth(options.agents) : undefined;
 
+  // Checked once here so a malformed value degrades to "no social URLs, no
+  // sitemap" instead of throwing on every render.
+  const siteUrl = validSiteUrl(options.siteUrl);
+
   let llmsTxtBody: string | undefined;
+  // Same reason llms.txt is memoized: building it walks every route and, for a
+  // docs-shaped app, reads every content file off disk through `staticParams`.
+  let sitemapBody: string | undefined;
 
   const expandRoute = async (route: Route): Promise<string[]> => {
     if (!route.pattern.includes('[')) return [route.pattern];
@@ -343,12 +357,16 @@ export function createJanuxServer(options: ServerOptions = {}) {
       html: result.html,
       title: result.meta?.title ?? options.title,
       description: result.meta?.description,
+      lang: options.lang,
+      meta: result.meta,
+      siteUrl,
       snapshots: result.snapshots,
       islandNames,
       islandModules: options.islandModules,
       runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
       manifestUrl: options.staticExport ? undefined : `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
       stylesheets: options.stylesheets,
+      inlineStyles: options.inlineStyles,
       favicon: options.favicon,
       i18n: shellI18n(locale, result),
     });
@@ -374,6 +392,17 @@ export function createJanuxServer(options: ServerOptions = {}) {
       llmsTxtBody ??= await renderLlmsTxt();
 
       return new Response(llmsTxtBody, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    }
+    // Both need an absolute origin to be valid at all, so `siteUrl` is the opt-in.
+    if (pathname === '/sitemap.xml' && siteUrl) {
+      sitemapBody ??= buildSitemap(siteUrl, await listPages());
+
+      return new Response(sitemapBody, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
+    }
+    if (pathname === '/robots.txt' && siteUrl) {
+      return new Response(buildRobotsTxt(siteUrl), {
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
     }
     if (pathname === '/_janux/manifest') {
       return json(await manifestFor(url.searchParams.get('path') ?? '/', await resolveCtx(req)));

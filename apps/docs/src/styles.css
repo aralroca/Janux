@@ -12,7 +12,9 @@
   --bg-soft: light-dark(#fafafa, #2a2a2a);
   --text: light-dark(#404040, #b4b4b4);
   --heading: light-dark(#111111, #ededed);
-  --muted: light-dark(#8f8f8f, #8a8a8a);
+  /* Muted, but still 4.5:1 against every surface it lands on — including
+     --bg-soft, where the previous pair fell to 3.10 (light) and 4.16 (dark). */
+  --muted: light-dark(#6e6e6e, #949494);
   --border: light-dark(#eaeaea, #3a3a3a);
   --accent: light-dark(#7c3aed, #a78bfa);
   --accent-soft: light-dark(#f5f3ff, #2e2745);
@@ -517,6 +519,12 @@ a:hover {
   text-decoration: none;
 }
 
+/* A link sitting inside a sentence can't rely on colour alone to be a link:
+   against the muted text around it the accent is only 1.26:1. */
+.home-footer span a {
+  text-decoration: underline;
+}
+
 blockquote {
   margin: 20px 0;
   padding: 12px 18px;
@@ -845,6 +853,46 @@ body[data-theme='dark'] .hero-janus {
   font-size: 14.5px;
   line-height: 1.7;
   color: var(--text);
+}
+
+.scores {
+  max-width: 1000px;
+  margin: 56px auto 8px;
+}
+
+
+/* A 2× screen capture, so half its pixel width is its real size. The still frame
+   is the background — one image, picked by the cascade — and scores-video.ts hands
+   the single <video> the source for the same theme. Same three cases as
+   .hero-janus: explicit dark, explicit light, and no choice made yet. */
+.scores-video {
+  max-width: 504px;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background-image: url('/lighthouse-100-light.jpg');
+  background-size: cover;
+}
+
+body[data-theme='dark'] .scores-video {
+  background-image: url('/lighthouse-100-dark.jpg');
+}
+
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme]) .scores-video {
+    background-image: url('/lighthouse-100-dark.jpg');
+  }
+}
+
+/* The width/height attributes carry the ratio, so the box is reserved before
+   anything loads — no layout shift. Transparent until it has frames, which is
+   what lets the still show through. */
+.scores-video video {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: transparent;
 }
 
 .mission-close {
