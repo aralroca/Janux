@@ -52,12 +52,22 @@ const demoLlm: Llm = async ({ messages }) => {
   return resolveRef({ toolCalls: [{ id: String(turn), ...plan[turn]! }] }, messages);
 };
 
+/** What each chip says while its tool runs; anything unlisted is humanized from its name. */
+const LABELS = {
+  console_goToTab: (call: any) => `Opening ${call.arguments.tab}`,
+  users_search: (call: any) => `Searching “${call.arguments.value}”`,
+  team_invite: (call: any) => `Inviting ${call.arguments.email}`,
+  workflow_addStep: (call: any) => `Adding “${call.arguments.label}”`,
+  read_page: 'Reading the page',
+  fill: 'Filling the field',
+};
+
 /** Answers one question, creating the copilot (and its visualizer) on first use. */
 export function ask(question: string): Promise<{ text: string }> {
   copilot ??= createCopilot({
     llm: demoLlm,
     domFallback: true,
-    visualize: { backdrop: { exclude: ['assistant-panel'] } },
+    visualize: { labels: LABELS, backdrop: { exclude: ['assistant-panel'] } },
   });
 
   return copilot.ask(question);

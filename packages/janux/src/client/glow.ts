@@ -1,3 +1,5 @@
+import { EVENT_ATTRS } from '../render/html';
+
 export const GLOW_CLASS = 'janux-agent-glow';
 
 /** ms a DOM-fallback target stays lit. Matches what `ui_click`/`ui_fill` used to paint themselves. */
@@ -72,21 +74,40 @@ export function glowElement(el: Element, duration = 700): void {
   setTimeout(() => el.classList.remove(GLOW_CLASS), duration);
 }
 
+/** Every attribute an intent's delegation marker can land on: click, submit, rich events. */
+const MARKER_ATTRS = ['data-jxa', 'data-jxform', ...Object.values(EVENT_ATTRS)];
+
+const selfAndAncestors = (el: Element): Element[] =>
+  el.parentElement ? [el, ...selfAndAncestors(el.parentElement)] : [el];
+
 /**
- * The element that carries the intent's delegation marker (`on={intents.x}` /
- * `<form intent>`), so the glow points at the exact control the agent "pressed".
- * Falls back to the whole island when the intent has no element in the view.
+ * `display: none` is not inherited, so an ancestor has to be asked; `visibility`
+ * is, so the element itself answers for it.
+ */
+function isPainted(el: Element): boolean {
+  if (el.closest('[hidden]')) return false;
+  if (getComputedStyle(el).visibility === 'hidden') return false;
+
+  return !selfAndAncestors(el).some((node) => getComputedStyle(node).display === 'none');
+}
+
+/**
+ * The element that carries the intent's delegation marker (`on={intents.x}`,
+ * `<form intent>`, `onInput={intents.x}` …), so the glow points at the exact
+ * control the agent "pressed". Falls back to the whole island when the intent
+ * has no element in the view, and to nothing at all when the target isn't
+ * painted — a ring around a box with no geometry lands in the page corner, with
+ * the backdrop veil over everything, which reads as a bug.
  */
 export function glowTargetFor(tool: string, scope: ParentNode = document): Element | undefined {
   const [component = '', intentName = ''] = tool.split('.');
   const island = scope.querySelector(`janux-island[data-jx^="${component}#"]`);
 
-  if (!island) return undefined;
+  if (!island || !isPainted(island)) return undefined;
   const marker = `${island.getAttribute('data-jx')}:${intentName}`;
+  const bound = island.querySelector(MARKER_ATTRS.map((attr) => `[${attr}="${marker}"]`).join(','));
 
-  return (
-    island.querySelector(`[data-jxa="${marker}"], [data-jxform="${marker}"]`) ?? island
-  );
+  return bound && isPainted(bound) ? bound : island;
 }
 
 /**

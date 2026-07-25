@@ -24,16 +24,24 @@ const SEARCH = /(?:search|find|filter)\s+(?:for\s+|users?\s+)?(\w+)/i;
 const RENAME = /(?:display name|name)\s+to\s+(.+)$/i;
 const TAB = /\b(users|team|profile|workflows?)\b/i;
 
+/** Acting on a tab that isn't on screen would be invisible, so the agent opens it first. */
+const open = (tab: string): PlannedCall => ({ name: 'console_goToTab', arguments: { tab } });
+
 function buildWorkflow(goal: string): PlannedCall[] | undefined {
   if (!FLOW_WORDS.test(goal) || !BUILD_FLOW.test(goal)) return undefined;
 
-  return WORKFLOW_STEPS.map((label) => ({ name: 'workflow_addStep', arguments: { label } }));
+  return [
+    open('workflows'),
+    ...WORKFLOW_STEPS.map((label) => ({ name: 'workflow_addStep', arguments: { label } })),
+  ];
 }
 
 function addStep(goal: string): PlannedCall[] | undefined {
   const match = /\bstep\b/i.test(goal) ? ADD_STEP.exec(goal) : null;
 
-  return match ? [{ name: 'workflow_addStep', arguments: { label: match[1]!.trim() } }] : undefined;
+  if (!match) return undefined;
+
+  return [open('workflows'), { name: 'workflow_addStep', arguments: { label: match[1]!.trim() } }];
 }
 
 function invite(goal: string): PlannedCall[] | undefined {
@@ -42,13 +50,13 @@ function invite(goal: string): PlannedCall[] | undefined {
   if (!email) return undefined;
   const role = /admin/i.test(goal) ? 'Admin' : /editor/i.test(goal) ? 'Editor' : 'Viewer';
 
-  return [{ name: 'team_invite', arguments: { email: email[1], role } }];
+  return [open('team'), { name: 'team_invite', arguments: { email: email[1], role } }];
 }
 
 function search(goal: string): PlannedCall[] | undefined {
   const match = SEARCH.exec(goal);
 
-  return match ? [{ name: 'users_search', arguments: { value: match[1] } }] : undefined;
+  return match ? [open('users'), { name: 'users_search', arguments: { value: match[1] } }] : undefined;
 }
 
 /** Nothing exposes the display name, so the agent reads the page and fills it. */
