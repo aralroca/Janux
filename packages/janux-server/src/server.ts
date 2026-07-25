@@ -46,6 +46,7 @@ export interface ServerOptions {
   runtimeUrl?: string;
   islandModules?: Record<string, string>;
   title?: string;
+  lang?: string;
   stylesheets?: string[];
   favicon?: string;
   llmsTxt?: LlmsTxtConfig;
@@ -343,6 +344,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       html: result.html,
       title: result.meta?.title ?? options.title,
       description: result.meta?.description,
+      lang: options.lang,
       snapshots: result.snapshots,
       islandNames,
       islandModules: options.islandModules,

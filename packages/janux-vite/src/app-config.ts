@@ -22,6 +22,7 @@ export interface JanuxAppConfig {
   stylesheet?: string;
   favicon?: string;
   title?: string;
+  lang?: string;
   llmsTxt?: { title?: string; description?: string };
   output: JanuxOutput;
 }
@@ -70,6 +71,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     stylesheet: optional(resolve(root, 'src/styles.css')),
     favicon: optional(resolve(root, 'public/favicon.svg')) ? '/favicon.svg' : undefined,
     title: options.title,
+    lang: options.lang,
     llmsTxt: options.llmsTxt,
     output: options.output ?? 'bun',
   };

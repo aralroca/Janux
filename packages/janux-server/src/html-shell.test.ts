@@ -31,3 +31,22 @@ describe('htmlDocument head keying (SPA-navigation FOUC guard)', () => {
     expect(html.indexOf('id="jx-style-0"')).toBeLessThan(html.indexOf('name="description"'));
   });
 });
+
+// A document with no declared language fails assistive tech (and every audit
+// that checks for it). i18n apps already declare one per locale; everyone else
+// used to ship a bare <html>, so the shell defaults instead of omitting.
+describe('htmlDocument document language', () => {
+  it('defaults to en when the app declares neither lang nor i18n', () => {
+    expect(htmlDocument(base)).toContain('<html lang="en">');
+  });
+
+  it('honours the configured lang', () => {
+    expect(htmlDocument({ ...base, lang: 'es' })).toContain('<html lang="es">');
+  });
+
+  it('lets i18n win over the configured lang, with a direction', () => {
+    const html = htmlDocument({ ...base, lang: 'es', i18n: { locale: 'ar', dir: 'rtl' } });
+
+    expect(html).toContain('<html lang="ar" dir="rtl">');
+  });
+});

@@ -171,6 +171,7 @@ export async function prodServerOptions(root: string): Promise<ServerOptions> {
     runtimeUrl: existsSync(join(root, 'dist/client/client.js')) ? '/client.js' : undefined,
     stylesheets: app.stylesheet ? ['/styles.css'] : [],
     title: app.title,
+    lang: app.lang,
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default,
     middleware: middlewareModule?.default,

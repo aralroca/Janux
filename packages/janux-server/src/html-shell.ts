@@ -9,6 +9,8 @@ export interface ShellOptions {
   html: string;
   title?: string;
   description?: string;
+  /** Document language when the app has no i18n. Defaults to `en`. */
+  lang?: string;
   snapshots: { uri: string; state: Record<string, unknown>; sources?: Record<string, unknown> }[];
   islandNames: string[];
   islandModules?: Record<string, string>;
@@ -72,7 +74,11 @@ export function htmlDocument(options: ShellOptions): string {
     ? `<link rel="icon" id="jx-favicon" href="${safeAttr(options.favicon)}">`
     : '';
 
-  const htmlAttrs = options.i18n ? ` lang="${safeAttr(options.i18n.locale)}" dir="${options.i18n.dir}"` : '';
+  // Always a language: an undeclared one is a bug for assistive tech, so apps
+  // without i18n get `lang` from config and fall back to English.
+  const htmlAttrs = options.i18n
+    ? ` lang="${safeAttr(options.i18n.locale)}" dir="${options.i18n.dir}"`
+    : ` lang="${safeAttr(options.lang ?? 'en')}"`;
   const i18nScript = options.i18n?.payload
     ? `<script type="application/janux+i18n" id="jx-i18n">${safeJson(options.i18n.payload)}</script>`
     : '';

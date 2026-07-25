@@ -39,6 +39,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     stylesheets: devStylesheets(vite.config.root, app.stylesheet),
     favicon: app.favicon,
     title: app.title,
+    lang: app.lang,
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default as ServerOptions['i18n'],
     foreignImport: appForeignImport(vite.config.root),

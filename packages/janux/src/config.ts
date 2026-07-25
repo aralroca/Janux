@@ -7,6 +7,8 @@ export interface JanuxConfig {
   agentModule?: string;
   storesModule?: string;
   title?: string;
+  /** Document language for `<html lang>`. Defaults to `en`; i18n apps take it from the locale. */
+  lang?: string;
   llmsTxt?: { title?: string; description?: string };
   output?: JanuxOutput;
 }
