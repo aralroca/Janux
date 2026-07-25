@@ -94,7 +94,7 @@ export function apiAuditEntry(
   origin: Origin,
   guard: GuardValue,
   ctx: Ctx,
-  extra: { input: unknown; ok: boolean; error?: string },
+  extra: { input: unknown; ok: boolean; error?: string; proposed?: boolean },
 ): AuditEntry {
   return { tool: `api.${tool.name}`, origin, guard, at: Date.now(), agent: agentKeyId(ctx), ...extra };
 }

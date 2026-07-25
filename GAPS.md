@@ -173,6 +173,30 @@ change cost much more and were fixed rather than accepted: a declarative fold
 over the path made `parentOf` 98x slower, and a `seen = new Set()` default
 parameter allocated a Set on every write including the scalar case.
 
+### A proposal is not bound to whoever it was created for
+
+`POST /_janux/approve` looks a pending proposal up by id in a server-wide map and
+executes it. The ids are now unguessable (`crypto.randomUUID`), which removes the
+exploit that mattered — while they were a shared counter, `{"id":"prop_api_3"}`
+approved somebody else's `confirm`-guarded call, defeating the guard system with a
+small integer. But nothing *ties* a proposal to a session, so a leaked id is still
+a bearer token for that one call.
+
+Closing it properly needs a notion of "who": Janux has `ctx` (whatever
+`ctxFor` resolves, plus a Web Bot Auth agent identity) and no user or session model
+of its own. An app that needs per-user isolation should carry an identity in `ctx`
+and check it in a `middleware` around `/_janux/approve`. Inventing a session
+concept inside the framework to fix this is a design decision, not a patch.
+
+### `forbidden` only blocks the agent face
+
+`resolveGuard` returning `forbidden` refuses `origin === 'agent'`; a human click and
+an RPC call with no `x-janux-origin: agent` header still run the intent. That is
+deliberate — `forbidden` means "not part of the agent surface", and the manifest
+omits it entirely — but the name reads stronger than it is. An intent no one should
+run, ever, needs its own check inside `run()`. Pinned in
+`packages/conformance/agent-surface/guards.cases.ts`.
+
 ### `setQueryData` on a key that was never fetched is a no-op
 
 `client.setQueryData(['k'], v)` before anything created the entry drops the write
