@@ -1,5 +1,5 @@
 import { CLIENT_TOOL_NAMES } from '../client-tools/specs';
-import { glowElement, injectGlowStyles } from './glow';
+import { emitToolTarget } from './glow';
 import { collectPageLinks, createNavigateTool } from './navigate-tool';
 
 export { CLIENT_TOOL_NAMES };
@@ -65,8 +65,7 @@ function resolve(selector: string): Element {
 function click(selector: string): unknown {
   const el = resolve(selector) as HTMLElement;
 
-  injectGlowStyles();
-  glowElement(el, 1200);
+  emitToolTarget({ element: el, action: 'click', selector });
   el.click();
 
   return { clicked: selector };
@@ -75,8 +74,7 @@ function click(selector: string): unknown {
 function fill(selector: string, value: string): unknown {
   const el = resolve(selector) as HTMLInputElement;
 
-  injectGlowStyles();
-  glowElement(el, 1200);
+  emitToolTarget({ element: el, action: 'fill', selector });
   el.focus();
   el.value = value;
   el.dispatchEvent(new Event('input', { bubbles: true }));

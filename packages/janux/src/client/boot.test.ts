@@ -252,6 +252,21 @@ describe('client boot (resume without hydration)', () => {
     expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(0);
   });
 
+  it('the enabled glow paints janux:tool-target elements (DOM-fallback feedback)', async () => {
+    document.body.innerHTML = '<button id="go">Go</button>';
+    document.getElementById('janux-glow-styles')?.remove();
+    boot({ defs: [counter], glow: { duration: 10 } });
+    const button = document.getElementById('go')!;
+
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-target', { detail: { element: button, action: 'click', selector: '#go' } }),
+    );
+
+    expect(button.classList.contains('janux-agent-glow')).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 1230));
+    expect(button.classList.contains('janux-agent-glow')).toBe(false);
+  });
+
   it('survives a malformed state snapshot (boot regression)', async () => {
     document.body.innerHTML =
       '<script type="application/janux+state" data-uri="ui://broken">{not json</script>';

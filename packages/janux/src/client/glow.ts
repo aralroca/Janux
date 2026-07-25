@@ -1,8 +1,29 @@
 export const GLOW_CLASS = 'janux-agent-glow';
 
+/** ms a DOM-fallback target stays lit. Matches what `ui_click`/`ui_fill` used to paint themselves. */
+const TARGET_GLOW_MS = 1200;
+
 export interface GlowOptions {
   /** ms the glow lingers after the call finishes. Default 700. */
   duration?: number;
+}
+
+/**
+ * The element a DOM-fallback client tool (`ui_click` / `ui_fill`) just resolved,
+ * reported on `janux:tool-target` right before it acts. The tools never paint:
+ * whichever feedback layer is enabled decides what the user sees — the built-in
+ * glow below, or a richer visualizer.
+ */
+export interface ToolTargetDetail {
+  element: Element;
+  action: 'click' | 'fill';
+  selector: string;
+}
+
+/** Announces the live element a client tool is about to operate. */
+export function emitToolTarget(detail: ToolTargetDetail): void {
+  if (typeof document === 'undefined') return;
+  document.dispatchEvent(new CustomEvent('janux:tool-target', { detail }));
 }
 
 /* !important: the glow is runtime-owned feedback and must win over inline
@@ -49,12 +70,18 @@ export function glowTargetFor(tool: string, scope: ParentNode = document): Eleme
 }
 
 /**
- * Highlights the island an agent is operating (gui-agent style): listens to
- * `janux:tool-call` bridge events and glows the matching island. Returns a
+ * Highlights what an agent is operating (gui-agent style): listens to
+ * `janux:tool-call` bridge events and glows the matching island, plus
+ * `janux:tool-target` for the elements the DOM-fallback tools touch. Returns a
  * disposer. `boot({ glow: true })` wires this for you.
  */
 export function enableAgentGlow(options: GlowOptions = {}): () => void {
   const duration = options.duration ?? 700;
+  const onToolTarget = (event: Event): void => {
+    const { element } = ((event as CustomEvent).detail ?? {}) as ToolTargetDetail;
+
+    if (element) glowElement(element, TARGET_GLOW_MS);
+  };
   const onToolCall = (event: Event): void => {
     const { tool, phase, guard, approval } = (event as CustomEvent).detail ?? {};
     const target = tool ? glowTargetFor(tool) : undefined;
@@ -69,6 +96,10 @@ export function enableAgentGlow(options: GlowOptions = {}): () => void {
 
   injectGlowStyles();
   document.addEventListener('janux:tool-call', onToolCall);
+  document.addEventListener('janux:tool-target', onToolTarget);
 
-  return () => document.removeEventListener('janux:tool-call', onToolCall);
+  return () => {
+    document.removeEventListener('janux:tool-call', onToolCall);
+    document.removeEventListener('janux:tool-target', onToolTarget);
+  };
 }
