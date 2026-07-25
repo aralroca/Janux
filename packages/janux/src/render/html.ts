@@ -59,6 +59,33 @@ function attrFor(name: string, value: unknown): string {
 }
 
 const VALID_ATTR_NAME = /^[a-zA-Z][\w-]*$/;
+const CUSTOM_PROPERTY = /^--/;
+const UPPER = /[A-Z]/g;
+
+function isStyleObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** `backgroundColor` → `background-color`; a custom property keeps its casing. */
+function cssName(prop: string): string {
+  return CUSTOM_PROPERTY.test(prop) ? prop : prop.replace(UPPER, (char) => `-${char.toLowerCase()}`);
+}
+
+/**
+ * A style object becomes CSS text, because JSX invites `style={{…}}` and
+ * `[object Object]` is the worst possible answer to it.
+ *
+ * Unlike React, a bare number is never given a unit: `{ width: 10 }` renders
+ * `width:10`, not `width:10px`. The guess is wrong for `lineHeight`, `flex`,
+ * `zIndex`, `opacity` and every unitless property, so Janux asks for the unit
+ * instead of maintaining a list of exceptions.
+ */
+function styleText(value: Record<string, unknown>): string {
+  return Object.entries(value)
+    .filter(([, part]) => part !== null && part !== undefined && part !== false && part !== '')
+    .map(([prop, part]) => `${cssName(prop)}:${part}`)
+    .join(';');
+}
 
 /** Rich events: each becomes a delegated `data-jxe-*` marker (resumability intact). */
 export const EVENT_ATTRS: Record<string, string> = {
@@ -79,6 +106,8 @@ function propToAttr(name: string, value: unknown): [string, unknown] | undefined
   if (name === 'intent') return ['data-jxform', intentMarker(value)];
   if (EVENT_ATTRS[name]) return [EVENT_ATTRS[name], intentMarker(value)];
   if (name === 'class' || name === 'className') return ['class', value];
+  // An empty style object must leave no attribute behind, so `undefined` here.
+  if (name === 'style' && isStyleObject(value)) return ['style', styleText(value) || undefined];
   if (typeof value === 'function') return undefined;
   if (!VALID_ATTR_NAME.test(name)) return undefined;
 

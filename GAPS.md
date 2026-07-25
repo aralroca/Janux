@@ -77,3 +77,26 @@ otherwise:
 - **Tracking paths are escaped.** A state key containing a dot keeps its own
   tracking identity, so `state["a.b"]` and `state.a.b` are different paths. The
   escaped form (`a\.b`) is what appears in mutation-gate error messages.
+- **A style number gets no unit.** `style={{ width: 10 }}` renders `width:10`,
+  not React's `width:10px`. Auto-appending `px` requires a list of unitless
+  exceptions (`lineHeight`, `flex`, `zIndex`, `opacity`, `order`, `flexGrow`, …)
+  that is wrong the moment it is incomplete, so Janux asks for the unit.
+- **Attribute names are emitted verbatim.** `tabIndex={3}` renders
+  `tabIndex="3"`, not `tabindex="3"`. HTML attribute names parse
+  case-insensitively so it behaves correctly, but the markup differs from React's.
+
+## Not fixed, and why
+
+### SVG namespaced attributes are silently dropped
+
+`VALID_ATTR_NAME` (`/^[a-zA-Z][\w-]*$/`) rejects any name containing a colon, so
+`xlink:href`, `xmlns:xlink` and friends never reach the output — silently, which
+is the bad part. The validation itself is load-bearing: it is what stops an
+attacker-supplied prop name from injecting markup, and it is asserted by several
+corpus rows.
+
+Widening it correctly means allowing exactly the XML namespace shape
+(`NCName ":" NCName`) rather than any colon, and deciding whether Janux renders
+SVG as a first-class tree at all. That is a design decision with a real surface,
+not a regex tweak, and no example or doc page uses SVG namespaced attributes
+today — so it is recorded here rather than guessed at.
