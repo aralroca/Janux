@@ -46,10 +46,12 @@ Next to the mounted page's tools, every agent turn also advertises six built-ins
 | `ui_navigate { path }` | SPA-navigates to any same-origin path. The system prompt carries the **full route map** (every router pattern), so the model can reach pages that are not mounted. |
 | `ui_get_view_context` | Current path, title, links and mounted components. |
 | `ui_read_page` | Accessibility snapshot (headings/buttons/inputs/links with stable selectors) — the DOM fallback when no dedicated tool exists. |
-| `ui_click { selector }` / `ui_fill { selector, value }` | Operate elements from the snapshot, with the same activity glow as intents. |
+| `ui_click { selector }` / `ui_fill { selector, value }` | Operate elements from the snapshot. They report the element on `janux:tool-target` rather than painting it, so the same feedback layer covers them and intents alike. |
 | `ui_wait_settled` | Deterministic quiescence via `janux.settled()` — call after navigation before reading state. |
 
 They execute in the browser bridge (`window.janux.call('ui_navigate', …)` works for any consumer: the embedded copilot, WebMCP or your own runner). Contracts live in `CLIENT_TOOL_SPECS` (exported from `janux`).
+
+> **See it running**: [`examples/with-web-agent`](https://github.com/aralroca/Janux/tree/main/examples/with-web-agent) — a console operated in natural language, with [`createCopilot({ visualize })`](/docs/recipes/local-model-copilot) showing every tool call as it happens. It's the video on the [home page](/).
 
 ## The bridge (gui-agent surface)
 

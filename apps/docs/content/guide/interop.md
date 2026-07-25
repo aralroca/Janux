@@ -84,4 +84,4 @@ That's the whole model: Janux owns the tree, React owns its leaves, and each fil
 - `react`/`react-dom` are optional peers — apps without foreign islands pay nothing.
 - Reverse interop (mounting a Janux island inside a React app) is on the roadmap.
 
-> **See it running**: [`examples/interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) — A React component mounted unchanged, with tracked props and callbacks bridged to intents. More in [Examples](/docs/more/examples).
+> **See it running**: [`examples/interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) — A React component mounted unchanged, with tracked props and callbacks bridged to intents. [`examples/with-web-agent`](https://github.com/aralroca/Janux/tree/main/examples/with-web-agent) goes one step further with `@xyflow/react` (`hydrate: 'only'`, since React Flow measures the viewport on mount) and an agent adding nodes to it. More in [Examples](/docs/more/examples).
