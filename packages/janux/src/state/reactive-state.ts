@@ -24,17 +24,51 @@ function isPlainContainer(value: unknown): value is object {
   return typeof value === 'object' && value !== null;
 }
 
-/** Deep-clones through proxies into plain JSON data (state is JSON-safe by schema). */
-function plainify<T>(value: T): T {
-  if (Array.isArray(value)) return untrack(() => value.map(plainify)) as T;
-  if (isPlainContainer(value)) return untrack(() => plainObject(value)) as T;
+/**
+ * Deep-clones through proxies into plain JSON data (state is JSON-safe by
+ * schema). `seen` holds the current ancestor chain only — it backtracks, so a
+ * value shared by two siblings is duplicated rather than mistaken for a cycle.
+ */
+function plainify<T>(value: T, path = '', seen: Set<object> = new Set()): T {
+  if (!isPlainContainer(value)) return value;
+  if (seen.has(value)) throw new Error(`Janux: cannot store a cycle in state ("${path}")`);
+  seen.add(value);
+  const plain = Array.isArray(value)
+    ? untrack(() => value.map((item) => plainify(item, path, seen)))
+    : untrack(() => plainObject(value, path, seen));
 
-  return value;
+  seen.delete(value);
+
+  return plain as T;
 }
 
-function plainObject(value: object): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(value).map(([key, v]) => [key, plainify(v)]));
+function plainObject(value: object, path: string, seen: Set<object>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nested]) => [key, plainify(nested, path, seen)]),
+  );
 }
+
+/**
+ * Offsets of the separators a key could not have produced.
+ *
+ * Paths are dot-joined, so a key that itself contains a dot would otherwise
+ * make `a["b.c"]` and `a.b.c` the same tracking key. `escapeSegment` prefixes
+ * `\` and `.` inside a key with a backslash; this fold finds the dots that
+ * survived as real separators.
+ */
+function separatorOffsets(path: string): number[] {
+  return [...path].reduce<{ offsets: number[]; escaped: boolean }>(
+    (acc, char, index) => {
+      if (acc.escaped) return { offsets: acc.offsets, escaped: false };
+      if (char === '\\') return { offsets: acc.offsets, escaped: true };
+
+      return { offsets: char === '.' ? [...acc.offsets, index] : acc.offsets, escaped: false };
+    },
+    { offsets: [], escaped: false },
+  ).offsets;
+}
+
+const escapeSegment = (key: string): string => key.replace(/[\\.]/g, '\\$&');
 
 /** Writes between prune sweeps: keeps the sweep cost amortized O(1) per write. */
 const PRUNE_EVERY = 256;
@@ -51,9 +85,9 @@ export function createReactiveState<T extends object>(
   let data = structuredClone(initial);
 
   const parentOf = (path: string): string => {
-    const cut = path.lastIndexOf('.');
+    const offsets = separatorOffsets(path);
 
-    return cut === -1 ? '' : path.slice(0, cut);
+    return offsets.length === 0 ? '' : path.slice(0, offsets[offsets.length - 1]);
   };
 
   const indexPath = (path: string): void => {
@@ -92,9 +126,7 @@ export function createReactiveState<T extends object>(
   };
 
   const bumpAncestors = (path: string): void => {
-    const parts = path.split('.').slice(0, -1);
-
-    parts.forEach((_, index) => bump(parts.slice(0, index + 1).join('.')));
+    separatorOffsets(path).forEach((offset) => bump(path.slice(0, offset)));
     bump('');
   };
 
@@ -133,12 +165,13 @@ export function createReactiveState<T extends object>(
     }
   };
 
-  const childPath = (path: string, key: string): string => (path === '' ? key : `${path}.${key}`);
+  const childPath = (path: string, key: string): string =>
+    path === '' ? escapeSegment(key) : `${path}.${escapeSegment(key)}`;
 
   const wrapArrayMethod = (target: unknown[], path: string, method: string) => {
     return (...args: unknown[]) => {
       assertMutable(gate, path);
-      const result = (target as any)[method](...args.map(plainify));
+      const result = (target as any)[method](...args.map((arg) => plainify(arg, path)));
 
       touch(path);
 
@@ -172,7 +205,7 @@ export function createReactiveState<T extends object>(
     const target = childPath(path, key);
 
     assertMutable(gate, target);
-    Reflect.set(raw, key, plainify(value));
+    Reflect.set(raw, key, plainify(value, target));
     touch(target);
 
     return true;
