@@ -87,7 +87,7 @@ describe('SPA navigation (streamed diff)', () => {
 
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
-      text: async () => pageB,
+      body: new Response(pageB).body,
     }));
     await client.navigate('/b');
 
@@ -136,7 +136,7 @@ describe('SPA navigation (streamed diff)', () => {
     panel.appendChild(nested);
     document.body.append(overlay, plain, panel);
 
-    (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => pageB }));
+    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageB).body }));
     await client.navigate('/b');
 
     expect(document.querySelector('h1')!.textContent).toBe('B');
@@ -161,14 +161,14 @@ describe('SPA navigation (streamed diff)', () => {
     expect(editorAttach).toHaveBeenCalledTimes(1); // first visit mounts
 
     // navigate away → the island is gone AND torn down (detach ran)
-    (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => pageDoc }));
+    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageDoc).body }));
     await client.navigate('/doc');
     expect(document.querySelector('janux-island[data-jx="editor#default"]')).toBeNull();
     expect(editorDetach).toHaveBeenCalledTimes(1);
 
     // revisit → the eager island mounts again from a clean slate (the playground
     // relies on this attach/detach symmetry to reset Monaco)
-    (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => pageEditor }));
+    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageEditor).body }));
     await client.navigate('/editor');
     expect(document.querySelector('janux-island[data-jx="editor#default"]')).not.toBeNull();
     expect(editorAttach).toHaveBeenCalledTimes(2);
@@ -202,7 +202,7 @@ describe('SPA navigation (streamed diff)', () => {
     await client.settled();
     expect(document.querySelectorAll('.w-host div').length).toBe(30);
 
-    (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => pageD }));
+    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageD).body }));
     await client.navigate('/d');
 
     expect(document.body.innerHTML).not.toContain('IMPERATIVE');
@@ -221,7 +221,7 @@ describe('SPA navigation (streamed diff)', () => {
 
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
-      text: async () => await pageHtml('B', jsx('h1', { children: 'B' })),
+      body: new Response(await pageHtml('B', jsx('h1', { children: 'B' }))).body,
     }));
     await client.navigate('/b');
 
@@ -244,7 +244,7 @@ describe('SPA navigation (streamed diff)', () => {
 
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
-      text: async () => await pageHtml('B', jsx('h1', { children: 'B' }), sheet),
+      body: new Response(await pageHtml('B', jsx('h1', { children: 'B' }), sheet)).body,
     }));
     await client.navigate('/b');
 
@@ -275,7 +275,7 @@ describe('SPA navigation (streamed diff)', () => {
     // a page that declares none of them
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
-      text: async () => await pageHtml('B', jsx('h1', { children: 'B' })),
+      body: new Response(await pageHtml('B', jsx('h1', { children: 'B' }))).body,
     }));
     await client.navigate('/b');
 
@@ -286,12 +286,13 @@ describe('SPA navigation (streamed diff)', () => {
     // and back to a page that declares its own: updated in place, not duplicated
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
-      text: async () =>
+      body: new Response(
         await pageHtml(
           'C',
           jsx('h1', { children: 'C' }),
           '<meta property="og:title" id="jx-og-title" content="Page C">',
         ),
+      ).body,
     }));
     await client.navigate('/c');
 
@@ -299,10 +300,20 @@ describe('SPA navigation (streamed diff)', () => {
     expect(document.querySelector('meta[property="og:title"]')!.getAttribute('content')).toBe('Page C');
   });
 
-  it('buffers the response into a single chunk before diffing (deterministic swap)', async () => {
+  /**
+   * The whole point of the streaming diff: the page is applied as it arrives, so
+   * a slow connection paints progressively instead of showing the old page until
+   * the last byte. This navigation used to buffer the response into a single
+   * chunk — a whole page's latency spent looking at the previous one — so what
+   * is asserted here is that the body is what gets diffed and `text()` is never
+   * called. How a browser parses chunk boundaries is verified against real Chrome
+   * (apps/docs), since happy-dom does not model an incremental tokenizer.
+   */
+  it('diffs the response body, and never buffers it into text', async () => {
     const pageA = await pageHtml('Page A', jsx('h1', { children: 'A' }));
     const pageB = await pageHtml('Page B', jsx('h1', { children: 'B' }));
-    let bodyRead = false;
+    let bufferedWholePage = false;
+    let streamed = false;
 
     document.write(pageA);
     document.close();
@@ -310,17 +321,25 @@ describe('SPA navigation (streamed diff)', () => {
 
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
-      text: async () => pageB,
-      get body() {
-        bodyRead = true;
+      text: async () => {
+        bufferedWholePage = true;
 
-        return new Response(pageB).body;
+        return pageB;
       },
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          streamed = true;
+          controller.enqueue(new TextEncoder().encode(pageB));
+          controller.close();
+        },
+      }),
     }));
     await client.navigate('/b');
 
     expect(document.querySelector('h1')!.textContent).toBe('B');
-    expect(bodyRead).toBe(false);
+    expect(document.title).toBe('Page B');
+    expect(streamed).toBe(true);
+    expect(bufferedWholePage).toBe(false);
   });
 
   it('emits janux:error and hard-navigates when the fetch fails', async () => {
@@ -362,7 +381,7 @@ describe('SPA navigation (streamed diff)', () => {
     let hardNavigations = 0;
 
     document.addEventListener('janux:error', (event: any) => errors.push(event.detail));
-    (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => next }));
+    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(next).body }));
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...location, get href() { return 'http://localhost/a'; }, set href(_value: string) { hardNavigations += 1; } },

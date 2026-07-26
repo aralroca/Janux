@@ -1,5 +1,5 @@
 interface PrefetchEntry {
-  body: Promise<string>;
+  body: Promise<ReadableStream<Uint8Array>>;
   at: number;
 }
 
@@ -10,20 +10,24 @@ function isFresh(entry: PrefetchEntry | undefined): entry is PrefetchEntry {
   return entry !== undefined && Date.now() - entry.at <= PREFETCH_TTL;
 }
 
-/** Warms the next page on link hover; entries expire after 30s. */
+/**
+ * Warms the next page on link hover; entries expire after 30s. The stream is
+ * kept rather than the text: the navigation diffs whatever it is handed, and a
+ * body already sitting in the network layer streams instantly.
+ */
 export function prefetch(url: string): void {
   if (isFresh(prefetched.get(url))) return;
   prefetched.set(url, {
     at: Date.now(),
     body: fetch(url, { headers: { accept: 'text/html' } }).then((response) =>
-      response.ok ? response.text() : Promise.reject(new Error('prefetch failed')),
+      response.ok && response.body ? response.body : Promise.reject(new Error('prefetch failed')),
     ),
   });
   prefetched.get(url)!.body.catch(() => prefetched.delete(url));
 }
 
-/** Returns the prefetched page's HTML if still fresh, evicting the entry either way. */
-export function consumePrefetched(url: string): Promise<string> | undefined {
+/** The prefetched page's stream if still fresh, evicting the entry either way. */
+export function consumePrefetched(url: string): Promise<ReadableStream<Uint8Array>> | undefined {
   const entry = prefetched.get(url);
 
   prefetched.delete(url);

@@ -2,7 +2,6 @@ import diff from 'diff-dom-streaming';
 import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { consumePrefetched } from './prefetch';
-import { singleChunkStream } from './single-chunk';
 
 export interface NavigateOptions {
   signal?: AbortSignal;
@@ -114,41 +113,22 @@ async function sweepDisconnected(mount: MountContext): Promise<void> {
   await Promise.all(gone.map(([, instance]) => instance.dispose()));
 }
 
-// Buffer the whole page before diffing: a navigation fetches a complete,
-// server-rendered page, so a single-chunk stream is deterministic and
-// avoids the streaming diff's chunk-boundary edge cases (a swap is not SSR).
-async function fetchPage(url: string, signal?: AbortSignal): Promise<string> {
+/**
+ * The page as a stream, so the diff can apply it while it arrives — a slow
+ * server paints progressively instead of showing the old page until the last
+ * byte. (It used to be buffered into one chunk; that is a whole page's latency
+ * spent looking at the previous one.)
+ */
+async function fetchPage(url: string, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>> {
   const cached = await consumePrefetched(url);
 
   if (cached !== undefined) return cached;
   const response = await fetch(url, { signal, headers: { accept: 'text/html' } });
 
   if (!response.ok) throw new Error(`navigation fetch failed (${response.status})`);
+  if (!response.body) throw new Error('navigation fetch failed (no body)');
 
-  return response.text();
-}
-
-/**
- * Mounted islands that don't exist on the incoming page leave BEFORE the diff:
- * their runtime DOM (a code editor, a canvas — anything an `attach` built
- * imperatively) must never be morphed against unrelated incoming content, or
- * fragments of it survive misplaced. Removal here; disposal stays with the
- * post-diff sweep, which sees them disconnected.
- */
-function extractLeaving(mount: MountContext, incomingHtml: string): Element[] {
-  const incoming = new Set([...incomingHtml.matchAll(/data-jx="([^"]+)"/g)].map((match) => match[1]));
-
-  return [...document.querySelectorAll('janux-island:not([data-jx-persist])')]
-    .filter((node) => {
-      const id = node.getAttribute('data-jx') ?? '';
-
-      return mount.registry.mounted.has(id) && !incoming.has(id);
-    })
-    .map((node) => {
-      node.remove();
-
-      return node;
-    });
+  return response.body;
 }
 
 /** Marks a runtime-injected body node the whole-document diff must not own. */
@@ -198,20 +178,24 @@ function keepRuntimeNodes(): () => void {
  * persisted nodes are re-attached, no island disposed). Disposal happens after,
  * driven by what the diff removed from the document.
  */
-async function applyPage(mount: MountContext, html: string, signal?: AbortSignal): Promise<void> {
+async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, signal?: AbortSignal): Promise<void> {
   const kept = extractPersisted(mount);
-  const leaving = extractLeaving(mount, html);
   const restoreStyles = keepRuntimeStyles();
   const restoreRuntimeNodes = keepRuntimeNodes();
 
   try {
     throwIfAborted(signal);
     // The Navigation API drives the transition; diff directly (its own would be skipped).
-    await diff(document, singleChunkStream(html));
+    await diff(document, page);
     await restorePersisted(mount, kept);
   } catch (error) {
-    // Aborted/failed before the swap committed: put persisted and leaving nodes back untouched.
-    [...kept.map(({ node }) => node), ...leaving].forEach((node) => {
+    /*
+     * Persisted islands go back untouched — losing a live editor to a superseded
+     * navigation would be the worst outcome here. The document itself may be
+     * half-updated: the diff applies the page as it streams, and whatever
+     * superseded this navigation diffs the same document to the page it wants.
+     */
+    kept.forEach(({ node }) => {
       if (!node.isConnected) document.body.appendChild(node);
     });
     throw error;
@@ -244,10 +228,10 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
   emitNavigate('before', from, url);
   try {
     throwIfAborted(options.signal);
-    const html = await fetchPage(url, options.signal);
+    const page = await fetchPage(url, options.signal);
 
     throwIfAborted(options.signal);
-    await applyPage(mount, html, options.signal);
+    await applyPage(mount, page, options.signal);
   } catch (error) {
     if ((error as any)?.name === 'AbortError') return;
     reportNavigationError(error);

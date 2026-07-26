@@ -66,7 +66,7 @@ describe('pages', () => {
   it('serves island pages with snapshots, island map and runtime', async () => {
     const html = await (await get('/shop')).text();
 
-    expect(html).toContain('<janux-island data-jx="cart#default">');
+    expect(html).toContain('<janux-island key="cart#default" data-jx="cart#default">');
     expect(html).toContain('data-uri="ui://cart#default"');
     expect(html).toContain('window.__JANUX_ISLANDS__={"cart":"/islands/cart.js"}');
     expect(html).toContain('src="/_janux/client.js"');
@@ -217,7 +217,7 @@ describe('staticExport', () => {
     const html = await (await staticServer.fetch(new Request('http://test/'))).text();
 
     expect(html).not.toContain('janux-manifest');
-    expect(html).toContain('<janux-island data-jx="cart#default">'); // the page itself is intact
+    expect(html).toContain('<janux-island key="cart#default" data-jx="cart#default">'); // the page itself is intact
   });
 
   it('serves it as usual otherwise', async () => {
