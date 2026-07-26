@@ -27,20 +27,23 @@ const PORT = 4322;
 /** One of each kind of page: the marketing home, a docs page, the editor. */
 const PAGES: { path: string; performance?: number; bars?: Record<string, number> }[] = [
   /*
-   * The home page is 85 KB of server-rendered HTML, and `janux start` ships it
-   * as-is: no compression, no cache headers — that is a CDN's job, and in
-   * production Vercel does it. Audited through the bare server it costs ~4
-   * points of LCP that the deployed page does not pay, so the bar here is 95.
-   * Everything else on this page is still asserted at 100.
+   * The home page is 85 KB of server-rendered HTML: compressed by the server,
+   * but with no CDN in front of it to cache, so it costs a point or two of LCP
+   * that the deployed page does not pay. The bar is 95; everything else on this
+   * page is still asserted at 100.
    */
   { path: '/', performance: 0.95 },
   { path: '/docs/getting-started/what-is-janux' },
   /*
-   * The playground ships Monaco — 3.3 MB of script for a page whose whole point
-   * is being a code editor — so its paint metrics measure the editor, not the
-   * framework. The bars here only catch a real collapse, and they are honest
-   * about one thing the old ones were not: they were set while Monaco failed to
-   * initialise, i.e. against a page that never loaded its editor at all.
+   * The playground ships Monaco, so its paint metrics measure an editor rather
+   * than the framework. The bar is 0.60 against 94 on a laptop and 71 on a
+   * two-core CI runner: an IDE page costs ~20 points of CPU-bound score on
+   * hardware like that, and the gap is not something the code can close. What is
+   * left is enough headroom for runner noise and tight enough to catch losing
+   * any of the three things that got the page here — the server compressing what
+   * it serves, the editor being imported without Monaco's 80-odd languages, and
+   * the page painting its code before the editor arrives — since each of those
+   * is worth 20 points or more on its own.
    *
    * `best-practices` is 0.85 for two audits neither the app nor the framework
    * owns: Monaco's hidden textarea trips `paste-preventing-inputs` (it
@@ -49,7 +52,7 @@ const PAGES: { path: string; performance?: number; bars?: Record<string, number>
    * app cannot ask for them yet. Accessibility, SEO and agentic-browsing stay at
    * 100, editor and all.
    */
-  { path: '/playground', performance: 0.55, bars: { 'best-practices': 0.85 } },
+  { path: '/playground', performance: 0.6, bars: { 'best-practices': 0.85 } },
 ];
 const THRESHOLDS: Record<string, number> = {
   performance: 0.99,
