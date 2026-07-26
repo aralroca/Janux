@@ -62,11 +62,64 @@ function debounce(fn: () => void, ms: number): () => void {
   };
 }
 
+/**
+ * Monaco is a third-party editor loaded at runtime, and it does fail: bundled
+ * for production, its language contributions reach the API before it is built
+ * (`languages.register is not a function`). A failure has to stop here, in the
+ * pane that owns it — an island that throws while mounting used to take the
+ * whole page down with it, and the page it took down was this one.
+ */
+/**
+ * Monaco measures text to lay itself out, so it has to be measured *after* the
+ * font it will measure with has loaded and while the pane already has its size —
+ * otherwise the first frame is the one that shipped: lines clipped mid-token,
+ * scrolled sideways, snapping into place a moment later. The cover comes off
+ * once, after that layout.
+ */
+async function reveal(editor: any): Promise<void> {
+  await document.fonts?.ready;
+  editor.layout();
+  editor.setScrollPosition({ scrollLeft: 0, scrollTop: 0 });
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  uncover();
+}
+
+/**
+ * The cover holds the same code the editor now holds, in the same place — the
+ * difference is syntax colour, and a short fade is what turns that into the
+ * editor arriving rather than the page flickering. Removed on the way out so no
+ * stale copy of the example is left in the DOM for the next visit.
+ */
+function uncover(): void {
+  const cover = document.getElementById('pg-editor-cover');
+
+  cover?.classList.add('gone');
+  cover?.addEventListener('transitionend', () => cover.remove(), { once: true });
+  setTimeout(() => cover?.remove(), 400);
+}
+
+async function openEditor(host: HTMLElement, initial: string, error: HTMLElement): Promise<any> {
+  try {
+    const editor = await createEditor(host, initial);
+
+    await reveal(editor);
+
+    return editor;
+  } catch (cause) {
+    showError(error, `The editor failed to load: ${cause}`);
+    uncover();
+
+    return undefined;
+  }
+}
+
 /** Wires the whole playground: Monaco, sandboxed frame, agent panel, share links. Returns a teardown. */
 export async function mountPlayground(): Promise<() => void> {
   const els = grabEls();
   const initial = decodeShare(location.hash) ?? EXAMPLES.Counter!;
-  const editor = await createEditor(els.editor, initial);
+  const editor = await openEditor(els.editor, initial, els.error);
+
+  if (!editor) return () => {};
 
   fillExamples(els.example);
   wireExpand();

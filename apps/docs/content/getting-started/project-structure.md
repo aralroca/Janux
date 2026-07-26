@@ -54,7 +54,7 @@ my-app/
 
 `janux.config.ts` takes the same options as the Vite plugin:
 
-```ts
+```ts title="janux.config.ts"
 import { defineConfig } from 'janux';
 
 export default defineConfig({

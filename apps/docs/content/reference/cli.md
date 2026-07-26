@@ -12,6 +12,8 @@ janux eval [files...]        # scripted agent-task scenarios against a live app
 
 `PORT` env is honored when `--port` is absent.
 
+`janux start` serves `dist/client` before falling back to the app: compressed with brotli (or gzip, whichever the request accepts), each file compressed once and kept in memory, and cached `immutable` for a year when its name carries a content hash. Behind a CDN that already does this, it costs nothing; on a box without one, it is the difference between shipping a bundle and shipping four of them.
+
 ## janux verify
 
 Renders every route's manifest and fails (exit 1) when an agent-reachable tool

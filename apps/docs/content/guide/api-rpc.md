@@ -2,8 +2,7 @@
 
 A server function defined once becomes three things: a validated HTTP endpoint, a typed client stub, and a registered agent tool.
 
-```ts
-// src/server/shop.api.ts
+```ts title="src/server/shop.api.ts"
 import { api } from '@janux/server';
 import { schema, str, money } from 'janux';
 

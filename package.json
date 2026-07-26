@@ -19,12 +19,12 @@
     "apps/*"
   ],
   "scripts": {
-    "test": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/conformance packages/docs-tests apps/docs",
+    "test": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs",
     "test:e2e": "bun test e2e",
-    "test:coverage": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/conformance packages/docs-tests apps/docs --coverage",
+    "test:coverage": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs --coverage",
     "test:census": "bun scripts/test-census.ts",
     "test:lighthouse": "bun run --cwd apps/docs build && bun scripts/lighthouse.ts",
-    "typecheck": "for p in janux janux-server janux-agent janux-vite janux-cli conformance; do bunx tsc --noEmit -p packages/$p || exit 1; done",
+    "typecheck": "for p in janux janux-server janux-agent janux-vite janux-cli janux-vercel conformance; do bunx tsc --noEmit -p packages/$p || exit 1; done",
     "dev:shop": "bun run --cwd examples/shop dev",
     "dev:i18n": "bun run --cwd examples/i18n dev",
     "dev:web-agent": "bun run --cwd examples/with-web-agent dev",

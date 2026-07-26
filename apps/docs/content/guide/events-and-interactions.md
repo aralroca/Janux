@@ -68,8 +68,7 @@ Need `dblclick` or drag today? Attach a plain listener in `lifecycle.attach` and
 
 Janux ships the gui-agent-style highlight: while an agent operates an island, it glows.
 
-```ts
-// src/client.ts
+```ts title="src/client.ts"
 boot({ defs: [Cart], glow: true });          // or { glow: { duration: 1200 } }
 ```
 

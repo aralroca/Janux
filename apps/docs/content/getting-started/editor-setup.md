@@ -4,7 +4,7 @@
 
 ## tsconfig.json
 
-```json
+```json title="tsconfig.json" {10,11}
 {
   "compilerOptions": {
     "target": "esnext",
@@ -32,7 +32,7 @@ The two lines that matter:
 
 A file that must render with React (a component you mount via [`foreign()`](/docs/guide/interop)) opts out with a pragma — everything else in the project keeps the Janux runtime:
 
-```tsx
+```tsx {1}
 /** @jsxImportSource react */
 export function Mixer({ band, onBand }: Props) {
   return <input type="range" value={band} onChange={(event) => onBand(Number(event.target.value))} />;
@@ -43,7 +43,7 @@ export function Mixer({ band, onBand }: Props) {
 
 No extension is required. Two settings help:
 
-```json
+```json title=".vscode/settings.json"
 {
   "typescript.tsdk": "node_modules/typescript/lib",
   "editor.formatOnSave": true

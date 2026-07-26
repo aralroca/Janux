@@ -71,7 +71,7 @@ describe('guide/interop.md — SSR and the agent surface', () => {
   it('server-renders the React component inside its host', async () => {
     const { html } = await renderToString(jsx(MixerShell as any, {}), {});
 
-    expect(html).toContain('janux-island data-jx="mixer#default"');
+    expect(html).toContain('janux-island key="mixer#default" data-jx="mixer#default"');
     expect(html).toContain('low:5'); // React rendered on the server, paint before JS
   });
 

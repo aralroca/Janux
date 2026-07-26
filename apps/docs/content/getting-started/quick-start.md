@@ -36,7 +36,7 @@ curl localhost:3000/_janux/manifest
 
 Edit `src/components/Counter.tsx` and add an intent:
 
-```tsx
+```tsx title="src/components/Counter.tsx" {7-10}
 intents: {
   inc: intent({
     description: 'Increment the counter',

@@ -20,6 +20,7 @@
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
+        "@janux/vercel": "workspace:*",
         "@shikijs/langs": "^3",
         "@shikijs/monaco": "^3",
         "@shikijs/themes": "^3",
@@ -127,6 +128,7 @@
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
         "@janux/tailwind": "workspace:*",
+        "@janux/vercel": "workspace:*",
         "@janux/vite": "workspace:*",
         "janux": "workspace:*",
       },
@@ -215,6 +217,22 @@
       "dependencies": {
         "@tailwindcss/postcss": "^4.0.0",
         "tailwindcss": "^4.0.0",
+      },
+    },
+    "packages/janux-vercel": {
+      "name": "@janux/vercel",
+      "version": "0.3.0",
+      "bin": {
+        "janux-vercel": "./bin.ts",
+      },
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "@janux/vite": "workspace:*",
+      },
+      "devDependencies": {
+        "janux": "workspace:*",
       },
     },
     "packages/janux-vite": {
@@ -387,6 +405,8 @@
     "@janux/server": ["@janux/server@workspace:packages/janux-server"],
 
     "@janux/tailwind": ["@janux/tailwind@workspace:packages/janux-tailwind"],
+
+    "@janux/vercel": ["@janux/vercel@workspace:packages/janux-vercel"],
 
     "@janux/vite": ["@janux/vite@workspace:packages/janux-vite"],
 

@@ -1,11 +1,20 @@
+/**
+ * Dev serves the frame's modules from source; a build emits them as their own
+ * entries (see vite.frame.config.ts). The `srcdoc` below is a string, so
+ * nothing rewrites these URLs for us — pointing them at `/src/**` in production
+ * is how the preview pane came to 404 while the editor worked.
+ */
+const FRAME = import.meta.env?.DEV ? '/src/playground/pg-frame.ts' : '/pg-frame.js';
+const RUNTIME = import.meta.env?.DEV ? '/src/playground/pg-runtime.ts' : '/pg-runtime.js';
+
 const SRCDOC = `<!doctype html>
 <html>
 <head>
 <script type="importmap">{"imports":{
-  "janux":"/src/playground/pg-runtime.ts",
-  "janux/jsx-runtime":"/src/playground/pg-runtime.ts",
-  "janux/jsx-dev-runtime":"/src/playground/pg-runtime.ts",
-  "janux/client":"/src/playground/pg-runtime.ts"
+  "janux":"${RUNTIME}",
+  "janux/jsx-runtime":"${RUNTIME}",
+  "janux/jsx-dev-runtime":"${RUNTIME}",
+  "janux/client":"${RUNTIME}"
 }}</scr` + `ipt>
 <style>
 body{margin:0;background:#fff;color:#0f172a}
@@ -15,7 +24,7 @@ body{margin:0;background:#fff;color:#0f172a}
 </head>
 <body>
 <div id="root"></div>
-<script type="module" src="/src/playground/pg-frame.ts"></scr` + `ipt>
+<script type="module" src="${FRAME}"></scr` + `ipt>
 </body>
 </html>`;
 
@@ -40,6 +49,9 @@ export function createFrame(
   // examples fire their (preventDefaulted) submit events. The sandbox here
   // isolates crashes, not the user from their own code — same as any REPL.
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
+  // Named: an unnamed frame is a hole in the accessibility tree, for a screen
+  // reader and for an agent reading the page.
+  iframe.title = 'Preview of the code in the editor';
   iframe.srcdoc = SRCDOC;
   container.appendChild(iframe);
   window.addEventListener('message', relay);

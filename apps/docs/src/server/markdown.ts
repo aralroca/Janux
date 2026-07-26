@@ -1,25 +1,39 @@
 import { Marked } from 'marked';
-import { createHighlighter, type Highlighter } from 'shiki';
-
-const THEMES = { light: 'github-light', dark: 'github-dark' } as const;
-const LANGS = ['typescript', 'tsx', 'bash', 'json', 'jsonc', 'css', 'html'];
+import { createHighlighterCore, type HighlighterCore } from 'shiki/core';
+import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
+import { codeBlock, lineTransformers, parseFence } from './code-block';
+import { CONTRAST_FIXES } from '../theme-contrast';
 
 /**
- * Two token colors in GitHub's themes don't clear 4.5:1 as body-sized code text,
- * measured against both the block background and the page's: the light orange
- * (3.49 on white — it lands on `state`, `input`, `intents`) and the dark comment
- * grey (3.05 on the page background). Darkened/lightened in place, same hue, so
- * the themes still read as GitHub's.
+ * Shiki, bundled by hand ("fine-grained", in its docs) rather than by name.
+ *
+ * `createHighlighter('typescript')` loads grammars through lazy imports and the
+ * Oniguruma WASM, which is fine while the app runs from `node_modules` and
+ * silently catastrophic once it is bundled for a serverless function: the
+ * imports resolve to nothing, the highlighter reports no languages, and every
+ * snippet on the site renders as plain text. Naming the grammars here means the
+ * bundler can see them, and the JS regex engine means there is no WASM to fetch.
  */
-const CONTRAST_FIXES = {
-  'github-light': { '#e36209': '#bd4b00' },
-  'github-dark': { '#6a737d': '#8b949e' },
-} as const;
+const THEMES = { light: 'github-light', dark: 'github-dark' } as const;
+const LANGS = [
+  import('@shikijs/langs/typescript'),
+  import('@shikijs/langs/tsx'),
+  import('@shikijs/langs/bash'),
+  import('@shikijs/langs/json'),
+  import('@shikijs/langs/jsonc'),
+  import('@shikijs/langs/css'),
+  import('@shikijs/langs/html'),
+];
 
-let highlighterPromise: Promise<Highlighter> | undefined;
 
-function getHighlighter(): Promise<Highlighter> {
-  highlighterPromise ??= createHighlighter({ themes: Object.values(THEMES), langs: LANGS });
+let highlighterPromise: Promise<HighlighterCore> | undefined;
+
+function getHighlighter(): Promise<HighlighterCore> {
+  highlighterPromise ??= createHighlighterCore({
+    themes: [import('@shikijs/themes/github-light'), import('@shikijs/themes/github-dark')],
+    langs: LANGS,
+    engine: createJavaScriptRegexEngine(),
+  });
 
   return highlighterPromise;
 }
@@ -47,10 +61,10 @@ function base64url(text: string): string {
   return Buffer.from(text).toString('base64url');
 }
 
-function codeRenderer(highlighter: Highlighter) {
+function codeRenderer(highlighter: HighlighterCore) {
   return ({ text, lang }: { text: string; lang?: string }): string => {
-    const [language = 'text', ...flags] = (lang ?? '').split(/\s+/);
-    const known = highlighter.getLoadedLanguages().includes(language) ? language : 'text';
+    const fence = parseFence(lang);
+    const known = highlighter.getLoadedLanguages().includes(fence.language) ? fence.language : 'text';
     // light-dark() colors follow the page's `color-scheme`, so code blocks flip
     // with the theme toggle without any extra CSS plumbing.
     const highlighted = highlighter.codeToHtml(text, {
@@ -58,13 +72,10 @@ function codeRenderer(highlighter: Highlighter) {
       themes: THEMES,
       colorReplacements: CONTRAST_FIXES,
       defaultColor: 'light-dark()',
+      transformers: lineTransformers(fence),
     });
 
-    const tryIt = flags.includes('live')
-      ? `<a class="try-it" href="/playground#c=${base64url(text)}">▶ Run in playground</a>`
-      : '';
-
-    return `<div class="code-block">${highlighted}<div class="block-actions"><button class="copy-code" type="button" aria-label="Copy code">Copy</button>${tryIt}</div></div>`;
+    return codeBlock(fence, highlighted, fence.live ? `/playground#c=${base64url(text)}` : undefined);
   };
 }
 
@@ -151,8 +162,25 @@ export function summarize(markdown: string): string | undefined {
   return prose ? truncate(stripMarkdown(prose).replace(/\s+/g, ' ').trim()) : undefined;
 }
 
+/**
+ * Rendered docs, keyed by their own source. The pages are files that only change
+ * when the site is rebuilt, so the second visitor to a page should not pay to
+ * highlight it again — and on a server that renders every request, the home page
+ * was paying for its five snippets every time (Lighthouse: 96, not 99). Bounded
+ * by the corpus: 75 pages and a handful of inline samples.
+ */
+const rendered = new Map<string, Promise<RenderedDoc>>();
+
 /** Renders a markdown doc with shiki highlighting, heading anchors, callouts and a TOC. */
-export async function renderMarkdown(markdown: string): Promise<RenderedDoc> {
+export function renderMarkdown(markdown: string): Promise<RenderedDoc> {
+  const cached = rendered.get(markdown) ?? render(markdown);
+
+  rendered.set(markdown, cached);
+
+  return cached;
+}
+
+async function render(markdown: string): Promise<RenderedDoc> {
   const highlighter = await getHighlighter();
   const toc: TocEntry[] = [];
   const md = new Marked();

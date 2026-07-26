@@ -57,7 +57,7 @@ describe('renderToString', () => {
     const page = jsx(Fragment, { children: [jsx('h1', { children: 'Shop' }), jsx(cart as any, {})] });
     const result = await renderToString(page, { initialState: { 'ui://cart#default': { items: [{ id: 'a', qty: 1 }] } } });
 
-    expect(result.html).toContain('<janux-island data-jx="cart#default">');
+    expect(result.html).toContain('<janux-island key="cart#default" data-jx="cart#default">');
     expect(result.html).toContain('1 items / 2 products');
     expect(result.html).toContain('data-jxa="cart#default:checkout"');
     expect(result.snapshots).toEqual([

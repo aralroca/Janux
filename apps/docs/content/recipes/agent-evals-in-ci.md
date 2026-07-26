@@ -75,8 +75,7 @@ janux verify
 }
 ```
 
-```yaml
-# .github/workflows/agent-surface.yml
+```yaml title=".github/workflows/agent-surface.yml"
 name: agent surface
 on: [push, pull_request]
 
@@ -100,8 +99,7 @@ What layers 1–2 cannot tell you: whether a model reading your `description` fi
 
 It needs a key and a running server, so it is **not** part of the default suite — a test that can only ever skip is noise. Make it a script you run on purpose, point it at a live app, and assert **what changed**, never what the model said:
 
-```ts
-// model-evals/run.ts
+```ts title="model-evals/run.ts"
 const BASE = process.env.EVAL_URL;
 const KEY = process.env.OPENROUTER_API_KEY;
 
@@ -178,8 +176,7 @@ description:
 
 …the same prompt called the tool on **5 of 5 runs**. That is the loop this layer buys you: a red nightly, a sharper description, a measurable change. Layers 1–2 cannot see it, because a scripted model always calls exactly what you scripted.
 
-```yaml
-# .github/workflows/model-evals.yml
+```yaml title=".github/workflows/model-evals.yml"
 name: model evals
 on:
   schedule: [{ cron: '0 4 * * *' }]

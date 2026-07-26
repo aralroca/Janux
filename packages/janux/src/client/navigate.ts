@@ -1,8 +1,8 @@
 import diff from 'diff-dom-streaming';
 import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
-import { consumePrefetched } from './prefetch';
-import { singleChunkStream } from './single-chunk';
+import { consumePrefetched, NAVIGATION_HEADERS } from './prefetch';
+import { runScriptsWhileStreaming } from './scripts';
 
 export interface NavigateOptions {
   signal?: AbortSignal;
@@ -43,12 +43,37 @@ function extractPersisted(mount: MountContext): PersistedIsland[] {
     });
 }
 
+function persistedSelector(id: string): string {
+  return `janux-island[data-jx="${esc(id)}"], janux-foreign[data-jx="${esc(id)}"]`;
+}
+
+/**
+ * Grafts each persisted island back the moment the diff inserts the incoming
+ * stand-in for it, instead of waiting for the navigation to finish. While the
+ * page streams those are very different moments: the docs' header lost its
+ * search box for 400 ms of an 800 ms navigation and reflowed without it.
+ */
+function restoreWhileStreaming(kept: PersistedIsland[]): () => void {
+  const pending = new Map(kept.map(({ id, node }) => [id, node]));
+  const observer = new MutationObserver(() => {
+    pending.forEach((node, id) => {
+      const standIn = document.querySelector(persistedSelector(id));
+
+      if (!standIn || standIn === node) return;
+      standIn.replaceWith(node);
+      pending.delete(id);
+    });
+  });
+
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  return () => observer.disconnect();
+}
+
 async function restorePersisted(mount: MountContext, kept: PersistedIsland[]): Promise<void> {
   await Promise.all(
     kept.map(async ({ id, node }) => {
-      const incoming = document.querySelector(
-        `janux-island[data-jx="${esc(id)}"], janux-foreign[data-jx="${esc(id)}"]`,
-      );
+      const incoming = document.querySelector(persistedSelector(id));
 
       if (incoming) incoming.replaceWith(node);
       else if (mount.registry.foreigns.has(id)) {
@@ -114,41 +139,64 @@ async function sweepDisconnected(mount: MountContext): Promise<void> {
   await Promise.all(gone.map(([, instance]) => instance.dispose()));
 }
 
-// Buffer the whole page before diffing: a navigation fetches a complete,
-// server-rendered page, so a single-chunk stream is deterministic and
-// avoids the streaming diff's chunk-boundary edge cases (a swap is not SSR).
-async function fetchPage(url: string, signal?: AbortSignal): Promise<string> {
+/**
+ * The page as a stream, so the diff can apply it while it arrives — a slow
+ * server paints progressively instead of showing the old page until the last
+ * byte. (It used to be buffered into one chunk; that is a whole page's latency
+ * spent looking at the previous one.)
+ */
+async function fetchPage(url: string, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>> {
   const cached = await consumePrefetched(url);
 
   if (cached !== undefined) return cached;
-  const response = await fetch(url, { signal, headers: { accept: 'text/html' } });
+  const response = await fetch(url, { signal, headers: NAVIGATION_HEADERS });
 
   if (!response.ok) throw new Error(`navigation fetch failed (${response.status})`);
+  if (!response.body) throw new Error('navigation fetch failed (no body)');
 
-  return response.text();
+  return response.body;
 }
 
 /**
- * Mounted islands that don't exist on the incoming page leave BEFORE the diff:
- * their runtime DOM (a code editor, a canvas — anything an `attach` built
- * imperatively) must never be morphed against unrelated incoming content, or
- * fragments of it survive misplaced. Removal here; disposal stays with the
- * post-diff sweep, which sees them disconnected.
+ * A `<dialog>` the diff left in the top layer with no `open` attribute.
+ *
+ * `showModal()` makes the rest of the document inert, and the browser tracks that
+ * in the top layer, not in the attribute — so when the diff syncs attributes and
+ * strips `open`, the page stays inert with nothing to click, and `close()` no
+ * longer helps: its first step reads the attribute it just lost. Restoring the
+ * attribute and closing releases the top layer and fires `close`, so the app hears
+ * about it. Reported as "no link works after searching".
  */
-function extractLeaving(mount: MountContext, incomingHtml: string): Element[] {
-  const incoming = new Set([...incomingHtml.matchAll(/data-jx="([^"]+)"/g)].map((match) => match[1]));
+function isStrandedModal(dialog: Element): boolean {
+  try {
+    return dialog.matches(':modal') && !dialog.hasAttribute('open');
+  } catch {
+    return false; // `:modal` is not everywhere yet (happy-dom, older engines).
+  }
+}
 
-  return [...document.querySelectorAll('janux-island:not([data-jx-persist])')]
-    .filter((node) => {
-      const id = node.getAttribute('data-jx') ?? '';
+export function closeStrandedModals(): void {
+  document.querySelectorAll('dialog').forEach((dialog) => {
+    if (!isStrandedModal(dialog)) return;
+    dialog.setAttribute('open', '');
+    (dialog as HTMLDialogElement).close();
+  });
+}
 
-      return mount.registry.mounted.has(id) && !incoming.has(id);
-    })
-    .map((node) => {
-      node.remove();
+/**
+ * Watches for one appearing, so an inert page is a frame long rather than the
+ * rest of the navigation: a modal opened while the page streams in is stripped by
+ * the diff the moment it reaches that part of the document.
+ */
+function keepModalsHonest(): () => void {
+  const observer = new MutationObserver(closeStrandedModals);
 
-      return node;
-    });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['open'], subtree: true });
+
+  return () => {
+    closeStrandedModals();
+    observer.disconnect();
+  };
 }
 
 /** Marks a runtime-injected body node the whole-document diff must not own. */
@@ -162,8 +210,7 @@ export const KEEP_ATTRIBUTE = 'data-janux-keep';
  */
 function keepAttached(nodes: Element[], fallback: Element): () => void {
   const places = nodes.map((node) => ({ node, parent: node.parentElement, next: node.nextElementSibling }));
-
-  return () =>
+  const restore = () =>
     places
       .filter(({ node }) => !node.isConnected)
       .forEach(({ node, parent, next }) => {
@@ -171,6 +218,21 @@ function keepAttached(nodes: Element[], fallback: Element): () => void {
 
         host.insertBefore(node, next?.isConnected && next.parentElement === host ? next : null);
       });
+  /*
+   * Restored the instant the diff drops one, not when the navigation ends. While
+   * the page streams in those are seconds apart, and for a stylesheet the
+   * difference is the whole page rendering unstyled: measured at 2.25 s of a
+   * 2.6 s navigation, with `<head>` holding zero style nodes — every element
+   * where the browser puts an unstyled one.
+   */
+  const observer = new MutationObserver(restore);
+
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  return () => {
+    observer.disconnect();
+    restore();
+  };
 }
 
 /**
@@ -198,27 +260,54 @@ function keepRuntimeNodes(): () => void {
  * persisted nodes are re-attached, no island disposed). Disposal happens after,
  * driven by what the diff removed from the document.
  */
-async function applyPage(mount: MountContext, html: string, signal?: AbortSignal): Promise<void> {
+async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, signal?: AbortSignal): Promise<void> {
   const kept = extractPersisted(mount);
-  const leaving = extractLeaving(mount, html);
+  const stopRestoring = restoreWhileStreaming(kept);
+  const stopRunningScripts = runScriptsWhileStreaming();
   const restoreStyles = keepRuntimeStyles();
   const restoreRuntimeNodes = keepRuntimeNodes();
+  const stopWatchingModals = keepModalsHonest();
 
   try {
     throwIfAborted(signal);
     // The Navigation API drives the transition; diff directly (its own would be skipped).
-    await diff(document, singleChunkStream(html));
+    await diff(document, page);
     await restorePersisted(mount, kept);
   } catch (error) {
-    // Aborted/failed before the swap committed: put persisted and leaving nodes back untouched.
-    [...kept.map(({ node }) => node), ...leaving].forEach((node) => {
+    /*
+     * Persisted islands go back untouched — losing a live editor to a superseded
+     * navigation would be the worst outcome here. The document itself may be
+     * half-updated: the diff applies the page as it streams, and whatever
+     * superseded this navigation diffs the same document to the page it wants.
+     */
+    kept.forEach(({ node }) => {
       if (!node.isConnected) document.body.appendChild(node);
     });
     throw error;
   } finally {
+    stopRunningScripts();
+    stopRestoring();
     restoreStyles();
     restoreRuntimeNodes();
+    stopWatchingModals();
   }
+}
+
+function reportNavigationError(error: unknown): void {
+  document.dispatchEvent(new CustomEvent('janux:error', { detail: String(error) }));
+}
+
+/** Everything that happens once the new page is on screen. */
+async function wireUpPage(mount: MountContext): Promise<void> {
+  reindexSnapshots(mount);
+  installI18n(mount.ctx);
+  await sweepDisconnected(mount);
+  sweepDisconnectedForeigns(mount);
+  await disposeRouteStores(mount);
+  await mountEagerIslands(mount);
+  // Foreign roots after navigation: mount the new page's hosts and push the
+  // morph-synced call-site props into hosts that survived the swap.
+  await mountDocumentForeigns(mount);
 }
 
 async function runNavigation(url: string, mount: MountContext, options: NavigateOptions): Promise<void> {
@@ -227,24 +316,30 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
   emitNavigate('before', from, url);
   try {
     throwIfAborted(options.signal);
-    const html = await fetchPage(url, options.signal);
+    const page = await fetchPage(url, options.signal);
 
     throwIfAborted(options.signal);
-    await applyPage(mount, html, options.signal);
-    reindexSnapshots(mount);
-    installI18n(mount.ctx);
-    await sweepDisconnected(mount);
-    sweepDisconnectedForeigns(mount);
-    await disposeRouteStores(mount);
-    await mountEagerIslands(mount);
-    // Foreign roots after navigation: mount the new page's hosts and push the
-    // morph-synced call-site props into hosts that survived the swap.
-    await mountDocumentForeigns(mount);
-    emitNavigate('after', from, url);
+    await applyPage(mount, page, options.signal);
   } catch (error) {
     if ((error as any)?.name === 'AbortError') return;
-    document.dispatchEvent(new CustomEvent('janux:error', { detail: String(error) }));
+    reportNavigationError(error);
+    // Nothing reached the screen (a failed swap rolls itself back), so the
+    // browser is the only way left to get there.
     location.href = url;
+
+    return;
+  }
+  try {
+    await wireUpPage(mount);
+    emitNavigate('after', from, url);
+  } catch (error) {
+    /*
+     * The requested page IS on screen — handing the URL to the browser now would
+     * fetch it again, mount the same island, and fail the same way: a
+     * deterministic mount error (a broken editor island on /playground) turns
+     * into an endless refresh. Report it and leave the page standing.
+     */
+    if ((error as any)?.name !== 'AbortError') reportNavigationError(error);
   }
 }
 

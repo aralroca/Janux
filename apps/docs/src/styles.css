@@ -22,6 +22,12 @@
   --accent: light-dark(#0062ff, #47a8ff);
   --accent-soft: light-dark(#f0f6ff, #12283f);
   --code-bg: light-dark(#f6f6f6, #1a1a1a);
+  /* Tint behind a highlighted code line. GitHub's light palette is tuned to
+     land at ~4.5:1 on pure white — its red is 4.57 — so ANY light tint drops
+     code text below AA; light-mode highlights ride on the accent bar alone.
+     The dark tint goes darker than the block's #24292e instead of lighter,
+     which moves the worst token (#8b949e) from 4.77 to 5.41. */
+  --code-hl: light-dark(transparent, #0e1f33);
   --backdrop: rgba(0, 0, 0, 0.5);
   --ok-bg: light-dark(#ecfdf5, #052e1f);
   --ok-text: light-dark(#047857, #34d399);
@@ -82,7 +88,12 @@ body {
   position: fixed;
   inset: 0 0 auto 0;
   z-index: 30;
-  display: flex;
+  /* Explicit columns, one per child, so nothing in the header depends on any
+     other child being there: while a navigation streams in, the diff rebuilds
+     this region node by node, and with a flex row every momentary absence slid
+     everything left. A grid cell stays where it is, empty or not. */
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 18px;
   height: var(--topbar-h);
@@ -109,8 +120,25 @@ body {
   display: block;
 }
 
-.topbar janux-island:has(.search) {
-  margin-left: auto;
+.topbar .logo {
+  grid-column: 1;
+}
+
+/* Right-aligned in its own column, with its size reserved: the island inside can
+   be absent for a moment without the header noticing. */
+.topbar .search-slot {
+  grid-column: 2;
+  justify-self: end;
+  min-width: 171px;
+  min-height: 35px;
+}
+
+.topbar .top-links {
+  grid-column: 3;
+}
+
+.topbar janux-island:has(.theme-toggle) {
+  grid-column: 4;
 }
 
 .search-btn {
@@ -598,18 +626,80 @@ pre code {
   line-height: 1.65;
 }
 
+/* The horizontal padding lives on the lines, not on the <pre>: a highlighted
+   line has to reach both edges, including the part only visible after
+   scrolling. `display: grid` on the <code> is what makes a line span the full
+   scroll width; the newlines between lines are whitespace-only anonymous items,
+   which grid drops, so blank lines need their own height. */
 pre.shiki {
-  padding: 18px 22px;
+  --code-pad: 22px;
+  padding: 18px 0;
 }
 
 pre.shiki code {
+  display: grid;
   color: inherit;
+}
+
+pre.shiki .line {
+  padding-inline: var(--code-pad);
+  min-height: 1lh;
+}
+
+pre.shiki .line.highlighted {
+  background: var(--code-hl);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .code-block {
   position: relative;
+  margin: 18px 0;
 }
 
+.code-block > pre {
+  margin: 0;
+}
+
+/* A file name turns the block into one card: header on top, code below. */
+.code-block.titled {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.code-block.titled > pre {
+  border: none;
+  border-radius: 0;
+}
+
+.code-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-soft);
+}
+
+.code-lang {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--heading);
+  color: var(--bg);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.code-file {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--heading);
+  overflow-wrap: anywhere;
+}
+
+/* Same actions, same order, same corner — inside the header when there is one,
+   floating over the top-right of the code when there isn't. */
 .block-actions {
   position: absolute;
   top: 12px;
@@ -619,23 +709,19 @@ pre.shiki code {
   gap: 8px;
 }
 
+.code-head .block-actions {
+  position: static;
+  margin-left: auto;
+}
+
 .copy-code {
-  padding: 4px 10px;
+  display: inline-flex;
+  padding: 5px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.code-block:hover .copy-code,
-.copy-code:focus-visible,
-.copy-code.copied {
-  opacity: 1;
 }
 
 .copy-code.copied {
@@ -758,7 +844,6 @@ body[data-theme='dark'] .hero-janus {
 .install-block {
   display: inline-flex;
   align-items: center;
-  margin: 18px 0;
   padding-right: 10px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -775,12 +860,10 @@ body[data-theme='dark'] .hero-janus {
   color: var(--heading);
 }
 
+/* Inside the pill the button's own border would double the pill's own. */
 .install-block .copy-code {
-  display: inline-flex;
-  padding: 6px;
   border: none;
   background: none;
-  opacity: 1;
 }
 
 .copy-code .ic-check {
@@ -1012,7 +1095,8 @@ body[data-theme='dark'] .scores-video {
 /* Half the width means half the columns, so these run a notch smaller and
    tighter than a full-width block — measured to fit, not guessed. */
 .surfaces .faces-grid pre {
-  padding: 12px;
+  --code-pad: 12px;
+  padding: 12px 0;
   font-size: 11.5px;
 }
 
@@ -1354,8 +1438,58 @@ body[data-theme='dark'] .scores-video {
 }
 
 .editor-host {
+  position: relative; /* the loading cover below is absolute against this pane */
   flex: 1;
   min-height: 0;
+}
+
+/* Opaque, and in the page's own colours: it hides Monaco until Monaco has
+   measured itself, so nobody watches the first frame of a 3 MB editor
+   arranging its glyphs. (The preview's overlay is translucent white on
+   purpose — that pane is always light.) */
+.pg-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  background: var(--bg);
+  transition: opacity 0.15s ease-out;
+}
+
+.pg-cover.gone {
+  opacity: 0;
+}
+
+/*
+ * Monaco's own text metrics, measured from the running editor: 13.5px of its
+ * default mono stack on a 20px line, 12px of top padding, and 67px of gutter
+ * before the first character (its 5-char line-number column). Matching them is
+ * the whole point — the editor takes over this text, and anything off by a pixel
+ * reads as the page jumping.
+ */
+.pg-cover-code {
+  margin: 0;
+  padding: 12px 0 0 67px;
+  font: 13.5px / 20px Menlo, Monaco, 'Courier New', monospace;
+  color: light-dark(#24292e, #e1e4e8);
+  white-space: pre;
+  tab-size: 8;
+}
+
+.pg-cover-note {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 /* CodeSandbox-style pane chrome: a file tab over the editor, a mini browser
@@ -1472,6 +1606,13 @@ body[data-theme='dark'] .scores-video {
   flex: 1;
   min-height: 0;
   background: #ffffff; /* the sandboxed iframe below is always light */
+}
+
+/* Monaco's own line-number grey is #bbbcbd — 1.9:1 on its white background, and
+   eighteen contrast failures in one audit. `--muted` is the site's dimmest text
+   colour that still clears AA on every surface it lands on (palette.test.ts). */
+.monaco-editor .line-numbers {
+  color: var(--muted) !important;
 }
 
 .pg-loading {

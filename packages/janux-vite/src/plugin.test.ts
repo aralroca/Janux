@@ -66,3 +66,42 @@ describe('the optimizer config', () => {
     expect(config.optimizeDeps.include).toEqual(runtimeIncludes(docs));
   });
 });
+
+const API_SOURCE = "export const list = api({ description: 'List', run: () => [] });\n";
+
+/** The client-stub transform, called the way Vite calls it. */
+async function transformed(root: string, id: string, code = API_SOURCE): Promise<string | undefined> {
+  const plugin: any = janux();
+
+  await plugin.config({ root }, { command: 'build', mode: 'production' });
+
+  return (await plugin.transform.call({}, code, id, undefined))?.code;
+}
+
+/**
+ * The rule used to be "any module whose path ends in `.api.ts|js`" — a filename
+ * a dependency is free to use. `monaco-editor/esm/vs/editor/editor.api.js` was
+ * therefore projected into fetch stubs in every production build, which is how
+ * `monaco.languages` became an async function and the docs playground died on
+ * arrival with `languages.register is not a function`. An app's api modules live
+ * in its server directory; nothing outside it is one.
+ */
+describe('api() client stubs', () => {
+  const docs = resolve(import.meta.dir, '../../../apps/docs');
+
+  it("projects the app's own api modules into typed fetch stubs", async () => {
+    const code = await transformed(docs, join(docs, 'src/server/docs.api.ts'));
+
+    expect(code).toContain('clientApi("docs.list")');
+  });
+
+  it('leaves a dependency that happens to name a file *.api.js alone', async () => {
+    const monaco = join(docs, 'node_modules/monaco-editor/esm/vs/editor/editor.api.js');
+
+    expect(await transformed(docs, monaco, 'export const languages = { register() {} };\n')).toBeUndefined();
+  });
+
+  it('leaves an app file outside the server directory alone', async () => {
+    expect(await transformed(docs, join(docs, 'src/components/widget.api.ts'))).toBeUndefined();
+  });
+});

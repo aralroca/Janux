@@ -6,8 +6,7 @@
 
 `src/ctx.ts` is the convention: default-export a function of the request and every route, intent, source and `api()` receives what it returns.
 
-```ts
-// src/ctx.ts
+```ts title="src/ctx.ts"
 import { verifyCookie } from './auth';
 
 export default async function ctxFor(req: Request) {

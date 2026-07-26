@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { bundleInputs, cssAssetName, devBanner, localeRedirectStub, prodServerOptions } from './commands';
+import { bundleInputs, cssAssetName, devBanner, localeRedirectStub } from './commands';
+import { prodServerOptions } from './prod';
 
 /** Runs the stub's inline script with a fake navigator/location and returns the redirect target. */
 function redirectOf(locales: string[], defaultLocale: string, languages: string[]): string {

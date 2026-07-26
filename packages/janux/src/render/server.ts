@@ -112,7 +112,17 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): 
   const persist = props.persist ? ' data-jx-persist' : '';
   const eager = props.eager ? ' data-jx-eager' : '';
 
-  return `<janux-island data-jx="${escapeHtml(`${def.name}#${key}`)}"${persist}${eager}>${inner}</janux-island>`;
+  const id = escapeHtml(`${def.name}#${key}`);
+
+  /*
+   * `key` is the same id, for the navigation diff rather than for us: it matches
+   * children by `key` (diff-dom-streaming), so a mounted island is either paired
+   * with its own incoming counterpart or removed — never morphed against a
+   * different island, which used to leave fragments of an editor or a canvas in
+   * the next page. Identity in the markup is what lets that diff read the page as
+   * a stream instead of waiting for all of it.
+   */
+  return `<janux-island key="${id}" data-jx="${id}"${persist}${eager}>${inner}</janux-island>`;
 }
 
 /** CJS/ESM interop for a dynamically imported module. */

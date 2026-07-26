@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
 import { join } from 'node:path';
 import { createJanuxServer } from '../packages/janux-server/src/index';
-import { prodServerOptions } from '../packages/janux-cli/src/commands';
+import { prodServerOptions } from '../packages/janux-cli/src/prod';
 
 const APP_ROOT = join(import.meta.dir, '../examples/i18n');
 
@@ -41,7 +41,7 @@ describe('examples/i18n end to end', () => {
 
   it('ships only the island translations, including interaction-only i18nKeys', async () => {
     const html = await (await get('/fr')).text();
-    const payload = JSON.parse(/janux\+i18n" id="jx-i18n">(.+?)<\/script>/.exec(html)![1]!);
+    const payload = JSON.parse(/janux\+i18n"[^>]*>(.+?)<\/script>/.exec(html)![1]!);
 
     expect(Object.keys(payload.messages)).toEqual(['counter']);
     expect(payload.messages.counter.milestone).toBe('Tape m’en cinq ! 🖐️');

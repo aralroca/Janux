@@ -1,5 +1,5 @@
 import { parseSync } from '@swc/core';
-import { basename } from 'node:path';
+import { apiModuleName } from './app-config';
 
 const UNSUPPORTED_EXPORTS = new Set([
   'ExportDefaultDeclaration',
@@ -41,9 +41,9 @@ export function exportedApiNames(code: string): string[] {
   });
 }
 
-export function apiModuleName(filePath: string): string {
-  return basename(filePath).replace(/\.api\.[tj]s$/, '');
-}
+// Re-exported from where it now lives: a production server needs the name of an
+// api module, and importing this file for it would hand it @swc/core too.
+export { apiModuleName };
 
 /**
  * Client projection of a server api module: every export becomes a typed

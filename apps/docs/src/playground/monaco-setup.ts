@@ -1,4 +1,5 @@
 import { JANUX_DTS } from './janux-types';
+import { withContrastFixes } from '../theme-contrast';
 
 /**
  * Shiki's real TSX TextMate grammar, registered under the id `typescript` so
@@ -16,8 +17,12 @@ async function installTsxHighlighting(monaco: any): Promise<void> {
   const langs = tsxLangs.default.map((grammar: any) =>
     grammar.name === 'tsx' ? { ...grammar, name: 'typescript', aliases: [] } : grammar,
   );
+  const [light, dark] = await Promise.all([
+    import('@shikijs/themes/github-light'),
+    import('@shikijs/themes/github-dark'),
+  ]);
   const highlighter = await createHighlighterCore({
-    themes: [import('@shikijs/themes/github-light'), import('@shikijs/themes/github-dark')],
+    themes: [withContrastFixes(light.default as any, 'github-light'), withContrastFixes(dark.default as any, 'github-dark')],
     langs,
     engine: createOnigurumaEngine(import('shiki/wasm')),
   });
@@ -49,7 +54,25 @@ function followPageTheme(monaco: any, editor: any): void {
 }
 
 export async function createEditor(host: HTMLElement, initial: string) {
-  const monaco = await import('monaco-editor');
+  /*
+   * The editor and the one language service this page uses, not the
+   * `monaco-editor` barrel: that ships every language Monaco knows (80-odd
+   * grammars) plus the CSS, HTML and JSON services, none of which this editor
+   * can reach — highlighting here is shiki's TSX grammar and the only model is
+   * `.tsx`. Measured: 3.15 MB of script became 2.28 MB, and its stylesheet
+   * 130 KB became 68 KB.
+   */
+  const monaco = await import('monaco-editor/esm/vs/editor/editor.api');
+
+  /*
+   * The language id is what the barrel used to register, and everything hangs
+   * off it: the TS service attaches to it, shiki's grammar is installed under
+   * it, and a model with no registered language is a model with no tokens at
+   * all — plain grey text, measured. Monaco's own monarch tokenizer is not
+   * imported with it, because shiki's TSX grammar is what tokenizes here.
+   */
+  monaco.languages.register({ id: 'typescript', extensions: ['.ts', '.tsx'] });
+  await import('monaco-editor/esm/vs/language/typescript/monaco.contribution');
   const [{ default: EditorWorker }, { default: TsWorker }] = await Promise.all([
     import('monaco-editor/esm/vs/editor/editor.worker?worker'),
     import('monaco-editor/esm/vs/language/typescript/ts.worker?worker'),

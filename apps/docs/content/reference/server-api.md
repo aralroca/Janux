@@ -109,6 +109,19 @@ Every head node the shell writes carries a stable `id` (`jx-og-title`, `jx-jsonl
 
 Error envelope: `{ ok: false, error }` with 400 (invalid input), 401 (`agent_required`), 403 (forbidden), 404, 500.
 
+### Client navigations announce themselves
+
+A page fetched by the client runtime during an SPA navigation carries `x-janux-navigation: 1` (`NAVIGATION_HEADER`). The server answers those without the inlined stylesheet: the live document already has it, the client keeps its `<style>` nodes across the diff, and re-sending it puts kilobytes in front of the content the visitor is waiting for — 27 KB of this site's 95 KB page.
+
+```ts title="a CDN in front of the app"
+import { NAVIGATION_HEADER } from '@janux/server';
+
+// Two different responses share one URL, so anything caching them must vary on it.
+const vary = NAVIGATION_HEADER;
+```
+
+If you cache pages at the edge, **vary on that header** — a navigation response and a first-load response are not interchangeable.
+
 > **Warning:** the origin header is not a security boundary — `human` is the default and the *most privileged* origin by design. Authentication belongs in `ctxFor`; guards control the agent, not the network.
 
 ## Verified agent identity (Web Bot Auth)

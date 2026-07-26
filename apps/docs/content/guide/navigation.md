@@ -16,8 +16,7 @@ Routes are files under `src/routes`. `index.tsx` → `/`, `orders/[id].tsx` → 
 
 Built-in matchers: `integer`, `uuid`. Add your own in `src/matchers.ts` (each export is a `(value) => boolean`):
 
-```ts
-// src/matchers.ts
+```ts title="src/matchers.ts"
 export const slug = (value: string) => /^[a-z0-9-]+$/.test(value);
 // then: routes/blog/[post=slug].tsx
 ```
@@ -46,8 +45,7 @@ export default function TeamLayout({ children, params }) {
 
 `src/middleware.ts` runs before routing on every request; return a `Response` to short-circuit (redirects, locale hardening, auth gates), or nothing to continue:
 
-```ts
-// src/middleware.ts
+```ts title="src/middleware.ts"
 export default function middleware(req: Request): Response | undefined {
   const url = new URL(req.url);
 
