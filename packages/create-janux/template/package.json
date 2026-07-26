@@ -9,15 +9,15 @@
     "start": "janux start"
   },
   "dependencies": {
-    "janux": "^0.3.0",
-    "@janux/server": "^0.3.0",
-    "@janux/cli": "^0.3.0"
+    "janux": "^0.3.1",
+    "@janux/server": "^0.3.1",
+    "@janux/cli": "^0.3.1"
   },
   "overrides": {
-    "janux": "^0.3.0",
-    "@janux/server": "^0.3.0",
-    "@janux/agent": "^0.3.0",
-    "@janux/vite": "^0.3.0"
+    "janux": "^0.3.1",
+    "@janux/server": "^0.3.1",
+    "@janux/agent": "^0.3.1",
+    "@janux/vite": "^0.3.1"
   },
   "devDependencies": {
     "@types/bun": "^1"

@@ -1,6 +1,6 @@
 {
   "name": "@janux/vercel",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Deploy a Janux app to Vercel — Bun functions for server apps, prerendered HTML for static ones.",
   "repository": {
     "type": "git",
@@ -30,7 +30,8 @@
   },
   "files": [
     "src",
-    "bin.ts"
+    "bin.ts",
+    "!src/__fixtures__"
   ],
   "publishConfig": {
     "access": "public"
