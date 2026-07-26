@@ -62,11 +62,30 @@ function debounce(fn: () => void, ms: number): () => void {
   };
 }
 
+/**
+ * Monaco is a third-party editor loaded at runtime, and it does fail: bundled
+ * for production, its language contributions reach the API before it is built
+ * (`languages.register is not a function`). A failure has to stop here, in the
+ * pane that owns it — an island that throws while mounting used to take the
+ * whole page down with it, and the page it took down was this one.
+ */
+async function openEditor(host: HTMLElement, initial: string, error: HTMLElement): Promise<any> {
+  try {
+    return await createEditor(host, initial);
+  } catch (cause) {
+    showError(error, `The editor failed to load: ${cause}`);
+
+    return undefined;
+  }
+}
+
 /** Wires the whole playground: Monaco, sandboxed frame, agent panel, share links. Returns a teardown. */
 export async function mountPlayground(): Promise<() => void> {
   const els = grabEls();
   const initial = decodeShare(location.hash) ?? EXAMPLES.Counter!;
-  const editor = await createEditor(els.editor, initial);
+  const editor = await openEditor(els.editor, initial, els.error);
+
+  if (!editor) return () => {};
 
   fillExamples(els.example);
   wireExpand();

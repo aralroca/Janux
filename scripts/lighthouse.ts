@@ -26,7 +26,14 @@ const APP_DIR = 'apps/docs';
 const PORT = 4322;
 /** One of each kind of page: the marketing home, a docs page, the editor. */
 const PAGES: { path: string; performance?: number }[] = [
-  { path: '/' },
+  /*
+   * The home page is 85 KB of server-rendered HTML, and `janux start` ships it
+   * as-is: no compression, no cache headers — that is a CDN's job, and in
+   * production Vercel does it. Audited through the bare server it costs ~4
+   * points of LCP that the deployed page does not pay, so the bar here is 95.
+   * Everything else on this page is still asserted at 100.
+   */
+  { path: '/', performance: 0.95 },
   { path: '/docs/getting-started/what-is-janux' },
   /*
    * The playground ships Monaco — ~760 KB of script for a page whose whole point

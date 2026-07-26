@@ -25,7 +25,7 @@ const GENERATED_DIR = '.janux';
 const ENTRY = `import { join } from 'node:path';
 import { createHandler } from '@janux/vercel';
 
-process.env.JANUX_APP_ROOT = join(import.meta.dir, '..');
+process.env.JANUX_APP_ROOT = join(import.meta.dirname, '..');
 const { default: app } = await import('./app');
 
 export default createHandler(app);

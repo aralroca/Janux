@@ -59,7 +59,7 @@ describe('runVercelInit', () => {
       { src: '/(.*)', dest: '/index' },
     ]);
     expect(JSON.parse(readFileSync(join(output, 'functions/index.func/.vc-config.json'), 'utf-8'))).toEqual({
-      runtime: 'nodejs22.x',
+      runtime: 'bun1.x',
       handler: 'index.js',
       launcherType: 'Nodejs',
       supportsResponseStreaming: true,

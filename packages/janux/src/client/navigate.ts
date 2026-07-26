@@ -221,6 +221,23 @@ async function applyPage(mount: MountContext, html: string, signal?: AbortSignal
   }
 }
 
+function reportNavigationError(error: unknown): void {
+  document.dispatchEvent(new CustomEvent('janux:error', { detail: String(error) }));
+}
+
+/** Everything that happens once the new page is on screen. */
+async function wireUpPage(mount: MountContext): Promise<void> {
+  reindexSnapshots(mount);
+  installI18n(mount.ctx);
+  await sweepDisconnected(mount);
+  sweepDisconnectedForeigns(mount);
+  await disposeRouteStores(mount);
+  await mountEagerIslands(mount);
+  // Foreign roots after navigation: mount the new page's hosts and push the
+  // morph-synced call-site props into hosts that survived the swap.
+  await mountDocumentForeigns(mount);
+}
+
 async function runNavigation(url: string, mount: MountContext, options: NavigateOptions): Promise<void> {
   const from = location.href;
 
@@ -231,20 +248,26 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
 
     throwIfAborted(options.signal);
     await applyPage(mount, html, options.signal);
-    reindexSnapshots(mount);
-    installI18n(mount.ctx);
-    await sweepDisconnected(mount);
-    sweepDisconnectedForeigns(mount);
-    await disposeRouteStores(mount);
-    await mountEagerIslands(mount);
-    // Foreign roots after navigation: mount the new page's hosts and push the
-    // morph-synced call-site props into hosts that survived the swap.
-    await mountDocumentForeigns(mount);
-    emitNavigate('after', from, url);
   } catch (error) {
     if ((error as any)?.name === 'AbortError') return;
-    document.dispatchEvent(new CustomEvent('janux:error', { detail: String(error) }));
+    reportNavigationError(error);
+    // Nothing reached the screen (a failed swap rolls itself back), so the
+    // browser is the only way left to get there.
     location.href = url;
+
+    return;
+  }
+  try {
+    await wireUpPage(mount);
+    emitNavigate('after', from, url);
+  } catch (error) {
+    /*
+     * The requested page IS on screen — handing the URL to the browser now would
+     * fetch it again, mount the same island, and fail the same way: a
+     * deterministic mount error (a broken editor island on /playground) turns
+     * into an endless refresh. Report it and leave the page standing.
+     */
+    if ((error as any)?.name !== 'AbortError') reportNavigationError(error);
   }
 }
 

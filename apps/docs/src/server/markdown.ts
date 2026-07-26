@@ -172,8 +172,25 @@ export function summarize(markdown: string): string | undefined {
   return prose ? truncate(stripMarkdown(prose).replace(/\s+/g, ' ').trim()) : undefined;
 }
 
+/**
+ * Rendered docs, keyed by their own source. The pages are files that only change
+ * when the site is rebuilt, so the second visitor to a page should not pay to
+ * highlight it again — and on a server that renders every request, the home page
+ * was paying for its five snippets every time (Lighthouse: 96, not 99). Bounded
+ * by the corpus: 75 pages and a handful of inline samples.
+ */
+const rendered = new Map<string, Promise<RenderedDoc>>();
+
 /** Renders a markdown doc with shiki highlighting, heading anchors, callouts and a TOC. */
-export async function renderMarkdown(markdown: string): Promise<RenderedDoc> {
+export function renderMarkdown(markdown: string): Promise<RenderedDoc> {
+  const cached = rendered.get(markdown) ?? render(markdown);
+
+  rendered.set(markdown, cached);
+
+  return cached;
+}
+
+async function render(markdown: string): Promise<RenderedDoc> {
   const highlighter = await getHighlighter();
   const toc: TocEntry[] = [];
   const md = new Marked();

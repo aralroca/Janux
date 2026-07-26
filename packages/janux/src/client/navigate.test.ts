@@ -2,7 +2,7 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
 import { component, intent, store } from '../define/factories';
 import { jsx } from '../jsx-runtime';
-import { int, list, schema, str, enums } from '../schema';
+import { bool, int, list, schema, str, enums } from '../schema';
 import { renderToString } from '../render/server';
 import { boot } from './boot';
 
@@ -333,5 +333,44 @@ describe('SPA navigation (streamed diff)', () => {
     document.addEventListener('janux:error', (event: any) => errors.push(event.detail));
     await client.navigate('/broken'); // resolves — the fallback owns the failure
     expect(errors.some((message) => /navigation fetch failed/.test(message))).toBe(true);
+  });
+
+  /**
+   * The page is already on screen by the time islands mount, so a mount that
+   * throws must not send the browser to fetch the same URL again: on a
+   * deterministic failure (a broken editor island, say) the reload mounts it,
+   * it throws, and the site refreshes forever — which is what janux.build's
+   * /playground did.
+   */
+  it('keeps the page when an island fails to mount, instead of reloading into the same failure', async () => {
+    const exploding = component({
+      name: 'exploding',
+      lifecycle: {
+        attach: () => {
+          throw new Error('mount exploded');
+        },
+      },
+      intents: {},
+      view: () => jsx('p', { children: 'boom' }),
+    });
+    const next = await pageHtml('Page B', jsx(exploding as any, { eager: true }));
+
+    document.write(await pageHtml('Page A', jsx('h1', { children: 'A' })));
+    document.close();
+    const client = boot({ defs: [exploding] });
+    const errors: string[] = [];
+    let hardNavigations = 0;
+
+    document.addEventListener('janux:error', (event: any) => errors.push(event.detail));
+    (globalThis as any).fetch = mock(async () => ({ ok: true, text: async () => next }));
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...location, get href() { return 'http://localhost/a'; }, set href(_value: string) { hardNavigations += 1; } },
+    });
+    await client.navigate('/b');
+
+    expect(hardNavigations).toBe(0);
+    expect(document.title).toBe('Page B');
+    expect(errors.some((message) => /mount exploded/.test(message))).toBe(true);
   });
 });

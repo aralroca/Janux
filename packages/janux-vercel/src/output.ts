@@ -32,11 +32,11 @@ handler.fetch = handler;
 export default handler;
 `;
 /**
- * Node's runtime identifier, with `bunVersion` in vercel.json deciding which
- * binary actually runs it — Bun's runtime is a deployment-wide setting on
- * Vercel, not a per-function one.
+ * A Build Output API function names its own runtime: `bunVersion` in
+ * vercel.json only reaches the functions Vercel builds itself, and a Node
+ * launcher would run this bundle without `Bun.file` existing.
  */
-const RUNTIME = 'nodejs22.x';
+const RUNTIME = 'bun1.x';
 
 export interface OutputOptions {
   /** Extra top-level directories the app reads at runtime (`content` for a docs site). */

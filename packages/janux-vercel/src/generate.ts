@@ -81,7 +81,7 @@ export function generateApp(root: string, app: JanuxAppConfig): string {
     ...imports,
     '',
     "/** The app root, from the bundle's own location: `.janux/server.js` → the app. */",
-    "const root = join(import.meta.dir, '..');",
+    "const root = join(import.meta.dirname, '..');",
     'const path = (file: string) => join(root, file);',
     '',
     'const app: VercelApp = {',

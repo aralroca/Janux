@@ -28,7 +28,7 @@ Two things, with different lifetimes. `vercel.json` is a **source file** — Ver
 ```
 
 - **`buildCommand`** builds the app, then the deployment. The flags you scaffolded with are baked in, so a deployment is one command with no arguments to remember.
-- **`bunVersion`** puts the deployment on Bun — the runtime Janux targets, so the server you tested locally is the server that runs.
+- **`bunVersion`** runs the *build* on Bun. The function names its own runtime (below) — `bunVersion` only reaches the functions Vercel builds for you.
 
 `.vercel/output` is the deployment itself, rebuilt on every build. Ignore it:
 
@@ -52,7 +52,21 @@ A [Build Output API](https://vercel.com/docs/build-output-api) directory — the
     └── content/                   # --include: whatever your app reads
 ```
 
-The alternative is letting the platform build `api/**` for you, which means letting it **trace** what your function needs. A traced function cannot leave a workspace: `node_modules/janux` is a symlink to `packages/janux`, outside the project, and packaging one fails the deployment outright — *"the framework produced an invalid deployment package for a Serverless Function. Typically this means that the framework produces files in symlinked directories."* Writing the output ourselves means nothing is traced: these bytes, that config.
+The function asks for Bun by name:
+
+```json title=".vercel/output/functions/index.func/.vc-config.json"
+{
+  "runtime": "bun1.x",
+  "handler": "index.js",
+  "launcherType": "Nodejs",
+  "supportsResponseStreaming": true,
+  "maxDuration": 60
+}
+```
+
+That is the line that matters most, and the one `bunVersion` cannot do for you: a Build Output API function picks its own runtime, and under a Node launcher this bundle would fail on its first `Bun.file`.
+
+The alternative — letting the platform build `api/**` for you — means letting it **trace** what your function needs. A traced function cannot leave a workspace: `node_modules/janux` is a symlink to `packages/janux`, outside the project, and packaging one fails the deployment outright — *"the framework produced an invalid deployment package for a Serverless Function. Typically this means that the framework produces files in symlinked directories."* Writing the output ourselves means nothing is traced: these bytes, that config.
 
 ## Why the app is bundled
 

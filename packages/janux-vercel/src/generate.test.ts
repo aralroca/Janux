@@ -39,7 +39,7 @@ describe('generateApp', () => {
   it('rebuilds paths from the running location, and never hardcodes the build root', async () => {
     const source = generateApp(APP, await resolveAppConfig(APP));
 
-    expect(source).toContain("const root = join(import.meta.dir, '..');");
+    expect(source).toContain("const root = join(import.meta.dirname, '..');");
     expect(source).toContain('routesDir: path("src/routes")');
     expect(source).not.toContain(APP);
   });
