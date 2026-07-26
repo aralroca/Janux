@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { join } from 'node:path';
+import { resolveAppConfig } from '@janux/vite/config';
 import { createHandler, vercelConfig } from './index';
 
 const APP = join(import.meta.dirname, '__fixtures__/app');
@@ -42,12 +43,26 @@ describe('vercelConfig', () => {
 });
 
 describe('createHandler', () => {
-  it('is the shape Vercel invokes: a default export with fetch', () => {
-    expect(typeof createHandler(APP).fetch).toBe('function');
+  /** What the generated module hands over: the app's modules, already imported. */
+  async function prebuilt() {
+    const config = await resolveAppConfig(APP);
+
+    return {
+      root: APP,
+      config,
+      modules: {
+        [join(APP, 'src/routes/index.tsx')]: await import(join(APP, 'src/routes/index.tsx')),
+        [join(APP, 'src/agent.ts')]: await import(join(APP, 'src/agent.ts')),
+      },
+    };
+  }
+
+  it('is the shape Vercel invokes: a default export with fetch', async () => {
+    expect(typeof createHandler(await prebuilt()).fetch).toBe('function');
   });
 
   it('serves the app, and boots it once for every request after the first', async () => {
-    const handler = createHandler(APP);
+    const handler = createHandler(await prebuilt());
     const [first, second] = await Promise.all([
       handler.fetch(new Request('https://janux.build/')),
       handler.fetch(new Request('https://janux.build/')),
@@ -59,7 +74,7 @@ describe('createHandler', () => {
   });
 
   it('answers a missing page with a 404 instead of throwing', async () => {
-    const response = await createHandler(APP).fetch(new Request('https://janux.build/nope'));
+    const response = await createHandler(await prebuilt()).fetch(new Request('https://janux.build/nope'));
 
     expect(response.status).toBe(404);
   });

@@ -1,9 +1,28 @@
 import { Marked } from 'marked';
-import { createHighlighter, type Highlighter } from 'shiki';
+import { createHighlighterCore, type HighlighterCore } from 'shiki/core';
+import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 import { codeBlock, lineTransformers, parseFence } from './code-block';
 
+/**
+ * Shiki, bundled by hand ("fine-grained", in its docs) rather than by name.
+ *
+ * `createHighlighter('typescript')` loads grammars through lazy imports and the
+ * Oniguruma WASM, which is fine while the app runs from `node_modules` and
+ * silently catastrophic once it is bundled for a serverless function: the
+ * imports resolve to nothing, the highlighter reports no languages, and every
+ * snippet on the site renders as plain text. Naming the grammars here means the
+ * bundler can see them, and the JS regex engine means there is no WASM to fetch.
+ */
 const THEMES = { light: 'github-light', dark: 'github-dark' } as const;
-const LANGS = ['typescript', 'tsx', 'bash', 'json', 'jsonc', 'css', 'html'];
+const LANGS = [
+  import('@shikijs/langs/typescript'),
+  import('@shikijs/langs/tsx'),
+  import('@shikijs/langs/bash'),
+  import('@shikijs/langs/json'),
+  import('@shikijs/langs/jsonc'),
+  import('@shikijs/langs/css'),
+  import('@shikijs/langs/html'),
+];
 
 /**
  * Two token colors in GitHub's themes don't clear 4.5:1 as body-sized code text,
@@ -17,10 +36,14 @@ const CONTRAST_FIXES = {
   'github-dark': { '#6a737d': '#8b949e' },
 } as const;
 
-let highlighterPromise: Promise<Highlighter> | undefined;
+let highlighterPromise: Promise<HighlighterCore> | undefined;
 
-function getHighlighter(): Promise<Highlighter> {
-  highlighterPromise ??= createHighlighter({ themes: Object.values(THEMES), langs: LANGS });
+function getHighlighter(): Promise<HighlighterCore> {
+  highlighterPromise ??= createHighlighterCore({
+    themes: [import('@shikijs/themes/github-light'), import('@shikijs/themes/github-dark')],
+    langs: LANGS,
+    engine: createJavaScriptRegexEngine(),
+  });
 
   return highlighterPromise;
 }

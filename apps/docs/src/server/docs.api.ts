@@ -5,7 +5,13 @@ import { schema, str, list } from 'janux';
 import { searchPages, type SearchPage } from '../search/score';
 import { slugify, stripMarkdown } from './markdown';
 
-const CONTENT_DIR = join(import.meta.dirname, '../../content');
+/**
+ * The pages are files on disk, so this has to hold wherever the module ends up.
+ * `import.meta.dirname` is this file's directory when Bun runs the source, and
+ * the *bundle's* directory once a deployment adapter has bundled the server —
+ * which is why one of them publishes the app root before importing the app.
+ */
+const CONTENT_DIR = join(process.env.JANUX_APP_ROOT ?? join(import.meta.dirname, '../..'), 'content');
 
 export interface SectionGroup {
   label?: string;
@@ -90,6 +96,7 @@ export const SECTIONS: SectionDef[] = [
           'monorepo-setup',
           'agent-evals-in-ci',
           'deploying',
+          'vercel',
           'docker',
           'external-mcp-clients',
           'local-model-copilot',

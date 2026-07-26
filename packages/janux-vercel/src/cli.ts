@@ -1,13 +1,11 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { resolveAppConfig } from '@janux/vite/config';
+import { BUNDLE_PATH, buildFunction } from './build';
 import { FUNCTION_PATH, vercelConfig, type VercelConfigOptions } from './index';
 
-/** The `api/index.ts` a server app deploys: the handler, and nothing else. */
-const FUNCTION_ENTRY = `import { createHandler } from '@janux/vercel';
-
-export default createHandler();
-`;
+/** The function Vercel invokes: the bundle, and nothing it has to resolve. */
+const FUNCTION_ENTRY = `export { default } from '../${BUNDLE_PATH}';\n`;
 
 export interface VercelArgs {
   include: string[];
@@ -34,22 +32,28 @@ export function vercelFiles(options: VercelConfigOptions): Record<string, string
   return { 'vercel.json': config, [FUNCTION_PATH]: FUNCTION_ENTRY };
 }
 
+const KB = 1024;
+
 /**
- * Writes them into the app. Both files are deployment sources, not build
- * output: Vercel reads `vercel.json` before it runs the build, and the function
- * entry has to exist for the runtime to find it — which is why this is a
- * command an app runs once and commits, not a step in `janux build`.
+ * `vercel.json` is a deployment *source* — Vercel reads it before it runs the
+ * build — so it is committed. The bundle under `.janux/` is build output, which
+ * is why this command runs inside the build command too. Running it again is
+ * always safe.
  */
 export async function runVercelInit(argv: string[], root: string): Promise<void> {
-  const { output } = await resolveAppConfig(root);
-  const files = vercelFiles({ output, ...parseVercelArgs(argv) });
+  const app = await resolveAppConfig(root);
+  const files = vercelFiles({ output: app.output, ...parseVercelArgs(argv) });
 
   for (const [path, contents] of Object.entries(files)) {
-    const target = join(root, path);
-    const existed = existsSync(target);
+    const existed = existsSync(join(root, path));
 
-    await Bun.write(target, contents);
+    await Bun.write(join(root, path), contents);
     console.log(`janux-vercel: ${existed ? 'updated' : 'wrote'} ${path}`);
   }
-  console.log(`janux-vercel: ready for \`vercel deploy\` (output: ${output}).`);
+  if (app.output !== 'static') {
+    const bytes = await buildFunction(root, app);
+
+    console.log(`janux-vercel: bundled ${BUNDLE_PATH} (${Math.round(bytes / KB)} KB)`);
+  }
+  console.log(`janux-vercel: ready for \`vercel deploy\` (output: ${app.output}).`);
 }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "bun run build",
+  "buildCommand": "bunx janux-vercel && bun run build",
   "outputDirectory": "dist/client",
   "bunVersion": "1.x",
   "functions": {

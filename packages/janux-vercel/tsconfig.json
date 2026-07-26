@@ -1,4 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*", "bin.ts"]
+  "include": [
+    "src/**/*",
+    "bin.ts"
+  ],
+  "exclude": [
+    "src/__fixtures__/app/api"
+  ]
 }

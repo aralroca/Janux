@@ -1,3 +1,1 @@
-import { createHandler } from '@janux/vercel';
-
-export default createHandler();
+export { default } from '../.janux/server.js';

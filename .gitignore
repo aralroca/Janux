@@ -16,4 +16,8 @@ test-results/
 playwright-report/
 lighthouse-reports/
 .vercel
+packages/janux-vercel/src/__fixtures__/app/api/
+packages/janux-vercel/src/__fixtures__/app/.janux/
+packages/janux-vercel/src/__fixtures__/app/vercel.json
+apps/docs/.janux/
 .env.local

@@ -128,6 +128,7 @@
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
         "@janux/tailwind": "workspace:*",
+        "@janux/vercel": "workspace:*",
         "@janux/vite": "workspace:*",
         "janux": "workspace:*",
       },
@@ -225,6 +226,7 @@
         "janux-vercel": "./bin.ts",
       },
       "dependencies": {
+        "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
         "@janux/vite": "workspace:*",

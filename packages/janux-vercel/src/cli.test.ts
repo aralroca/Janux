@@ -43,14 +43,16 @@ describe('runVercelInit', () => {
     expect(await Bun.file(join(root, 'api/index.ts')).exists()).toBe(false);
   });
 
-  it('defaults to a server app, function entry included', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'janux-vercel-'));
+  /** A server app gets the config, the entry, and the bundle that entry re-exports. */
+  it('bundles the function for a server app', async () => {
+    const app = join(import.meta.dirname, '__fixtures__/app');
 
-    await runVercelInit(['--include', 'content'], root);
-    const config = JSON.parse(readFileSync(join(root, 'vercel.json'), 'utf-8'));
+    await runVercelInit(['--include', 'content'], app);
+    const config = JSON.parse(readFileSync(join(app, 'vercel.json'), 'utf-8'));
 
     expect(config.bunVersion).toBe('1.x');
     expect(config.functions['api/index.ts'].includeFiles).toBe('{src,dist,content}/**');
-    expect(readFileSync(join(root, 'api/index.ts'), 'utf-8')).toContain('@janux/vercel');
+    expect(readFileSync(join(app, 'api/index.ts'), 'utf-8')).toBe("export { default } from '../.janux/server.js';\n");
+    expect(await Bun.file(join(app, '.janux/server.js')).exists()).toBe(true);
   });
 });

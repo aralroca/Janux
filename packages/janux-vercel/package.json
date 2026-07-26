@@ -36,6 +36,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@janux/agent": "workspace:*",
     "@janux/cli": "workspace:*",
     "@janux/server": "workspace:*",
     "@janux/vite": "workspace:*"

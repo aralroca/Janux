@@ -22,6 +22,19 @@ describe('code blocks', () => {
   const fence = (info: string) => `\`\`\`${info}\nconst a = 1;\n\nconst b = 2;\nconst c = 3;\n\`\`\``;
   const lines = (html: string) => [...html.matchAll(/<span class="line( highlighted)?"/g)].map(([, hit]) => Boolean(hit));
 
+  /**
+   * The grammars are bundled by hand precisely so this cannot silently stop
+   * working: loaded by name they resolve to nothing inside a bundled server, the
+   * highlighter reports no languages, and every snippet renders as plain text —
+   * a 200 with the words in the right order and no colour anywhere.
+   */
+  test('highlights with real grammars, not the plain-text fallback', async () => {
+    const { html } = await renderMarkdown(fence('ts'));
+
+    expect(html).toContain('--shiki-light:#D73A49');
+    expect(html).toContain('--shiki-dark:#F97583');
+  });
+
   test('a plain fence has no header and one copy button', async () => {
     const { html } = await renderMarkdown(fence('ts'));
 
