@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
 import { join } from 'node:path';
 import { createJanuxServer } from '../packages/janux-server/src/index';
-import { prodServerOptions } from '../packages/janux-cli/src/commands';
+import { prodServerOptions } from '../packages/janux-cli/src/prod';
 
 const APP_ROOT = join(import.meta.dir, '../examples/i18n');
 

@@ -93,12 +93,18 @@ const FOREIGN_PACKAGES = ['react', 'react-dom', 'react-dom/client'];
 
 /** The Janux Vite plugin: JSX runtime config, api() client stubs (SWC) and the SSR dev bridge. */
 export function janux(options: JanuxPluginOptions = {}): Plugin {
+  /** Where the app keeps its `*.api.ts` modules, learned in `config`. */
+  let serverDir = '';
+
   return {
     name: 'janux',
 
     async config(config) {
       const root = resolve(config.root ?? process.cwd());
-      const { clientEntry } = await resolveAppConfig(root, options);
+      const app = await resolveAppConfig(root, options);
+      const { clientEntry } = app;
+
+      serverDir = `${app.serverDir}/`;
 
       return {
         appType: 'custom',
@@ -122,8 +128,16 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       };
     },
 
+    /*
+     * An api module is one the *app* declared, which means one inside its server
+     * directory. Matching on the filename alone claimed files that were never
+     * ours: `monaco-editor/esm/vs/editor/editor.api.js` was projected into fetch
+     * stubs in every production build, so `monaco.languages` became an async
+     * function and the docs playground died on arrival with
+     * `languages.register is not a function`.
+     */
     transform(code, id, transformOptions) {
-      if (!/\.api\.[tj]s($|\?)/.test(id)) return undefined;
+      if (!id.startsWith(serverDir) || !/\.api\.[tj]s($|\?)/.test(id)) return undefined;
       if (transformOptions?.ssr) return undefined;
 
       return { code: apiStubModule(id, code), map: null };

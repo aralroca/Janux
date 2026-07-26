@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
 import { join } from 'node:path';
 import { createJanuxServer } from '../packages/janux-server/src/index';
-import { prodServerOptions } from '../packages/janux-cli/src/commands';
+import { prodServerOptions } from '../packages/janux-cli/src/prod';
 
 /**
  * The home page sells three things — WebMCP tools from `component()`, an MCP

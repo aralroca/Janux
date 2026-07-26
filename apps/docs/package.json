@@ -7,8 +7,9 @@
   "scripts": {
     "build:index": "bun scripts/build-search-index.ts",
     "dev": "bun run build:index && janux dev --port 4321",
-    "build": "bun run build:index && janux build",
-    "start": "janux start"
+    "build": "bun run build:index && janux build && bun run build:frame",
+    "start": "janux start",
+    "build:frame": "bunx vite build --config vite.frame.config.ts"
   },
   "dependencies": {
     "@aralroca/gui-agent": "^0.5.0",
