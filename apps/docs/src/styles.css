@@ -1536,6 +1536,13 @@ body[data-theme='dark'] .scores-video {
   background: #ffffff; /* the sandboxed iframe below is always light */
 }
 
+/* Monaco's own line-number grey is #bbbcbd — 1.9:1 on its white background, and
+   eighteen contrast failures in one audit. `--muted` is the site's dimmest text
+   colour that still clears AA on every surface it lands on (palette.test.ts). */
+.monaco-editor .line-numbers {
+  color: var(--muted) !important;
+}
+
 .pg-loading {
   position: absolute;
   inset: 0;

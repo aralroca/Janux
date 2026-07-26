@@ -45,7 +45,14 @@ export const PlaygroundShell = component({
               ⛶
             </button>
           </div>
-          <div class="editor-host" id="pg-editor"></div>
+          <div class="editor-host" id="pg-editor">
+            {/* Monaco is ~3 MB and arrives when it arrives. Until then this is
+                what the pane shows, rather than a blank rectangle or a
+                half-laid-out editor. */}
+            <div class="pg-loading on" id="pg-editor-loading">
+              <span class="pg-spinner"></span> Loading the editor…
+            </div>
+          </div>
         </div>
         <div class="preview-pane">
           <div class="pane-head browser-chrome">

@@ -2,6 +2,7 @@ import { Marked } from 'marked';
 import { createHighlighterCore, type HighlighterCore } from 'shiki/core';
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 import { codeBlock, lineTransformers, parseFence } from './code-block';
+import { CONTRAST_FIXES } from '../theme-contrast';
 
 /**
  * Shiki, bundled by hand ("fine-grained", in its docs) rather than by name.
@@ -24,17 +25,6 @@ const LANGS = [
   import('@shikijs/langs/html'),
 ];
 
-/**
- * Two token colors in GitHub's themes don't clear 4.5:1 as body-sized code text,
- * measured against both the block background and the page's: the light orange
- * (3.49 on white — it lands on `state`, `input`, `intents`) and the dark comment
- * grey (3.05 on the page background). Darkened/lightened in place, same hue, so
- * the themes still read as GitHub's.
- */
-const CONTRAST_FIXES = {
-  'github-light': { '#e36209': '#bd4b00' },
-  'github-dark': { '#6a737d': '#8b949e' },
-} as const;
 
 let highlighterPromise: Promise<HighlighterCore> | undefined;
 
@@ -71,7 +61,7 @@ function base64url(text: string): string {
   return Buffer.from(text).toString('base64url');
 }
 
-function codeRenderer(highlighter: Highlighter) {
+function codeRenderer(highlighter: HighlighterCore) {
   return ({ text, lang }: { text: string; lang?: string }): string => {
     const fence = parseFence(lang);
     const known = highlighter.getLoadedLanguages().includes(fence.language) ? fence.language : 'text';

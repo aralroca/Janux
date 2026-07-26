@@ -1,4 +1,5 @@
 import { JANUX_DTS } from './janux-types';
+import { withContrastFixes } from '../theme-contrast';
 
 /**
  * Shiki's real TSX TextMate grammar, registered under the id `typescript` so
@@ -16,8 +17,12 @@ async function installTsxHighlighting(monaco: any): Promise<void> {
   const langs = tsxLangs.default.map((grammar: any) =>
     grammar.name === 'tsx' ? { ...grammar, name: 'typescript', aliases: [] } : grammar,
   );
+  const [light, dark] = await Promise.all([
+    import('@shikijs/themes/github-light'),
+    import('@shikijs/themes/github-dark'),
+  ]);
   const highlighter = await createHighlighterCore({
-    themes: [import('@shikijs/themes/github-light'), import('@shikijs/themes/github-dark')],
+    themes: [withContrastFixes(light.default as any, 'github-light'), withContrastFixes(dark.default as any, 'github-dark')],
     langs,
     engine: createOnigurumaEngine(import('shiki/wasm')),
   });

@@ -25,7 +25,7 @@ import { join } from 'node:path';
 const APP_DIR = 'apps/docs';
 const PORT = 4322;
 /** One of each kind of page: the marketing home, a docs page, the editor. */
-const PAGES: { path: string; performance?: number }[] = [
+const PAGES: { path: string; performance?: number; bars?: Record<string, number> }[] = [
   /*
    * The home page is 85 KB of server-rendered HTML, and `janux start` ships it
    * as-is: no compression, no cache headers — that is a CDN's job, and in
@@ -36,14 +36,20 @@ const PAGES: { path: string; performance?: number }[] = [
   { path: '/', performance: 0.95 },
   { path: '/docs/getting-started/what-is-janux' },
   /*
-   * The playground ships Monaco — ~760 KB of script for a page whose whole point
-   * is being a code editor. Its paint metrics measure the editor, not the
-   * framework, and they swing hard between runs (100 / 74 / 74 on the same build).
-   * The four markup categories are still asserted at 100; this bar only catches a
-   * real collapse. Worth revisiting: Monaco currently fails to initialise in the
-   * production build, so today those bytes buy nothing.
+   * The playground ships Monaco — 3.3 MB of script for a page whose whole point
+   * is being a code editor — so its paint metrics measure the editor, not the
+   * framework. The bars here only catch a real collapse, and they are honest
+   * about one thing the old ones were not: they were set while Monaco failed to
+   * initialise, i.e. against a page that never loaded its editor at all.
+   *
+   * `best-practices` is 0.85 for two audits neither the app nor the framework
+   * owns: Monaco's hidden textarea trips `paste-preventing-inputs` (it
+   * implements paste itself), and `valid-source-maps` wants maps for a
+   * production build — `janux build` overrides the app's `build` options, so an
+   * app cannot ask for them yet. Accessibility, SEO and agentic-browsing stay at
+   * 100, editor and all.
    */
-  { path: '/playground', performance: 0.7 },
+  { path: '/playground', performance: 0.55, bars: { 'best-practices': 0.85 } },
 ];
 const THRESHOLDS: Record<string, number> = {
   performance: 0.99,
@@ -158,7 +164,7 @@ try {
   console.log(`\nlighthouse: ${PAGES.length} pages × ${runs} run(s), median, mobile, light scheme\n`);
 
   for (const page of PAGES) {
-    const thresholds = { ...THRESHOLDS, ...(page.performance ? { performance: page.performance } : {}) };
+    const thresholds = { ...THRESHOLDS, ...(page.performance ? { performance: page.performance } : {}), ...page.bars };
 
     failures.push(...report(page.path, await medianScores(page.path), thresholds));
   }

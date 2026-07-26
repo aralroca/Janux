@@ -49,6 +49,9 @@ export function createFrame(
   // examples fire their (preventDefaulted) submit events. The sandbox here
   // isolates crashes, not the user from their own code — same as any REPL.
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
+  // Named: an unnamed frame is a hole in the accessibility tree, for a screen
+  // reader and for an agent reading the page.
+  iframe.title = 'Preview of the code in the editor';
   iframe.srcdoc = SRCDOC;
   container.appendChild(iframe);
   window.addEventListener('message', relay);

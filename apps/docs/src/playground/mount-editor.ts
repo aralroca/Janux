@@ -71,11 +71,19 @@ function debounce(fn: () => void, ms: number): () => void {
  */
 async function openEditor(host: HTMLElement, initial: string, error: HTMLElement): Promise<any> {
   try {
-    return await createEditor(host, initial);
+    const editor = await createEditor(host, initial);
+
+    // Created inside a pane whose size the browser may not have settled yet: one
+    // explicit layout after the fact, so the first paint is never half-measured.
+    requestAnimationFrame(() => editor.layout());
+
+    return editor;
   } catch (cause) {
     showError(error, `The editor failed to load: ${cause}`);
 
     return undefined;
+  } finally {
+    document.getElementById('pg-editor-loading')?.remove();
   }
 }
 

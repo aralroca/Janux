@@ -63,11 +63,19 @@ async function awaitTracked(mount: MountContext, work: Promise<unknown>): Promis
 
 let nativeClickAt = 0;
 
-function shouldIntercept(event: any): boolean {
+export function shouldIntercept(event: any): boolean {
   if (!event.canIntercept || event.hashChange || event.downloadRequest || event.formData) return false;
   const destination = new URL(event.destination.url);
 
   if (destination.origin !== location.origin) return false;
+  /*
+   * The page we are already on. Diffing it against itself is not free: islands
+   * are torn down and re-mounted against DOM the diff has just replaced, which
+   * is how clicking "Playground" while on /playground emptied the editor. A
+   * router has nothing to do here; `client.navigate()` still re-navigates
+   * deliberately, because it does not come through this path.
+   */
+  if (destination.href === location.href) return false;
   // Query-only changes on the same path are shallow: islands read the query
   // reactively (urlState), so a filter/tab/dialog change never re-renders the
   // page. Cross-path navigations still get the SPA diff.

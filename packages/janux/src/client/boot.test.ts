@@ -4,7 +4,7 @@ import { component, intent, source, store } from '../define/factories';
 import { jsx } from '../jsx-runtime';
 import { int, list, schema, str } from '../schema';
 import { renderToString } from '../render/server';
-import { boot, type JanuxClient } from './boot';
+import { boot, shouldIntercept, type JanuxClient } from './boot';
 
 beforeAll(() => GlobalRegistrator.register());
 afterAll(() => GlobalRegistrator.unregister());
@@ -470,5 +470,40 @@ describe('client boot (resume without hydration)', () => {
 
     expect(manifest.tools.map((t) => t.name)).toContain('counter.inc');
     expect(manifest.resources.map((r) => r.uri)).toContain('ui://counter');
+  });
+});
+
+/**
+ * Which clicks the router takes over. The identical-URL case is the one that
+ * broke a page: clicking the current page's own link re-diffed it, tearing
+ * islands down and re-mounting them against DOM that had just been replaced —
+ * /playground came back with an empty editor and an empty example list.
+ */
+describe('shouldIntercept', () => {
+  const HERE = 'http://localhost:3000/playground';
+  const navigateEvent = (url: string, extra: Record<string, unknown> = {}) => ({
+    canIntercept: true,
+    hashChange: false,
+    downloadRequest: null,
+    formData: null,
+    destination: { url },
+    ...extra,
+  });
+
+  beforeAll(() => {
+    Object.defineProperty(window, 'location', { configurable: true, value: new URL(HERE) });
+  });
+
+  it('takes over a link to another page', () => {
+    expect(shouldIntercept(navigateEvent('http://localhost:3000/docs'))).toBe(true);
+  });
+
+  it('leaves the page we are already on alone', () => {
+    expect(shouldIntercept(navigateEvent(HERE))).toBe(false);
+  });
+
+  it('still leaves query-only changes and other origins to the app', () => {
+    expect(shouldIntercept(navigateEvent(`${HERE}?tab=two`))).toBe(false);
+    expect(shouldIntercept(navigateEvent('https://example.com/'))).toBe(false);
   });
 });

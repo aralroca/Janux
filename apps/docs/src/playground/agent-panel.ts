@@ -20,6 +20,8 @@ function toolRow(tool: any, onCall: CallFn): HTMLElement {
   const button = document.createElement('button');
 
   inputBox.rows = 2;
+  // A field an agent (or a screen reader) can name, not an anonymous textarea.
+  inputBox.setAttribute('aria-label', `Input for ${tool.name}`);
   inputBox.value = tool.input ? JSON.stringify(exampleInput(tool.input), null, 0) : '{}';
   button.textContent = 'Call as agent';
   button.addEventListener('click', () => {
