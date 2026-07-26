@@ -28,14 +28,31 @@ async function viteOptions(root: string): Promise<Record<string, unknown>> {
   };
 }
 
+/**
+ * Everything `janux dev` serves beyond the app itself. The MCP endpoint is on
+ * the list because it is the URL you hand to an external client, and a URL
+ * nobody prints is a URL nobody uses.
+ */
+const DEV_ENDPOINTS = [
+  ['app', '/'],
+  ['manifest', '/_janux/manifest'],
+  ['agent', '/_janux/agent'],
+  ['mcp', '/_janux/mcp'],
+] as const;
+
+/** The endpoint list, URLs aligned in one column. */
+export function devBanner(port: number): string {
+  const label = Math.max(...DEV_ENDPOINTS.map(([name]) => name.length)) + 1;
+
+  return DEV_ENDPOINTS.map(([name, path]) => `  → ${`${name}:`.padEnd(label)} http://localhost:${port}${path}`).join('\n');
+}
+
 export async function dev({ root, port }: CliCommand): Promise<void> {
   const { createServer } = await import('vite');
   const server = await createServer({ ...(await viteOptions(root)), server: { port } });
 
   await server.listen();
-  console.log(`\n  janux dev ready\n  → app:      http://localhost:${port}/`);
-  console.log(`  → manifest: http://localhost:${port}/_janux/manifest`);
-  console.log(`  → agent:    http://localhost:${port}/_janux/agent\n`);
+  console.log(`\n  janux dev ready\n${devBanner(port)}\n`);
 }
 
 /**

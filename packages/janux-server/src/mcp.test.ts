@@ -83,6 +83,41 @@ describe('hosted MCP endpoint (/_janux/mcp)', () => {
     expect(ok.status).toBe(200);
   });
 
+  it('405s a GET from an MCP client, which asks for JSON and event streams', async () => {
+    const res = await server().fetch(
+      new Request('http://x/_janux/mcp', { headers: { accept: 'application/json, text/event-stream' } }),
+    );
+
+    expect(res.status).toBe(405);
+    expect(res.headers.get('allow')).toBe('POST');
+  });
+
+  /** The dev banner prints this URL, so clicking it must explain itself rather than error. */
+  it('answers a browser GET with the connect instructions and the tool list', async () => {
+    const res = await server().fetch(new Request('http://x/_janux/mcp', { headers: { accept: 'text/html' } }));
+    const html = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    expect(html).toContain('claude mcp add --transport http demo http://x/_janux/mcp');
+    expect(html).toContain('demo.greet');
+    expect(html).toContain('Greet a person');
+  });
+
+  /** The visitor's actual confusion: that a browsable URL means it stopped being JSON-RPC. */
+  it('explains that POST is the protocol and GET is why they are seeing a page', async () => {
+    const res = await server().fetch(new Request('http://x/_janux/mcp', { headers: { accept: 'text/html' } }));
+    const html = await res.text();
+
+    expect(html).toContain('JSON-RPC 2.0 in, JSON-RPC 2.0 out');
+    expect(html).toContain('<code>POST</code>');
+    expect(html).toContain('<code>GET</code>');
+    expect(html).toContain('405');
+    // A copy-pasteable proof, so nobody has to take the page's word for it.
+    expect(html).toContain(`curl -s http://x/_janux/mcp`);
+    expect(html).toContain('"method":"tools/list"');
+  });
+
   it('serves the .md projection of a page', async () => {
     const res = await server().fetch(new Request('http://x/.md'));
     const alt = await server().fetch(new Request('http://x/index.md'));
