@@ -54,8 +54,8 @@ export const Counter = component({
       <h1 class="text-6xl font-extrabold tracking-tight">{state.count}</h1>
       <div class="flex gap-3">
         <button on={intents.inc}
-          class="rounded-xl bg-violet-600 px-6 py-2.5 font-bold text-white
-                 shadow-lg shadow-violet-600/30 hover:bg-violet-700">
+          class="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white
+                 shadow-lg shadow-blue-600/30 hover:bg-blue-700">
           +1
         </button>
         <button on={intents.reset}
@@ -67,6 +67,56 @@ export const Counter = component({
     </section>
   ),
 });`;
+
+/* These two sit side by side in half the page, which is ~56 monospace columns.
+   Every line stays under that — a marketing snippet you have to scroll
+   sideways is a snippet nobody reads. The imports live in the captions. */
+const WEBMCP_CODE = `export const Cart = component({
+  name: 'cart',
+  state: schema({ items: list({ sku: str() }) }),
+  intents: {
+    add: intent({
+      description: 'Add a product to the cart',
+      input: schema({ sku: str() }),
+      run: ({ state, input }) => state.items.push(input),
+    }),
+  },
+  view: ({ state }) => <b>{state.items.length}</b>,
+});`;
+
+const API_CODE = `export const refund = api({
+  description: 'Refund an order. Irreversible.',
+  input: schema({ orderId: str(), amount: money() }),
+  guard: 'confirm',
+  run: ({ input }) => payments.refund(input),
+});`;
+
+const INTEROP_CODE = `import { foreign } from 'janux/interop';
+import { ReactFlow } from '@xyflow/react';
+
+const Flow = foreign(ReactFlow, {
+  props: (own) => ({ nodes: own.state.nodes }),
+  on: { onNodeDrag: 'moveNode' },
+  hydrate: 'visible',
+});`;
+
+/** The hero's install pill, reused verbatim by the MCP section. */
+function CommandPill({ command }: { command: string }) {
+  return (
+    <div class="code-block install-block">
+      <pre class="install">{command}</pre>
+      <button class="copy-code" type="button" aria-label="Copy command">
+        <svg class="ic-copy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="9" width="13" height="13" rx="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+        <svg class="ic-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      </button>
+    </div>
+  );
+}
 
 const sampleDef = component({
   name: 'counter',
@@ -97,6 +147,9 @@ export default async function Home() {
   const manifestJson = await renderMarkdown(
     '```json\n' + JSON.stringify({ resources: manifest.resources.map((r) => r.uri), tools: manifest.tools }, null, 2) + '\n```',
   );
+  const webmcpCode = await renderMarkdown('```tsx\n' + WEBMCP_CODE + '\n```');
+  const apiCode = await renderMarkdown('```ts\n' + API_CODE + '\n```');
+  const interopCode = await renderMarkdown('```tsx\n' + INTEROP_CODE + '\n```');
 
   return (
     <Layout current="/" sidebar={false}>
@@ -124,18 +177,7 @@ export default async function Home() {
               GitHub
             </a>
           </div>
-          <div class="code-block install-block">
-            <pre class="install">bun create janux my-app</pre>
-            <button class="copy-code" type="button" aria-label="Copy command">
-              <svg class="ic-copy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="9" y="9" width="13" height="13" rx="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
-              <svg class="ic-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            </button>
-          </div>
+          <CommandPill command="bun create janux my-app" />
         </section>
 
         <section class="demo">
@@ -248,6 +290,75 @@ export default async function Home() {
               <p>{body}</p>
             </div>
           ))}
+        </section>
+
+        <section class="pitch surfaces">
+          <h2 class="pitch-title">
+            Ship <span class="gradient">WebMCP</span> tools and an{' '}
+            <span class="gradient">MCP&nbsp;server</span>. Same code.
+          </h2>
+          <p class="pitch-lede">
+            Two agent surfaces, no integration work: one comes out of your components, the other out
+            of your server functions. You define neither.
+          </p>
+          <div class="faces-grid">
+            <div>
+              <p class="face-label">🌐 WebMCP — tools in the browser</p>
+              <div class="pitch-code" dangerHTML={webmcpCode.html} />
+              <p class="code-caption">
+                <code>component</code>, <code>intent</code> and <code>schema</code> come from{' '}
+                <code>janux</code>. Every intent is registered with{' '}
+                <code>document.modelContext</code> the moment the island mounts, so Chrome's agent
+                and the DevTools WebMCP panel see it — and the button a human clicks runs that same
+                code.
+              </p>
+            </div>
+            <div>
+              <p class="face-label">🔌 MCP server — tools over HTTP</p>
+              <div class="pitch-code" dangerHTML={apiCode.html} />
+              <p class="code-caption">
+                <code>api</code> comes from <code>@janux/server</code>. One definition is a
+                validated endpoint, a ~100-byte client stub <em>and</em> a tool on your app's MCP
+                server at <code>/_janux/mcp</code> — where <code>guard: 'confirm'</code> reaches
+                clients as <code>annotations.requiresApproval</code>.
+              </p>
+            </div>
+          </div>
+          <p class="pitch-note">Pointing Claude at it takes a URL, not an integration project:</p>
+          <CommandPill command="claude mcp add --transport http my-app https://your.app/_janux/mcp" />
+          <p class="pitch-links">
+            <a href="/docs/guide/agent-and-copilot">Agent &amp; copilot →</a>
+            <a href="/docs/recipes/debugging-webmcp">Debugging WebMCP →</a>
+            <a href="/docs/guide/api-rpc">api() reference →</a>
+            <a href="/docs/recipes/external-mcp-clients">External MCP clients →</a>
+          </p>
+        </section>
+
+        <section class="pitch split">
+          <div dangerHTML={interopCode.html} />
+          <div class="pitch-copy">
+            <h2 class="pitch-title">
+              Better than React. Still runs the{' '}
+              <span class="gradient">React&nbsp;ecosystem</span>.
+            </h2>
+            <p class="pitch-lede">
+              You shouldn't have to choose between a better model and the libraries you already
+              depend on. <code>foreign()</code> mounts any React component{' '}
+              <strong>unchanged</strong> — in a real embedded React root, inside a Janux view. React
+              Flow, data grids, animation libraries, PDF viewers: they keep working.
+            </p>
+            <p class="code-caption">
+              Wrap it once in a bifacial shell and the opaque widget becomes agent-drivable too. And{' '}
+              <code>react</code> stays an optional peer:{' '}
+              <strong>an app with no foreign island ships zero React</strong>.
+            </p>
+            <p class="pitch-links">
+              <a href="/docs/guide/interop">Interop guide →</a>
+              <a href="https://github.com/aralroca/Janux/tree/main/examples/interop-react">
+                examples/interop-react →
+              </a>
+            </p>
+          </div>
         </section>
 
         <footer class="home-footer">

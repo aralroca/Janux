@@ -9,7 +9,9 @@ import { describe, expect, test } from 'bun:test';
  *
  * It exists because two of these pairs shipped broken: `--muted` was 3.23:1 on
  * white, and 4.16:1 on the dark soft surface — the second one no audited page
- * happened to exercise.
+ * happened to exercise. `--accent` is in here for the same reason: it is link
+ * text, and it lands on the soft surfaces too (blockquotes, table headers, the
+ * active sidebar item, the search result under the cursor).
  */
 
 const CSS = readFileSync(new URL('./styles.css', import.meta.url), 'utf8');
@@ -40,8 +42,8 @@ function contrast(a: string, b: string): number {
   return (lighter! + 0.05) / (darker! + 0.05);
 }
 
-const SURFACES = ['bg', 'bg-soft'] as const;
-const TEXT_TOKENS = ['text', 'heading', 'muted'] as const;
+const SURFACES = ['bg', 'bg-soft', 'accent-soft'] as const;
+const TEXT_TOKENS = ['text', 'heading', 'muted', 'accent'] as const;
 /** Position is the index: `token()` returns each pair in scheme order. */
 const SCHEMES = ['light', 'dark'] as const;
 
