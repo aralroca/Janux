@@ -69,21 +69,33 @@ function debounce(fn: () => void, ms: number): () => void {
  * pane that owns it — an island that throws while mounting used to take the
  * whole page down with it, and the page it took down was this one.
  */
+/**
+ * Monaco measures text to lay itself out, so it has to be measured *after* the
+ * font it will measure with has loaded and while the pane already has its size —
+ * otherwise the first frame is the one that shipped: lines clipped mid-token,
+ * scrolled sideways, snapping into place a moment later. The cover comes off
+ * once, after that layout.
+ */
+async function reveal(editor: any): Promise<void> {
+  await document.fonts?.ready;
+  editor.layout();
+  editor.setScrollPosition({ scrollLeft: 0, scrollTop: 0 });
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  document.getElementById('pg-editor-cover')?.remove();
+}
+
 async function openEditor(host: HTMLElement, initial: string, error: HTMLElement): Promise<any> {
   try {
     const editor = await createEditor(host, initial);
 
-    // Created inside a pane whose size the browser may not have settled yet: one
-    // explicit layout after the fact, so the first paint is never half-measured.
-    requestAnimationFrame(() => editor.layout());
+    await reveal(editor);
 
     return editor;
   } catch (cause) {
     showError(error, `The editor failed to load: ${cause}`);
+    document.getElementById('pg-editor-cover')?.remove();
 
     return undefined;
-  } finally {
-    document.getElementById('pg-editor-loading')?.remove();
   }
 }
 

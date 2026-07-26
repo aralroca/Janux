@@ -46,10 +46,11 @@ export const PlaygroundShell = component({
             </button>
           </div>
           <div class="editor-host" id="pg-editor">
-            {/* Monaco is ~3 MB and arrives when it arrives. Until then this is
-                what the pane shows, rather than a blank rectangle or a
-                half-laid-out editor. */}
-            <div class="pg-loading on" id="pg-editor-loading">
+            {/* Monaco is 3 MB and arrives when it arrives — on a slow connection,
+                seconds after this HTML. The cover stays over the pane until the
+                editor has measured itself, so what a visitor sees is a spinner
+                and then an editor, never an editor mid-measurement. */}
+            <div class="pg-cover" id="pg-editor-cover">
               <span class="pg-spinner"></span> Loading the editor…
             </div>
           </div>

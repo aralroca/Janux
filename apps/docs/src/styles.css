@@ -1416,8 +1416,27 @@ body[data-theme='dark'] .scores-video {
 }
 
 .editor-host {
+  position: relative; /* the loading cover below is absolute against this pane */
   flex: 1;
   min-height: 0;
+}
+
+/* Opaque, and in the page's own colours: it hides Monaco until Monaco has
+   measured itself, so nobody watches the first frame of a 3 MB editor
+   arranging its glyphs. (The preview's overlay is translucent white on
+   purpose — that pane is always light.) */
+.pg-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* CodeSandbox-style pane chrome: a file tab over the editor, a mini browser
