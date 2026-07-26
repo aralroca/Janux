@@ -14,7 +14,8 @@
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./config": "./src/app-config.ts"
   },
   "dependencies": {
     "@swc/core": "^1.9.0",

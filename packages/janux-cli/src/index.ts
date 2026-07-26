@@ -5,7 +5,7 @@ import { evalCommand } from './eval';
 
 export { parseArgs, HELP_TEXT } from './args';
 /** The ServerOptions `janux start` builds from an app's conventions — for custom servers. */
-export { prodServerOptions } from './commands';
+export { prodServerOptions } from './prod';
 
 export async function runCli(argv: string[]): Promise<void> {
   const parsed = parseArgs(argv, process.cwd());

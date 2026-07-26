@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ServerOptions } from '@janux/server';
 import type { JanuxConfig, JanuxOutput } from 'janux';
@@ -103,4 +103,9 @@ export function apiFiles(serverDir: string): string[] {
   return readdirSync(serverDir)
     .filter((entry) => /\.api\.[tj]s$/.test(entry))
     .map((entry) => join(serverDir, entry));
+}
+
+/** `src/server/shop.api.ts` → `shop`: the prefix its exports get as tools. */
+export function apiModuleName(filePath: string): string {
+  return basename(filePath).replace(/\.api\.[tj]s$/, '');
 }

@@ -1,6 +1,6 @@
 import { createFsRouter, createJanuxServer } from '@janux/server';
 import type { ManifestTool } from 'janux/manifest';
-import { prodServerOptions } from './commands';
+import { prodServerOptions } from './prod';
 import type { CliCommand } from './args';
 
 export interface VerifyFinding {
