@@ -5,6 +5,7 @@ import { jsx } from '../jsx-runtime';
 import { bool, int, list, schema, str, enums } from '../schema';
 import { renderToString } from '../render/server';
 import { boot } from './boot';
+import { closeStrandedModals } from './navigate';
 
 beforeAll(() => GlobalRegistrator.register({ url: 'http://localhost:3000/' }));
 afterAll(() => GlobalRegistrator.unregister());
@@ -394,3 +395,52 @@ describe('SPA navigation (streamed diff)', () => {
   });
 });
 
+
+describe('modal dialogs across a navigation', () => {
+  /**
+   * `:modal` is the browser's own top-layer bookkeeping, and no DOM
+   * implementation outside a real engine tracks it — the state under test is a
+   * dialog the engine still considers modal, so the test says so directly.
+   */
+  function openModal(inTopLayer = true): { dialog: HTMLDialogElement; closes: () => number } {
+    const dialog = document.createElement('dialog') as HTMLDialogElement;
+    let closed = 0;
+
+    dialog.setAttribute('open', '');
+    dialog.addEventListener('close', () => (closed += 1));
+    if (inTopLayer) dialog.matches = (selector: string) => selector === ':modal';
+    document.body.replaceChildren(dialog);
+
+    return { dialog, closes: () => closed };
+  }
+
+  it('closes a modal the diff stripped `open` from, so the page is not left inert', () => {
+    const { dialog, closes } = openModal();
+
+    // What the whole-document diff does when the incoming page has it closed.
+    dialog.removeAttribute('open');
+    closeStrandedModals();
+
+    expect(closes()).toBe(1);
+    expect(dialog.hasAttribute('open')).toBe(false);
+  });
+
+  it('leaves a modal the incoming page still has open alone', () => {
+    const { dialog, closes } = openModal();
+
+    closeStrandedModals();
+
+    expect(closes()).toBe(0);
+    expect(dialog.hasAttribute('open')).toBe(true);
+  });
+
+  it('leaves a dialog that was never modal alone', () => {
+    const { dialog, closes } = openModal(false);
+
+    dialog.removeAttribute('open');
+    closeStrandedModals();
+
+    expect(closes()).toBe(0);
+    expect(dialog.hasAttribute('open')).toBe(false);
+  });
+});

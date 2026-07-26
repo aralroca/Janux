@@ -157,6 +157,48 @@ async function fetchPage(url: string, signal?: AbortSignal): Promise<ReadableStr
   return response.body;
 }
 
+/**
+ * A `<dialog>` the diff left in the top layer with no `open` attribute.
+ *
+ * `showModal()` makes the rest of the document inert, and the browser tracks that
+ * in the top layer, not in the attribute — so when the diff syncs attributes and
+ * strips `open`, the page stays inert with nothing to click, and `close()` no
+ * longer helps: its first step reads the attribute it just lost. Restoring the
+ * attribute and closing releases the top layer and fires `close`, so the app hears
+ * about it. Reported as "no link works after searching".
+ */
+function isStrandedModal(dialog: Element): boolean {
+  try {
+    return dialog.matches(':modal') && !dialog.hasAttribute('open');
+  } catch {
+    return false; // `:modal` is not everywhere yet (happy-dom, older engines).
+  }
+}
+
+export function closeStrandedModals(): void {
+  document.querySelectorAll('dialog').forEach((dialog) => {
+    if (!isStrandedModal(dialog)) return;
+    dialog.setAttribute('open', '');
+    (dialog as HTMLDialogElement).close();
+  });
+}
+
+/**
+ * Watches for one appearing, so an inert page is a frame long rather than the
+ * rest of the navigation: a modal opened while the page streams in is stripped by
+ * the diff the moment it reaches that part of the document.
+ */
+function keepModalsHonest(): () => void {
+  const observer = new MutationObserver(closeStrandedModals);
+
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['open'], subtree: true });
+
+  return () => {
+    closeStrandedModals();
+    observer.disconnect();
+  };
+}
+
 /** Marks a runtime-injected body node the whole-document diff must not own. */
 export const KEEP_ATTRIBUTE = 'data-janux-keep';
 
@@ -224,6 +266,7 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
   const stopRunningScripts = runScriptsWhileStreaming();
   const restoreStyles = keepRuntimeStyles();
   const restoreRuntimeNodes = keepRuntimeNodes();
+  const stopWatchingModals = keepModalsHonest();
 
   try {
     throwIfAborted(signal);
@@ -246,6 +289,7 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
     stopRestoring();
     restoreStyles();
     restoreRuntimeNodes();
+    stopWatchingModals();
   }
 }
 
