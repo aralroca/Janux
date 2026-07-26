@@ -1,8 +1,10 @@
 /**
  * The docs site's Lighthouse gate.
  *
- * Serves the built export the way a production host does (scripts/serve-dist.ts)
- * and audits a representative page of each kind. Accessibility, best practices
+ * Runs the docs app the way production runs it — `janux start`, the Bun server
+ * the site deploys as — and audits a representative page of each kind.
+ * (`--dist` audits a prerendered export through scripts/serve-dist.ts instead,
+ * which is what a static app deploys.) Accessibility, best practices
  * and SEO are asserted at a flat 100: they measure the markup, so anything less
  * is a defect, not weather. Performance is asserted just under, because its
  * score is a function of the machine — a CI runner is slower and noisier than a
@@ -14,13 +16,13 @@
  *   bun scripts/lighthouse.ts                       # gate
  *   bun scripts/lighthouse.ts --runs 1              # quick local check
  *   bun scripts/lighthouse.ts --reports ./lh-out    # keep the JSON
- *   bun scripts/lighthouse.ts --dist path/to/dist   # audit another export
+ *   bun scripts/lighthouse.ts --dist path/to/dist   # audit a static export instead
  */
 import { mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const DEFAULT_DIST = 'apps/docs/dist/client';
+const APP_DIR = 'apps/docs';
 const PORT = 4322;
 /** One of each kind of page: the marketing home, a docs page, the editor. */
 const PAGES: { path: string; performance?: number }[] = [
@@ -66,10 +68,17 @@ function flag(name: string): string | undefined {
 }
 
 const runs = Number(flag('--runs') ?? 3);
-const dist = flag('--dist') ?? DEFAULT_DIST;
+const dist = flag('--dist');
 const reportDir = flag('--reports') ?? mkdtempSync(join(tmpdir(), 'janux-lh-'));
 
 mkdirSync(reportDir, { recursive: true });
+
+/** The app's own production server, unless a static export was named. */
+function serverCommand(): string[] {
+  if (dist) return ['bun', 'scripts/serve-dist.ts', dist, String(PORT)];
+
+  return ['bun', '../../packages/janux-cli/bin.ts', 'start', '--port', String(PORT)];
+}
 
 async function waitForServer(url: string): Promise<void> {
   for (let attempt = 0; attempt < 50; attempt += 1) {
@@ -78,7 +87,7 @@ async function waitForServer(url: string): Promise<void> {
     if (reached) return;
     await Bun.sleep(200);
   }
-  throw new Error(`serve-dist never came up on ${url}`);
+  throw new Error(`the docs server never came up on ${url}`);
 }
 
 /** One audit, returning the category scores of that run. */
@@ -131,7 +140,7 @@ function report(url: string, scores: Record<string, number>, thresholds: Record<
   return cells.map(({ failure }) => failure).filter((failure): failure is string => failure !== undefined);
 }
 
-const server = Bun.spawn(['bun', 'scripts/serve-dist.ts', dist, String(PORT)], { stdout: 'ignore', stderr: 'inherit' });
+const server = Bun.spawn(serverCommand(), { cwd: dist ? undefined : APP_DIR, stdout: 'ignore', stderr: 'inherit' });
 const failures: string[] = [];
 
 // `process.exit` skips `finally`, which orphaned the server on every red run and

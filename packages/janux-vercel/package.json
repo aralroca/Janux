@@ -1,0 +1,46 @@
+{
+  "name": "@janux/vercel",
+  "version": "0.3.0",
+  "description": "Deploy a Janux app to Vercel — Bun functions for server apps, prerendered HTML for static ones.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aralroca/Janux.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Aral Roca Gomez",
+    "email": "contact@aralroca.com"
+  },
+  "homepage": "https://github.com/aralroca/Janux#readme",
+  "bugs": "https://github.com/aralroca/Janux/issues",
+  "keywords": [
+    "janux",
+    "vercel",
+    "adapter",
+    "bun",
+    "deploy"
+  ],
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "janux-vercel": "./bin.ts"
+  },
+  "files": [
+    "src",
+    "bin.ts"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@janux/cli": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/vite": "workspace:*"
+  },
+  "devDependencies": {
+    "janux": "workspace:*"
+  }
+}

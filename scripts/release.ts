@@ -4,7 +4,7 @@ import { $ } from 'bun';
 import { cpSync, rmSync } from 'node:fs';
 import { basename } from 'node:path';
 
-const ORDER = ['janux', 'janux-server', 'janux-agent', 'janux-vite', 'janux-tailwind', 'janux-cli', 'create-janux'];
+const ORDER = ['janux', 'janux-server', 'janux-agent', 'janux-vite', 'janux-tailwind', 'janux-cli', 'janux-vercel', 'create-janux'];
 
 async function alreadyPublished(name: string, version: string): Promise<boolean> {
   const encoded = name.replace('/', '%2f');
