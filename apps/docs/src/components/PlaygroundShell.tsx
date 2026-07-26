@@ -1,4 +1,5 @@
 import { component } from 'janux';
+import { DEFAULT_EXAMPLE } from '../playground/default-example';
 
 let teardown: (() => void) | undefined;
 
@@ -46,12 +47,18 @@ export const PlaygroundShell = component({
             </button>
           </div>
           <div class="editor-host" id="pg-editor">
-            {/* Monaco is 3 MB and arrives when it arrives — on a slow connection,
-                seconds after this HTML. The cover stays over the pane until the
-                editor has measured itself, so what a visitor sees is a spinner
-                and then an editor, never an editor mid-measurement. */}
+            {/* Monaco is 2 MB and arrives when it arrives — on a slow connection,
+                seconds after this HTML. Until then the pane shows the code the
+                editor is about to open, laid out with Monaco's own metrics, so
+                the wait is spent reading the example rather than watching a
+                spinner: it was the biggest thing on the page and it used to
+                paint only once the editor had downloaded. The cover comes off
+                when the editor has measured itself, never mid-measurement. */}
             <div class="pg-cover" id="pg-editor-cover">
-              <span class="pg-spinner"></span> Loading the editor…
+              <pre class="pg-cover-code">{DEFAULT_EXAMPLE}</pre>
+              <span class="pg-cover-note">
+                <span class="pg-spinner"></span> Loading the editor…
+              </span>
             </div>
           </div>
         </div>

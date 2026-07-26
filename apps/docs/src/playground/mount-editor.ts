@@ -81,7 +81,21 @@ async function reveal(editor: any): Promise<void> {
   editor.layout();
   editor.setScrollPosition({ scrollLeft: 0, scrollTop: 0 });
   await new Promise((resolve) => requestAnimationFrame(resolve));
-  document.getElementById('pg-editor-cover')?.remove();
+  uncover();
+}
+
+/**
+ * The cover holds the same code the editor now holds, in the same place — the
+ * difference is syntax colour, and a short fade is what turns that into the
+ * editor arriving rather than the page flickering. Removed on the way out so no
+ * stale copy of the example is left in the DOM for the next visit.
+ */
+function uncover(): void {
+  const cover = document.getElementById('pg-editor-cover');
+
+  cover?.classList.add('gone');
+  cover?.addEventListener('transitionend', () => cover.remove(), { once: true });
+  setTimeout(() => cover?.remove(), 400);
 }
 
 async function openEditor(host: HTMLElement, initial: string, error: HTMLElement): Promise<any> {
@@ -93,7 +107,7 @@ async function openEditor(host: HTMLElement, initial: string, error: HTMLElement
     return editor;
   } catch (cause) {
     showError(error, `The editor failed to load: ${cause}`);
-    document.getElementById('pg-editor-cover')?.remove();
+    uncover();
 
     return undefined;
   }

@@ -1451,13 +1451,44 @@ body[data-theme='dark'] .scores-video {
   position: absolute;
   inset: 0;
   z-index: 5;
+  overflow: hidden;
+  background: var(--bg);
+  transition: opacity 0.15s ease-out;
+}
+
+.pg-cover.gone {
+  opacity: 0;
+}
+
+/*
+ * Monaco's own text metrics, measured from the running editor: 13.5px of its
+ * default mono stack on a 20px line, 12px of top padding, and 67px of gutter
+ * before the first character (its 5-char line-number column). Matching them is
+ * the whole point — the editor takes over this text, and anything off by a pixel
+ * reads as the page jumping.
+ */
+.pg-cover-code {
+  margin: 0;
+  padding: 12px 0 0 67px;
+  font: 13.5px / 20px Menlo, Monaco, 'Courier New', monospace;
+  color: light-dark(#24292e, #e1e4e8);
+  white-space: pre;
+  tab-size: 8;
+}
+
+.pg-cover-note {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   background: var(--bg);
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
