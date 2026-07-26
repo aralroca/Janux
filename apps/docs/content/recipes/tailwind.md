@@ -27,7 +27,7 @@ export const Counter = component({
   view: ({ state, intents }) => (
     <section class="flex flex-col items-center gap-4 pt-16 font-sans">
       <h1 class="text-5xl font-extrabold text-indigo-950">{state.count}</h1>
-      <button on={intents.inc} class="rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 px-6 py-2 font-bold text-white shadow-lg">
+      <button on={intents.inc} class="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-2 font-bold text-white shadow-lg">
         +1
       </button>
     </section>
@@ -40,7 +40,7 @@ export const Counter = component({
 - The CLI detects `@janux/tailwind` and wires the official `@tailwindcss/postcss` plugin into `janux dev` and `janux build`. The postcss pipeline processes the directly-linked `src/styles.css`, so **fully static apps keep shipping 0 KB of JS** — Tailwind is just CSS.
 - `@import "@janux/tailwind"` (rather than `"tailwindcss"`) exists so imports resolve without adding Tailwind to your own dependencies.
 - `janux build` compiles the stylesheet with content scanning to `dist/client/styles.css` — only the utilities you actually use ship.
-- Custom theme? Standard Tailwind v4 CSS-first config in your stylesheet: `@theme { --color-brand: #7c3aed; }`.
+- Custom theme? Standard Tailwind v4 CSS-first config in your stylesheet: `@theme { --color-brand: #0062ff; }`.
 
 ## In the playground
 

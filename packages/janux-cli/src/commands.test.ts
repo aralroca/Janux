@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { bundleInputs, cssAssetName, localeRedirectStub, prodServerOptions } from './commands';
+import { bundleInputs, cssAssetName, devBanner, localeRedirectStub, prodServerOptions } from './commands';
 
 /** Runs the stub's inline script with a fake navigator/location and returns the redirect target. */
 function redirectOf(locales: string[], defaultLocale: string, languages: string[]): string {
@@ -109,6 +109,25 @@ describe('prodServerOptions shell fields', () => {
 
     expect(options.inlineStyles).toBeUndefined();
     expect(options.stylesheets).toEqual(['/styles.css']);
+  });
+});
+
+describe('devBanner', () => {
+  it('advertises every endpoint the dev server exposes, MCP included', () => {
+    const lines = devBanner(4321).split('\n');
+
+    expect(lines).toEqual([
+      '  → app:      http://localhost:4321/',
+      '  → manifest: http://localhost:4321/_janux/manifest',
+      '  → agent:    http://localhost:4321/_janux/agent',
+      '  → mcp:      http://localhost:4321/_janux/mcp',
+    ]);
+  });
+
+  it('aligns the URLs in one column whatever the port', () => {
+    const columns = devBanner(80).split('\n').map((line) => line.indexOf('http'));
+
+    expect(new Set(columns).size).toBe(1);
   });
 });
 

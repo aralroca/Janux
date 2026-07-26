@@ -29,7 +29,7 @@ export const Counter = component({
         <button on={intents.dec} class="rounded-xl bg-slate-500 px-7 py-2.5 text-xl font-bold text-white shadow-lg hover:bg-slate-600">
           −1
         </button>
-        <button on={intents.inc} class="rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 px-7 py-2.5 text-xl font-bold text-white shadow-lg hover:opacity-90">
+        <button on={intents.inc} class="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-7 py-2.5 text-xl font-bold text-white shadow-lg hover:opacity-90">
           +1
         </button>
       </div>
@@ -58,7 +58,7 @@ export const Cart = component({
   },
   view: ({ state, derived, intents }) => (
     <section class="mx-auto mt-10 max-w-sm rounded-2xl border border-slate-200 p-6 font-sans shadow-xl">
-      <button on={intents.add} data-input='{"id":"sneakers"}' class="rounded-lg bg-gradient-to-r from-violet-600 to-cyan-500 px-4 py-2 font-semibold text-white">
+      <button on={intents.add} data-input='{"id":"sneakers"}' class="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2 font-semibold text-white">
         Add sneakers (9.99)
       </button>
       <ul class="my-4 divide-y divide-slate-100">
@@ -90,8 +90,8 @@ export const Guestbook = component({
   view: ({ state, intents }) => (
     <section class="mx-auto mt-10 max-w-sm p-6 font-sans">
       <form intent={intents.sign} class="flex gap-2">
-        <input name="name" placeholder="Your name" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-violet-500" />
-        <button type="submit" class="rounded-lg bg-violet-600 px-4 py-2 font-semibold text-white hover:bg-violet-700">
+        <input name="name" placeholder="Your name" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500" />
+        <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">
           Sign
         </button>
       </form>

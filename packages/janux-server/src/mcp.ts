@@ -1,5 +1,6 @@
 import type { Ctx } from 'janux';
 import type { ApiTool } from './api';
+import { mcpLandingPage } from './mcp-landing';
 
 /**
  * Hosted MCP endpoint (RFC 0002 §13.2): `/_janux/mcp` speaks MCP over
@@ -116,8 +117,15 @@ export function createMcpEndpoint(deps: McpDeps) {
   return async function handleMcp(req: Request, ctx: Ctx): Promise<Response> {
     if (req.method === 'GET') {
       // Streamable HTTP allows GET for server-initiated streams; stateless
-      // servers advertise none.
-      return new Response(null, { status: 405, headers: { allow: 'POST' } });
+      // servers advertise none. A browser gets the instructions instead — see
+      // mcp-landing.ts. MCP clients never ask for HTML, so they still get 405.
+      if (!req.headers.get('accept')?.includes('text/html')) {
+        return new Response(null, { status: 405, headers: { allow: 'POST' } });
+      }
+
+      return new Response(mcpLandingPage(deps.serverName, new URL(req.url).href, deps.tools), {
+        headers: { 'content-type': 'text/html;charset=utf-8' },
+      });
     }
     if (req.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
     if (deps.auth) {
