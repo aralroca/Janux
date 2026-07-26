@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
+import { packageDir, runtimeIncludes } from './deps';
 import { mimeFor, resolvePublicFile } from './static-files';
 import { apiFiles, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
@@ -83,15 +84,7 @@ export function devStylesheets(root: string, stylesheet: string | undefined): st
  * dead code instead of breaking the bundle.
  */
 export function foreignExternals(root: string): string[] {
-  const missing = FOREIGN_PACKAGES.filter((name) => {
-    try {
-      Bun.resolveSync(name, root);
-
-      return false;
-    } catch {
-      return true;
-    }
-  });
+  const missing = FOREIGN_PACKAGES.filter((name) => !packageDir(name, root));
 
   return missing.length > 0 ? FOREIGN_PACKAGES : [];
 }
@@ -103,17 +96,29 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
   return {
     name: 'janux',
 
-    config(config) {
+    async config(config) {
+      const root = resolve(config.root ?? process.cwd());
+      const { clientEntry } = await resolveAppConfig(root, options);
+
       return {
         appType: 'custom',
-        build: { rollupOptions: { external: foreignExternals(config.root ?? process.cwd()) } },
+        build: { rollupOptions: { external: foreignExternals(root) } },
         esbuild: { jsx: 'automatic', jsxImportSource: 'janux' },
         // react/react-dom deduped so every browser-side import is one copy;
         // SSR resolves them via `foreignImport` from the app root instead
         // (externals bypass dedupe and two Reacts break hooks).
         resolve: { dedupe: ['janux', 'react', 'react-dom'] },
         ssr: { noExternal: SSR_PACKAGES },
-        optimizeDeps: { exclude: SSR_PACKAGES },
+        optimizeDeps: {
+          exclude: SSR_PACKAGES,
+          include: runtimeIncludes(root),
+          // Vite finds what to pre-bundle by crawling HTML files, and a Janux app
+          // has none — the shell is rendered by the server. With nothing to crawl
+          // it pre-bundles nothing at startup and meets the app's own deps
+          // mid-session instead, re-optimizing and 504ing whatever import is in
+          // flight. The client entry is the browser graph's real root.
+          entries: clientEntry ? [relativeToRoot(root, clientEntry)] : undefined,
+        },
       };
     },
 

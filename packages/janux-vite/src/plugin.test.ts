@@ -2,7 +2,8 @@ import { describe, expect, it } from 'bun:test';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { devStylesheets, foreignExternals } from './plugin';
+import { runtimeIncludes } from './deps';
+import { devStylesheets, foreignExternals, janux } from './plugin';
 
 /**
  * Regression: the dev shell used to link `/src/styles.css`, which Vite's
@@ -45,5 +46,23 @@ describe('foreignExternals', () => {
     const withReact = resolve(import.meta.dir, '../../../examples/interop-react');
 
     expect(foreignExternals(withReact)).toEqual([]);
+  });
+});
+
+/**
+ * Vite finds what to pre-bundle by crawling HTML files, and a Janux app has none.
+ * Left to discover deps mid-session it re-optimizes, re-hashes every dep URL and
+ * 504s the imports already in flight — how `localLlm()` came to answer "Local
+ * model unavailable". The client entry and `runtimeIncludes` are what it crawls
+ * and pre-bundles instead.
+ */
+describe('the optimizer config', () => {
+  const docs = resolve(import.meta.dir, '../../../apps/docs');
+
+  it('names the app entry Vite has no HTML to infer, and the framework deps behind it', async () => {
+    const config = await (janux().config as any)({ root: docs }, { command: 'serve', mode: 'development' });
+
+    expect(config.optimizeDeps.entries).toEqual(['src/client.ts']);
+    expect(config.optimizeDeps.include).toEqual(runtimeIncludes(docs));
   });
 });
