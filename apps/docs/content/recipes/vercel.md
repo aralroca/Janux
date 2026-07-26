@@ -1,6 +1,6 @@
 # Deploying to Vercel
 
-Vercel runs functions on Bun, and a Janux server is already the shape that runtime wants — a default export with `fetch`, Web `Request` in, Web `Response` out. `@janux/vercel` is the glue, for both of the framework's outputs: a **Bun server** (SSR, `api()` endpoints, the manifest, MCP, the copilot) or a **static export** (prerendered HTML on the CDN, no runtime).
+Vercel runs functions on Bun, and a Janux server is already the shape that runtime wants — Web `Request` in, Web `Response` out. `@janux/vercel` is the glue, for both of the framework's outputs: a **Bun server** (SSR, `api()` endpoints, the manifest, MCP, the copilot) or a **static export** (prerendered HTML on the CDN, no runtime).
 
 This site runs on it. [janux.build](https://janux.build) is `apps/docs`, deployed exactly as described here.
 
@@ -11,33 +11,58 @@ bun add @janux/vercel
 bunx janux-vercel --include content --max-duration 60
 ```
 
-```bash title="what it writes for a server app"
+```bash title="what it writes"
 janux-vercel: wrote vercel.json
-janux-vercel: wrote api/index.ts
-janux-vercel: bundled .janux/server.js (12155 KB)
-janux-vercel: ready for `vercel deploy` (output: bun).
+janux-vercel: bundled the app (12155 KB)
+janux-vercel: wrote .vercel/output (output: bun).
 ```
 
-`vercel.json` and `api/index.ts` are **deployment sources** — Vercel reads the config before running your build — so commit them. The bundle under `.janux/` is build output; ignore it:
+Two things, with different lifetimes. `vercel.json` is a **source file** — Vercel reads it before running your build, so no build could have produced it — and it is three lines long:
+
+```json title="vercel.json"
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "bun run build && bunx janux-vercel --include content --max-duration 60",
+  "bunVersion": "1.x"
+}
+```
+
+- **`buildCommand`** builds the app, then the deployment. The flags you scaffolded with are baked in, so a deployment is one command with no arguments to remember.
+- **`bunVersion`** puts the deployment on Bun — the runtime Janux targets, so the server you tested locally is the server that runs.
+
+`.vercel/output` is the deployment itself, rebuilt on every build. Ignore it:
 
 ```bash title=".gitignore"
-.janux/
+.vercel
 ```
 
-The function itself has nothing in it but the bundle:
+## What the adapter writes
 
-```ts title="api/index.ts"
-export { default } from '../.janux/server.js';
+A [Build Output API](https://vercel.com/docs/build-output-api) directory — the deployment, described as files, with nothing left for the platform to infer:
+
+```txt
+.vercel/output/
+├── config.json                    # routes: static files first, then the app
+├── static/                        # dist/client, served by the CDN
+└── functions/index.func/
+    ├── .vc-config.json            # runtime, handler, maxDuration
+    ├── index.js                   # the handler
+    ├── .janux/server.js           # the app, bundled
+    ├── src/                       # the routes tree, read at boot
+    └── content/                   # --include: whatever your app reads
 ```
 
-## Why the app is bundled, not shipped
+The alternative is letting the platform build `api/**` for you, which means letting it **trace** what your function needs. A traced function cannot leave a workspace: `node_modules/janux` is a symlink to `packages/janux`, outside the project, and packaging one fails the deployment outright — *"the framework produced an invalid deployment package for a Serverless Function. Typically this means that the framework produces files in symlinked directories."* Writing the output ourselves means nothing is traced: these bytes, that config.
 
-A Janux server imports your app's own source when it boots — routes, layouts, `*.api.ts`, `src/agent.ts`, stores, i18n, middleware — and resolves `janux` from your `node_modules`. That is how `janux start` runs an app with no server bundle at all, and it is the wrong shape for a function twice over:
+## Why the app is bundled
 
-- **Nothing resolves.** A function has no `node_modules` beside it, so an app resolved at boot dies on its first import, naming a file you never thought of as code: `Cannot find package 'janux' from '/var/task/apps/docs/janux.config.ts'`.
-- **Nothing packages.** Vercel's runtimes *trace* dependencies and ship the files they find. In a workspace, `node_modules/janux` is a symlink to `packages/janux`, outside the project — and the deployment is rejected: *"the framework produced an invalid deployment package for a Serverless Function"*.
+A Janux server imports your app's own source when it boots — routes, layouts, `*.api.ts`, `src/agent.ts`, stores, i18n, middleware — resolving `janux` from your `node_modules`. That is how `janux start` runs an app with no server bundle at all, and it is the wrong shape for a function: there is no `node_modules` beside it, so an app resolved at boot dies on its first import, naming a file you never thought of as code:
 
-So `janux-vercel` resolves the app at **build** time. It generates a module that imports every one of those files statically — a bundler can see through those — captures the resolved config as data, and bundles the result into one self-contained file. Nothing is resolved at runtime, and there is nothing left to trace.
+```bash
+Cannot find package 'janux' from '/var/task/janux.config.ts'
+```
+
+So `janux-vercel` resolves the app at **build** time. It generates a module that imports every one of those files statically — a bundler can see through those — captures the resolved config as data, and bundles the result into one self-contained file:
 
 ```ts title=".janux/app.ts (generated)" {6,10,11}
 import { join } from 'node:path';
@@ -57,7 +82,7 @@ const app: VercelApp = {
 export default app;
 ```
 
-Every path is rebuilt from the module's own location, because the build machine's `/vercel/path0/…` is not the runtime's `/var/task/…`.
+`prodServerOptions` takes that as a prebuilt app, so the wiring is the same one `janux start` uses — nothing is resolved at runtime, and there is no second code path to keep honest. Every path is rebuilt from the module's own location, because the build machine's `/vercel/path0/…` is not the runtime's `/var/task/…`.
 
 ### Two things bundling changes about your app
 
@@ -67,50 +92,23 @@ Every path is rebuilt from the module's own location, because the build machine'
 const CONTENT_DIR = join(process.env.JANUX_APP_ROOT ?? join(import.meta.dirname, '../..'), 'content');
 ```
 
-**Browser-only imports.** Islands lazily import their client code, so a bundler walking the server graph reaches it — including Vite's asset specifiers (`?worker`, `?url`, `?raw`). Those can only be resolved by a client build, so the adapter stubs them: the code behind them never runs on a server. Anything a *server* path imports is bundled normally.
+**Browser-only imports.** Islands lazily import their client code, so a bundler walking the server graph reaches it — including Vite's asset specifiers (`?worker`, `?url`, `?raw`). Only a client build can resolve those, so the adapter stubs them: the code behind them never runs on a server. Anything a *server* path imports is bundled normally.
 
-> **Note:** the bundle is the whole app, including whatever your islands pull in — this site's is 12 MB because the playground carries Monaco. It is well under Vercel's 250 MB limit, and it is worth knowing when you read a cold start.
-
-## What the generated config says
-
-```json title="vercel.json" {5,8,12}
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "bunx janux-vercel && bun run build",
-  "outputDirectory": "dist/client",
-  "bunVersion": "1.x",
-  "functions": {
-    "api/index.ts": {
-      "includeFiles": "{src,dist,content}/**",
-      "maxDuration": 60
-    }
-  },
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index" }
-  ]
-}
-```
-
-- **`buildCommand`** runs the adapter first: the bundle is regenerated on every deployment, from that deployment's routes.
-- **`bunVersion`** puts the whole deployment on Bun — the runtime Janux targets, so the server you tested locally is the server that runs.
-- **`includeFiles`** carries what the bundle does not: `src` (the router still reads the routes tree from disk), `dist` (the built stylesheet and `client.js`), and whatever else your app reads — `--include content` for this site, whose pages *are* files. Without it the function deploys and every page 404s.
-- **`maxDuration`** raises the function's ceiling; a streaming copilot wants it.
-- **The rewrite runs last.** Vercel serves `outputDirectory` from its CDN first, so `client.js`, the stylesheet and everything in `public/` never wake the function; only what the CDN could not answer does.
+> **Note:** the bundle is the whole app, including whatever your islands pull in — this site's is 12 MB because the playground carries Monaco. Well under Vercel's 250 MB limit, and worth knowing when you read a cold start.
 
 ## Static export instead
 
-An app with `output: 'static'` has no runtime to configure:
+An app with `output: 'static'` has no runtime to choose:
 
 ```json title="vercel.json"
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "bunx janux-vercel && bun run build",
-  "outputDirectory": "dist/client",
+  "buildCommand": "bun run build && bunx janux-vercel",
   "cleanUrls": true
 }
 ```
 
-No function, no `bunVersion`, no bundle: `janux build` prerendered every page and Vercel serves the folder. Remember what a static export drops — everything under `/_janux/*`, so no `api()` endpoints, no manifest, no copilot ([details](/docs/recipes/deploying)).
+The adapter writes the same output directory with `static/` and no function at all: `janux build` prerendered every page, and the CDN serves the folder. Remember what a static export drops — everything under `/_janux/*`, so no `api()` endpoints, no manifest, no copilot ([details](/docs/recipes/deploying)).
 
 ## Deploying
 
@@ -118,7 +116,7 @@ No function, no `bunVersion`, no bundle: `janux build` prerendered every page an
 bunx vercel deploy --prod
 ```
 
-In a monorepo, set the project's **Root Directory** to the app (`apps/docs` here) so the install runs at the workspace root and `workspace:*` dependencies resolve. Everything else is zero-config: the build command comes from `vercel.json`, and `bun install` is what Vercel already runs for a Bun lockfile.
+In a monorepo, set the project's **Root Directory** to the app (`apps/docs` here) so the install runs at the workspace root and `workspace:*` dependencies resolve. Everything else comes from `vercel.json`, and `bun install` is what Vercel already runs for a Bun lockfile.
 
 > **Note:** a CLI deployment is attributed to your **git commit author**. If that email is not on the Vercel team, the deployment is created and immediately blocked — *"Git author … must have access to the team"* — for a build that never started. Check `git config user.email` first.
 

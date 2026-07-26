@@ -11,13 +11,13 @@ coverage/
 .census-junit.xml
 PLAN-*.md
 apps/docs/public/search-index.json
-
 test-results/
 playwright-report/
 lighthouse-reports/
 .vercel
-packages/janux-vercel/src/__fixtures__/app/api/
 packages/janux-vercel/src/__fixtures__/app/.janux/
 packages/janux-vercel/src/__fixtures__/app/vercel.json
 apps/docs/.janux/
 .env.local
+.vercel/output
+packages/janux-vercel/src/__fixtures__/app/node_modules/

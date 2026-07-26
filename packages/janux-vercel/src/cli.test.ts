@@ -19,8 +19,8 @@ describe('parseVercelArgs', () => {
 });
 
 describe('vercelFiles', () => {
-  it('writes the function entry only for a server app', () => {
-    expect(Object.keys(vercelFiles({ output: 'bun' }))).toEqual(['vercel.json', 'api/index.ts']);
+  it('is the one file an app commits', () => {
+    expect(Object.keys(vercelFiles({ output: 'bun' }))).toEqual(['vercel.json']);
     expect(Object.keys(vercelFiles({ output: 'static' }))).toEqual(['vercel.json']);
   });
 
@@ -40,19 +40,33 @@ describe('runVercelInit', () => {
     await runVercelInit([], root);
 
     expect(JSON.parse(readFileSync(join(root, 'vercel.json'), 'utf-8')).cleanUrls).toBe(true);
-    expect(await Bun.file(join(root, 'api/index.ts')).exists()).toBe(false);
+    // Static: assets on the CDN, and no function to route anything to.
+    expect(JSON.parse(readFileSync(join(root, '.vercel/output/config.json'), 'utf-8')).routes).toEqual([
+      { handle: 'filesystem' },
+    ]);
+    expect(await Bun.file(join(root, '.vercel/output/functions/index.func/index.js')).exists()).toBe(false);
   });
 
-  /** A server app gets the config, the entry, and the bundle that entry re-exports. */
-  it('bundles the function for a server app', async () => {
+  /** A server app gets the whole deployment: static assets, function, routes. */
+  it('writes a Build Output API deployment for a server app', async () => {
     const app = join(import.meta.dirname, '__fixtures__/app');
+    const output = join(app, '.vercel/output');
 
-    await runVercelInit(['--include', 'content'], app);
-    const config = JSON.parse(readFileSync(join(app, 'vercel.json'), 'utf-8'));
+    await runVercelInit(['--include', 'content', '--max-duration', '60'], app);
 
-    expect(config.bunVersion).toBe('1.x');
-    expect(config.functions['api/index.ts'].includeFiles).toBe('{src,dist,content}/**');
-    expect(readFileSync(join(app, 'api/index.ts'), 'utf-8')).toBe("export { default } from '../.janux/server.js';\n");
-    expect(await Bun.file(join(app, '.janux/server.js')).exists()).toBe(true);
+    expect(JSON.parse(readFileSync(join(output, 'config.json'), 'utf-8')).routes).toEqual([
+      { handle: 'filesystem' },
+      { src: '/(.*)', dest: '/index' },
+    ]);
+    expect(JSON.parse(readFileSync(join(output, 'functions/index.func/.vc-config.json'), 'utf-8'))).toEqual({
+      runtime: 'nodejs22.x',
+      handler: 'index.js',
+      launcherType: 'Nodejs',
+      supportsResponseStreaming: true,
+      maxDuration: 60,
+    });
+    expect(await Bun.file(join(output, 'functions/index.func/.janux/server.js')).exists()).toBe(true);
+    // The routes tree travels with it: the router reads the directory at boot.
+    expect(await Bun.file(join(output, 'functions/index.func/src/routes/index.tsx')).exists()).toBe(true);
   });
 });

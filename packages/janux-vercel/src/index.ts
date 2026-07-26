@@ -44,40 +44,28 @@ export interface VercelConfigOptions {
 }
 
 const SCHEMA = 'https://openapi.vercel.sh/vercel.json';
-/** Where a server app's function lives. Vercel takes `api/**` as its functions. */
-export const FUNCTION_PATH = 'api/index.ts';
-/** `src` carries the routes the server resolves; `dist` the built client and stylesheet. */
-const RUNTIME_DIRS = ['src', 'dist'];
-
-function includeGlob(include: string[]): string {
-  const dirs = [...new Set([...RUNTIME_DIRS, ...include])];
-
-  return dirs.length === 1 ? `${dirs[0]}/**` : `{${dirs.join(',')}}/**`;
-}
 
 /**
- * The `vercel.json` a Janux app deploys with. It is generated rather than
- * documented as a snippet because Vercel reads it *before* the build — an app
- * cannot write it from its own build step, so `janux-vercel` writes it once.
+ * The `vercel.json` a Janux app commits. Short, because the deployment itself is
+ * described by the Build Output API directory the build writes (see output.ts):
+ * the config only has to say how to produce it, and on which runtime.
+ *
+ * It is generated rather than documented as a snippet because Vercel reads it
+ * *before* the build — no build step could have produced it.
  */
 export function vercelConfig({
   output = 'bun',
-  buildCommand = 'bunx janux-vercel && bun run build',
+  buildCommand = 'bun run build && bunx janux-vercel',
   include = [],
   maxDuration,
 }: VercelConfigOptions = {}): Record<string, unknown> {
-  const base = { $schema: SCHEMA, buildCommand, outputDirectory: 'dist/client' };
+  const flags = [...include.flatMap((dir) => ['--include', dir]), ...(maxDuration ? ['--max-duration', String(maxDuration)] : [])];
+  const base = { $schema: SCHEMA, buildCommand: [buildCommand, ...flags].join(' ') };
 
-  // A static export is plain HTML: no function, no runtime, nothing to route.
+  // A static export has no runtime to choose: prerendered HTML on the CDN.
   if (output === 'static') return { ...base, cleanUrls: true };
 
-  return {
-    ...base,
-    // The whole deployment runs on Bun — the runtime Janux itself targets.
-    bunVersion: '1.x',
-    functions: { [FUNCTION_PATH]: { includeFiles: includeGlob(include), ...(maxDuration ? { maxDuration } : {}) } },
-    // Anything the CDN did not answer from `outputDirectory` is the app's.
-    rewrites: [{ source: '/(.*)', destination: `/${FUNCTION_PATH.replace(/\.ts$/, '')}` }],
-  };
+  // The whole deployment runs on Bun — the runtime Janux itself targets.
+  return { ...base, bunVersion: '1.x' };
 }
 

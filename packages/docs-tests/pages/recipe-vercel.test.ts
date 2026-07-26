@@ -34,13 +34,7 @@ describe('recipes/vercel.md — the config it prints is the config it writes', (
   });
 });
 
-describe('recipes/vercel.md — the function entry it prints is the one that runs', () => {
-  it('re-exports the bundle, and nothing it would have to resolve', () => {
-    const entry = /```ts title="api\/index\.ts"\n([\s\S]*?)```/.exec(PAGE)![1]!;
-
-    expect(entry.trim()).toBe("export { default } from '../.janux/server.js';");
-  });
-
+describe('recipes/vercel.md — the handler it describes is the one that runs', () => {
   it('createHandler is a fetch handler, the shape Vercel invokes', () => {
     const handler = createHandler({ root: '/tmp/none', config: {} as any, modules: {} });
 

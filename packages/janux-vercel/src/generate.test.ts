@@ -4,7 +4,7 @@ import { cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveAppConfig } from '@janux/vite/config';
-import { BUNDLE_PATH, buildFunction } from './build';
+import { writeVercelOutput } from './output';
 import { appModules, generateApp } from './generate';
 
 const PACKAGE = join(import.meta.dirname, '..');
@@ -61,20 +61,19 @@ describe('generateApp', () => {
 describe('a bundled function with no node_modules beside it', () => {
   it('serves the app', async () => {
     const app = await resolveAppConfig(APP);
-    const bytes = await buildFunction(APP, app);
 
-    expect(bytes).toBeGreaterThan(0);
+    expect(await writeVercelOutput(APP, app)).toBeGreaterThan(0);
 
+    // The function directory as the platform will unpack it, moved somewhere
+    // with no `node_modules` anywhere above it.
     const deployment = mkdtempSync(join(tmpdir(), 'janux-fn-'));
 
-    await cp(join(APP, 'src'), join(deployment, 'src'), { recursive: true });
-    await cp(join(APP, 'janux.config.ts'), join(deployment, 'janux.config.ts'));
-    await cp(join(APP, BUNDLE_PATH), join(deployment, BUNDLE_PATH));
+    await cp(join(APP, '.vercel/output/functions/index.func'), deployment, { recursive: true });
 
     // In its own process, like the function: the bundle publishes the app root
     // it was deployed at, and one process can only be one app.
-    const serve = `const handler = (await import('./${BUNDLE_PATH}')).default;
-      const response = await handler.fetch(new Request('https://janux.build/'));
+    const serve = `const handler = (await import('./index.js')).default;
+      const response = await handler(new Request('https://janux.build/'));
       console.log(response.status, await response.text());`;
     const served = Bun.spawnSync(['bun', '-e', serve], { cwd: deployment });
 

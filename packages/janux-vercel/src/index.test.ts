@@ -6,39 +6,28 @@ import { createHandler, vercelConfig } from './index';
 const APP = join(import.meta.dirname, '__fixtures__/app');
 
 describe('vercelConfig', () => {
-  it('gives a server app a Bun function every unmatched request rewrites to', () => {
-    const config: any = vercelConfig();
+  it('puts a server app on Bun and builds the deployment through the adapter', () => {
+    const config: any = vercelConfig({ include: ['content'], maxDuration: 60 });
 
     expect(config.bunVersion).toBe('1.x');
-    expect(config.outputDirectory).toBe('dist/client');
-    expect(config.rewrites).toEqual([{ source: '/(.*)', destination: '/api/index' }]);
-    expect(config.functions['api/index.ts'].includeFiles).toBe('{src,dist}/**');
-  });
-
-  /**
-   * The server resolves the app's own modules at runtime, so whatever the app
-   * reads from disk has to travel with the function — `content/**` for a docs
-   * site is not optional, it is the site.
-   */
-  it('carries the app data directories into the function, deduped', () => {
-    const config: any = vercelConfig({ include: ['content', 'src'], maxDuration: 60 });
-
-    expect(config.functions['api/index.ts'].includeFiles).toBe('{src,dist,content}/**');
-    expect(config.functions['api/index.ts'].maxDuration).toBe(60);
+    expect(config.buildCommand).toBe('bun run build && bunx janux-vercel --include content --max-duration 60');
   });
 
   it('leaves a static export without a runtime', () => {
     const config: any = vercelConfig({ output: 'static' });
 
     expect(config.bunVersion).toBeUndefined();
-    expect(config.functions).toBeUndefined();
-    expect(config.rewrites).toBeUndefined();
     expect(config.cleanUrls).toBe(true);
-    expect(config.outputDirectory).toBe('dist/client');
+    expect(config.buildCommand).toBe('bun run build && bunx janux-vercel');
   });
 
-  it('omits maxDuration rather than guessing one', () => {
-    expect((vercelConfig() as any).functions['api/index.ts'].maxDuration).toBeUndefined();
+  /** The deployment lives in .vercel/output, so the config has no routes of its own. */
+  it('describes no functions or rewrites itself', () => {
+    const config: any = vercelConfig();
+
+    expect(config.functions).toBeUndefined();
+    expect(config.rewrites).toBeUndefined();
+    expect(config.outputDirectory).toBeUndefined();
   });
 });
 

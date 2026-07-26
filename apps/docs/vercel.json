@@ -1,18 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "bunx janux-vercel && bun run build",
-  "outputDirectory": "dist/client",
-  "bunVersion": "1.x",
-  "functions": {
-    "api/index.ts": {
-      "includeFiles": "{src,dist,content}/**",
-      "maxDuration": 60
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index"
-    }
-  ]
+  "buildCommand": "bun run build && bunx janux-vercel --include content --max-duration 60",
+  "bunVersion": "1.x"
 }
