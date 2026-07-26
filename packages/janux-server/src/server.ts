@@ -25,6 +25,12 @@ import { htmlDocument } from './html-shell';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
 
+/**
+ * Set by the client runtime on a navigation fetch. What the document already has
+ * (the app's CSS) does not need to travel again — see handlePage.
+ */
+export const NAVIGATION_HEADER = 'x-janux-navigation';
+
 export interface AgentMount {
   handle(req: Request, deps: AgentDeps): Promise<Response>;
   /** One-turn LLM proxy for browser-side agent loops (`serverLlm()` from `@janux/agent/local`). */
@@ -341,6 +347,14 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const handlePage = async (req: Request, pathname: string): Promise<Response> => {
     const { locale, pathname: page } = localize(pathname);
+    /*
+     * A client navigation is being diffed into a document that already has the
+     * app's CSS — and the client keeps its live <style> nodes across the swap
+     * (keepRuntimeStyles). Re-sending inlined CSS puts it in front of the
+     * content instead: 27 KB of the docs site's 95 KB page, which is what the
+     * streaming diff then spends its first chunks on.
+     */
+    const navigating = req.headers.get(NAVIGATION_HEADER) === '1';
 
     if (options.i18n && !locale) {
       const { search } = new URL(req.url);
@@ -366,7 +380,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
       manifestUrl: options.staticExport ? undefined : `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
       stylesheets: options.stylesheets,
-      inlineStyles: options.inlineStyles,
+      inlineStyles: navigating ? undefined : options.inlineStyles,
       favicon: options.favicon,
       i18n: shellI18n(locale, result),
     });

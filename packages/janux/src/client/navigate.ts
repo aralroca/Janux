@@ -1,7 +1,8 @@
 import diff from 'diff-dom-streaming';
 import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
-import { consumePrefetched } from './prefetch';
+import { consumePrefetched, NAVIGATION_HEADERS } from './prefetch';
+import { runScriptsWhileStreaming } from './scripts';
 
 export interface NavigateOptions {
   signal?: AbortSignal;
@@ -42,12 +43,37 @@ function extractPersisted(mount: MountContext): PersistedIsland[] {
     });
 }
 
+function persistedSelector(id: string): string {
+  return `janux-island[data-jx="${esc(id)}"], janux-foreign[data-jx="${esc(id)}"]`;
+}
+
+/**
+ * Grafts each persisted island back the moment the diff inserts the incoming
+ * stand-in for it, instead of waiting for the navigation to finish. While the
+ * page streams those are very different moments: the docs' header lost its
+ * search box for 400 ms of an 800 ms navigation and reflowed without it.
+ */
+function restoreWhileStreaming(kept: PersistedIsland[]): () => void {
+  const pending = new Map(kept.map(({ id, node }) => [id, node]));
+  const observer = new MutationObserver(() => {
+    pending.forEach((node, id) => {
+      const standIn = document.querySelector(persistedSelector(id));
+
+      if (!standIn || standIn === node) return;
+      standIn.replaceWith(node);
+      pending.delete(id);
+    });
+  });
+
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  return () => observer.disconnect();
+}
+
 async function restorePersisted(mount: MountContext, kept: PersistedIsland[]): Promise<void> {
   await Promise.all(
     kept.map(async ({ id, node }) => {
-      const incoming = document.querySelector(
-        `janux-island[data-jx="${esc(id)}"], janux-foreign[data-jx="${esc(id)}"]`,
-      );
+      const incoming = document.querySelector(persistedSelector(id));
 
       if (incoming) incoming.replaceWith(node);
       else if (mount.registry.foreigns.has(id)) {
@@ -123,7 +149,7 @@ async function fetchPage(url: string, signal?: AbortSignal): Promise<ReadableStr
   const cached = await consumePrefetched(url);
 
   if (cached !== undefined) return cached;
-  const response = await fetch(url, { signal, headers: { accept: 'text/html' } });
+  const response = await fetch(url, { signal, headers: NAVIGATION_HEADERS });
 
   if (!response.ok) throw new Error(`navigation fetch failed (${response.status})`);
   if (!response.body) throw new Error('navigation fetch failed (no body)');
@@ -180,6 +206,8 @@ function keepRuntimeNodes(): () => void {
  */
 async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, signal?: AbortSignal): Promise<void> {
   const kept = extractPersisted(mount);
+  const stopRestoring = restoreWhileStreaming(kept);
+  const stopRunningScripts = runScriptsWhileStreaming();
   const restoreStyles = keepRuntimeStyles();
   const restoreRuntimeNodes = keepRuntimeNodes();
 
@@ -200,6 +228,8 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
     });
     throw error;
   } finally {
+    stopRunningScripts();
+    stopRestoring();
     restoreStyles();
     restoreRuntimeNodes();
   }

@@ -393,3 +393,4 @@ describe('SPA navigation (streamed diff)', () => {
     expect(errors.some((message) => /mount exploded/.test(message))).toBe(true);
   });
 });
+

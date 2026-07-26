@@ -3,6 +3,13 @@ interface PrefetchEntry {
   at: number;
 }
 
+/**
+ * Tells the server this is a client navigation, not a first load: it then leaves
+ * out what the live document already has (inlined CSS), which is what the
+ * streaming diff would otherwise spend its first chunks on.
+ */
+export const NAVIGATION_HEADERS = { accept: 'text/html', 'x-janux-navigation': '1' };
+
 const prefetched = new Map<string, PrefetchEntry>();
 const PREFETCH_TTL = 30_000;
 
@@ -19,7 +26,7 @@ export function prefetch(url: string): void {
   if (isFresh(prefetched.get(url))) return;
   prefetched.set(url, {
     at: Date.now(),
-    body: fetch(url, { headers: { accept: 'text/html' } }).then((response) =>
+    body: fetch(url, { headers: NAVIGATION_HEADERS }).then((response) =>
       response.ok && response.body ? response.body : Promise.reject(new Error('prefetch failed')),
     ),
   });

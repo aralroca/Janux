@@ -31,12 +31,19 @@ export interface ShellOptions {
   i18n?: ShellI18n;
 }
 
+/*
+ * Every script the shell emits carries a `key`, for the navigation diff: it
+ * matches children by key, and unkeyed scripts are matched by position — which
+ * silently morphs one script into another (a snapshot's JSON becoming the
+ * runtime's, say). Keyed, they are matched by identity or inserted.
+ */
 function stateScripts(snapshots: ShellOptions['snapshots']): string {
   return snapshots
     .map((snapshot) => {
       const payload = safeJson({ state: snapshot.state, sources: snapshot.sources ?? {} });
+      const uri = safeAttr(snapshot.uri);
 
-      return `<script type="application/janux+state" data-uri="${safeAttr(snapshot.uri)}">${payload}</script>`;
+      return `<script type="application/janux+state" key="state:${uri}" data-uri="${uri}">${payload}</script>`;
     })
     .join('\n');
 }
@@ -48,8 +55,8 @@ function runtimeScripts(options: ShellOptions): string {
   );
 
   return [
-    `<script>window.__JANUX_ISLANDS__=${safeJson(modules)}</script>`,
-    options.runtimeUrl ? `<script type="module" src="${options.runtimeUrl}"></script>` : '',
+    `<script key="jx-islands">window.__JANUX_ISLANDS__=${safeJson(modules)}</script>`,
+    options.runtimeUrl ? `<script type="module" key="jx-runtime" src="${options.runtimeUrl}"></script>` : '',
   ].join('\n');
 }
 
@@ -91,7 +98,7 @@ export function htmlDocument(options: ShellOptions): string {
     ? ` lang="${safeAttr(options.i18n.locale)}" dir="${options.i18n.dir}"`
     : ` lang="${safeAttr(options.lang ?? 'en')}"`;
   const i18nScript = options.i18n?.payload
-    ? `<script type="application/janux+i18n" id="jx-i18n">${safeJson(options.i18n.payload)}</script>`
+    ? `<script type="application/janux+i18n" key="jx-i18n" id="jx-i18n">${safeJson(options.i18n.payload)}</script>`
     : '';
   // Social tags, canonical and JSON-LD go last for the same reason the
   // description does: they are the most page-dependent nodes in the head.

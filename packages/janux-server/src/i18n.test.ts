@@ -47,7 +47,7 @@ const get = (path: string, headers: Record<string, string> = {}) =>
   server.fetch(new Request(`http://test${path}`, { headers }));
 
 function embeddedI18n(html: string): { locale: string; messages: Record<string, unknown> } {
-  const match = /<script type="application\/janux\+i18n" id="jx-i18n">(.+?)<\/script>/.exec(html);
+  const match = /<script type="application\/janux\+i18n"[^>]*>(.+?)<\/script>/.exec(html);
 
   expect(match).not.toBeNull();
 

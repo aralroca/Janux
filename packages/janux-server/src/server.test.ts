@@ -226,3 +226,30 @@ describe('staticExport', () => {
     expect(html).toContain('rel="janux-manifest"');
   });
 });
+
+/**
+ * A client navigation is not a first load: the document it is being diffed into
+ * already has the app's CSS, and `keepRuntimeStyles` on the client keeps it
+ * across the swap. Re-sending it is pure weight in front of the content — 27 KB
+ * of the docs site's 95 KB page, which on a slow link is the difference between
+ * seeing the new page and waiting for it.
+ */
+describe('inlined CSS on a client navigation', () => {
+  const styled = createJanuxServer({
+    routes: { '/': () => jsx('h1', { children: 'Home' }) },
+    inlineStyles: ['body{color:red}'],
+  });
+  const load = (headers: Record<string, string> = {}) =>
+    styled.fetch(new Request('http://test/', { headers }));
+
+  it('inlines it on a first load', async () => {
+    expect(await (await load()).text()).toContain('body{color:red}');
+  });
+
+  it('leaves it out when the client says it is navigating', async () => {
+    const html = await (await load({ 'x-janux-navigation': '1' })).text();
+
+    expect(html).not.toContain('body{color:red}');
+    expect(html).toContain('<h1>Home</h1>');
+  });
+});
