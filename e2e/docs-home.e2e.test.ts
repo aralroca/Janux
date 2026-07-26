@@ -4,8 +4,8 @@ import { createJanuxServer } from '../packages/janux-server/src/index';
 import { prodServerOptions } from '../packages/janux-cli/src/prod';
 
 /**
- * The home page sells three things — WebMCP tools from `component()`, an MCP
- * server from `api()`, and React interop — and a sales pitch is only as good as
+ * The home page sells three things — an MCP server from `api()`, WebMCP tools
+ * from `component()`, and React interop — and a sales pitch is only as good as
  * the URLs in it. This boots the real docs app and checks that every endpoint
  * and link those sections advertise exists and answers with what was promised.
  */
@@ -33,12 +33,20 @@ function rpc(method: string, params?: unknown) {
 }
 
 const PITCH_SECTION = /<section class="pitch[^"]*">([\s\S]*?)<\/section>/g;
+const HERO = /<section class="hero">([\s\S]*?)<\/section>/;
 const TAG = /<[^>]+>/g;
 const ENTITY: Record<string, string> = { '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" };
 
 /** The `.pitch` sections' markup. */
 function pitches(): string[] {
   return [...home.matchAll(PITCH_SECTION)].map((match) => match[1]!);
+}
+
+/** One `.pitch` section's markup, by the modifier class that names it. */
+function pitch(modifier: string): string {
+  const match = home.match(new RegExp(`<section class="pitch ${modifier}">([\\s\\S]*?)</section>`));
+
+  return match![1]!;
 }
 
 /**
@@ -61,20 +69,57 @@ function pitchLinks(): string[] {
   return [...new Set(hrefs)];
 }
 
+describe('docs home — the hero', () => {
+  it('says who wrote it where it can be seen, not in the footer', () => {
+    const hero = home.match(HERO)![1]!;
+
+    expect(hero).toContain('From the creator of');
+    expect(hero).toContain('https://brisa.build/');
+  });
+
+  /** The scaffold is Bun-only; that belongs next to the command, not in a 404 later. */
+  it('prints the install command with the runtime it needs', () => {
+    const hero = home.match(HERO)![1]!;
+
+    expect(hero).toContain('bun create janux my-app');
+    expect(hero).toContain('bunx create-janux my-app');
+    expect(hero).toContain('https://bun.sh');
+  });
+});
+
 describe('docs home — the pitch sections', () => {
   it('sells both agent surfaces and the React story', () => {
     const text = pitchText();
 
-    expect(text).toContain('Ship WebMCP tools and an MCP server. Same code.');
-    expect(text).toContain('Better than React. Still runs the React ecosystem.');
+    expect(text).toContain('Ship an MCP server. Get WebMCP for free.');
+    expect(text).toContain('A better model. Without giving up the React ecosystem.');
   });
 
-  it('puts WebMCP and the MCP server side by side, each with its own label', () => {
-    const [surfaces] = pitches();
+  /** The heading is a promise about which surface leads; the markup has to keep it. */
+  it('puts the MCP server and WebMCP side by side, server first', () => {
+    const surfaces = pitch('surfaces');
+    const server = surfaces.indexOf('MCP server — tools over HTTP');
+    const browser = surfaces.indexOf('WebMCP — the same tools, in the browser');
 
     expect(surfaces).toContain('faces-grid');
-    expect(surfaces).toContain('WebMCP — tools in the browser');
-    expect(surfaces).toContain('MCP server — tools over HTTP');
+    expect(server).toBeGreaterThan(-1);
+    expect(server).toBeLessThan(browser);
+  });
+
+  /**
+   * "It works today with real clients" is the answer to "isn't this a bet on
+   * the future?", so the command comes before either snippet, not after both.
+   */
+  it('opens the surfaces pitch with the command that works today', () => {
+    const surfaces = pitch('surfaces');
+
+    expect(surfaces.indexOf('claude mcp add')).toBeLessThan(surfaces.indexOf('faces-grid'));
+  });
+
+  /** foreign() answers "I'm not rewriting my stack", which is objection number one. */
+  it('puts both pitches above the philosophy and the feature grid', () => {
+    expect(home.indexOf('class="pitch split"')).toBeLessThan(home.indexOf('class="mission"'));
+    expect(home.indexOf('class="pitch surfaces"')).toBeLessThan(home.indexOf('class="features"'));
   });
 
   it('shows a real snippet for each surface', () => {
