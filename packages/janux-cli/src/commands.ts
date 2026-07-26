@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { createJanuxServer } from '@janux/server';
 import { janux, resolveAppConfig } from '@janux/vite';
 import { prodServerOptions } from './prod';
+import { staticResponse } from './static-assets';
 import type { CliCommand } from './args';
 
 /** Zero-config integrations: installing @janux/tailwind IS the configuration. */
@@ -186,14 +187,7 @@ export async function start({ root, port }: CliCommand): Promise<void> {
 
   Bun.serve({
     port,
-    fetch: async (req) => {
-      const { pathname } = new URL(req.url);
-      const staticFile = Bun.file(join(staticDir, pathname.slice(1)));
-
-      if (pathname !== '/' && (await staticFile.exists())) return new Response(staticFile);
-
-      return server.fetch(req);
-    },
+    fetch: async (req) => (await staticResponse(staticDir, req)) ?? server.fetch(req),
   });
   console.log(`janux start: production server on http://localhost:${port}/ (Bun)`);
 }

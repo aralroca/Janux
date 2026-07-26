@@ -27,7 +27,7 @@ janux eval [files...]       # scripted agent-task scenarios against a live app
 
 A Bun server that:
 
-1. Serves `dist/client` assets.
+1. Serves `dist/client` assets — brotli or gzip depending on what the client accepts, compressed once and cached in memory, with hashed filenames served `immutable` for a year and everything else revalidating. (The docs playground ships 3.15 MB of editor: 0.72 MB of it goes over the wire.)
 2. SSRs routes directly — Bun executes your TSX natively, no Vite in production.
 3. Exposes the same `/_janux/*` surface as dev.
 
