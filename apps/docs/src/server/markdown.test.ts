@@ -18,6 +18,60 @@ describe('renderMarkdown', () => {
   });
 });
 
+describe('code blocks', () => {
+  const fence = (info: string) => `\`\`\`${info}\nconst a = 1;\n\nconst b = 2;\nconst c = 3;\n\`\`\``;
+  const lines = (html: string) => [...html.matchAll(/<span class="line( highlighted)?"/g)].map(([, hit]) => Boolean(hit));
+
+  test('a plain fence has no header and one copy button', async () => {
+    const { html } = await renderMarkdown(fence('ts'));
+
+    expect(html).not.toContain('code-head');
+    expect(html).toContain('class="code-block"');
+    expect([...html.matchAll(/class="copy-code"/g)]).toHaveLength(1);
+  });
+
+  test('title= renders the language badge, the path and the copy button in a header', async () => {
+    const { html } = await renderMarkdown(fence('tsx title="src/pages/index.tsx"'));
+
+    expect(html).toContain('<span class="code-lang">TSX</span>');
+    expect(html).toContain('<span class="code-file">src/pages/index.tsx</span>');
+    expect(html).toMatch(/<div class="code-head">[\s\S]*class="copy-code"[\s\S]*<\/div><pre/);
+    expect([...html.matchAll(/class="copy-code"/g)]).toHaveLength(1);
+  });
+
+  test('{1,3-4} highlights exactly those lines, ranges expanded', async () => {
+    const { html } = await renderMarkdown(fence('ts {1,3-4}'));
+
+    expect(lines(html)).toEqual([true, false, true, true]);
+  });
+
+  test('a fence with no range highlights nothing', async () => {
+    const { html } = await renderMarkdown(fence('ts'));
+
+    expect(lines(html)).toEqual([false, false, false, false]);
+  });
+
+  /** The playground flag predates the rest of the meta and has to survive next to it. */
+  test('live still links to the playground alongside a title and a range', async () => {
+    const { html } = await renderMarkdown(fence('tsx title="src/x.tsx" {2} live'));
+
+    expect(html).toContain('class="try-it"');
+    expect(lines(html)).toEqual([false, true, false, false]);
+  });
+
+  test('a title that looks like the live flag does not trigger it', async () => {
+    const { html } = await renderMarkdown(fence('ts title="src/live.ts"'));
+
+    expect(html).not.toContain('try-it');
+  });
+
+  test('the title is escaped, not injected', async () => {
+    const { html } = await renderMarkdown(fence('ts title="a&b/<i>.ts"'));
+
+    expect(html).toContain('<span class="code-file">a&amp;b/&lt;i&gt;.ts</span>');
+  });
+});
+
 describe('summarize', () => {
   test('takes the first prose paragraph as plain text, links and ticks stripped', () => {
     const markdown = '# Title\n\nSee the [guide](/docs/guide) for `component()` and **more**.\n\nSecond paragraph.';

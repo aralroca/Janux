@@ -2,7 +2,7 @@
 
 Janux is a fullstack UI framework with **two first-class audiences**: the humans who use your app and the AI agents that operate it. You write one component definition; Janux projects it three ways — a view for people, a typed resource agents can read, and typed tools both can invoke. They can't drift, because they're generated from the same source.
 
-```tsx
+```tsx title="src/components/Counter.tsx"
 export const Counter = component({
   name: 'counter',
   description: 'A counter agents can read and change',

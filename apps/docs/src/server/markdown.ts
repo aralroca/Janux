@@ -1,5 +1,6 @@
 import { Marked } from 'marked';
 import { createHighlighter, type Highlighter } from 'shiki';
+import { codeBlock, lineTransformers, parseFence } from './code-block';
 
 const THEMES = { light: 'github-light', dark: 'github-dark' } as const;
 const LANGS = ['typescript', 'tsx', 'bash', 'json', 'jsonc', 'css', 'html'];
@@ -49,8 +50,8 @@ function base64url(text: string): string {
 
 function codeRenderer(highlighter: Highlighter) {
   return ({ text, lang }: { text: string; lang?: string }): string => {
-    const [language = 'text', ...flags] = (lang ?? '').split(/\s+/);
-    const known = highlighter.getLoadedLanguages().includes(language) ? language : 'text';
+    const fence = parseFence(lang);
+    const known = highlighter.getLoadedLanguages().includes(fence.language) ? fence.language : 'text';
     // light-dark() colors follow the page's `color-scheme`, so code blocks flip
     // with the theme toggle without any extra CSS plumbing.
     const highlighted = highlighter.codeToHtml(text, {
@@ -58,13 +59,10 @@ function codeRenderer(highlighter: Highlighter) {
       themes: THEMES,
       colorReplacements: CONTRAST_FIXES,
       defaultColor: 'light-dark()',
+      transformers: lineTransformers(fence),
     });
 
-    const tryIt = flags.includes('live')
-      ? `<a class="try-it" href="/playground#c=${base64url(text)}">▶ Run in playground</a>`
-      : '';
-
-    return `<div class="code-block">${highlighted}<div class="block-actions"><button class="copy-code" type="button" aria-label="Copy code">Copy</button>${tryIt}</div></div>`;
+    return codeBlock(fence, highlighted, fence.live ? `/playground#c=${base64url(text)}` : undefined);
   };
 }
 

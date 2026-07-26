@@ -6,8 +6,8 @@ Beyond pages and `api()` RPC, a real app needs arbitrary HTTP endpoints: REST ro
 
 A file under `src/api` exports functions named by HTTP method, each returning a Web `Response`:
 
-```ts
-// src/api/healthcheck.ts        →  /api/healthcheck
+```ts title="src/api/healthcheck.ts"
+// →  /api/healthcheck
 export function GET() {
   return Response.json({ status: 'Healthy' });
 }
@@ -36,8 +36,7 @@ This is the surface for everything the `/_janux/*` RPC layer doesn't cover — i
 
 Handlers and form actions read multipart bodies with the platform API:
 
-```ts
-// src/api/upload.ts
+```ts title="src/api/upload.ts"
 export async function POST({ req }) {
   const form = await req.formData();
   const file = form.get('file') as File;

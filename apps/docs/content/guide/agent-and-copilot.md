@@ -13,8 +13,8 @@ Resolution order (first match wins):
 3. Provider-key sniffing: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or `GOOGLE_GENERATIVE_AI_API_KEY` present → that provider's default model
 4. Nothing found → the endpoint answers with a **setup card** naming the exact variable to set. The app never crashes over a missing key.
 
-```ts
-// src/agent.ts (optional)
+```ts title="src/agent.ts"
+// optional
 import { defineAgent } from '@janux/agent';
 
 export default defineAgent({
@@ -81,8 +81,7 @@ The copilot chrome is just another Janux component (see the shop example's `Copi
 
 A production copilot is a long-lived agent, not a stateless loop. `defineAgent` grows into the harness with one opt-in config block — enable only the pieces you need:
 
-```ts
-// src/agent.ts
+```ts title="src/agent.ts"
 import { defineAgent, createMemory, createPgStorage, unicodeNormalizer, historyTokenBudget, piiFilter, injectionGuard } from '@janux/agent';
 
 const storage = await createPgStorage({ connectionString: process.env.DATABASE_URL! });

@@ -70,7 +70,9 @@ describe('palette contrast (WCAG AA, normal text)', () => {
 describe('syntax highlighting contrast', () => {
   const CASES = [
     { name: 'light keyword orange', color: '#bd4b00', backgrounds: ['#ffffff'] },
-    { name: 'dark comment grey', color: '#8b949e', backgrounds: ['#24292e', '#212121'] },
+    // #0e1f33 is the tint behind a highlighted line: it is part of the set
+    // because that line's code text lands on it instead of the block's own bg.
+    { name: 'dark comment grey', color: '#8b949e', backgrounds: ['#24292e', '#212121', '#0e1f33'] },
   ];
 
   for (const { name, color, backgrounds } of CASES) {
@@ -78,4 +80,17 @@ describe('syntax highlighting contrast', () => {
       backgrounds.forEach((background) => expect(contrast(color, background)).toBeGreaterThanOrEqual(AA_NORMAL));
     });
   }
+
+  /**
+   * The dark tint may only go *darker* than the block background, and the light
+   * one may not exist at all: GitHub's light palette sits at ~4.5:1 on pure
+   * white (its red at 4.57), so any tint at all would push code text under AA.
+   * The accent bar carries the highlight in light mode.
+   */
+  test('the highlight tint never lowers contrast', () => {
+    const [light, dark] = /--code-hl:\s*light-dark\(\s*(\w+)\s*,\s*(#[0-9a-f]{6})\s*\)/i.exec(CSS)!.slice(1);
+
+    expect(light).toBe('transparent');
+    expect(luminance(dark!)).toBeLessThan(luminance('#24292e'));
+  });
 });

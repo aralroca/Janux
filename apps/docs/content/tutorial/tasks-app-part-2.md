@@ -4,8 +4,7 @@ Part 1 gave us a working board that forgets everything on reload. Let's fix that
 
 ## An api() is three things
 
-```ts
-// src/server/tasks.api.ts
+```ts title="src/server/tasks.api.ts"
 import { api } from '@janux/server';
 import { schema, str, bool, list } from 'janux';
 
@@ -32,7 +31,7 @@ One definition each — and you got: a validated `POST /_janux/api/tasks.saveTas
 
 ## Persist with a declared effect
 
-```tsx
+```tsx title="src/components/TaskBoard.tsx" {7,8}
 import { effect } from 'janux';
 import { saveTasks } from '../server/tasks.api';
 
@@ -50,8 +49,7 @@ Every mutation of `tasks` — click, form, copilot — schedules a save; rapid e
 
 ## Load on the server, resume on the client
 
-```tsx
-// src/routes/index.tsx
+```tsx title="src/routes/index.tsx" {2}
 export default async function Home() {
   const saved = await loadTasks({});           // direct call on the server — no HTTP
 
@@ -63,8 +61,7 @@ The page arrives fully rendered with your tasks in the HTML **and** in the snaps
 
 ## A store two islands share
 
-```ts
-// src/stores.ts
+```ts title="src/stores.ts"
 export const theme = store({
   name: 'theme',
   state: schema({ mode: enums(['dark', 'light']).default('dark') }),

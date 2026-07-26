@@ -12,7 +12,7 @@ The starter ships a counter island and an agent panel — a working app to see b
 
 Everything the agent should know lives in `state`, schema-typed:
 
-```tsx
+```tsx title="src/components/TaskBoard.tsx" {5,13}
 import { component, intent, schema, str, bool, enums, list } from 'janux';
 
 export const TaskBoard = component({
@@ -35,7 +35,7 @@ Two things to notice: the `description` is written *for the model* — it will a
 
 ## Intents: one pipeline for clicks and tools
 
-```tsx
+```tsx title="src/components/TaskBoard.tsx" {18}
 intents: {
   add: intent({
     description: 'Add a task by title',
@@ -63,7 +63,7 @@ intents: {
 
 ## The view
 
-```tsx
+```tsx title="src/components/TaskBoard.tsx" {4,11}
 view: ({ state, derived, intents }) => (
   <section class="board">
     <header><h2>Tasks</h2><span>{derived.remaining} left</span></header>

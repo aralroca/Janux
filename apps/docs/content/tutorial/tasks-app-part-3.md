@@ -4,15 +4,15 @@ The board works and persists. Time to let an agent drive it — safely.
 
 ## Turn on the copilot
 
-```bash
-# .env — either one:
+```bash title=".env"
+# either one:
 JANUX_MODEL=anthropic/claude-fable-5
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 Optionally give it a personality in `src/agent.ts`:
 
-```ts
+```ts title="src/agent.ts"
 export default defineAgent({
   instructions:
     'You are this task app’s copilot. Use the tasks.* tools. ' +
@@ -36,7 +36,7 @@ For the chat version, [`examples/shop`](https://github.com/aralroca/Janux/tree/m
 
 ## Test it all without a browser
 
-```ts
+```ts title="src/components/TaskBoard.test.ts" {11}
 import { createInstance } from 'janux';
 import { TaskBoard } from './TaskBoard';
 

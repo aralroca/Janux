@@ -22,6 +22,12 @@
   --accent: light-dark(#0062ff, #47a8ff);
   --accent-soft: light-dark(#f0f6ff, #12283f);
   --code-bg: light-dark(#f6f6f6, #1a1a1a);
+  /* Tint behind a highlighted code line. GitHub's light palette is tuned to
+     land at ~4.5:1 on pure white — its red is 4.57 — so ANY light tint drops
+     code text below AA; light-mode highlights ride on the accent bar alone.
+     The dark tint goes darker than the block's #24292e instead of lighter,
+     which moves the worst token (#8b949e) from 4.77 to 5.41. */
+  --code-hl: light-dark(transparent, #0e1f33);
   --backdrop: rgba(0, 0, 0, 0.5);
   --ok-bg: light-dark(#ecfdf5, #052e1f);
   --ok-text: light-dark(#047857, #34d399);
@@ -598,18 +604,80 @@ pre code {
   line-height: 1.65;
 }
 
+/* The horizontal padding lives on the lines, not on the <pre>: a highlighted
+   line has to reach both edges, including the part only visible after
+   scrolling. `display: grid` on the <code> is what makes a line span the full
+   scroll width; the newlines between lines are whitespace-only anonymous items,
+   which grid drops, so blank lines need their own height. */
 pre.shiki {
-  padding: 18px 22px;
+  --code-pad: 22px;
+  padding: 18px 0;
 }
 
 pre.shiki code {
+  display: grid;
   color: inherit;
+}
+
+pre.shiki .line {
+  padding-inline: var(--code-pad);
+  min-height: 1lh;
+}
+
+pre.shiki .line.highlighted {
+  background: var(--code-hl);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .code-block {
   position: relative;
+  margin: 18px 0;
 }
 
+.code-block > pre {
+  margin: 0;
+}
+
+/* A file name turns the block into one card: header on top, code below. */
+.code-block.titled {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.code-block.titled > pre {
+  border: none;
+  border-radius: 0;
+}
+
+.code-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-soft);
+}
+
+.code-lang {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--heading);
+  color: var(--bg);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.code-file {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--heading);
+  overflow-wrap: anywhere;
+}
+
+/* Same actions, same order, same corner — inside the header when there is one,
+   floating over the top-right of the code when there isn't. */
 .block-actions {
   position: absolute;
   top: 12px;
@@ -619,23 +687,19 @@ pre.shiki code {
   gap: 8px;
 }
 
+.code-head .block-actions {
+  position: static;
+  margin-left: auto;
+}
+
 .copy-code {
-  padding: 4px 10px;
+  display: inline-flex;
+  padding: 5px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.code-block:hover .copy-code,
-.copy-code:focus-visible,
-.copy-code.copied {
-  opacity: 1;
 }
 
 .copy-code.copied {
@@ -758,7 +822,6 @@ body[data-theme='dark'] .hero-janus {
 .install-block {
   display: inline-flex;
   align-items: center;
-  margin: 18px 0;
   padding-right: 10px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -775,12 +838,10 @@ body[data-theme='dark'] .hero-janus {
   color: var(--heading);
 }
 
+/* Inside the pill the button's own border would double the pill's own. */
 .install-block .copy-code {
-  display: inline-flex;
-  padding: 6px;
   border: none;
   background: none;
-  opacity: 1;
 }
 
 .copy-code .ic-check {
@@ -1012,7 +1073,8 @@ body[data-theme='dark'] .scores-video {
 /* Half the width means half the columns, so these run a notch smaller and
    tighter than a full-width block — measured to fit, not guessed. */
 .surfaces .faces-grid pre {
-  padding: 12px;
+  --code-pad: 12px;
+  padding: 12px 0;
   font-size: 11.5px;
 }
 
