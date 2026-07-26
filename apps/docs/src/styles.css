@@ -88,7 +88,12 @@ body {
   position: fixed;
   inset: 0 0 auto 0;
   z-index: 30;
-  display: flex;
+  /* Explicit columns, one per child, so nothing in the header depends on any
+     other child being there: while a navigation streams in, the diff rebuilds
+     this region node by node, and with a flex row every momentary absence slid
+     everything left. A grid cell stays where it is, empty or not. */
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 18px;
   height: var(--topbar-h);
@@ -115,8 +120,25 @@ body {
   display: block;
 }
 
-.topbar janux-island:has(.search) {
-  margin-left: auto;
+.topbar .logo {
+  grid-column: 1;
+}
+
+/* Right-aligned in its own column, with its size reserved: the island inside can
+   be absent for a moment without the header noticing. */
+.topbar .search-slot {
+  grid-column: 2;
+  justify-self: end;
+  min-width: 171px;
+  min-height: 35px;
+}
+
+.topbar .top-links {
+  grid-column: 3;
+}
+
+.topbar janux-island:has(.theme-toggle) {
+  grid-column: 4;
 }
 
 .search-btn {

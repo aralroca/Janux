@@ -78,7 +78,18 @@ export function Layout({ children, current, sidebar = true }: { children: unknow
           <JanuxMark />
           Janux
         </a>
-        <SearchModal persist eager />
+        {/*
+          Not persisted, deliberately. A persisted island is lifted out of the
+          document before the navigation diff and grafted back after it, which
+          while the page streams in meant a header with no search box — and,
+          because the shape of the live header no longer matched the incoming
+          one, a header the diff rebuilt from scratch: everything slid left for a
+          moment. Islands are matched by key now, so this one is morphed in place
+          instead, and what it loses is a modal that a navigation closes anyway.
+        */}
+        <div class="search-slot">
+          <SearchModal eager />
+        </div>
         <nav class="top-links">
           <a href="/docs/getting-started/what-is-janux">Docs</a>
           <a href="/playground">Playground</a>
