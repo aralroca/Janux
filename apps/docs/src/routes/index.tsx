@@ -169,6 +169,12 @@ export default async function Home() {
             The agent-native fullstack UI framework: a live view for humans, typed MCP tools &amp;
             resources for AI agents — generated from the same definition, so they can never drift.
           </p>
+          <p class="hero-credit">
+            From the creator of{' '}
+            <a href="https://brisa.build/" target="_blank" rel="noopener">
+              Brisa
+            </a>
+          </p>
           <div class="hero-actions">
             <a class="cta" href="/docs/getting-started/quick-start">
               Get started
@@ -178,6 +184,13 @@ export default async function Home() {
             </a>
           </div>
           <CommandPill command="bun create janux my-app" />
+          <p class="hero-note">
+            <code>bunx create-janux my-app</code> is the same command. Requires{' '}
+            <a href="https://bun.sh" target="_blank" rel="noopener">
+              Bun
+            </a>{' '}
+            ≥ 1.3 — the dev server, the build and the production server all run on it.
+          </p>
         </section>
 
         <section class="demo">
@@ -221,6 +234,79 @@ export default async function Home() {
           </div>
         </section>
 
+        <section class="pitch split">
+          <div dangerHTML={interopCode.html} />
+          <div class="pitch-copy">
+            <h2 class="pitch-title">
+              A better model. Without giving up the{' '}
+              <span class="gradient">React&nbsp;ecosystem</span>.
+            </h2>
+            <p class="pitch-lede">
+              Nobody rewrites their stack for a new framework, and you don't have to.{' '}
+              <code>foreign()</code> mounts any React component <strong>unchanged</strong> — in a
+              real embedded React root, inside a Janux view. React Flow, data grids, animation
+              libraries, PDF viewers: they keep working.
+            </p>
+            <p class="code-caption">
+              Wrap it once in a bifacial shell and the opaque widget becomes agent-drivable too. And{' '}
+              <code>react</code> stays an optional peer:{' '}
+              <strong>an app with no foreign island ships zero React</strong>.
+            </p>
+            <p class="pitch-links">
+              <a href="/docs/guide/interop">Interop guide →</a>
+              <a href="https://github.com/aralroca/Janux/tree/main/examples/interop-react">
+                examples/interop-react →
+              </a>
+            </p>
+          </div>
+        </section>
+
+        <section class="pitch surfaces">
+          <h2 class="pitch-title">
+            Ship an <span class="gradient">MCP&nbsp;server</span>. Get{' '}
+            <span class="gradient">WebMCP</span> for free.
+          </h2>
+          <p class="pitch-lede">
+            Two agent surfaces, no integration work: the one every MCP client already speaks comes
+            out of your server functions, the browser one out of your components. You define
+            neither.
+          </p>
+          <p class="pitch-note">
+            Pointing Claude, Cursor or any MCP client at your app takes a URL, not an integration
+            project — and it works today:
+          </p>
+          <CommandPill command="claude mcp add --transport http my-app https://your.app/_janux/mcp" />
+          <div class="faces-grid">
+            <div>
+              <p class="face-label">🔌 MCP server — tools over HTTP</p>
+              <div class="pitch-code" dangerHTML={apiCode.html} />
+              <p class="code-caption">
+                <code>api</code> comes from <code>@janux/server</code>. One definition is a
+                validated endpoint, a ~100-byte client stub <em>and</em> a tool on your app's MCP
+                server at <code>/_janux/mcp</code> — where <code>guard: 'confirm'</code> reaches
+                clients as <code>annotations.requiresApproval</code>.
+              </p>
+            </div>
+            <div>
+              <p class="face-label">🌐 WebMCP — the same tools, in the browser</p>
+              <div class="pitch-code" dangerHTML={webmcpCode.html} />
+              <p class="code-caption">
+                <code>component</code>, <code>intent</code> and <code>schema</code> come from{' '}
+                <code>janux</code>. Every intent is registered with{' '}
+                <code>document.modelContext</code> the moment the island mounts, so Chrome's agent
+                and the DevTools WebMCP panel see it — and the button a human clicks runs that same
+                code.
+              </p>
+            </div>
+          </div>
+          <p class="pitch-links">
+            <a href="/docs/guide/api-rpc">api() reference →</a>
+            <a href="/docs/recipes/external-mcp-clients">External MCP clients →</a>
+            <a href="/docs/guide/agent-and-copilot">Agent &amp; copilot →</a>
+            <a href="/docs/recipes/debugging-webmcp">Debugging WebMCP →</a>
+          </p>
+        </section>
+
         <section class="mission">
           <h2>Built for how software gets written now</h2>
           <p class="mission-lede">
@@ -246,9 +332,9 @@ export default async function Home() {
             <div>
               <h3>🤖 Easy for agents to operate</h3>
               <p>
-                Every component ships as typed MCP tools and live resources — <strong>WebMCP</strong>{' '}
-                in the browser, a hosted <strong>MCP endpoint</strong> on the server. Connecting
-                Claude, ChatGPT or your own copilot is a URL, not an integration project.
+                Every app ships a hosted <strong>MCP endpoint</strong> on the server, and every
+                component its tools as <strong>WebMCP</strong> in the browser. Connecting Claude,
+                ChatGPT or your own copilot is a URL, not an integration project.
               </p>
             </div>
           </div>
@@ -292,84 +378,13 @@ export default async function Home() {
           ))}
         </section>
 
-        <section class="pitch surfaces">
-          <h2 class="pitch-title">
-            Ship <span class="gradient">WebMCP</span> tools and an{' '}
-            <span class="gradient">MCP&nbsp;server</span>. Same code.
-          </h2>
-          <p class="pitch-lede">
-            Two agent surfaces, no integration work: one comes out of your components, the other out
-            of your server functions. You define neither.
-          </p>
-          <div class="faces-grid">
-            <div>
-              <p class="face-label">🌐 WebMCP — tools in the browser</p>
-              <div class="pitch-code" dangerHTML={webmcpCode.html} />
-              <p class="code-caption">
-                <code>component</code>, <code>intent</code> and <code>schema</code> come from{' '}
-                <code>janux</code>. Every intent is registered with{' '}
-                <code>document.modelContext</code> the moment the island mounts, so Chrome's agent
-                and the DevTools WebMCP panel see it — and the button a human clicks runs that same
-                code.
-              </p>
-            </div>
-            <div>
-              <p class="face-label">🔌 MCP server — tools over HTTP</p>
-              <div class="pitch-code" dangerHTML={apiCode.html} />
-              <p class="code-caption">
-                <code>api</code> comes from <code>@janux/server</code>. One definition is a
-                validated endpoint, a ~100-byte client stub <em>and</em> a tool on your app's MCP
-                server at <code>/_janux/mcp</code> — where <code>guard: 'confirm'</code> reaches
-                clients as <code>annotations.requiresApproval</code>.
-              </p>
-            </div>
-          </div>
-          <p class="pitch-note">Pointing Claude at it takes a URL, not an integration project:</p>
-          <CommandPill command="claude mcp add --transport http my-app https://your.app/_janux/mcp" />
-          <p class="pitch-links">
-            <a href="/docs/guide/agent-and-copilot">Agent &amp; copilot →</a>
-            <a href="/docs/recipes/debugging-webmcp">Debugging WebMCP →</a>
-            <a href="/docs/guide/api-rpc">api() reference →</a>
-            <a href="/docs/recipes/external-mcp-clients">External MCP clients →</a>
-          </p>
-        </section>
-
-        <section class="pitch split">
-          <div dangerHTML={interopCode.html} />
-          <div class="pitch-copy">
-            <h2 class="pitch-title">
-              Better than React. Still runs the{' '}
-              <span class="gradient">React&nbsp;ecosystem</span>.
-            </h2>
-            <p class="pitch-lede">
-              You shouldn't have to choose between a better model and the libraries you already
-              depend on. <code>foreign()</code> mounts any React component{' '}
-              <strong>unchanged</strong> — in a real embedded React root, inside a Janux view. React
-              Flow, data grids, animation libraries, PDF viewers: they keep working.
-            </p>
-            <p class="code-caption">
-              Wrap it once in a bifacial shell and the opaque widget becomes agent-drivable too. And{' '}
-              <code>react</code> stays an optional peer:{' '}
-              <strong>an app with no foreign island ships zero React</strong>.
-            </p>
-            <p class="pitch-links">
-              <a href="/docs/guide/interop">Interop guide →</a>
-              <a href="https://github.com/aralroca/Janux/tree/main/examples/interop-react">
-                examples/interop-react →
-              </a>
-            </p>
-          </div>
-        </section>
-
         <footer class="home-footer">
           <a href="https://www.npmjs.com/package/janux">npm</a>
           <a href="https://github.com/aralroca/Janux">GitHub</a>
           <a href="https://github.com/aralroca/Janux/issues/1">RFC 0001</a>
           <a href="/docs/more/examples">Examples</a>
           <a href="/playground">Playground</a>
-          <span>
-            MIT © Aral Roca — from the creator of <a href="https://brisa.build/" target="_blank" rel="noopener">Brisa</a>
-          </span>
+          <span>MIT © Aral Roca</span>
         </footer>
       </main>
       <DocsCopilot persist />
