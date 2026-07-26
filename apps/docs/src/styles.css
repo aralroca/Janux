@@ -552,7 +552,8 @@ a:hover {
 
 /* A link sitting inside a sentence can't rely on colour alone to be a link:
    against the muted text around it the accent is only 1.26:1. */
-.home-footer span a {
+.hero-credit a,
+.hero-note a {
   text-decoration: underline;
 }
 
@@ -819,6 +820,14 @@ body[data-theme='dark'] .hero-janus {
   color: var(--text);
 }
 
+/* The strongest credibility line on the page, so it sits in the hero rather
+   than in the footer — small enough not to compete with the headline. */
+.hero-credit {
+  margin: 0 0 22px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
 .hero-actions {
   display: flex;
   justify-content: center;
@@ -877,6 +886,16 @@ body[data-theme='dark'] .hero-janus {
 .copy-code.copied .ic-check {
   display: inline;
   color: var(--accent);
+}
+
+/* Bun is a hard requirement, not a preference: better read under the pill than
+   discovered after `npm create`. */
+.hero-note {
+  margin: 12px auto 0;
+  max-width: 520px;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--muted);
 }
 
 .demo {
@@ -1038,9 +1057,10 @@ body[data-theme='dark'] .scores-video {
   color: var(--text);
 }
 
-/* The closing pitches. `.surfaces` puts WebMCP and the MCP server side by side
-   in the same grid as .two-faces above it — two ways to reach the same app, so
-   they belong on one line, not stacked. `.split` is code against prose. */
+/* The two pitches that answer the first objections, right after the fold.
+   `.surfaces` puts the MCP server and WebMCP side by side in the same grid as
+   .two-faces — two ways to reach the same app, so they belong on one line, not
+   stacked. `.split` is code against prose. */
 .pitch {
   max-width: 1000px;
   margin: 72px auto 8px;
@@ -1071,9 +1091,11 @@ body[data-theme='dark'] .scores-video {
 /* Both snippets stretch to the taller of the two, so the captions under them
    sit on the same line instead of stepping. The chain has to run all the way
    down — column → .pitch-code → .code-block → pre — or the box that carries
-   the border stays its natural height. */
+   the border stays its natural height. The section opens on the command pill
+   now, so the grid brings its own air instead of taking the lede's. */
 .surfaces .faces-grid {
   align-items: stretch;
+  margin-top: 34px;
 }
 
 .surfaces .faces-grid > div,
