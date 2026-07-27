@@ -25,6 +25,8 @@ export default defineAgent({
 });
 ```
 
+`OPENROUTER_API_KEY` is one key for hundreds of models, so the identifier keeps the vendor: `openrouter/deepseek/deepseek-v4-flash`. Provider-specific knobs go in [`modelOptions`](/docs/reference/agent-api#modeloptions) — on OpenRouter, `reasoning: { enabled: false }` skips the thinking pass and `provider: { sort: 'throughput' }` routes to the fastest host, which is the difference between a two-second turn and a twelve-second one.
+
 ## The turn protocol
 
 `POST /_janux/agent` with `{ messages, path }` returns one of:
@@ -33,7 +35,7 @@ export default defineAgent({
 - `{ type: 'ui_calls', calls, messages }` — the model wants to operate the UI. The client executes each call through the bridge (`window.janux.call`) and re-POSTs `{ continuation: true, toolResults, path }` — the **same turn resumes** against the (possibly new) path's manifest, so navigate-then-act flows work end to end.
 - `{ type: 'setup', message }` — no model configured.
 
-There is a second, simpler mount for browser-side loops: `POST /_janux/llm` takes `{ messages, tools }` and returns a single model turn (`{ text, toolCalls }`) — the `serverLlm()` transport of [`@janux/agent/local`](/docs/recipes/local-model-copilot). Model resolution is identical; tools always execute in the page.
+There is a second, simpler mount for browser-side loops: `POST /_janux/llm` takes `{ messages, tools }` and returns a single model turn (`{ text, toolCalls }`) — the `serverLlm()` transport of [`@janux/agent/local`](/docs/recipes/local-model-copilot). Model resolution, `modelOptions` and the [rate limit](/docs/reference/agent-rate-limit) are identical; tools always execute in the page.
 
 Tools prefixed `api.` execute **server-side inside the loop**; UI tools always cross the bridge so guards and proposals surface on the real page. `confirm` guards mean the copilot can *propose* checkout, but a human approves it on the UI.
 

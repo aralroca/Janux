@@ -2,6 +2,8 @@
 
 Per-identity limits on copilot turns, with a global circuit breaker. The counter store is pluggable, which is what makes the limiter correct across several instances.
 
+It guards **both** agent mounts: `POST /_janux/agent` (the server loop) and `POST /_janux/llm` (the one-turn model proxy browser loops use). They share the key and the budget, because they share the bill — protecting one door and leaving the other open just moves the abuse.
+
 ```ts
 import { createRateLimiter, createMemoryCounterStore, createRedisCounterStore } from '@janux/agent';
 
