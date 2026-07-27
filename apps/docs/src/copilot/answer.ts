@@ -44,6 +44,9 @@ async function consume(stream: ReadableStream<UIMessageChunk>, progress: Progres
     const { done, value } = await reader.read();
 
     if (done) break;
+    // Each turn is its own text part: a model that narrates ("Let me look this
+    // up") before answering would otherwise have the two glued into one word.
+    if (value.type === 'text-start' && text) text += '\n\n';
     // Stripped per delta, not once at the end: the model's reasoning would
     // otherwise sit in the panel for the whole run and vanish on the last paint.
     if (value.type === 'text-delta') progress.onText(stripThink((text += value.delta ?? '')));

@@ -89,6 +89,22 @@ describe('askStream', () => {
     expect(answer.text).toContain('could not find an answer');
   });
 
+  it('keeps each turn its own paragraph', async () => {
+    const answer = await askStream(
+      streamOf([
+        { type: 'text-start', id: 't0' },
+        { type: 'text-delta', delta: 'Let me look that up in the guards page' },
+        { type: 'text-end', id: 't0' },
+        { type: 'text-start', id: 't0' },
+        { type: 'text-delta', delta: 'An intent is a named action.' },
+      ]),
+      silent,
+    );
+
+    expect(answer.text).toBe('Let me look that up in the guards page\n\nAn intent is a named action.');
+    expect(answer.html).toContain('</p>');
+  });
+
   it('announces the tool that is running', async () => {
     const tools: string[] = [];
 
