@@ -36,16 +36,32 @@ function setAttr(el: Element, name: string, value: unknown): void {
   el.setAttribute(name, value === true ? '' : String(value));
 }
 
-function appendChildren(el: Element, children: unknown, pass?: RenderPass): void {
-  toDomNodes(children, pass).forEach((node) => el.appendChild(node));
+function appendChildren(el: Element, children: unknown, pass?: RenderPass, svg?: boolean): void {
+  toDomNodes(children, pass, svg).forEach((node) => el.appendChild(node));
 }
 
-function elementFor(node: JanuxNode, pass?: RenderPass): Element {
-  const el = document.createElement(node.$t as string);
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/**
+ * SVG needs its namespace. `createElement('path')` yields an unknown HTML
+ * element that lays out as nothing, so an icon rendered client-side (a view
+ * that appeared after boot, not from SSR) was silently invisible while the
+ * markup looked right in devtools.
+ *
+ * `foreignObject` is the door back to HTML, so its children stop inheriting it.
+ */
+function createElement(tag: string, svg: boolean): Element {
+  return svg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
+}
+
+function elementFor(node: JanuxNode, pass?: RenderPass, svg?: boolean): Element {
+  const tag = node.$t as string;
+  const inSvg = svg || tag === 'svg';
+  const el = createElement(tag, inSvg);
 
   attrEntries(node.$p).forEach(([name, value]) => setAttr(el, name, value));
   if (typeof node.$p.dangerHTML === 'string') el.innerHTML = node.$p.dangerHTML;
-  else appendChildren(el, node.$p.children, pass);
+  else appendChildren(el, node.$p.children, pass, inSvg && tag !== 'foreignObject');
 
   return el;
 }
@@ -91,21 +107,21 @@ function foreignPlaceholder(node: JanuxNode, def: ForeignDef, pass: RenderPass):
 }
 
 /** Expands a client view tree (static fns inline, nested islands as hosts) into real DOM nodes. */
-export function toDomNodes(node: unknown, pass?: RenderPass): Node[] {
+export function toDomNodes(node: unknown, pass?: RenderPass, svg?: boolean): Node[] {
   if (node === null || node === undefined || typeof node === 'boolean') return [];
   if (typeof node === 'string' || typeof node === 'number') {
     return [document.createTextNode(String(node))];
   }
-  if (Array.isArray(node)) return node.flatMap((child) => toDomNodes(child, pass));
+  if (Array.isArray(node)) return node.flatMap((child) => toDomNodes(child, pass, svg));
   const jsxNode = node as JanuxNode;
 
-  if (jsxNode.$t === Fragment) return toDomNodes(jsxNode.$p.children, pass);
+  if (jsxNode.$t === Fragment) return toDomNodes(jsxNode.$p.children, pass, svg);
   if (isForeignDef(jsxNode.$t)) {
     if (!pass) throw new Error(`Janux: foreign <${jsxNode.$t.name}> outside an island render pass`);
 
     return [foreignPlaceholder(jsxNode, jsxNode.$t, pass)];
   }
-  if (typeof jsxNode.$t === 'function') return toDomNodes((jsxNode.$t as any)(jsxNode.$p), pass);
+  if (typeof jsxNode.$t === 'function') return toDomNodes((jsxNode.$t as any)(jsxNode.$p), pass, svg);
   if (isComponentDef(jsxNode.$t)) {
     if (!pass) {
       throw new Error(`Janux: nested island <${jsxNode.$t.name}> outside an island render pass`);
@@ -114,5 +130,5 @@ export function toDomNodes(node: unknown, pass?: RenderPass): Node[] {
     return [islandPlaceholder(jsxNode, jsxNode.$t, pass)];
   }
 
-  return [elementFor(jsxNode, pass)];
+  return [elementFor(jsxNode, pass, svg)];
 }

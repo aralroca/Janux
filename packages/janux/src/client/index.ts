@@ -19,6 +19,7 @@ export {
 export { performNavigation, mountEagerIslands, KEEP_ATTRIBUTE } from './navigate';
 export { prefetch } from './prefetch';
 export {
+  appTools,
   installWebMCP,
   createModelContextPolyfill,
   type ModelContext,

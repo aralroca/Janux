@@ -128,6 +128,21 @@ function mergedTools(bridge: JanuxBridge, remote: ManifestTool[]): ManifestTool[
 }
 
 /**
+ * Every tool this route exposes, whether or not its island has resumed yet.
+ * The live bridge only knows what is mounted, and an agent asking "switch the
+ * theme" must not depend on whether the visitor happened to click the toggle
+ * first — `call()` mounts the island on demand anyway.
+ *
+ * Deliberately not cached: the route manifest is built per request against the
+ * caller's `ctx`, so a dynamic guard can open or close a tool without any
+ * navigation. It costs one small local request per call, which is noise next to
+ * the model turn that follows it.
+ */
+export async function appTools(bridge: JanuxBridge): Promise<ManifestTool[]> {
+  return mergedTools(bridge, await routeTools());
+}
+
+/**
  * Zero-config WebMCP: registers every mounted tool with `document.modelContext`
  * (polyfilled when absent) and keeps the registration in sync across SPA
  * navigations. Chrome's DevTools WebMCP panel then shows the Janux surface as-is.
@@ -138,7 +153,7 @@ export function installWebMCP(bridge: JanuxBridge): WebMCPHandle {
   let chain: Promise<void> = Promise.resolve();
 
   const run = async (): Promise<void> => {
-    const tools = mergedTools(bridge, await routeTools());
+    const tools = await appTools(bridge);
     // An app tool named `navigate` owns the name; the built-in steps aside.
     const taken = tools.some((tool) => tool.name.replace(/[^\w-]/g, '_') === 'navigate');
     const descriptors = [...(taken ? [] : [createNavigateTool()]), ...tools.map((tool) => descriptorFor(tool, bridge))];
