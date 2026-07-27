@@ -78,6 +78,8 @@ beforeAll(async () => {
   const app = createJanuxServer(await prodServerOptions(APP_ROOT));
 
   server = Bun.serve({ port: PORT, fetch: slowProxy(app) });
+  // Chrome proper, not the bundled Chromium: the Navigation API and speculation
+  // rules are what this suite exercises, and it is the engine that ships both.
   browser = await chromium.launch({ channel: 'chrome' });
 });
 
