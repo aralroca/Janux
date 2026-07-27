@@ -17,6 +17,8 @@ import { runtimeIncludes } from './deps';
  */
 const FRAMEWORK_BROWSER_SOURCES = ['janux/src/client', 'janux-agent/src/local'];
 const BARE_IMPORT = /(?:from|import)\s*\(?\s*['"]([^.'"][^'"]*)['"]/g;
+/** Erased at compile time, so it is nothing to pre-bundle — and the package need not be installed. */
+const TYPE_ONLY_IMPORT = /import\s+type\s[\s\S]*?from\s*['"][^'"]+['"];?/g;
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -31,17 +33,16 @@ function sourceFiles(dir: string): string[] {
 /** Every package the framework's browser runtime imports — `janux`/`@janux/*` is itself, `node:*` the runtime. */
 function frameworkBrowserImports(): string[] {
   const code = FRAMEWORK_BROWSER_SOURCES.flatMap((dir) => sourceFiles(resolve(import.meta.dir, '../..', dir)))
-    .map((file) => readFileSync(file, 'utf8'))
+    .map((file) => readFileSync(file, 'utf8').replace(TYPE_ONLY_IMPORT, ''))
     .join('\n');
   const specifiers = [...code.matchAll(BARE_IMPORT)].map(([, specifier]) => specifier);
 
   return [...new Set(specifiers)].filter((specifier) => !/^(node:|janux$|janux\/|@janux\/)/.test(specifier));
 }
 
-/** An app root that installed `@janux/agent` and its gui-agent dep — and no optional peer. */
-function appWithGuiAgentOnly(): string {
+/** An app root that installed exactly `stubs` under `node_modules`. */
+function appWith(stubs: string[]): string {
   const root = mkdtempSync(join(tmpdir(), 'janux-stub-app-'));
-  const stubs = ['@janux/agent', '@janux/agent/node_modules/@aralroca/gui-agent'];
 
   stubs.forEach((pkg) => {
     const dir = join(root, 'node_modules', pkg);
@@ -53,20 +54,31 @@ function appWithGuiAgentOnly(): string {
   return root;
 }
 
+const AGENT_STUBS = ['@janux/agent', '@janux/agent/node_modules/@aralroca/gui-agent'];
+
+/** An app root that installed `@janux/agent` and its gui-agent dep — and no optional peer. */
+function appWithGuiAgentOnly(): string {
+  return appWith(AGENT_STUBS);
+}
+
+/** …and the same app with the optional local-model peer installed. */
+function appWithLocalModel(): string {
+  return appWith([...AGENT_STUBS, '@janux/agent/node_modules/@browser-ai/transformers-js']);
+}
+
 describe('runtimeIncludes', () => {
   const docs = resolve(import.meta.dir, '../../../apps/docs');
 
   it('pre-bundles the copilot deps Vite cannot see behind the excluded packages', () => {
     expect(runtimeIncludes(docs)).toContain('@janux/agent > @aralroca/gui-agent/ui');
-    expect(runtimeIncludes(docs)).toContain('@janux/agent > @browser-ai/transformers-js');
+    expect(runtimeIncludes(appWithLocalModel())).toContain('@janux/agent > @browser-ai/transformers-js');
   });
 
-  /** Between the copilot app and the React-islands app, every import is installed somewhere. */
+  /** Between the copilot app, a local-model app and the React-islands app, every import is installed somewhere. */
   it('covers every bare import of the framework browser runtime', () => {
     const withReact = resolve(import.meta.dir, '../../../examples/interop-react');
-    const covered = [...runtimeIncludes(docs), ...runtimeIncludes(withReact)].map((entry) =>
-      entry.split(' > ').at(-1),
-    );
+    const covered = [...runtimeIncludes(docs), ...runtimeIncludes(appWithLocalModel()), ...runtimeIncludes(withReact)]
+      .map((entry) => entry.split(' > ').at(-1));
 
     expect(frameworkBrowserImports().filter((specifier) => !covered.includes(specifier))).toEqual([]);
   });
