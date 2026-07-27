@@ -1,6 +1,6 @@
 {
   "name": "janux",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "The agent-native UI framework core. One component, two faces: a view for humans, typed MCP tools & resources for AI agents.",
   "repository": {
     "type": "git",
