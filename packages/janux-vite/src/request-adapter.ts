@@ -22,5 +22,14 @@ export async function toFetchRequest(req: IncomingMessage): Promise<Request> {
 
 export async function sendFetchResponse(res: ServerResponse, response: Response): Promise<void> {
   res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-  res.end(Buffer.from(await response.arrayBuffer()));
+  if (!response.body) {
+    res.end();
+
+    return;
+  }
+  // Piped chunk by chunk, not buffered: pages are streamed SSR now, and
+  // collecting the body first would hold every chunk until the slowest
+  // island resolved — exactly what streaming exists to avoid.
+  for await (const chunk of response.body) res.write(chunk);
+  res.end();
 }
