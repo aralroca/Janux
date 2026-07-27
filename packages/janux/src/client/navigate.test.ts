@@ -5,7 +5,7 @@ import { jsx } from '../jsx-runtime';
 import { bool, int, list, schema, str, enums } from '../schema';
 import { renderToString } from '../render/server';
 import { boot } from './boot';
-import { closeStrandedModals } from './navigate';
+import { abortableStream, closeStrandedModals } from './navigate';
 
 beforeAll(() => GlobalRegistrator.register({ url: 'http://localhost:3000/' }));
 afterAll(() => GlobalRegistrator.unregister());
@@ -395,6 +395,93 @@ describe('SPA navigation (streamed diff)', () => {
   });
 });
 
+
+/**
+ * The `persist` contract: the island keeps its live instance across pages that
+ * render it. A destination page that does NOT render it disposes the instance —
+ * correct, but from the app's side it reads as "the assistant closed itself",
+ * so dev builds must name the island and the route out loud.
+ */
+describe('persisted island dropped by the incoming page', () => {
+  async function navigateAwayFromPersistedChat(): Promise<string[]> {
+    const pageA = await pageHtml('A', jsx(chat as any, { persist: true }));
+    const pageB = await pageHtml('B', jsx('h1', { children: 'B' }));
+
+    document.write(pageA);
+    document.close();
+    const client = boot({ defs: [chat] });
+
+    await client.call('chat.add', { text: 'hi' }); // mounts the island
+    await client.settled();
+
+    const warned: string[] = [];
+    const originalWarn = console.warn;
+
+    console.warn = (...args: unknown[]) => warned.push(args.join(' '));
+    try {
+      (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageB).body }));
+      await client.navigate('/b');
+    } finally {
+      console.warn = originalWarn;
+    }
+
+    return warned;
+  }
+
+  it('warns in dev naming the island, and still disposes it', async () => {
+    const warned = await navigateAwayFromPersistedChat();
+
+    expect(warned.some((message) => message.includes('chat#default'))).toBe(true);
+    expect(document.querySelector('janux-island[data-jx="chat#default"]')).toBeNull();
+  });
+
+  it('stays silent in production builds', async () => {
+    const previous = process.env.NODE_ENV;
+
+    process.env.NODE_ENV = 'production';
+    try {
+      const warned = await navigateAwayFromPersistedChat();
+
+      expect(warned).toEqual([]);
+    } finally {
+      process.env.NODE_ENV = previous;
+    }
+  });
+});
+
+/**
+ * Rapid navigations: the Navigation API aborts the superseded one's signal, and
+ * its fetch dies with it — but a body served from the prefetch cache has no
+ * fetch signal, so the navigation's own signal must kill the stream, or the
+ * superseded diff keeps consuming while the newest navigation waits behind it.
+ */
+describe('superseded navigation stream', () => {
+  it('abortableStream errors the reader and cancels the source on abort', async () => {
+    let cancelled = false;
+    const source = new ReadableStream<Uint8Array>({
+      pull() {},
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const controller = new AbortController();
+    const guarded = abortableStream(source, controller.signal);
+    const reader = guarded.getReader();
+    const pending = reader.read();
+
+    controller.abort();
+
+    await expect(pending).rejects.toThrow();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(cancelled).toBe(true);
+  });
+
+  it('is the identity without a signal', () => {
+    const source = new ReadableStream<Uint8Array>();
+
+    expect(abortableStream(source)).toBe(source);
+  });
+});
 
 describe('modal dialogs across a navigation', () => {
   /**
