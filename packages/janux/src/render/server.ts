@@ -251,7 +251,16 @@ async function* drainInOrder(children: EagerChild[]): AsyncGenerator<string> {
   }
 }
 
-export async function* renderChunks(node: unknown, scope: RenderScope): AsyncGenerator<string> {
+/** One node's HTML, buffered. The streaming renderer is `renderChunks`. */
+export async function renderNode(node: unknown, scope: RenderScope): Promise<string> {
+  const parts: string[] = [];
+
+  for await (const chunk of renderChunks(node, scope)) parts.push(chunk);
+
+  return parts.join('');
+}
+
+async function* renderChunks(node: unknown, scope: RenderScope): AsyncGenerator<string> {
   if (node === null || node === undefined || typeof node === 'boolean') return;
   if (typeof node === 'string' || typeof node === 'number') {
     yield escapeHtml(node);

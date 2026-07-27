@@ -1,5 +1,30 @@
 export type JanuxOutput = 'bun' | 'static';
 
+/**
+ * How the browser is told to get ahead of the next page.
+ *
+ * Speculation rules only apply to full document navigations, so they are for
+ * the links Janux does NOT intercept — `[data-native]` ones once SPA navigation
+ * is installed, and every link in a browser without the Navigation API. The
+ * pages Janux navigates itself are warmed by `prefetch` instead, whose stream
+ * feeds the diff directly.
+ */
+export interface SpeculationRulesConfig {
+  /** When the browser should act on a rule. Default: `moderate` (hover). */
+  eagerness?: 'conservative' | 'moderate' | 'eager';
+  /** URL patterns to leave alone, e.g. `['/logout', '/api/*']`. */
+  exclude?: string[];
+}
+
+export interface NavigationConfig {
+  /** SPA navigation via the Navigation API + streamed DOM diff. Default: true. */
+  spa?: boolean;
+  /** Hover-warm the page a link points at, feeding its stream to the diff. Default: true. */
+  prefetch?: boolean | { ttl?: number };
+  /** `<script type="speculationrules">` for browser-driven navigations. Default: true. */
+  speculationRules?: boolean | SpeculationRulesConfig;
+}
+
 export interface JanuxConfig {
   routesDir?: string;
   serverDir?: string;
@@ -23,6 +48,8 @@ export interface JanuxConfig {
   inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
   output?: JanuxOutput;
+  /** SPA navigation, prefetching and speculation rules. */
+  navigation?: NavigationConfig;
 }
 
 /** Identity helper for `janux.config.ts`: type-checks and autocompletes the config. */

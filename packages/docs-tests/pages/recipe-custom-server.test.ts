@@ -102,10 +102,13 @@ describe('recipes/custom-server.md', () => {
   it('the node adapter round-trips req/res through the same handler', async () => {
     const nodeReq = { method: 'GET', url: '/', headers: { host: 'localhost' } } as any;
     const response = await handler(await toFetchRequest(nodeReq));
-    const written: { status?: number; body?: string } = {};
+    const written: { status?: number; body: string } = { body: '' };
+    const decoder = new TextDecoder();
+    // Pages stream, so the adapter writes chunk by chunk and ends empty.
     const nodeRes = {
       writeHead: (status: number) => (written.status = status),
-      end: (buffer: Buffer) => (written.body = buffer.toString()),
+      write: (chunk: Uint8Array) => (written.body += decoder.decode(chunk, { stream: true })),
+      end: () => undefined,
     } as any;
 
     await sendFetchResponse(nodeRes, response);

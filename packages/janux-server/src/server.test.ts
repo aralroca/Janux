@@ -56,11 +56,19 @@ const post = (path: string, body: unknown, headers: Record<string, string> = {})
   );
 
 describe('pages', () => {
+  /**
+   * Still zero JavaScript: the one script tag a static page carries is the
+   * speculation rules' JSON, which the browser reads as data — no runtime, no
+   * module, nothing to execute. It is also the page type that benefits most,
+   * since every navigation away from it is a full document load.
+   */
   it('serves static pages with ZERO JavaScript', async () => {
     const html = await (await get('/')).text();
+    const scripts = [...html.matchAll(/<script[^>]*>/g)].map(([tag]) => tag);
 
     expect(html).toContain('<h1>Welcome</h1>');
-    expect(html).not.toContain('<script');
+    expect(scripts).toEqual(['<script type="speculationrules" key="jx-speculation" id="jx-speculation">']);
+    expect(html).not.toContain('src=');
     expect(html).toContain('rel="janux-manifest"');
   });
 

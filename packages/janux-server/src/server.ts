@@ -8,6 +8,7 @@ import {
   type Ctx,
   type I18n,
   type I18nConfig,
+  type NavigationConfig,
   type PageMeta,
   type RenderResult,
   type RenderStream,
@@ -82,6 +83,8 @@ export interface ServerOptions {
    * exist there. Without it every static page fetches a 404 manifest.
    */
   staticExport?: boolean;
+  /** SPA navigation, prefetching and speculation rules (`navigation` in the app config). */
+  navigation?: NavigationConfig;
 }
 
 async function resolveMeta(
@@ -463,6 +466,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
         inlineStyles: navigating ? undefined : options.inlineStyles,
         favicon: options.favicon,
         i18n: result ? shellI18n(locale, result) : locale ? { locale, dir: localeDir(locale) } : undefined,
+        navigation: options.navigation,
       };
     };
     const { prelude } = shellParts(shellFor());

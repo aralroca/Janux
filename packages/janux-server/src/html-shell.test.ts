@@ -116,6 +116,44 @@ describe('shellParts (streaming shell)', () => {
   });
 });
 
+/**
+ * Speculation rules are for the navigations the browser drives itself: they do
+ * not apply to the SPA path's fetch. So the shell emits them for every internal
+ * link, and the client narrows them once it starts intercepting.
+ */
+describe('htmlDocument navigation and speculation rules', () => {
+  it('prefetches internal links on hover by default', () => {
+    const html = htmlDocument(base);
+
+    expect(html).toContain('<script type="speculationrules" key="jx-speculation" id="jx-speculation">');
+    expect(html).toContain('"eagerness":"moderate"');
+    expect(html).toContain('"href_matches":"/*"');
+  });
+
+  it('reflects the configured eagerness and exclusions', () => {
+    const html = htmlDocument({
+      ...base,
+      navigation: { speculationRules: { eagerness: 'conservative', exclude: ['/logout'] } },
+    });
+    const rules = JSON.parse(html.match(/type="speculationrules"[^>]*>([^<]+)</)![1]!);
+
+    expect(rules.prefetch[0].eagerness).toBe('conservative');
+    expect(rules.prefetch[0].where.and).toContainEqual({ not: { href_matches: '/logout' } });
+  });
+
+  it('emits none when they are turned off', () => {
+    expect(htmlDocument({ ...base, navigation: { speculationRules: false } })).not.toContain('speculationrules');
+  });
+
+  it('ships the navigation config to the client, and nothing when it is empty', () => {
+    const configured = htmlDocument({ ...base, navigation: { prefetch: false } });
+
+    expect(configured).toContain('type="application/janux+config" key="jx-config"');
+    expect(configured).toContain('"prefetch":false');
+    expect(htmlDocument(base)).not.toContain('janux+config');
+  });
+});
+
 // A document with no declared language fails assistive tech (and every audit
 // that checks for it). i18n apps already declare one per locale; everyone else
 // used to ship a bare <html>, so the shell defaults instead of omitting.

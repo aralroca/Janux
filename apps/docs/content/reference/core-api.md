@@ -133,6 +133,23 @@ const { html, registry, snapshots, i18nKeys } = await renderToString(<ShopPage /
 
 `options` accepts `{ ctx, bus, storeDefs, initialState }` — the same wiring `createJanuxServer` supplies per request (`initialState` reseeds islands by uri when resuming).
 
+### renderToStream(node, options?)
+
+The same render, handed over as it is produced instead of after the last island resolves. This is what `createJanuxServer` serves pages with — see [SSR and resumability](/docs/guide/ssr-and-resumability#streaming).
+
+```ts
+const { chunks, done } = renderToStream(<ShopPage />, { ctx });
+
+for await (const chunk of chunks) process.stdout.write(chunk);
+const { snapshots, registry, i18nKeys } = await done;   // only after chunks is drained
+```
+
+Same `options` as `renderToString`, and the joined chunks are byte-identical to its `html`. Islands still load their sources in parallel — a slow one holds back its own children, not the page — and the snapshots only exist once the render finished, which is why they arrive through `done` rather than up front.
+
+### speculationRules(config, options?)
+
+The JSON behind the `<script type="speculationrules">` the shell emits, exported so a custom server can build its own. `config` is the `navigation.speculationRules` value (`true`, `false`, or `{ eagerness, exclude }`); pass `{ nativeOnly: true }` for the narrowed form the client swaps in once it intercepts navigations. `SPECULATION_SCRIPT_ID` is the id both sides agree on. See [Navigation](/docs/guide/navigation#prefetching-and-speculation-rules).
+
 ### buildManifest(entries, ctx?)
 
 Builds the agent-facing manifest for a set of mounted defs — the projection external MCP clients and `GET /_janux/manifest` consume:

@@ -8,8 +8,10 @@ import { mountDocumentForeigns, mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
 import { enableAgentGlow, type GlowOptions } from './glow';
 import { installI18n } from './i18n';
+import type { NavigationConfig } from '../config';
 import { mountEagerIslands, performNavigation } from './navigate';
-import { prefetch } from './prefetch';
+import { configurePrefetch, prefetch } from './prefetch';
+import { speculationRules, SPECULATION_SCRIPT_ID } from './speculation';
 import { installWebMCP } from './webmcp';
 
 export interface BootOptions {
@@ -18,7 +20,11 @@ export interface BootOptions {
   ctx?: Record<string, unknown>;
   /** Highlight islands while an agent operates them. `true` or `{ duration }`. */
   glow?: boolean | GlowOptions;
-  /** SPA navigation via the Navigation API + streamed DOM diff. Default: true. */
+  /**
+   * SPA navigation via the Navigation API + streamed DOM diff. Default: true.
+   * Overrides `navigation` from `janux.config.ts`, which is where an app
+   * normally configures this.
+   */
   navigation?: boolean;
   /** Register mounted tools with `document.modelContext` (WebMCP), polyfilled when absent. Default: true. */
   webmcp?: boolean;
@@ -89,13 +95,48 @@ export function shouldIntercept(event: any): boolean {
   return !wasNative;
 }
 
+/** `janux.config.ts`'s navigation section, shipped by the shell as a keyed script. */
+function shellNavigationConfig(): NavigationConfig {
+  const script = document.getElementById('jx-config');
+
+  try {
+    return JSON.parse(script?.textContent ?? '{}').navigation ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * The server emits rules for every internal link, since at that point nothing
+ * knows whether this browser will intercept navigations. Once it does, those
+ * rules speculate documents the SPA path never uses and make hover fetch the
+ * page twice — so they are narrowed to the links the browser still owns.
+ * Replacing the script is how rules are re-evaluated; editing it is not.
+ */
+function rescopeSpeculationRules(config: NavigationConfig): void {
+  const existing = document.getElementById(SPECULATION_SCRIPT_ID);
+
+  if (!existing) return;
+  const rules = speculationRules(config.speculationRules ?? true, { nativeOnly: true });
+  const script = document.createElement('script');
+
+  existing.remove();
+  if (!rules) return;
+  script.type = 'speculationrules';
+  script.id = SPECULATION_SCRIPT_ID;
+  script.textContent = JSON.stringify(rules);
+  document.head.appendChild(script);
+}
+
 /**
  * Navigation API interception (Baseline 2026). Browsers without it keep
  * native MPA links — which already work — so there is no History fallback.
  */
-function installNavigation(mount: MountContext): void {
+function installNavigation(mount: MountContext, config: NavigationConfig): void {
   const nav = (window as any).navigation;
+  const prefetching = config.prefetch !== false;
 
+  configurePrefetch({ enabled: prefetching, ...(typeof config.prefetch === 'object' ? config.prefetch : {}) });
   document.addEventListener(
     'click',
     (event) => {
@@ -103,7 +144,8 @@ function installNavigation(mount: MountContext): void {
     },
     true,
   );
-  nav?.addEventListener('navigate', (event: any) => {
+  if (!nav) return; // No interception: the server's document-wide rules stand.
+  nav.addEventListener('navigate', (event: any) => {
     if (!shouldIntercept(event)) return;
     event.intercept({
       scroll: 'after-transition',
@@ -111,6 +153,8 @@ function installNavigation(mount: MountContext): void {
         awaitTracked(mount, performNavigation(event.destination.url, mount, { signal: event.signal })),
     });
   });
+  rescopeSpeculationRules(config);
+  if (!prefetching) return;
   document.addEventListener('mouseover', (event) => {
     const link = (event.target as Element | null)?.closest?.('a[href^="/"]:not([data-native])');
 
@@ -145,7 +189,9 @@ export function boot(options: BootOptions = {}): JanuxClient {
   installI18n(mount.ctx);
   listen(mount, (work) => trackInflight(mount, work));
   if (options.glow) enableAgentGlow(options.glow === true ? {} : options.glow);
-  if (options.navigation !== false) installNavigation(mount);
+  const navigation = shellNavigationConfig();
+
+  if (options.navigation ?? navigation.spa ?? true) installNavigation(mount, navigation);
   const bridge = createBridge(mount, proposals);
   const client: JanuxClient = {
     ...bridge,

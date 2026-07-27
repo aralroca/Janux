@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ServerOptions } from '@janux/server';
-import type { JanuxConfig, JanuxOutput } from 'janux';
+import type { JanuxConfig, JanuxOutput, NavigationConfig } from 'janux';
 
 export type { JanuxOutput } from 'janux';
 
@@ -28,6 +28,7 @@ export interface JanuxAppConfig {
   inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
   output: JanuxOutput;
+  navigation?: NavigationConfig;
 }
 
 const CONFIG_FILES = ['janux.config.ts', 'janux.config.js'];
@@ -79,6 +80,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     inlineStyles: options.inlineStyles,
     llmsTxt: options.llmsTxt,
     output: options.output ?? 'bun',
+    navigation: options.navigation,
   };
 }
 
@@ -93,8 +95,15 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
 export function shellOptions(
   app: JanuxAppConfig,
   stylesheets: string[],
-): Pick<ServerOptions, 'title' | 'lang' | 'siteUrl' | 'favicon' | 'stylesheets'> {
-  return { title: app.title, lang: app.lang, siteUrl: app.siteUrl, favicon: app.favicon, stylesheets };
+): Pick<ServerOptions, 'title' | 'lang' | 'siteUrl' | 'favicon' | 'stylesheets' | 'navigation'> {
+  return {
+    title: app.title,
+    lang: app.lang,
+    siteUrl: app.siteUrl,
+    favicon: app.favicon,
+    stylesheets,
+    navigation: app.navigation,
+  };
 }
 
 export function apiFiles(serverDir: string): string[] {

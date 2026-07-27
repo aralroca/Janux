@@ -3,6 +3,13 @@ interface PrefetchEntry {
   at: number;
 }
 
+export interface PrefetchConfig {
+  /** Hover-warming on internal links. Default: true. */
+  enabled?: boolean;
+  /** How long a warmed page stays usable, in ms. Default: 30000. */
+  ttl?: number;
+}
+
 /**
  * Tells the server this is a client navigation, not a first load: it then leaves
  * out what the live document already has (inlined CSS), which is what the
@@ -10,20 +17,35 @@ interface PrefetchEntry {
  */
 export const NAVIGATION_HEADERS = { accept: 'text/html', 'x-janux-navigation': '1' };
 
+const DEFAULTS: Required<PrefetchConfig> = { enabled: true, ttl: 30_000 };
 const prefetched = new Map<string, PrefetchEntry>();
-const PREFETCH_TTL = 30_000;
+let config = DEFAULTS;
+
+/**
+ * Applied from `janux.config.ts` (or `boot()`) before navigation is installed.
+ * Warmed pages are dropped: they were fetched under the previous rules.
+ */
+export function configurePrefetch(options: PrefetchConfig | undefined): void {
+  config = { ...DEFAULTS, ...options };
+  prefetched.clear();
+}
 
 function isFresh(entry: PrefetchEntry | undefined): entry is PrefetchEntry {
-  return entry !== undefined && Date.now() - entry.at <= PREFETCH_TTL;
+  return entry !== undefined && Date.now() - entry.at <= config.ttl;
+}
+
+/** Warming a page the user may never open is their data, not ours. */
+function saveData(): boolean {
+  return (navigator as any)?.connection?.saveData === true;
 }
 
 /**
- * Warms the next page on link hover; entries expire after 30s. The stream is
- * kept rather than the text: the navigation diffs whatever it is handed, and a
- * body already sitting in the network layer streams instantly.
+ * Warms the next page on link hover. The stream is kept rather than the text:
+ * the navigation diffs whatever it is handed, and a body already sitting in the
+ * network layer streams instantly.
  */
 export function prefetch(url: string): void {
-  if (isFresh(prefetched.get(url))) return;
+  if (!config.enabled || saveData() || isFresh(prefetched.get(url))) return;
   prefetched.set(url, {
     at: Date.now(),
     body: fetch(url, { headers: NAVIGATION_HEADERS }).then((response) =>

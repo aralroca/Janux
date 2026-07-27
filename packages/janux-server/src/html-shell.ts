@@ -1,4 +1,4 @@
-import type { PageMeta } from 'janux';
+import { speculationRules, SPECULATION_SCRIPT_ID, type NavigationConfig, type PageMeta } from 'janux';
 import { headTags } from './head-tags';
 import { safeAttr, safeJson } from './html-escape';
 
@@ -29,6 +29,8 @@ export interface ShellOptions {
   inlineStyles?: string[];
   favicon?: string;
   i18n?: ShellI18n;
+  /** `navigation` from the app config: reaches the client through the shell. */
+  navigation?: NavigationConfig;
 }
 
 /*
@@ -46,6 +48,32 @@ function stateScripts(snapshots: ShellOptions['snapshots']): string {
       return `<script type="application/janux+state" key="state:${uri}" data-uri="${uri}">${payload}</script>`;
     })
     .join('\n');
+}
+
+/**
+ * Speculation rules, and the navigation config the client reads back.
+ *
+ * The rules cover every internal link: at parse time nothing knows whether this
+ * browser intercepts navigations, and a browser that does not is exactly the
+ * one that benefits. `boot()` narrows them to `[data-native]` links once it
+ * takes over. Both scripts are keyed, like everything else the shell emits, so
+ * the navigation diff matches them by identity.
+ */
+function navigationScripts(options: Omit<ShellOptions, 'html'>): string {
+  const config = options.navigation;
+  const rules = speculationRules(config?.speculationRules ?? true);
+  const scripts = rules
+    ? [`<script type="speculationrules" key="jx-speculation" id="${SPECULATION_SCRIPT_ID}">${safeJson(rules)}</script>`]
+    : [];
+
+  // Only when it says something: the defaults live in the client.
+  if (config && Object.keys(config).length > 0) {
+    scripts.push(
+      `<script type="application/janux+config" key="jx-config" id="jx-config">${safeJson({ navigation: config })}</script>`,
+    );
+  }
+
+  return scripts.join('\n');
 }
 
 function runtimeScripts(options: Omit<ShellOptions, 'html'>): string {
@@ -127,6 +155,7 @@ export function shellParts(options: Omit<ShellOptions, 'html'>): { prelude: stri
   const epilogue = [
     i18nScript,
     options.islandNames.length > 0 ? stateScripts(options.snapshots) : '',
+    navigationScripts(options),
     runtimeScripts(options),
     '</body>',
     '</html>',
