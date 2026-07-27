@@ -81,6 +81,40 @@ describe('createCopilot', () => {
     expect(seen[0]!.tools.map((tool) => tool.name)).toEqual(['navigate']);
   });
 
+  it('exposes tools of islands that have not resumed yet (route manifest)', async () => {
+    installBridge();
+    const originalFetch = globalThis.fetch;
+    // The shell advertises a manifest endpoint; the route knows a tool the live bridge does not.
+    document.body.innerHTML = '<link id="jx-manifest" rel="manifest" href="/_janux/manifest">';
+    globalThis.fetch = (async () =>
+      Response.json({ tools: [{ name: 'theme.cycle', description: 'Cycle the theme', guard: 'auto' }] })) as any;
+    const { llm, seen } = scriptedLlm([]);
+
+    await createCopilot({ llm }).ask('hi');
+    globalThis.fetch = originalFetch;
+    document.body.innerHTML = '';
+
+    expect(seen[0]!.tools.map((tool) => tool.name)).toContain('theme_cycle');
+  });
+
+  it('narrows the manifest surface with tools.include', async () => {
+    installBridge();
+    const { llm, seen } = scriptedLlm([]);
+
+    await createCopilot({ llm, tools: { include: ['api.docs.*'] } }).ask('hi');
+
+    expect(seen[0]!.tools.map((tool) => tool.name)).toEqual(['api_docs_searchDocs', 'navigate']);
+  });
+
+  it('lets tools.exclude win over a matching include', async () => {
+    installBridge();
+    const { llm, seen } = scriptedLlm([]);
+
+    await createCopilot({ llm, tools: { include: ['api.docs.*', 'cart.addItem'], exclude: ['api.docs.*'] } }).ask('hi');
+
+    expect(seen[0]!.tools.map((tool) => tool.name)).toEqual(['cart_addItem', 'navigate']);
+  });
+
   it('navigate drives the page through the framework tool', async () => {
     installBridge();
     document.body.innerHTML = '<a href="/docs/guide/cli-and-deployment">CLI</a>';

@@ -1,21 +1,9 @@
-import { searchPages, type SearchHit, type SearchPage } from './score';
+import { hitHref, loadCorpus, searchPages, type SearchHit } from './score';
 
 interface Refs {
   dialog: HTMLDialogElement;
   input: HTMLInputElement;
   results: HTMLElement;
-}
-
-let corpus: Promise<SearchPage[]> | undefined;
-
-function loadCorpus(): Promise<SearchPage[]> {
-  corpus ??= fetch('/search-index.json').then((response) => response.json());
-
-  return corpus;
-}
-
-function hitHref(hit: SearchHit): string {
-  return `/docs/${hit.section}/${hit.slug}${hit.heading ? `#${hit.heading.id}` : ''}`;
 }
 
 function hitItem(hit: SearchHit): HTMLLIElement {

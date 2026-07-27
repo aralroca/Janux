@@ -23,13 +23,17 @@ export const ThemeToggle = component({
 
   intents: {
     cycle: intent({
-      description: 'Switch to the next color theme (system → light → dark)',
+      description: 'Switch to the next color theme (system → light → dark). Returns the theme it landed on.',
+      // An agent asked for "dark" cannot see the DOM: without the resulting mode
+      // it calls this once and reports success from the wrong theme.
       run: ({ state }: any) => {
         const current = document.body.dataset.theme ?? 'system';
         const next = MODES[(MODES.indexOf(current as (typeof MODES)[number]) + 1) % MODES.length];
 
         state.mode = next;
         applyTheme(next);
+
+        return { theme: next };
       },
     }),
   },

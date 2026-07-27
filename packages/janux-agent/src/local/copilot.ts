@@ -1,7 +1,10 @@
 import { GuiAgent, registry } from '@aralroca/gui-agent';
 import type { AgentStep, Confirm, Llm, RunResult, ToolDefinition } from '@aralroca/gui-agent';
 import type { AgentVisualizer, AgentVisualizerOptions } from '@aralroca/gui-agent/ui';
-import { createNavigateTool } from 'janux/client';
+import { appTools, createNavigateTool } from 'janux/client';
+import { allowsTool, type ToolFilter } from '../tool-filter';
+import type { UIMessageChunk } from './llm';
+import { runStream } from './stream';
 import { startVisualization, type Visualization } from './visualize';
 
 export interface CopilotOptions {
@@ -17,6 +20,13 @@ export interface CopilotOptions {
   onStep?: (step: AgentStep) => void;
   /** Expose the Janux manifest tools (intents + api()) to the model. Default true. */
   manifestTools?: boolean;
+  /**
+   * Which manifest tools reach the model, same patterns as `defineAgent({ tools })`:
+   * `include` is an allowlist (default: everything), `exclude` always wins. Use it
+   * to hide server tools a client-side `defineTool` already covers, or to keep the
+   * copilot from calling its own intents.
+   */
+  tools?: ToolFilter;
   /** Synthesize generic click/fill/read tools from the live DOM. Default false. */
   domFallback?: boolean;
   /**
@@ -33,6 +43,13 @@ export interface CopilotOptions {
 export interface Copilot {
   /** Run the agent loop toward `question`; resolves with the final answer and transcript. */
   ask(question: string, signal?: AbortSignal): Promise<RunResult>;
+  /**
+   * The same run, as an [AI SDK UI Message Stream](/docs/reference/agent-api)
+   * of chunks: text deltas and tool inputs as the model produces them, tool
+   * outputs as the page executes them. Needs a streaming `llm` for the text to
+   * arrive live (`serverLlm({ stream: true })`).
+   */
+  stream(question: string, signal?: AbortSignal): ReadableStream<UIMessageChunk>;
   /** The visualizer driving the chips and the glow — present once a run has started it. */
   visualizer?: AgentVisualizer;
   /** Unregister the manifest tools this copilot bridged into gui-agent. */
@@ -65,12 +82,19 @@ function toDefinition(tool: any, bridge: any): ToolDefinition {
 }
 
 /** Re-registers every manifest tool (replace-mode: SPA navigations change the surface). */
-function syncManifestTools(registered: Set<string>): void {
+async function syncManifestTools(registered: Set<string>, filter: ToolFilter | undefined): Promise<void> {
   const bridge = (window as any).janux;
 
   if (!bridge) return;
-  bridge.manifest().tools.forEach((tool: any) => {
+  // The route's whole surface, not just the islands that happen to be mounted:
+  // "switch the theme" must not depend on the visitor having clicked the toggle.
+  const tools = await appTools(bridge);
+
+  tools.forEach((tool: any) => {
     const name = wireName(tool.name);
+
+    // Filtered on the manifest name, the one the app wrote — not on the wire name.
+    if (!allowsTool(tool.name, filter)) return;
 
     // A same-named tool registered by the app itself (defineTool) wins.
     if (registry.has(name) && !registered.has(name)) return;
@@ -103,11 +127,13 @@ function syncNavigateTool(registered: Set<string>): void {
  */
 export function createCopilot(options: CopilotOptions): Copilot {
   const registered = new Set<string>();
+  const runListeners = new Set<(step: AgentStep) => void>();
   let visualization: Visualization | undefined;
   // The visualizer never replaces the caller's observer — it chains onto it.
   const onStep = (step: AgentStep): void => {
     options.onStep?.(step);
     visualization?.visualizer.onStep(step);
+    runListeners.forEach((listener) => listener(step));
   };
   /**
    * Built on the first run, not at construction: an app that wires its copilot
@@ -121,24 +147,38 @@ export function createCopilot(options: CopilotOptions): Copilot {
     visualization.visualizer.clear();
   };
 
+  const ask = async (question: string, signal?: AbortSignal): Promise<RunResult> => {
+    startRun();
+    if (options.manifestTools !== false) await syncManifestTools(registered, options.tools);
+    syncNavigateTool(registered);
+    const agent = new GuiAgent({
+      llm: options.llm,
+      systemPrompt: options.instructions,
+      maxSteps: options.maxSteps ?? 8,
+      domFallback: options.domFallback ?? false,
+      confirm: options.confirm,
+      onStep,
+    });
+
+    return agent.run(question, signal);
+  };
+
   return {
     get visualizer() {
       return visualization?.visualizer;
     },
-    ask(question, signal) {
-      startRun();
-      if (options.manifestTools !== false) syncManifestTools(registered);
-      syncNavigateTool(registered);
-      const agent = new GuiAgent({
+    ask,
+    stream(question, signal) {
+      return runStream({
         llm: options.llm,
-        systemPrompt: options.instructions,
-        maxSteps: options.maxSteps ?? 8,
-        domFallback: options.domFallback ?? false,
-        confirm: options.confirm,
-        onStep,
-      });
+        signal,
+        run: () => ask(question, signal),
+        listen: (listener) => {
+          runListeners.add(listener);
 
-      return agent.run(question, signal);
+          return () => runListeners.delete(listener);
+        },
+      });
     },
     dispose() {
       registered.forEach((name) => registry.unregister(name));

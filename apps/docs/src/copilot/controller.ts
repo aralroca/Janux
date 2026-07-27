@@ -1,56 +1,38 @@
-import { marked } from 'marked';
-import { createCopilot, localLlm, serverLlm, supportsLocalLlm, type Copilot, type Llm } from '@janux/agent/local';
-import { createNavigateTool } from 'janux/client';
-import { readPage, registerDocsTools, searchMatches } from './docs-tools';
+import { createCopilot, serverLlm, type Copilot } from '@janux/agent/local';
+import { askStream, type Answer, type Progress } from './answer';
+import { docsMap, readPage, registerDocsTools, searchMatches } from './docs-tools';
+import { renderMarkdown } from './markdown';
 
-export { supportsLocalLlm };
+export { renderMarkdown };
+export type { Answer, Progress };
 
 export interface Exchange {
   role: string;
   text: string;
 }
 
-export interface Reply {
-  /** Raw markdown, for the conversation history. */
-  text: string;
-  /** Sanitized HTML, for rendering. */
-  html: string;
-}
-
-const SCRIPT_BLOCKS = /<(script|style)[^>]*>[\s\S]*?<\/(script|style)>/gi;
-const EVENT_ATTRS = /\son\w+\s*=\s*("[^"]*"|'[^']*')/gi;
-const JS_URLS = /javascript:/gi;
-
-/** marked does not sanitize; the model's output never gets to run code in the page. */
-export function renderMarkdown(text: string): string {
-  const html = marked.parse(text, { async: false }) as string;
-
-  return html.replace(SCRIPT_BLOCKS, '').replace(EVENT_ATTRS, '').replace(JS_URLS, '');
-}
-
-const INSTRUCTIONS =
-  'You are the Janux documentation copilot. Answer ONLY from the provided page content ' +
-  'and search results — never from memory. If they are not enough, call read_doc on ' +
-  'another listed path, or search_docs with a better query. When the user asks to open, ' +
-  'go to, or navigate to a page, call navigate with its path (pick it from the search ' +
-  'results) and confirm in one sentence. Otherwise answer in 2-6 sentences (with a code ' +
-  'example when the page shows one), then the exact path of the page you used on its own ' +
-  'line (e.g. /docs/guide/api-rpc). If the docs do not cover something, say so. ' +
-  'Reply in the language the user writes in.';
+const INSTRUCTIONS = [
+  'You are the Janux documentation copilot, embedded in the docs site itself.',
+  'Answer ONLY from the documentation: the page map below, the search results and read_doc.',
+  'Never answer from memory, and say so plainly when the docs do not cover something.',
+  'Always end the answer with the page you used as a markdown link, including the section anchor:',
+  '[Title](/docs/guide/intents-and-guards#proposals).',
+  'To take the user somewhere, call navigate with that same path — the anchor scrolls to the section.',
+  'You can also operate this site through its own tools (switching the theme, for instance).',
+  'Answer in 2-6 sentences, with a code example when the page has one.',
+  'Reply in the language the user writes in.',
+].join(' ');
 
 const HISTORY_LIMIT = 6;
 
-/** Qwen3 wraps (possibly empty) reasoning in think tags; never show them. */
-const THINK_BLOCK = /<think>[\s\S]*?<\/think>/g;
+/**
+ * How much of the top match rides along in the goal. It buys the single-turn
+ * answer, but it sits in the part of the prompt no provider can cache, and it is
+ * re-sent on every turn of the loop — `read_doc` is there for the rest.
+ */
+const PRE_READ_CHARS = 6000;
 
-/** A truncated generation can leave the last think block unclosed. */
-const OPEN_THINK = /<think>[\s\S]*$/;
-
-export function stripThink(text: string): string {
-  return text.replace(THINK_BLOCK, '').replace(OPEN_THINK, '').trim();
-}
-
-let copilot: Copilot | undefined;
+let ready: Promise<Copilot> | undefined;
 
 /** Opt-in step tracing: `localStorage.setItem('copilot-debug', '1')`. */
 function onStep(step: unknown): void {
@@ -59,22 +41,33 @@ function onStep(step: unknown): void {
   }
 }
 
-function start(llm: Llm, instructions: string): void {
+/**
+ * Wires the copilot to the app server's model (`/_janux/llm`, DeepSeek V4 Flash
+ * over OpenRouter). The whole page map rides in the instructions, so the model
+ * knows the documentation before it searches it, and the site's own manifest
+ * tools are on the table — minus `api.docs.*`, which the client-side
+ * `search_docs`/`read_doc` already cover with the static index.
+ */
+async function build(): Promise<Copilot> {
   registerDocsTools();
-  copilot = createCopilot({ llm, instructions, manifestTools: false, maxSteps: 6, onStep });
+  const map = await docsMap().catch(() => '');
+
+  return createCopilot({
+    llm: serverLlm({ stream: true }),
+    instructions: `${INSTRUCTIONS}\n\nPages and sections:\n${map}`,
+    // `copilot.*` too: the panel's own intents are not tools for the model —
+    // closing the panel it is answering into is not a feature.
+    tools: { exclude: ['api.docs.*', 'copilot.*'] },
+    maxSteps: 6,
+    onStep,
+  });
 }
 
-/** Download (or reuse from cache) the in-browser model, then wire the copilot to it. */
-export async function setupLocal(onProgress: (percent: number) => void): Promise<void> {
-  const llm = localLlm();
+/** Idempotent and re-entrant: the promise is the latch, so a double open builds one copilot. */
+export function setup(): Promise<Copilot> {
+  ready ??= build();
 
-  await llm.load({ onProgress: (fraction) => onProgress(Math.round(fraction * 100)) });
-  start(llm, INSTRUCTIONS);
-}
-
-/** Wire the copilot to the app server's model (`/_janux/llm`) instead. */
-export function setupServer(): void {
-  start(serverLlm(), INSTRUCTIONS);
+  return ready;
 }
 
 function withHistory(question: string, history: Exchange[]): string {
@@ -86,13 +79,9 @@ function withHistory(question: string, history: Exchange[]): string {
   return `Previous conversation:\n${transcript}\n\nNew question: ${question}`;
 }
 
-/** How much of the top-matching page rides along in the prompt (small-model context budget). */
-const PRE_READ_CHARS = 2500;
-
 /**
  * Deterministic grounding: search up-front and pre-read the top match, so the
- * model answers from real content and cites a real path. Tools stay available
- * for follow-up reads.
+ * model can answer in a single turn. Tools stay available for follow-up reads.
  */
 async function withGrounding(goal: string, question: string): Promise<string> {
   const matches = await searchMatches(question).catch(() => []);
@@ -101,42 +90,18 @@ async function withGrounding(goal: string, question: string): Promise<string> {
   const results = matches.map(({ title, path, snippet }) => `- ${title} (${path}): ${snippet}`).join('\n');
   const top = await readPage(matches[0]!.path, PRE_READ_CHARS).catch(() => undefined);
   const content = top ? `\n\nContent of ${top.path} ("${top.title}"):\n${top.text}` : '';
-  const note = 'Context for ANSWERING only — if the user asked to open, go to, or navigate to a page, call the navigate tool with its path instead of answering:';
 
-  return `${goal}\n\n${note}\nSearch results:\n${results}${content}`;
+  return `${goal}\n\nSearch results:\n${results}${content}`;
 }
 
-/** Imperative navigation openers (es/en); mid-sentence verbs go through the model. */
-export const NAV_INTENT =
-  /^\s*(?:please\s+|por\s+favor\s+)?(?:navega(?:r)?(?:\s+a)?|abre|open|go\s+to|goto|ve\s+a|ll[eé]vame\s+a|take\s+me\s+to)\b/i;
-
-/**
- * A 0.6B model narrates instead of acting often enough that explicit
- * navigation requests are routed deterministically: best search hit → the
- * framework's navigate tool (glow included). Ambiguous phrasing still goes
- * to the model, which has the same tool.
- */
-async function tryDirectNavigation(question: string): Promise<Reply | undefined> {
-  if (!NAV_INTENT.test(question)) return undefined;
-  const top = (await searchMatches(question).catch(() => []))[0];
-
-  if (!top) return undefined;
-  const outcome = createNavigateTool().execute({ path: top.path }) as { error?: string };
-
-  if (outcome?.error) return undefined;
-  const text = `Opening **${top.title}** (${top.path})…`;
-
-  return { text, html: renderMarkdown(text) };
-}
-
-export async function ask(question: string, history: Exchange[]): Promise<Reply> {
-  if (!copilot) throw new Error('copilot not ready');
-  const direct = await tryDirectNavigation(question);
-
-  if (direct) return direct;
+export async function ask(
+  question: string,
+  history: Exchange[],
+  progress: Progress,
+  signal?: AbortSignal,
+): Promise<Answer> {
+  const running = await setup();
   const goal = await withGrounding(withHistory(question, history), question);
-  const result = await copilot.ask(goal);
-  const text = stripThink(result.text) || 'I could not find an answer for that in the docs.';
 
-  return { text, html: renderMarkdown(text) };
+  return askStream(running, progress, goal, signal);
 }

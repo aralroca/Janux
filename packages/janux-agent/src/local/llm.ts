@@ -1,5 +1,7 @@
 import { createAiSdkLlm, createRemoteLlm } from '@aralroca/gui-agent/ai-sdk';
 import type { Llm, LlmRequest, LlmResponse } from '@aralroca/gui-agent';
+import type { UIMessageChunk } from 'ai';
+import { sseData } from '../sse';
 
 /** Apache-2.0, ~500 MB in q4f16 and the strongest tool-caller of its size class. */
 export const DEFAULT_LOCAL_MODEL = 'onnx-community/Qwen3-0.6B-ONNX';
@@ -72,6 +74,74 @@ export interface ServerLlmOptions {
   /** Defaults to the built-in `/_janux/llm` mount. */
   endpoint?: string;
   headers?: Record<string, string>;
+  /**
+   * Read the turn as it is produced instead of waiting for it. The mount answers
+   * in the AI SDK UI Message Stream vocabulary; `subscribe()` hands those chunks
+   * to a UI, and the resolved {@link LlmResponse} is identical either way.
+   */
+  stream?: boolean;
+}
+
+/** The protocol's own chunk type, so a Janux stream lines up structurally with any AI SDK renderer. */
+export type { UIMessageChunk };
+
+export type ChunkListener = (chunk: UIMessageChunk) => void;
+
+export interface StreamingLlm extends Llm {
+  /** Listen to the chunks of every turn this Llm runs. Returns an unsubscribe. */
+  subscribe(listener: ChunkListener): () => void;
+}
+
+function accumulate(chunk: UIMessageChunk, text: string[], toolCalls: any[]): void {
+  if (chunk.type === 'text-delta') text.push(chunk.delta ?? '');
+  if (chunk.type === 'error') throw new Error(chunk.errorText ?? 'llm stream error');
+  if (chunk.type === 'tool-input-available') {
+    toolCalls.push({ id: chunk.toolCallId, name: chunk.toolName, arguments: chunk.input ?? {} });
+  }
+}
+
+async function readTurn(body: ReadableStream<Uint8Array>, emit: ChunkListener): Promise<LlmResponse> {
+  const text: string[] = [];
+  const toolCalls: any[] = [];
+
+  for await (const payload of sseData(body)) {
+    const chunk = JSON.parse(payload) as UIMessageChunk;
+
+    // `accumulate` throws on an error chunk, and the thrown turn is what the
+    // run reports — forwarding it as well would surface the same failure twice.
+    accumulate(chunk, text, toolCalls);
+    emit(chunk);
+  }
+
+  return { text: text.join(''), toolCalls };
+}
+
+/**
+ * The mount says why it refused — the setup card names the variable to set, the
+ * gate says it rate-limited you. Throwing the status code instead would discard
+ * the one message written to be read by a human.
+ */
+async function failure(response: Response): Promise<Error> {
+  const body = (await response.json().catch(() => undefined)) as any;
+
+  return new Error(body?.message ?? body?.error ?? `janux: /_janux/llm returned ${response.status}`);
+}
+
+async function streamedTurn(
+  options: ServerLlmOptions,
+  request: LlmRequest,
+  emit: ChunkListener,
+): Promise<LlmResponse> {
+  const response = await fetch(options.endpoint ?? '/_janux/llm', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'text/event-stream', ...options.headers },
+    body: JSON.stringify({ messages: request.messages, tools: request.tools, stream: true }),
+    signal: request.signal,
+  });
+
+  if (!response.ok || !response.body) throw await failure(response);
+
+  return readTurn(response.body, emit);
 }
 
 /**
@@ -79,6 +149,24 @@ export interface ServerLlmOptions {
  * and API keys resolve exactly like `defineAgent()`. Same browser-side loop,
  * different brain.
  */
-export function serverLlm(options: ServerLlmOptions = {}): Llm {
-  return createRemoteLlm({ api: options.endpoint ?? '/_janux/llm', headers: options.headers });
+export function serverLlm(options: ServerLlmOptions = {}): StreamingLlm {
+  const listeners = new Set<ChunkListener>();
+  const emit = (chunk: UIMessageChunk): void => listeners.forEach((listener) => listener(chunk));
+  // Only built when it is the path actually taken.
+  let remote: Llm | undefined;
+  const oneShot = (request: LlmRequest): Promise<LlmResponse> => {
+    remote ??= createRemoteLlm({ api: options.endpoint ?? '/_janux/llm', headers: options.headers });
+
+    return remote(request);
+  };
+  const llm = ((request: LlmRequest) =>
+    options.stream ? streamedTurn(options, request, emit) : oneShot(request)) as StreamingLlm;
+
+  llm.subscribe = (listener) => {
+    listeners.add(listener);
+
+    return () => listeners.delete(listener);
+  };
+
+  return llm;
 }

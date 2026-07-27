@@ -30,6 +30,15 @@ const copilot = createCopilot({
 const { text } = await copilot.ask('add two seats to my plan');
 ```
 
+Narrow the surface with `tools`, the same patterns [`defineAgent`](/docs/reference/agent-api) takes — `include` is an allowlist, `exclude` always wins:
+
+```ts
+const copilot = createCopilot({
+  llm,
+  tools: { exclude: ['api.docs.*'] }, // a client-side defineTool already covers these
+});
+```
+
 `createCopilot` exposes your manifest tools (intents + `api()` endpoints, `forbidden` excluded, `confirm` annotated) to the model automatically, plus the framework's built-in `navigate` tool — synthesized from the same-origin links already on the page, so "take me to the CLI page" works with zero authoring (define your own `navigate` tool to take the name over). Everything re-syncs on every `ask()` so SPA navigations stay current. Register extra client-side tools with `defineTool` — this site adds `search_docs` / `read_doc` over its static search index, which is how Ask AI reads *and drives* the site with zero backend. When a tool takes ids or paths, validate them and return the real options on a miss — small models hallucinate identifiers, and handing back the valid list is what turns that into a self-correcting retry (`navigate` does exactly this with the page's links).
 
 ## Show what the agent is doing
@@ -85,6 +94,32 @@ const llm = supportsLocalLlm() ? localLlm() : serverLlm();
 ```
 
 On a static deploy there is no `/_janux/llm`, so the local model isn't a nice-to-have there — it's the only brain available.
+
+## Streaming the answer
+
+`serverLlm({ stream: true })` reads the turn as the model writes it. The loop is unchanged — it still awaits one `{ text, toolCalls }` per turn — but the chunks are available while it waits:
+
+```ts
+const llm = serverLlm({ stream: true });
+
+llm.subscribe((chunk) => {
+  if (chunk.type === 'text-delta') appendToBubble(chunk.delta);
+});
+```
+
+For the whole run rather than one turn, `copilot.stream()` returns a `ReadableStream` of [UI Message Stream](/docs/reference/agent-api#streaming-the-turn) chunks — the server's text and tool inputs **merged with the tool outputs the page produced**, which is the half no server-side stream can know about:
+
+```ts
+for await (const chunk of copilot.stream('take me to the CLI page')) {
+  if (chunk.type === 'text-delta') appendToBubble(chunk.delta);
+  if (chunk.type === 'tool-input-available') showChip(chunk.toolName);
+  if (chunk.type === 'tool-output-available') completeChip(chunk.toolCallId);
+}
+```
+
+It works with any `Llm`: with `localLlm()` (or a `serverLlm()` without `stream`) there are no deltas to forward, so the final answer arrives as one `text-delta` and the tool chunks are unaffected. Pass an `AbortSignal` to stop a run — the stream closes with an `abort` chunk.
+
+`for await` over a `ReadableStream` is not in every engine yet (Safari); `stream.getReader()` in a `while` loop is the portable form, and it is what this site's Ask AI uses.
 
 ## Requirements & gotchas
 

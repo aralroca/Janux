@@ -1,0 +1,100 @@
+import type { UIMessageChunk } from '@janux/agent/local';
+import { renderMarkdown } from './markdown';
+
+/** Reports the answer as it is written, and which tool is running while it isn't. */
+export interface Progress {
+  onText(markdown: string): void;
+  onTool(name: string): void;
+}
+
+export interface Answer {
+  /** Raw markdown, for the conversation history. */
+  text: string;
+  /** Sanitized HTML, for rendering. */
+  html: string;
+  /** Why the run ended, so a stop is never mistaken for an exhausted search. */
+  outcome: 'answered' | 'stopped' | 'failed';
+}
+
+interface Streamed {
+  text: string;
+  outcome: Answer['outcome'];
+  error?: string;
+}
+
+/** Reasoning-capable models wrap (possibly empty) thinking in think tags; never show them. */
+const THINK_BLOCK = /<think>[\s\S]*?<\/think>/g;
+
+/** A truncated generation can leave the last think block unclosed. */
+const OPEN_THINK = /<think>[\s\S]*$/;
+
+export function stripThink(text: string): string {
+  return text.replace(THINK_BLOCK, '').replace(OPEN_THINK, '').trim();
+}
+
+const NOTHING_FOUND = 'I could not find an answer for that in the docs.';
+
+/** `for await` over a ReadableStream is not universal yet (Safari); a reader is. */
+async function consume(stream: ReadableStream<UIMessageChunk>, progress: Progress): Promise<Streamed> {
+  const reader = stream.getReader();
+  let text = '';
+  let end: Streamed | undefined;
+
+  while (!end) {
+    const { done, value } = await reader.read();
+
+    if (done) break;
+    // Each turn is its own text part: a model that narrates ("Let me look this
+    // up") before answering would otherwise have the two glued into one word.
+    if (value.type === 'text-start' && text) text += '\n\n';
+    // Stripped per delta, not once at the end: the model's reasoning would
+    // otherwise sit in the panel for the whole run and vanish on the last paint.
+    if (value.type === 'text-delta') progress.onText(stripThink((text += value.delta ?? '')));
+    if (value.type === 'tool-input-available') progress.onTool(String(value.toolName));
+    if (value.type === 'abort') end = { text, outcome: 'stopped' };
+    if (value.type === 'error') end = { text, outcome: 'failed', error: String(value.errorText) };
+  }
+
+  return end ?? { text, outcome: 'answered' };
+}
+
+/**
+ * A failed run must never read as an answer. A 429 from the rate limiter and a
+ * 503 setup card both arrive as `error` chunks, and answering "the docs do not
+ * cover that" blames the documentation for a transport problem — then writes
+ * that lie into the history the next turn is built from.
+ */
+/**
+ * A refusal is our own sentence, not model output — the mount's setup card names
+ * the variable to set, and markdown would eat the underscores in `/_janux/llm`
+ * (and `JANUX_MODEL`) on the way to the screen.
+ */
+const MARKDOWN_CHARS = /([\\`*_{}[\]()#+\-.!])/g;
+
+function asProse(message: string): string {
+  return message.replace(MARKDOWN_CHARS, '\\$1');
+}
+
+function messageFor({ text, outcome, error }: Streamed): string {
+  if (outcome === 'failed') return asProse(String(error).replace(/^Error:\s*/, ''));
+  if (outcome === 'stopped') return text ? `${text}\n\n*(stopped)*` : '*(stopped)*';
+
+  return text || NOTHING_FOUND;
+}
+
+/** What the copilot needs to be, for one run. */
+export interface Runner {
+  stream(question: string, signal?: AbortSignal): ReadableStream<UIMessageChunk>;
+}
+
+export async function askStream(
+  runner: Runner,
+  progress: Progress,
+  goal = '',
+  signal?: AbortSignal,
+): Promise<Answer> {
+  const streamed = await consume(runner.stream(goal, signal), progress);
+  const text = messageFor({ ...streamed, text: stripThink(streamed.text) });
+
+  return { text, html: renderMarkdown(text), outcome: streamed.outcome };
+}

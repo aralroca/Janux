@@ -8,12 +8,29 @@ Everything importable from `@janux/agent`.
 export default defineAgent({
   instructions: 'You are the shop copilot. Prefer proposing over acting.',
   model: 'anthropic/claude-fable-5',            // optional — see resolution order
+  modelOptions: { temperature: 0.2 },            // optional — extra provider fields
   maxTurns: 6,                                   // loop cap per request
   tools: { include: ['api.shop.*', 'cart.*'] },  // default: everything mounted
 });
 ```
 
 Place it in `src/agent.ts` as the default export. With no file at all, every app still gets a working default agent.
+
+### modelOptions
+
+Provider fields merged into **every** model request, on both mounts. What you put here is provider-specific — the framework does not interpret it:
+
+```ts
+export default defineAgent({
+  model: 'openrouter/deepseek/deepseek-v4-flash',
+  modelOptions: {
+    reasoning: { enabled: false },      // OpenRouter: skip the thinking pass
+    provider: { sort: 'throughput' },   // OpenRouter: route to the fastest provider
+  },
+});
+```
+
+The request the framework builds always wins: `modelOptions` can add `reasoning`, `provider`, `temperature` or `top_p`, and can never rewrite `model`, `messages` or `tools`.
 
 ## Model resolution order
 
@@ -38,6 +55,33 @@ Responses:
 - UI tools come back as `ui_calls`: the client executes each through `window.janux.call(...)`, appends `{ role: 'tool', toolCallId, content }` messages, and re-POSTs. Guards and proposals surface on the real page.
 - Parallel tool calls are supported; tool results are coalesced per provider requirements.
 
+## Streaming the turn
+
+Ask `/_janux/llm` for a stream with `Accept: text/event-stream` or `{ stream: true }` in the body and the mount answers in the **AI SDK UI Message Stream** vocabulary (v1) instead of one JSON turn:
+
+```txt
+x-vercel-ai-ui-message-stream: v1
+
+id: 0
+data: {"type":"start"}
+
+id: 2
+data: {"type":"text-start","id":"t0"}
+
+id: 3
+data: {"type":"text-delta","id":"t0","delta":"An intent"}
+
+data: [DONE]
+```
+
+Janux emits the subset a single model turn can produce: `start`, `start-step`, `text-start` / `text-delta` / `text-end`, `tool-input-start` / `tool-input-delta` / `tool-input-available`, `finish-step`, `finish`, and `error` when the provider dies mid-turn. The tool **outputs** are not on this stream — they happen in the page, and [`copilot.stream()`](/docs/recipes/local-model-copilot) splices them in.
+
+Borrowing the vocabulary rather than inventing one is deliberate: anything that already reads it — `useChat`, AI Elements, the AI DevTools — reads a Janux turn with no translator. Two rules matter if you write your own client: `*-start` always precedes its deltas, and the body ends with `data: [DONE]`.
+
+Incremental streaming is implemented for the OpenAI-compatible wire (OpenAI, Google, OpenRouter). Anthropic answers whole and arrives as a single `text-delta` — the chunk sequence is identical either way, so a client never branches on the provider. Whether the answer lands in pieces is a provider property; the protocol is not.
+
+Every event carries an incremental `id:` and the response an `x-janux-stream-id`. Nothing replays them yet: a resume needs a durable buffer the app owns, so a request arriving with `Last-Event-ID` is answered `422 stream_not_resumable` rather than being silently served a second, duplicate turn.
+
 ## Message shape
 
 ```txt
@@ -54,7 +98,7 @@ The built-in loop is composed from these; import them to build a custom mount or
 
 | Export | Signature | What it does |
 |---|---|---|
-| `resolveModel(explicit, env)` | `→ ResolvedModel \| undefined` | Runs the [resolution order](#model-resolution-order) against an env bag. `ResolvedModel` is `{ provider, model, apiKey, source }`; `undefined` means nothing was configured. |
+| `resolveModel(explicit, env, options?)` | `→ ResolvedModel \| undefined` | Runs the [resolution order](#model-resolution-order) against an env bag. `ResolvedModel` is `{ provider, model, apiKey, source, options? }`; `undefined` means nothing was configured. |
 | `setupCard()` | `→ { type: 'setup', message }` | The exact `setup` response the endpoint returns when no model resolves — names the variables to set. |
 | `callProvider(model, system, messages, tools, fetch)` | `→ Promise<ProviderReply>` | One provider round-trip, normalized across Anthropic / OpenAI / Google into a `ProviderReply` (`text` and/or `toolCalls`). The `fetch` seam makes it testable and edge-portable. |
 

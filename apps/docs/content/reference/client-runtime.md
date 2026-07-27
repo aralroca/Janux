@@ -51,6 +51,8 @@ import {
 | `subscribe(event, handler)` | Bus subscription; returns unsubscribe |
 | `manifest()` | The live manifest of what's mounted right now |
 
+`manifest()` is deliberately narrow: it answers "what is mounted", which is why `ready` states in it are current. For "what does this route expose", use `appTools(bridge)` — the route manifest merged under the live one, so a tool whose island has not resumed yet is still on the table (`call()` mounts it on demand). `installWebMCP` and [`createCopilot`](/docs/recipes/local-model-copilot) both register from it.
+
 ## The navigate tool
 
 `collectPageLinks(): PageLink[]` returns every **same-origin** link currently in the DOM as `{ path, label }` — deduped by path and capped at 100 so a link-heavy page can't blow up a tool payload. It needs no authoring: the links are whatever your JSX rendered.

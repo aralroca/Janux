@@ -11,9 +11,12 @@ export {
   localLlm,
   serverLlm,
   supportsLocalLlm,
+  type ChunkListener,
   type LocalLlm,
   type LocalLlmOptions,
   type ServerLlmOptions,
+  type StreamingLlm,
+  type UIMessageChunk,
 } from './llm';
 export { defineTool, registry } from '@aralroca/gui-agent';
 export type {
