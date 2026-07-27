@@ -36,6 +36,8 @@ interface RenderScope extends RenderOptions {
   i18nKeys?: Set<string>;
   /** Set while rendering inside an island's view: children become nested islands. */
   island?: { name: string; key: string; keySeq: Map<string, number>; usedKeys: Set<string> };
+  /** An abandoned stream (client gone) stops descending into new work. */
+  halted?: () => boolean;
 }
 
 function isComponentDef(type: unknown): type is ComponentDef {
@@ -93,7 +95,10 @@ function islandCtx(scope: RenderScope): RenderOptions['ctx'] {
   return { ...scope.ctx, i18n: { ...i18n, t } };
 }
 
-async function* renderIsland(def: ComponentDef, props: any, scope: RenderScope): AsyncGenerator<string> {
+/** Where rendered HTML goes: pushed as produced, in document order. */
+type Emit = (chunk: string) => void;
+
+async function renderIsland(def: ComponentDef, props: any, scope: RenderScope, emit: Emit): Promise<void> {
   const key = nextKey(scope, def, props.key ?? props.id);
   const stores = storeInstances(scope);
   const useStores = Object.fromEntries(
@@ -120,11 +125,11 @@ async function* renderIsland(def: ComponentDef, props: any, scope: RenderScope):
    * The open tag goes out before the sources load: a slow island holds back its
    * own children, not the rest of the page.
    */
-  yield `<janux-island key="${id}" data-jx="${id}"${persist}${eager}>`;
+  emit(`<janux-island key="${id}" data-jx="${id}"${persist}${eager}>`);
   await loadSources(instance);
   scope.registry.islands.push({ def, key, instance });
-  yield* renderChunks(def.view!(instance.bag), childScope);
-  yield '</janux-island>';
+  await renderInto(def.view!(instance.bag), childScope, emit);
+  emit('</janux-island>');
 }
 
 /** CJS/ESM interop for a dynamically imported module. */
@@ -187,106 +192,86 @@ function localizedProps(node: JanuxNode, scope: RenderScope): Record<string, unk
   return { ...node.$p, href: `/${i18n.locale}${href === '/' ? '' : href}` };
 }
 
-async function* renderElement(node: JanuxNode, scope: RenderScope): AsyncGenerator<string> {
+async function renderElement(node: JanuxNode, scope: RenderScope, emit: Emit): Promise<void> {
   const tag = node.$t as string;
   const attrs = renderAttrs(localizedProps(node, scope));
 
-  if (VOID_ELEMENTS.has(tag)) {
-    yield `<${tag}${attrs}/>`;
-
-    return;
-  }
-  yield `<${tag}${attrs}>`;
-  if (typeof node.$p.dangerHTML === 'string') yield node.$p.dangerHTML;
-  else yield* renderChunks(node.$p.children, scope);
-  yield `</${tag}>`;
-}
-
-interface EagerChild {
-  chunks: string[];
-  done: boolean;
-  error?: unknown;
-  wake?: () => void;
-}
-
-/** Starts consuming a child immediately, buffering what an earlier sibling hasn't let through yet. */
-function pumpChild(iterator: AsyncGenerator<string>): EagerChild {
-  const child: EagerChild = { chunks: [], done: false };
-  const notify = () => {
-    child.wake?.();
-    child.wake = undefined;
-  };
-
-  (async () => {
-    try {
-      for await (const chunk of iterator) {
-        child.chunks.push(chunk);
-        notify();
-      }
-    } catch (error) {
-      child.error = error;
-    } finally {
-      child.done = true;
-      notify();
-    }
-  })();
-
-  return child;
+  if (VOID_ELEMENTS.has(tag)) return emit(`<${tag}${attrs}/>`);
+  emit(`<${tag}${attrs}>`);
+  if (typeof node.$p.dangerHTML === 'string') emit(node.$p.dangerHTML);
+  else await renderInto(node.$p.children, scope, emit);
+  emit(`</${tag}>`);
 }
 
 /**
- * Siblings render in parallel — the `Promise.all` the string renderer used —
- * but their chunks are re-emitted strictly in document order: later siblings
- * buffer while an earlier one is still streaming.
+ * Siblings render in parallel with `Promise.all` — the exact scheduling the
+ * string renderer always used, which is what keeps island key assignment
+ * aligned with the client's synchronous depth-first traversal (each child's
+ * synchronous prefix runs deep-first, in array order, before any sibling's) —
+ * while their output streams in document order: the leftmost unfinished child
+ * emits straight through, later siblings buffer until every child before them
+ * has finished.
  */
-async function* drainInOrder(children: EagerChild[]): AsyncGenerator<string> {
-  for (const child of children) {
-    let index = 0;
-
-    while (index < child.chunks.length || !child.done) {
-      if (index < child.chunks.length) yield child.chunks[index++]!;
-      else await new Promise<void>((resolve) => { child.wake = resolve; });
+async function renderSiblings(nodes: unknown[], scope: RenderScope, emit: Emit): Promise<void> {
+  const buffers: string[][] = nodes.map(() => []);
+  const finished: boolean[] = nodes.map(() => false);
+  let live = 0;
+  const advanceLive = () => {
+    while (finished[live] && live < nodes.length) {
+      live += 1;
+      buffers[live]?.forEach(emit);
+      if (buffers[live]) buffers[live] = [];
     }
-    if (child.error) throw child.error;
-  }
+  };
+
+  await Promise.all(
+    nodes.map((child, index) =>
+      renderInto(child, scope, (chunk) => {
+        if (index === live) emit(chunk);
+        else buffers[index]!.push(chunk);
+      }).then(() => {
+        finished[index] = true;
+        if (index === live) advanceLive();
+      }),
+    ),
+  );
 }
 
-/** One node's HTML, buffered. The streaming renderer is `renderChunks`. */
-export async function renderNode(node: unknown, scope: RenderScope): Promise<string> {
-  const parts: string[] = [];
-
-  for await (const chunk of renderChunks(node, scope)) parts.push(chunk);
-
-  return parts.join('');
-}
-
-async function* renderChunks(node: unknown, scope: RenderScope): AsyncGenerator<string> {
+async function renderInto(node: unknown, scope: RenderScope, emit: Emit): Promise<void> {
+  if (scope.halted?.()) return;
   if (node === null || node === undefined || typeof node === 'boolean') return;
-  if (typeof node === 'string' || typeof node === 'number') {
-    yield escapeHtml(node);
-
-    return;
-  }
+  if (typeof node === 'string' || typeof node === 'number') return emit(escapeHtml(node));
   if (Array.isArray(node)) {
-    yield* drainInOrder(node.map((child) => pumpChild(renderChunks(child, scope))));
+    // One child needs no buffering machinery — and single-child arrays are
+    // what JSX produces most of the time.
+    if (node.length === 1) return renderInto(node[0], scope, emit);
 
-    return;
+    return renderSiblings(node, scope, emit);
   }
   const jsxNode = node as JanuxNode;
 
-  if (jsxNode.$t === Fragment) return yield* renderChunks(jsxNode.$p.children, scope);
-  if (isForeignDef(jsxNode.$t)) return yield await renderForeign(jsxNode.$t, jsxNode, scope);
+  if (jsxNode.$t === Fragment) return renderInto(jsxNode.$p.children, scope, emit);
+  if (isForeignDef(jsxNode.$t)) return emit(await renderForeign(jsxNode.$t, jsxNode, scope));
   if (typeof jsxNode.$t === 'function') {
-    return yield* renderChunks((jsxNode.$t as any)(jsxNode.$p), scope);
+    return renderInto((jsxNode.$t as any)(jsxNode.$p), scope, emit);
   }
   // TSX puts `key` in $k (never in props): surface it so `<Island key={locale} />` re-keys the island.
   if (isComponentDef(jsxNode.$t)) {
     const props = jsxNode.$k === undefined ? jsxNode.$p : { key: String(jsxNode.$k), ...jsxNode.$p };
 
-    return yield* renderIsland(jsxNode.$t, props, scope);
+    return renderIsland(jsxNode.$t, props, scope, emit);
   }
 
-  yield* renderElement(jsxNode, scope);
+  return renderElement(jsxNode, scope, emit);
+}
+
+/** One node's HTML, buffered. The streaming renderer is `renderInto`. */
+export async function renderNode(node: unknown, scope: RenderScope): Promise<string> {
+  const parts: string[] = [];
+
+  await renderInto(node, scope, (chunk) => parts.push(chunk));
+
+  return parts.join('');
 }
 
 export interface Snapshot {
@@ -325,6 +310,51 @@ export interface RenderStream {
   chunks: AsyncGenerator<string>;
   /** Resolves once `chunks` is fully consumed — snapshots exist only then. */
   done: Promise<Omit<RenderResult, 'html'>>;
+  /**
+   * Stop rendering: the response was abandoned (client gone), so no new
+   * island work starts and `done` settles with what rendered. Explicit rather
+   * than via the generator protocol — `chunks.return()` cannot reach a
+   * renderer parked on its own await until it yields again.
+   */
+  cancel(): void;
+}
+
+/**
+ * Merges chunks that are produced back-to-back, flushing only when the
+ * renderer genuinely pauses (a source loading, a foreign import) — detected by
+ * racing the next chunk against a macrotask. A static subtree is one flush
+ * instead of one write per tag, which is what the network and the client-side
+ * diff see; nothing is held back at a real await point, so first paint keeps
+ * its latency.
+ */
+async function* coalesce(source: AsyncGenerator<string>): AsyncGenerator<string> {
+  const IDLE = Symbol('idle');
+  let buffer = '';
+  let pending = source.next();
+
+  try {
+    while (true) {
+      const idle = new Promise<typeof IDLE>((resolve) => setTimeout(() => resolve(IDLE), 0));
+      let result = await Promise.race([pending, idle]);
+
+      if (result === IDLE) {
+        if (buffer) {
+          yield buffer;
+          buffer = '';
+        }
+        result = await pending;
+      }
+      if (result.done) break;
+      buffer += result.value;
+      pending = source.next();
+    }
+  } finally {
+    // Also on error: what rendered before the failure still reaches the page.
+    if (buffer) yield buffer;
+    // And when the consumer abandons us, the abandonment must reach the
+    // renderer (its own finally is what stops further work).
+    await source.return(undefined);
+  }
 }
 
 /**
@@ -335,16 +365,64 @@ export interface RenderStream {
 export function renderToStream(node: unknown, options: RenderOptions = {}): RenderStream {
   const registry: RenderRegistry = { islands: [], stores: new Map() };
   const i18nKeys = options.ctx?.i18n ? new Set<string>() : undefined;
-  const scope: RenderScope = { ...options, registry, keySeq: new Map(), usedKeys: new Set(), i18nKeys };
-  let finish!: (summary: Omit<RenderResult, 'html'>) => void;
-  const done = new Promise<Omit<RenderResult, 'html'>>((resolve) => { finish = resolve; });
+  const queue: string[] = [];
+  let wake: (() => void) | undefined;
+  let finished = false;
+  let failure: unknown;
+  let abandoned = false;
+  const scope: RenderScope = {
+    ...options,
+    registry,
+    keySeq: new Map(),
+    usedKeys: new Set(),
+    i18nKeys,
+    halted: () => abandoned,
+  };
+  const { promise: done, resolve: finish } = Promise.withResolvers<Omit<RenderResult, 'html'>>();
+  const notify = () => {
+    wake?.();
+    wake = undefined;
+  };
+
+  (async () => {
+    try {
+      await renderInto(node, scope, (chunk) => {
+        queue.push(chunk);
+        notify();
+      });
+    } catch (error) {
+      failure = error;
+    } finally {
+      finished = true;
+      notify();
+      if (!failure) finish({ registry, snapshots: collectSnapshots(registry), i18nKeys: [...(i18nKeys ?? [])] });
+    }
+  })();
 
   async function* chunks(): AsyncGenerator<string> {
-    yield* renderChunks(node, scope);
-    finish({ registry, snapshots: collectSnapshots(registry), i18nKeys: [...(i18nKeys ?? [])] });
+    let index = 0;
+
+    try {
+      while (!abandoned && (index < queue.length || !finished)) {
+        if (index < queue.length) {
+          yield queue[index++]!;
+          // Flushed chunks must not pile up for the length of a slow response.
+          if (index > 256) index -= queue.splice(0, index).length;
+        } else await new Promise<void>((resolve) => { wake = resolve; });
+      }
+      if (failure) throw failure;
+    } finally {
+      // Also reached when the consumer abandons the generator directly.
+      abandoned = true;
+    }
   }
 
-  return { chunks: chunks(), done };
+  const cancel = () => {
+    abandoned = true;
+    notify();
+  };
+
+  return { chunks: coalesce(chunks()), done, cancel };
 }
 
 /** Server-renders a page tree: static components inline, bifacial components as islands. */

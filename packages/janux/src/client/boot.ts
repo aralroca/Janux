@@ -11,7 +11,7 @@ import { installI18n } from './i18n';
 import type { NavigationConfig } from '../config';
 import { mountEagerIslands, performNavigation } from './navigate';
 import { configurePrefetch, prefetch } from './prefetch';
-import { rescopeSpeculationRules } from './speculation';
+import { rescopeSpeculationRules, shellNavigationConfig } from './speculation';
 import { installWebMCP } from './webmcp';
 
 export interface BootOptions {
@@ -95,26 +95,15 @@ export function shouldIntercept(event: any): boolean {
   return !wasNative;
 }
 
-/** `janux.config.ts`'s navigation section, shipped by the shell as a keyed script. */
-function shellNavigationConfig(): NavigationConfig {
-  const script = document.getElementById('jx-config');
-
-  try {
-    return JSON.parse(script?.textContent ?? '{}').navigation ?? {};
-  } catch {
-    return {};
-  }
-}
-
 /**
  * Navigation API interception (Baseline 2026). Browsers without it keep
- * native MPA links — which already work — so there is no History fallback.
+ * native MPA links — which already work — so there is no History fallback,
+ * and no hover-prefetch either: without interception nothing would ever
+ * consume that cache (the speculation rules cover those browsers instead).
  */
 function installNavigation(mount: MountContext, config: NavigationConfig): void {
   const nav = (window as any).navigation;
-  const prefetching = config.prefetch !== false;
 
-  configurePrefetch({ enabled: prefetching, ...(typeof config.prefetch === 'object' ? config.prefetch : {}) });
   document.addEventListener(
     'click',
     (event) => {
@@ -131,8 +120,9 @@ function installNavigation(mount: MountContext, config: NavigationConfig): void 
         awaitTracked(mount, performNavigation(event.destination.url, mount, { signal: event.signal })),
     });
   });
-  rescopeSpeculationRules(config);
-  if (!prefetching) return;
+  rescopeSpeculationRules();
+  if (config.prefetch === false) return;
+  configurePrefetch(typeof config.prefetch === 'object' ? config.prefetch : undefined);
   document.addEventListener('mouseover', (event) => {
     const link = (event.target as Element | null)?.closest?.('a[href^="/"]:not([data-native])');
 

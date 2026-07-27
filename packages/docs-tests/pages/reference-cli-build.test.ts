@@ -143,6 +143,7 @@ describe('reference/build-internals.md', () => {
     await sendFetchResponse(
       {
         writeHead: (status: number, headers: unknown) => Object.assign(written, { status, headers }),
+        once: () => undefined,
         // Streamed responses arrive as chunks; `end` closes with nothing left.
         write: (chunk: Uint8Array) => (written.body = `${written.body ?? ''}${new TextDecoder().decode(chunk)}`),
         end: () => undefined,

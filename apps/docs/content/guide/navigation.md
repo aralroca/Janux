@@ -123,7 +123,7 @@ This is the part a plain MPA (or native cross-document view transitions) can't g
 export const theme = store({ name: 'theme', scope: 'app', /* ... */ });
 ```
 
-> **`persist` has one requirement: every route must render the island.** It's lifted out of the document before the diff and grafted back over whatever the incoming page rendered for it — and if that page doesn't render it, there is nothing to graft onto and the live instance is disposed. Render it from a shared layout and it survives the whole session; forget it on one route and it closes the moment the user goes there. Development builds warn in the console, naming the island and the route, when that happens.
+> **`persist` has one requirement: every route must render the island.** It's lifted out of the document before the diff and grafted back over whatever the incoming page rendered for it — and if that page doesn't render it, there is nothing to graft onto and the live instance is disposed. Render it from a shared layout and it survives the whole session; forget it on one route and it closes the moment the user goes there — with a console warning naming the island and the route when it does.
 
 The mental model is the same one that powers resume: **islands are ephemeral, stores and the server are durable.** State that must outlive a navigation belongs in a store (or on the server), not in a plain route island. Put it there and it survives; leave it in a route island and it re-resumes from the fresh page — by design, not by accident.
 

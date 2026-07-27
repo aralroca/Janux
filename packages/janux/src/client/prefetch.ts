@@ -4,8 +4,6 @@ interface PrefetchEntry {
 }
 
 export interface PrefetchConfig {
-  /** Hover-warming on internal links. Default: true. */
-  enabled?: boolean;
   /** How long a warmed page stays usable, in ms. Default: 30000. */
   ttl?: number;
 }
@@ -17,21 +15,37 @@ export interface PrefetchConfig {
  */
 export const NAVIGATION_HEADERS = { accept: 'text/html', 'x-janux-navigation': '1' };
 
-const DEFAULTS: Required<PrefetchConfig> = { enabled: true, ttl: 30_000 };
+const DEFAULT_TTL = 30_000;
+/** Warmed-but-unopened pages hold real connections; a hover tour must not pile them up. */
+const MAX_WARM = 8;
 const prefetched = new Map<string, PrefetchEntry>();
-let config = DEFAULTS;
+let ttl = DEFAULT_TTL;
 
 /**
  * Applied from `janux.config.ts` (or `boot()`) before navigation is installed.
  * Warmed pages are dropped: they were fetched under the previous rules.
  */
 export function configurePrefetch(options: PrefetchConfig | undefined): void {
-  config = { ...DEFAULTS, ...options };
+  ttl = options?.ttl ?? DEFAULT_TTL;
   prefetched.clear();
 }
 
 function isFresh(entry: PrefetchEntry | undefined): entry is PrefetchEntry {
-  return entry !== undefined && Date.now() - entry.at <= config.ttl;
+  return entry !== undefined && Date.now() - entry.at <= ttl;
+}
+
+function drop(url: string): void {
+  const entry = prefetched.get(url);
+
+  prefetched.delete(url);
+  // Cancelling hands the connection back — an unopened body keeps it occupied.
+  entry?.body.then((body) => body.cancel()).catch(() => {});
+}
+
+function evict(): void {
+  [...prefetched.keys()].filter((url) => !isFresh(prefetched.get(url))).forEach(drop);
+  // Map iteration is insertion-ordered, so the first key is the oldest.
+  while (prefetched.size >= MAX_WARM) drop(prefetched.keys().next().value!);
 }
 
 /** Warming a page the user may never open is their data, not ours. */
@@ -45,14 +59,20 @@ function saveData(): boolean {
  * network layer streams instantly.
  */
 export function prefetch(url: string): void {
-  if (!config.enabled || saveData() || isFresh(prefetched.get(url))) return;
-  prefetched.set(url, {
+  if (saveData() || isFresh(prefetched.get(url))) return;
+  evict();
+  const entry: PrefetchEntry = {
     at: Date.now(),
     body: fetch(url, { headers: NAVIGATION_HEADERS }).then((response) =>
       response.ok && response.body ? response.body : Promise.reject(new Error('prefetch failed')),
     ),
+  };
+
+  prefetched.set(url, entry);
+  // Identity-checked: a slow failure must not delete a NEWER entry for the URL.
+  entry.body.catch(() => {
+    if (prefetched.get(url) === entry) prefetched.delete(url);
   });
-  prefetched.get(url)!.body.catch(() => prefetched.delete(url));
 }
 
 /** The prefetched page's stream if still fresh, evicting the entry either way. */

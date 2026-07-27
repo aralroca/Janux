@@ -107,6 +107,7 @@ describe('recipes/custom-server.md', () => {
     // Pages stream, so the adapter writes chunk by chunk and ends empty.
     const nodeRes = {
       writeHead: (status: number) => (written.status = status),
+      once: () => undefined,
       write: (chunk: Uint8Array) => (written.body += decoder.decode(chunk, { stream: true })),
       end: () => undefined,
     } as any;

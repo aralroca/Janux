@@ -104,7 +104,10 @@ describe('renderToString', () => {
 });
 
 describe('renderToStream', () => {
-  const settle = () => new Promise((resolve) => setTimeout(resolve));
+  // Several timer ticks: chunk coalescing flushes on its own macrotask.
+  const settle = async () => {
+    for (let tick = 0; tick < 5; tick += 1) await new Promise((resolve) => setTimeout(resolve));
+  };
 
   function slowComponent(gate: Promise<string[]>) {
     return component({
@@ -147,6 +150,53 @@ describe('renderToStream', () => {
 
     expect(collected.join('')).toBe(expected.html);
     expect(summary.snapshots).toEqual(expected.snapshots);
+  });
+
+  /**
+   * The client re-renders island views with a synchronous depth-first walk, so
+   * SSR must assign nested keys in exactly that order — a scheduling change
+   * that keyed the deeper sibling second made two same-typed nested islands
+   * swap state on the parent's first re-render.
+   */
+  it('assigns nested island keys in client traversal order (deep-first, by index)', async () => {
+    const badge = component({ name: 'badge', view: () => jsx('b', { children: 'x' }) });
+    const parent = component({
+      name: 'parent',
+      view: () =>
+        jsx('div', {
+          children: [jsx('section', { children: jsx(badge as any, {}) }), jsx(badge as any, {})],
+        }),
+    });
+    const { html } = await renderToString(jsx(parent as any, {}));
+    const keys = [...html.matchAll(/data-jx="(badge#[^"]+)"/g)].map((match) => match[1]);
+
+    expect(keys).toEqual(['badge#parent.default.1', 'badge#parent.default.2']);
+    // And .1 is the nested one: it sits inside the <section>.
+    expect(html).toContain('<section><janux-island key="badge#parent.default.1"');
+  });
+
+  it('an abandoned stream settles `done` and stops descending into new work', async () => {
+    let releaseParent!: () => void;
+    const gate = new Promise<void>((resolve) => { releaseParent = resolve; });
+    let nestedQueries = 0;
+    const nested = component({
+      name: 'nested',
+      sources: { data: source({ query: async () => { nestedQueries += 1; return []; } }) },
+      view: () => jsx('i', { children: 'n' }),
+    });
+    const slowParent = component({
+      name: 'slow-parent',
+      sources: { data: source({ query: () => gate.then(() => []) }) },
+      view: () => jsx(nested as any, {}),
+    });
+    const { chunks, done, cancel } = renderToStream(jsx('main', { children: jsx(slowParent as any, {}) }));
+
+    await chunks.next(); // the first flush is on the wire
+    cancel(); // ...and the client disconnects
+
+    releaseParent();
+    await done; // settles anyway — no promise left dangling per aborted request
+    expect(nestedQueries).toBe(0); // the parent's children were never started
   });
 
   it('keeps sibling islands loading in parallel, not serialized by document order', async () => {

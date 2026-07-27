@@ -1,4 +1,10 @@
-import { speculationRules, SPECULATION_SCRIPT_ID, type NavigationConfig, type PageMeta } from 'janux';
+import {
+  CONFIG_SCRIPT_ID,
+  SPECULATION_SCRIPT_ID,
+  speculationRules,
+  type NavigationConfig,
+  type PageMeta,
+} from 'janux';
 import { headTags } from './head-tags';
 import { safeAttr, safeJson } from './html-escape';
 
@@ -31,6 +37,13 @@ export interface ShellOptions {
   i18n?: ShellI18n;
   /** `navigation` from the app config: reaches the client through the shell. */
   navigation?: NavigationConfig;
+  /**
+   * The response answers a client navigation (`x-janux-navigation`), so the
+   * speculation rules ship already narrowed to `[data-native]` links — the
+   * client is provably intercepting, and matching content lets its rescope
+   * pass be a no-op instead of making the browser drop its candidates.
+   */
+  navigating?: boolean;
 }
 
 /*
@@ -53,23 +66,26 @@ function stateScripts(snapshots: ShellOptions['snapshots']): string {
 /**
  * Speculation rules, and the navigation config the client reads back.
  *
- * The rules cover every internal link: at parse time nothing knows whether this
- * browser intercepts navigations, and a browser that does not is exactly the
- * one that benefits. `boot()` narrows them to `[data-native]` links once it
- * takes over. Both scripts are keyed, like everything else the shell emits, so
- * the navigation diff matches them by identity.
+ * On a first load the rules cover every internal link: at parse time nothing
+ * knows whether this browser intercepts navigations, and a browser that does
+ * not is exactly the one that benefits. `boot()` narrows them to
+ * `[data-native]` links once it takes over; navigation responses ship them
+ * narrowed already. Both scripts are keyed, like everything else the shell
+ * emits, so the navigation diff matches them by identity.
  */
 function navigationScripts(options: Omit<ShellOptions, 'html'>): string {
   const config = options.navigation;
-  const rules = speculationRules(config?.speculationRules ?? true);
+  const rules = speculationRules(config?.speculationRules ?? true, { nativeOnly: options.navigating });
   const scripts = rules
-    ? [`<script type="speculationrules" key="jx-speculation" id="${SPECULATION_SCRIPT_ID}">${safeJson(rules)}</script>`]
+    ? [
+        `<script type="speculationrules" key="${SPECULATION_SCRIPT_ID}" id="${SPECULATION_SCRIPT_ID}">${safeJson(rules)}</script>`,
+      ]
     : [];
 
   // Only when it says something: the defaults live in the client.
   if (config && Object.keys(config).length > 0) {
     scripts.push(
-      `<script type="application/janux+config" key="jx-config" id="jx-config">${safeJson({ navigation: config })}</script>`,
+      `<script type="application/janux+config" key="${CONFIG_SCRIPT_ID}" id="${CONFIG_SCRIPT_ID}">${safeJson({ navigation: config })}</script>`,
     );
   }
 
@@ -89,16 +105,11 @@ function runtimeScripts(options: Omit<ShellOptions, 'html'>): string {
 }
 
 /**
- * The document split for streaming: everything before the page's HTML and
- * everything after it. The prelude needs nothing from the render — title, meta
- * and styles are resolved from the route before the body renders — so it can be
- * flushed as the first chunk; the epilogue (state snapshots, island runtime,
- * i18n payload) only exists once the render finished.
- *
- * `[prelude, html, epilogue].filter(Boolean).join('\n')` is byte-identical to
- * `htmlDocument(...)` — htmlDocument is implemented on top of these parts.
+ * Everything before the page's HTML. Needs nothing from the render — title,
+ * meta and styles are resolved from the route before the body renders — so it
+ * can be flushed as the response's first chunk.
  */
-export function shellParts(options: Omit<ShellOptions, 'html'>): { prelude: string; epilogue: string } {
+export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
   const manifestLink = options.manifestUrl
     ? `<link rel="janux-manifest" id="jx-manifest" href="${options.manifestUrl}">`
     : '';
@@ -125,15 +136,11 @@ export function shellParts(options: Omit<ShellOptions, 'html'>): { prelude: stri
   const favicon = options.favicon
     ? `<link rel="icon" id="jx-favicon" href="${safeAttr(options.favicon)}">`
     : '';
-
   // Always a language: an undeclared one is a bug for assistive tech, so apps
   // without i18n get `lang` from config and fall back to English.
   const htmlAttrs = options.i18n
     ? ` lang="${safeAttr(options.i18n.locale)}" dir="${options.i18n.dir}"`
     : ` lang="${safeAttr(options.lang ?? 'en')}"`;
-  const i18nScript = options.i18n?.payload
-    ? `<script type="application/janux+i18n" key="jx-i18n" id="jx-i18n">${safeJson(options.i18n.payload)}</script>`
-    : '';
   // Social tags, canonical and JSON-LD go last for the same reason the
   // description does: they are the most page-dependent nodes in the head.
   const social = headTags(options.meta, {
@@ -142,7 +149,7 @@ export function shellParts(options: Omit<ShellOptions, 'html'>): { prelude: stri
     description: options.description,
   });
 
-  const prelude = [
+  return [
     '<!doctype html>',
     `<html${htmlAttrs}>`,
     // Order matters for SPA-navigation diffing: persistent, keyed resource
@@ -152,7 +159,18 @@ export function shellParts(options: Omit<ShellOptions, 'html'>): { prelude: stri
     `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${favicon}${manifestLink}${styleLinks}${description}${social}</head>`,
     '<body>',
   ].join('\n');
-  const epilogue = [
+}
+
+/**
+ * Everything after the page's HTML: state snapshots, island runtime, i18n
+ * payload — the parts that only exist once the render finished.
+ */
+export function shellEpilogue(options: Omit<ShellOptions, 'html'>): string {
+  const i18nScript = options.i18n?.payload
+    ? `<script type="application/janux+i18n" key="jx-i18n" id="jx-i18n">${safeJson(options.i18n.payload)}</script>`
+    : '';
+
+  return [
     i18nScript,
     options.islandNames.length > 0 ? stateScripts(options.snapshots) : '',
     navigationScripts(options),
@@ -162,8 +180,16 @@ export function shellParts(options: Omit<ShellOptions, 'html'>): { prelude: stri
   ]
     .filter(Boolean)
     .join('\n');
+}
 
-  return { prelude, epilogue };
+/**
+ * Both halves at once. `[prelude, html, epilogue].filter(Boolean).join('\n')`
+ * is byte-identical to `htmlDocument(...)` — htmlDocument is implemented on
+ * top of these parts, which is what lets the streamed response and the
+ * buffered document never disagree.
+ */
+export function shellParts(options: Omit<ShellOptions, 'html'>): { prelude: string; epilogue: string } {
+  return { prelude: shellPrelude(options), epilogue: shellEpilogue(options) };
 }
 
 /**

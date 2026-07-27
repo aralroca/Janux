@@ -1,6 +1,7 @@
 import {
   buildManifest,
   renderToStream,
+  renderToString,
   selectMessages,
   translateCore,
   type AuditEntry,
@@ -11,7 +12,6 @@ import {
   type NavigationConfig,
   type PageMeta,
   type RenderResult,
-  type RenderStream,
 } from 'janux';
 import { QueryClient } from 'janux/query';
 import { createHttpHandlers, type HandlerModule } from './http-handlers';
@@ -23,7 +23,7 @@ import { assertValidInput, errorStatus, evictOldestProposal, json, proposalId, t
 import { apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 import { createFsRouter, type Route } from './router';
-import { shellParts, type ShellOptions } from './html-shell';
+import { shellEpilogue, shellPrelude, type ShellOptions } from './html-shell';
 import { safeJson } from './html-escape';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
@@ -122,48 +122,53 @@ type RenderSummary = Omit<RenderResult, 'html'>;
 function streamErrorScript(error: unknown): string {
   const detail = safeJson(String(error));
 
-  return `\n<script key="jx-stream-error">document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("janux: render failed mid-stream",${detail})</script>\n</body>\n</html>`;
+  return `\n<script key="jx-stream-error">document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: render failed mid-stream",${detail})</script>\n</body>\n</html>`;
 }
 
 /**
  * prelude → body chunks → epilogue, byte-identical to the buffered
- * `htmlDocument()` (see shellParts). Pull-based so a slow reader applies
- * backpressure instead of buffering the page in memory.
+ * `htmlDocument()` (see shellPrelude/shellEpilogue). Lazily pulled, so a slow
+ * reader applies backpressure to the encoder.
  */
 function documentStream(
   prelude: string,
   body: AsyncGenerator<string>,
   epilogue: () => Promise<string>,
+  onCancel: () => void,
 ): ReadableStream<Uint8Array> {
+  async function* document(): AsyncGenerator<string> {
+    let sentBody = false;
+
+    yield `${prelude}\n`;
+    try {
+      for await (const chunk of body) {
+        // Skip empty chunks: `htmlDocument` drops empty html the same way.
+        if (!chunk) continue;
+        sentBody = true;
+        yield chunk;
+      }
+      yield `${sentBody ? '\n' : ''}${await epilogue()}`;
+    } catch (error) {
+      yield streamErrorScript(error);
+    }
+  }
+
+  // `ReadableStream.from` is not everywhere yet; this is the same adapter.
+  const chunks = document();
   const encoder = new TextEncoder();
-  let head: string | undefined = `${prelude}\n`;
-  let sentBody = false;
 
   return new ReadableStream({
     async pull(controller) {
-      if (head) {
-        controller.enqueue(encoder.encode(head));
-        head = undefined;
+      const { value, done } = await chunks.next();
 
-        return;
-      }
-      try {
-        const { value, done } = await body.next();
-
-        if (!done) {
-          // Skip empty chunks: `htmlDocument` drops empty html the same way.
-          if (value) {
-            sentBody = true;
-            controller.enqueue(encoder.encode(value));
-          }
-
-          return;
-        }
-        controller.enqueue(encoder.encode(`${sentBody ? '\n' : ''}${await epilogue()}`));
-      } catch (error) {
-        controller.enqueue(encoder.encode(streamErrorScript(error)));
-      }
-      controller.close();
+      if (done) controller.close();
+      else controller.enqueue(encoder.encode(value));
+    },
+    cancel() {
+      // The renderer first — a generator parked on its own await cannot be
+      // return()ed until it yields, which for an abandoned response is never.
+      onCancel();
+      chunks.return(undefined).catch(() => {});
     },
   });
 }
@@ -260,7 +265,8 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return wrapped;
   };
 
-  const renderPageStream = async (pathname: string, ctx: Ctx) => {
+  /** Route resolution up to the renderable tree: what both render flavours share. */
+  const resolvePage = async (pathname: string, ctx: Ctx) => {
     const route = findRoute(pathname);
 
     if (!route) return undefined;
@@ -271,25 +277,23 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const render = 'render' in route ? route.render : module.default;
     const meta = await resolveMeta(module?.meta, ctx, route.params);
     const vnode = await applyLayouts(await render({ ctx, params: route.params }), route.layouts, ctx, route.params);
-    const stream = renderToStream(vnode, {
-      ctx,
-      storeDefs: options.storeDefs,
-      foreignImport: options.foreignImport,
-    });
 
-    return { ...stream, meta };
+    return { vnode, meta };
+  };
+
+  const renderOptions = (ctx: Ctx) => ({ ctx, storeDefs: options.storeDefs, foreignImport: options.foreignImport });
+
+  const renderPageStream = async (pathname: string, ctx: Ctx) => {
+    const page = await resolvePage(pathname, ctx);
+
+    return page && { ...renderToStream(page.vnode, renderOptions(ctx)), meta: page.meta };
   };
 
   /** Buffered render for consumers that need the whole page at once (manifest, markdown projections). */
   const renderPage = async (pathname: string, ctx: Ctx) => {
-    const rendered = await renderPageStream(pathname, ctx);
+    const page = await resolvePage(pathname, ctx);
 
-    if (!rendered) return undefined;
-    const parts: string[] = [];
-
-    for await (const chunk of rendered.chunks) parts.push(chunk);
-
-    return { html: parts.join(''), ...(await rendered.done), meta: rendered.meta };
+    return page && { ...(await renderToString(page.vnode, renderOptions(ctx))), meta: page.meta };
   };
 
   const manifestFor = async (pathname: string, ctx: Ctx): Promise<unknown> => {
@@ -374,11 +378,17 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return json({ ok: true, result: await proposal.execute() });
   };
 
-  /** The client payload ships only what the page's islands consume: SSR-recorded keys + declared `i18nKeys`. */
-  const shellI18n = (locale: string | undefined, result: RenderSummary): ShellI18n | undefined => {
+  /**
+   * The client payload ships only what the page's islands consume:
+   * SSR-recorded keys + declared `i18nKeys`. Without a render result (the
+   * prelude, flushed before the body renders) it is just the locale and its
+   * direction — the payload only exists once the render finished.
+   */
+  const shellI18n = (locale: string | undefined, result?: RenderSummary): ShellI18n | undefined => {
     const config = options.i18n;
 
     if (!locale || !config) return undefined;
+    if (!result) return { locale, dir: localeDir(locale) };
     const islands = result.registry.islands;
     const declared = islands.flatMap(({ def }) => def.i18nKeys ?? []);
     const messages = selectMessages(config.messages?.[locale] ?? {}, result.i18nKeys, declared, config.keySeparator);
@@ -465,12 +475,18 @@ export function createJanuxServer(options: ServerOptions = {}) {
         stylesheets: options.stylesheets,
         inlineStyles: navigating ? undefined : options.inlineStyles,
         favicon: options.favicon,
-        i18n: result ? shellI18n(locale, result) : locale ? { locale, dir: localeDir(locale) } : undefined,
+        i18n: shellI18n(locale, result),
         navigation: options.navigation,
+        navigating,
       };
     };
-    const { prelude } = shellParts(shellFor());
-    const body = documentStream(prelude, rendered.chunks, async () => shellParts(shellFor(await rendered.done)).epilogue);
+    const prelude = shellPrelude(shellFor());
+    const body = documentStream(
+      prelude,
+      rendered.chunks,
+      async () => shellEpilogue(shellFor(await rendered.done)),
+      rendered.cancel,
+    );
 
     return new Response(body, { headers: { 'content-type': 'text/html; charset=utf-8' } });
   };

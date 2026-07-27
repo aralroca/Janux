@@ -124,19 +124,23 @@ describe.skipIf(!BUILT)('navigation in a real browser (apps/docs)', () => {
     const { page } = await openDocsWithAssistant();
     const navigation = page.evaluate((path) => (window as any).janux.navigate(path), `/slow${SECOND}`);
 
-    // Halfway through the pause: the tail of the page provably has not arrived.
+    // Halfway through the pause: the tail of the page provably has not
+    // arrived. The marker lives near the end of Quick start and appears
+    // nowhere on the page navigated from.
+    const TAIL_MARKER = 'Make your first change';
+
     await page.waitForTimeout(CHUNK_PAUSE_MS / 2);
-    const midStream = await page.evaluate(() => ({
+    const midStream = await page.evaluate((marker) => ({
       heading: document.querySelector('h1')?.textContent ?? '',
-      tailLanded: !!document.body.textContent?.includes('Next:'),
-    }));
+      tailLanded: !!document.body.textContent?.includes(marker),
+    }), TAIL_MARKER);
 
     await navigation;
 
     expect(midStream.heading).toContain('Quick start');
     expect(midStream.tailLanded).toBe(false);
     // And the rest of the page did land, once its chunk arrived.
-    expect(await page.evaluate(() => document.body.textContent?.includes('Next:'))).toBe(true);
+    expect(await page.evaluate((marker) => document.body.textContent?.includes(marker), TAIL_MARKER)).toBe(true);
     await page.close();
   }, TIMEOUT);
 

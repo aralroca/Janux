@@ -458,24 +458,11 @@ describe('persisted island dropped by the incoming page', () => {
     return warned;
   }
 
-  it('warns in dev naming the island, and still disposes it', async () => {
+  it('warns naming the island, and still disposes it', async () => {
     const warned = await navigateAwayFromPersistedChat();
 
-    expect(warned.some((message) => message.includes('chat#default'))).toBe(true);
+    expect(warned.some((message) => message.includes('Janux:') && message.includes('chat#default'))).toBe(true);
     expect(document.querySelector('janux-island[data-jx="chat#default"]')).toBeNull();
-  });
-
-  it('stays silent in production builds', async () => {
-    const previous = process.env.NODE_ENV;
-
-    process.env.NODE_ENV = 'production';
-    try {
-      const warned = await navigateAwayFromPersistedChat();
-
-      expect(warned).toEqual([]);
-    } finally {
-      process.env.NODE_ENV = previous;
-    }
   });
 });
 

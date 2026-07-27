@@ -56,3 +56,34 @@ export interface JanuxConfig {
 export function defineConfig(config: JanuxConfig): JanuxConfig {
   return config;
 }
+
+/** Ids both sides agree on: the server emits these scripts, the client reads and rewrites them. */
+export const SPECULATION_SCRIPT_ID = 'jx-speculation';
+export const CONFIG_SCRIPT_ID = 'jx-config';
+
+type SpeculationMatcher = { href_matches: string } | { selector_matches: string } | { not: SpeculationMatcher };
+
+/**
+ * The `<script type="speculationrules">` payload. `nativeOnly` scopes the
+ * rules to links Janux hands back to the browser.
+ *
+ * Only `prefetch`: prerendering runs the page's scripts in a hidden tab, which
+ * for an app whose islands register tools and open connections is a side effect
+ * nobody asked for — and its win is redundant with the diff.
+ */
+export function speculationRules(
+  config: boolean | SpeculationRulesConfig | undefined,
+  options: { nativeOnly?: boolean } = {},
+): { prefetch: [{ where: unknown; eagerness: string }] } | undefined {
+  if (config === false) return undefined;
+  const settings = typeof config === 'object' ? config : {};
+  const scope: SpeculationMatcher = options.nativeOnly
+    ? { selector_matches: 'a[data-native]' }
+    : { href_matches: '/*' };
+  const excludes: SpeculationMatcher[] = (settings.exclude ?? []).map((pattern) => ({
+    not: { href_matches: pattern },
+  }));
+  const where = excludes.length > 0 ? { and: [scope, ...excludes] } : scope;
+
+  return { prefetch: [{ where, eagerness: settings.eagerness ?? 'moderate' }] };
+}

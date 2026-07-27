@@ -75,13 +75,11 @@ function restoreWhileStreaming(kept: PersistedIsland[]): () => void {
  * A persisted island the incoming page does not render is disposed — that is
  * the contract (`persist` keeps the instance across pages that render it), but
  * when it bites it looks like "my assistant closed itself on navigation", so
- * dev builds say it out loud. Vite replaces NODE_ENV in dev and build alike;
- * without a bundler there is no signal and the warning stays off.
+ * it is said out loud, like every other developer-mistake warning here.
  */
 function warnDroppedPersist(id: string): void {
-  if (typeof process === 'undefined' || process.env?.NODE_ENV === 'production') return;
   console.warn(
-    `janux: persisted island "${id}" is not rendered by ${location.pathname}, so its live instance was disposed. Render it on every route (e.g. from a shared layout) to keep it alive across navigations.`,
+    `Janux: persisted island "${id}" is not rendered by ${location.pathname}, so its live instance was disposed. Render it on every route (e.g. from a shared layout) to keep it alive across navigations.`,
   );
 }
 
@@ -166,7 +164,10 @@ async function sweepDisconnected(mount: MountContext): Promise<void> {
 async function fetchPage(url: string, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>> {
   const cached = await consumePrefetched(url);
 
-  if (cached !== undefined) return cached;
+  // The contract: the returned stream dies with the navigation's signal. A
+  // fresh fetch is signal-bound natively; a prefetched body was fetched before
+  // any navigation existed, so it gets wrapped.
+  if (cached !== undefined) return abortableStream(cached, signal);
   const response = await fetch(url, { signal, headers: NAVIGATION_HEADERS });
 
   if (!response.ok) throw new Error(`navigation fetch failed (${response.status})`);
@@ -338,7 +339,7 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
   try {
     throwIfAborted(signal);
     // The Navigation API drives the transition; diff directly (its own would be skipped).
-    await diff(document, abortableStream(page, signal));
+    await diff(document, page);
     /*
      * A superseded navigation must not report success: the diff can finish
      * cleanly on a cancelled stream, having applied only the part that arrived,

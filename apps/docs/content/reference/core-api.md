@@ -146,9 +146,11 @@ const { snapshots, registry, i18nKeys } = await done;   // only after chunks is 
 
 Same `options` as `renderToString`, and the joined chunks are byte-identical to its `html`. Islands still load their sources in parallel — a slow one holds back its own children, not the page — and the snapshots only exist once the render finished, which is why they arrive through `done` rather than up front.
 
+The third field, `cancel()`, is for a response the client abandoned mid-stream: it stops the renderer from descending into new island work and settles `done` with what rendered. Call it from your stream's `cancel` hook — the generator protocol alone can't reach a renderer parked on its own `await`.
+
 ### speculationRules(config, options?)
 
-The JSON behind the `<script type="speculationrules">` the shell emits, exported so a custom server can build its own. `config` is the `navigation.speculationRules` value (`true`, `false`, or `{ eagerness, exclude }`); pass `{ nativeOnly: true }` for the narrowed form the client swaps in once it intercepts navigations. `SPECULATION_SCRIPT_ID` is the id both sides agree on. See [Navigation](/docs/guide/navigation#prefetching-and-speculation-rules).
+The JSON behind the `<script type="speculationrules">` the shell emits, exported so a custom server can build its own. `config` is the `navigation.speculationRules` value (`true`, `false`, or `{ eagerness, exclude }`); pass `{ nativeOnly: true }` for the narrowed form the client swaps in once it intercepts navigations. `SPECULATION_SCRIPT_ID` and `CONFIG_SCRIPT_ID` are the script ids both sides agree on — the second one is where the shell ships the `navigation` config for the client to read back. See [Navigation](/docs/guide/navigation#prefetching-and-speculation-rules).
 
 ### buildManifest(entries, ctx?)
 

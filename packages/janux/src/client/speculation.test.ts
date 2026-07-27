@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { speculationRules } from './speculation';
+import { speculationRules } from '../config';
 
 describe('speculationRules', () => {
   it('prefetches every internal URL on hover by default', () => {

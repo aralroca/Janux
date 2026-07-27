@@ -10,6 +10,7 @@ function fakeNodeResponse() {
     writes,
     isEnded: () => ended,
     writeHead() {},
+    once() {},
     write(chunk: Uint8Array) {
       writes.push(decoder.decode(chunk, { stream: true }));
 

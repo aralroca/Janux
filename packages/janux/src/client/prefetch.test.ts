@@ -64,12 +64,23 @@ describe('prefetch cache', () => {
     Object.defineProperty(navigator, 'connection', { configurable: true, value: undefined });
   });
 
-  it('does nothing when prefetching is turned off in the config', () => {
-    const fetched = mockFetch();
+  /** A hover tour over a long nav must not pile up open connections. */
+  it('caps warmed pages, cancelling the oldest body when a new one comes in', async () => {
+    const cancelled: string[] = [];
 
-    configurePrefetch({ enabled: false });
-    prefetch('/a');
+    (globalThis as any).fetch = mock(async (url: string) => ({
+      ok: true,
+      body: new ReadableStream({
+        cancel() {
+          cancelled.push(url);
+        },
+      }),
+    }));
+    for (let index = 0; index < 9; index += 1) prefetch(`/page-${index}`);
+    await Bun.sleep(1);
 
-    expect(fetched).not.toHaveBeenCalled();
+    expect(cancelled).toEqual(['/page-0']);
+    expect(consumePrefetched('/page-0')).toBeUndefined();
+    expect(await consumePrefetched('/page-8')).toBeDefined();
   });
 });
