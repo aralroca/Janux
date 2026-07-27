@@ -397,6 +397,36 @@ describe('SPA navigation (streamed diff)', () => {
 
 
 /**
+ * The incoming page carries the server's document-wide rules (it cannot know
+ * this browser intercepts), and the diff faithfully applies them — so without
+ * re-narrowing them after every navigation, the second page onwards speculates
+ * documents the SPA path never uses and hover fetches each page twice.
+ */
+describe('speculation rules across a navigation', () => {
+  it('re-narrows the incoming page rules to native links', async () => {
+    const serverRules =
+      '<script type="speculationrules" id="jx-speculation">{"prefetch":[{"where":{"href_matches":"/*"},"eagerness":"moderate"}]}</script>';
+
+    document.write(await pageHtml('A', jsx('h1', { children: 'A' }), serverRules));
+    document.close();
+    (window as any).navigation = { addEventListener() {} };
+    const client = boot({ defs: [] });
+
+    (globalThis as any).fetch = mock(async () => ({
+      ok: true,
+      body: new Response(await pageHtml('B', jsx('h1', { children: 'B' }), serverRules)).body,
+    }));
+    await client.navigate('/b');
+
+    const rules = JSON.parse(document.getElementById('jx-speculation')!.textContent!);
+
+    expect(document.querySelectorAll('#jx-speculation').length).toBe(1);
+    expect(rules.prefetch[0].where).toEqual({ selector_matches: 'a[data-native]' });
+    delete (window as any).navigation;
+  });
+});
+
+/**
  * The `persist` contract: the island keeps its live instance across pages that
  * render it. A destination page that does NOT render it disposes the instance —
  * correct, but from the app's side it reads as "the assistant closed itself",

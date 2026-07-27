@@ -11,7 +11,7 @@ import { installI18n } from './i18n';
 import type { NavigationConfig } from '../config';
 import { mountEagerIslands, performNavigation } from './navigate';
 import { configurePrefetch, prefetch } from './prefetch';
-import { speculationRules, SPECULATION_SCRIPT_ID } from './speculation';
+import { rescopeSpeculationRules } from './speculation';
 import { installWebMCP } from './webmcp';
 
 export interface BootOptions {
@@ -104,28 +104,6 @@ function shellNavigationConfig(): NavigationConfig {
   } catch {
     return {};
   }
-}
-
-/**
- * The server emits rules for every internal link, since at that point nothing
- * knows whether this browser will intercept navigations. Once it does, those
- * rules speculate documents the SPA path never uses and make hover fetch the
- * page twice — so they are narrowed to the links the browser still owns.
- * Replacing the script is how rules are re-evaluated; editing it is not.
- */
-function rescopeSpeculationRules(config: NavigationConfig): void {
-  const existing = document.getElementById(SPECULATION_SCRIPT_ID);
-
-  if (!existing) return;
-  const rules = speculationRules(config.speculationRules ?? true, { nativeOnly: true });
-  const script = document.createElement('script');
-
-  existing.remove();
-  if (!rules) return;
-  script.type = 'speculationrules';
-  script.id = SPECULATION_SCRIPT_ID;
-  script.textContent = JSON.stringify(rules);
-  document.head.appendChild(script);
 }
 
 /**

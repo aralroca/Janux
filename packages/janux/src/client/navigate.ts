@@ -3,6 +3,7 @@ import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { consumePrefetched, NAVIGATION_HEADERS } from './prefetch';
 import { runScriptsWhileStreaming } from './scripts';
+import { rescopeSpeculationRules } from './speculation';
 
 export interface NavigateOptions {
   signal?: AbortSignal;
@@ -373,6 +374,8 @@ function reportNavigationError(error: unknown): void {
 /** Everything that happens once the new page is on screen. */
 async function wireUpPage(mount: MountContext): Promise<void> {
   reindexSnapshots(mount);
+  // The incoming page brought the server's document-wide speculation rules.
+  rescopeSpeculationRules();
   installI18n(mount.ctx);
   await sweepDisconnected(mount);
   sweepDisconnectedForeigns(mount);
