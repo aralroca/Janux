@@ -3,7 +3,7 @@ import { component, intent, source, store } from '../define/factories';
 import { jsx, Fragment } from '../jsx-runtime';
 import { int, list, schema, str } from '../schema';
 import { buildManifest } from '../manifest';
-import { renderToString } from './server';
+import { renderToStream, renderToString } from './server';
 
 function PriceTag({ amount }: { amount: number }) {
   return jsx('span', { class: 'price', children: `${amount}¢` });
@@ -100,6 +100,77 @@ describe('renderToString', () => {
     const result = await renderToString(jsx('div', { 'onmouseover=alert(1) x': 'y', title: 'ok' }));
 
     expect(result.html).toBe('<div title="ok"></div>');
+  });
+});
+
+describe('renderToStream', () => {
+  const settle = () => new Promise((resolve) => setTimeout(resolve));
+
+  function slowComponent(gate: Promise<string[]>) {
+    return component({
+      name: 'slow',
+      sources: { catalog: source({ query: () => gate }) },
+      view: ({ sources }: any) => jsx('p', { children: `slow:${sources.catalog.value.length}` }),
+    });
+  }
+
+  it('emits earlier siblings while a later island is still loading its sources', async () => {
+    let release!: (products: string[]) => void;
+    const gate = new Promise<string[]>((resolve) => { release = resolve; });
+    const page = jsx('main', {
+      children: [jsx('h1', { children: 'Shop' }), jsx(slowComponent(gate) as any, {})],
+    });
+    const { chunks } = renderToStream(page);
+    const collected: string[] = [];
+    const drained = (async () => {
+      for await (const chunk of chunks) collected.push(chunk);
+    })();
+
+    await settle();
+    expect(collected.join('')).toContain('<h1>Shop</h1>');
+    expect(collected.join('')).not.toContain('slow:');
+
+    release(['p1', 'p2']);
+    await drained;
+    expect(collected.join('')).toContain('slow:2');
+  });
+
+  it('joined chunks are byte-identical to renderToString, with the same snapshots', async () => {
+    const page = jsx(Fragment, { children: [jsx('h1', { children: 'Shop' }), jsx(cart as any, {})] });
+    const options = { initialState: { 'ui://cart#default': { items: [{ id: 'a', qty: 1 }] } } };
+    const expected = await renderToString(page, options);
+    const { chunks, done } = renderToStream(page, options);
+    const collected: string[] = [];
+
+    for await (const chunk of chunks) collected.push(chunk);
+    const summary = await done;
+
+    expect(collected.join('')).toBe(expected.html);
+    expect(summary.snapshots).toEqual(expected.snapshots);
+  });
+
+  it('keeps sibling islands loading in parallel, not serialized by document order', async () => {
+    // `a` only resolves once `b` has started: serialized rendering would deadlock here.
+    let bStarted!: () => void;
+    const gate = new Promise<void>((resolve) => { bStarted = resolve; });
+    const first = component({
+      name: 'first',
+      sources: { data: source({ query: async () => { await gate; return ['a']; } }) },
+      view: ({ sources }: any) => jsx('span', { children: sources.data.value[0] }),
+    });
+    const second = component({
+      name: 'second',
+      sources: { data: source({ query: async () => { bStarted(); return ['b']; } }) },
+      view: ({ sources }: any) => jsx('span', { children: sources.data.value[0] }),
+    });
+    const page = jsx('div', { children: [jsx(first as any, {}), jsx(second as any, {})] });
+    const { chunks } = renderToStream(page);
+    const collected: string[] = [];
+
+    for await (const chunk of chunks) collected.push(chunk);
+
+    expect(collected.join('')).toContain('<span>a</span>');
+    expect(collected.join('')).toContain('<span>b</span>');
   });
 });
 

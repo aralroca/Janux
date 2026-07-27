@@ -21,7 +21,7 @@ export type {
   RunBag,
   StoreHandle,
 } from './define/types';
-export { renderToString, type RenderResult } from './render/server';
+export { renderToStream, renderToString, type RenderResult, type RenderStream } from './render/server';
 export { buildManifest, type Manifest, type ManifestEntry } from './manifest';
 export {
   schema,

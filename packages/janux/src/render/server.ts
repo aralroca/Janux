@@ -93,7 +93,7 @@ function islandCtx(scope: RenderScope): RenderOptions['ctx'] {
   return { ...scope.ctx, i18n: { ...i18n, t } };
 }
 
-async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): Promise<string> {
+async function* renderIsland(def: ComponentDef, props: any, scope: RenderScope): AsyncGenerator<string> {
   const key = nextKey(scope, def, props.key ?? props.id);
   const stores = storeInstances(scope);
   const useStores = Object.fromEntries(
@@ -101,18 +101,13 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): 
   );
   const initial = scope.initialState?.[`ui://${def.name}#${key}`] ?? props.initial;
   const instance = createInstance(def, { key, ctx: islandCtx(scope), bus: scope.bus, initial, stores: useStores });
-
-  await loadSources(instance);
-  scope.registry.islands.push({ def, key, instance });
+  const persist = props.persist ? ' data-jx-persist' : '';
+  const eager = props.eager ? ' data-jx-eager' : '';
+  const id = escapeHtml(`${def.name}#${key}`);
   const childScope: RenderScope = {
     ...scope,
     island: { name: def.name, key, keySeq: new Map(), usedKeys: new Set() },
   };
-  const inner = await renderNode(def.view!(instance.bag), childScope);
-  const persist = props.persist ? ' data-jx-persist' : '';
-  const eager = props.eager ? ' data-jx-eager' : '';
-
-  const id = escapeHtml(`${def.name}#${key}`);
 
   /*
    * `key` is the same id, for the navigation diff rather than for us: it matches
@@ -121,8 +116,15 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope): 
    * different island, which used to leave fragments of an editor or a canvas in
    * the next page. Identity in the markup is what lets that diff read the page as
    * a stream instead of waiting for all of it.
+   *
+   * The open tag goes out before the sources load: a slow island holds back its
+   * own children, not the rest of the page.
    */
-  return `<janux-island key="${id}" data-jx="${id}"${persist}${eager}>${inner}</janux-island>`;
+  yield `<janux-island key="${id}" data-jx="${id}"${persist}${eager}>`;
+  await loadSources(instance);
+  scope.registry.islands.push({ def, key, instance });
+  yield* renderChunks(def.view!(instance.bag), childScope);
+  yield '</janux-island>';
 }
 
 /** CJS/ESM interop for a dynamically imported module. */
@@ -185,42 +187,97 @@ function localizedProps(node: JanuxNode, scope: RenderScope): Record<string, unk
   return { ...node.$p, href: `/${i18n.locale}${href === '/' ? '' : href}` };
 }
 
-async function renderElement(node: JanuxNode, scope: RenderScope): Promise<string> {
+async function* renderElement(node: JanuxNode, scope: RenderScope): AsyncGenerator<string> {
   const tag = node.$t as string;
   const attrs = renderAttrs(localizedProps(node, scope));
 
-  if (VOID_ELEMENTS.has(tag)) return `<${tag}${attrs}/>`;
-  const children =
-    typeof node.$p.dangerHTML === 'string'
-      ? node.$p.dangerHTML
-      : await renderNode(node.$p.children, scope);
+  if (VOID_ELEMENTS.has(tag)) {
+    yield `<${tag}${attrs}/>`;
 
-  return `<${tag}${attrs}>${children}</${tag}>`;
+    return;
+  }
+  yield `<${tag}${attrs}>`;
+  if (typeof node.$p.dangerHTML === 'string') yield node.$p.dangerHTML;
+  else yield* renderChunks(node.$p.children, scope);
+  yield `</${tag}>`;
 }
 
-export async function renderNode(node: unknown, scope: RenderScope): Promise<string> {
-  if (node === null || node === undefined || typeof node === 'boolean') return '';
-  if (typeof node === 'string' || typeof node === 'number') return escapeHtml(node);
-  if (Array.isArray(node)) {
-    const parts = await Promise.all(node.map((child) => renderNode(child, scope)));
+interface EagerChild {
+  chunks: string[];
+  done: boolean;
+  error?: unknown;
+  wake?: () => void;
+}
 
-    return parts.join('');
+/** Starts consuming a child immediately, buffering what an earlier sibling hasn't let through yet. */
+function pumpChild(iterator: AsyncGenerator<string>): EagerChild {
+  const child: EagerChild = { chunks: [], done: false };
+  const notify = () => {
+    child.wake?.();
+    child.wake = undefined;
+  };
+
+  (async () => {
+    try {
+      for await (const chunk of iterator) {
+        child.chunks.push(chunk);
+        notify();
+      }
+    } catch (error) {
+      child.error = error;
+    } finally {
+      child.done = true;
+      notify();
+    }
+  })();
+
+  return child;
+}
+
+/**
+ * Siblings render in parallel — the `Promise.all` the string renderer used —
+ * but their chunks are re-emitted strictly in document order: later siblings
+ * buffer while an earlier one is still streaming.
+ */
+async function* drainInOrder(children: EagerChild[]): AsyncGenerator<string> {
+  for (const child of children) {
+    let index = 0;
+
+    while (index < child.chunks.length || !child.done) {
+      if (index < child.chunks.length) yield child.chunks[index++]!;
+      else await new Promise<void>((resolve) => { child.wake = resolve; });
+    }
+    if (child.error) throw child.error;
+  }
+}
+
+export async function* renderChunks(node: unknown, scope: RenderScope): AsyncGenerator<string> {
+  if (node === null || node === undefined || typeof node === 'boolean') return;
+  if (typeof node === 'string' || typeof node === 'number') {
+    yield escapeHtml(node);
+
+    return;
+  }
+  if (Array.isArray(node)) {
+    yield* drainInOrder(node.map((child) => pumpChild(renderChunks(child, scope))));
+
+    return;
   }
   const jsxNode = node as JanuxNode;
 
-  if (jsxNode.$t === Fragment) return renderNode(jsxNode.$p.children, scope);
-  if (isForeignDef(jsxNode.$t)) return renderForeign(jsxNode.$t, jsxNode, scope);
+  if (jsxNode.$t === Fragment) return yield* renderChunks(jsxNode.$p.children, scope);
+  if (isForeignDef(jsxNode.$t)) return yield await renderForeign(jsxNode.$t, jsxNode, scope);
   if (typeof jsxNode.$t === 'function') {
-    return renderNode((jsxNode.$t as any)(jsxNode.$p), scope);
+    return yield* renderChunks((jsxNode.$t as any)(jsxNode.$p), scope);
   }
   // TSX puts `key` in $k (never in props): surface it so `<Island key={locale} />` re-keys the island.
   if (isComponentDef(jsxNode.$t)) {
     const props = jsxNode.$k === undefined ? jsxNode.$p : { key: String(jsxNode.$k), ...jsxNode.$p };
 
-    return renderIsland(jsxNode.$t, props, scope);
+    return yield* renderIsland(jsxNode.$t, props, scope);
   }
 
-  return renderElement(jsxNode, scope);
+  yield* renderElement(jsxNode, scope);
 }
 
 export interface Snapshot {
@@ -237,12 +294,7 @@ export interface RenderResult {
   i18nKeys: string[];
 }
 
-/** Server-renders a page tree: static components inline, bifacial components as islands. */
-export async function renderToString(node: unknown, options: RenderOptions = {}): Promise<RenderResult> {
-  const registry: RenderRegistry = { islands: [], stores: new Map() };
-  const i18nKeys = options.ctx?.i18n ? new Set<string>() : undefined;
-  const scope: RenderScope = { ...options, registry, keySeq: new Map(), usedKeys: new Set(), i18nKeys };
-  const html = await renderNode(node, scope);
+function collectSnapshots(registry: RenderRegistry): Snapshot[] {
   const islandSnapshots = registry.islands
     .filter(({ def }) => def.state || def.sources)
     .map(({ instance }) => ({
@@ -256,5 +308,42 @@ export async function renderToString(node: unknown, options: RenderOptions = {})
     sources: instance.sourcesSnapshot(),
   }));
 
-  return { html, registry, snapshots: [...islandSnapshots, ...storeSnapshots], i18nKeys: [...(i18nKeys ?? [])] };
+  return [...islandSnapshots, ...storeSnapshots];
+}
+
+export interface RenderStream {
+  /** Page HTML, in document order, flushed as each part resolves. */
+  chunks: AsyncGenerator<string>;
+  /** Resolves once `chunks` is fully consumed — snapshots exist only then. */
+  done: Promise<Omit<RenderResult, 'html'>>;
+}
+
+/**
+ * Streaming render: HTML goes out as it is produced instead of after the last
+ * island resolves — a slow source holds back its own island, not the page. The
+ * joined chunks are byte-identical to `renderToString(...).html`.
+ */
+export function renderToStream(node: unknown, options: RenderOptions = {}): RenderStream {
+  const registry: RenderRegistry = { islands: [], stores: new Map() };
+  const i18nKeys = options.ctx?.i18n ? new Set<string>() : undefined;
+  const scope: RenderScope = { ...options, registry, keySeq: new Map(), usedKeys: new Set(), i18nKeys };
+  let finish!: (summary: Omit<RenderResult, 'html'>) => void;
+  const done = new Promise<Omit<RenderResult, 'html'>>((resolve) => { finish = resolve; });
+
+  async function* chunks(): AsyncGenerator<string> {
+    yield* renderChunks(node, scope);
+    finish({ registry, snapshots: collectSnapshots(registry), i18nKeys: [...(i18nKeys ?? [])] });
+  }
+
+  return { chunks: chunks(), done };
+}
+
+/** Server-renders a page tree: static components inline, bifacial components as islands. */
+export async function renderToString(node: unknown, options: RenderOptions = {}): Promise<RenderResult> {
+  const { chunks, done } = renderToStream(node, options);
+  const parts: string[] = [];
+
+  for await (const chunk of chunks) parts.push(chunk);
+
+  return { html: parts.join(''), ...(await done) };
 }
