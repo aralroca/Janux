@@ -73,6 +73,24 @@ function toHit(page: SearchPage, tokens: string[], score: number): SearchHit {
   return { section, slug, title, heading: bestHeading(page, tokens), snippet: snippet(page, tokens), score };
 }
 
+let corpus: Promise<SearchPage[]> | undefined;
+
+/**
+ * The static index, fetched once for the whole page. The ⌘K modal and the
+ * copilot's `search_docs` read the same 300 KB — two module-level promises meant
+ * downloading it twice the moment a visitor used both.
+ */
+export function loadCorpus(): Promise<SearchPage[]> {
+  corpus ??= fetch('/search-index.json').then((response) => response.json());
+
+  return corpus;
+}
+
+/** Where a hit points: the page, plus the matching section when there is one. */
+export function hitHref(hit: Pick<SearchHit, 'section' | 'slug' | 'heading'>): string {
+  return `/docs/${hit.section}/${hit.slug}${hit.heading ? `#${hit.heading.id}` : ''}`;
+}
+
 export function searchPages(pages: SearchPage[], query: string, limit = 10): SearchHit[] {
   const tokens = terms(query);
 

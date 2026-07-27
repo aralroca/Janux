@@ -1199,6 +1199,9 @@ body[data-theme='dark'] .scores-video {
   right: 26px;
   bottom: 26px;
   z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   padding: 12px 22px;
   border: none;
   border-radius: 999px;
@@ -1210,20 +1213,65 @@ body[data-theme='dark'] .scores-video {
   box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.4);
 }
 
+.copilot-spark {
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* A docked panel, not a bubble: answers run long, and a tall column with a
+   header is the difference between reading one and scrolling through it. */
 .copilot-panel {
   position: fixed;
-  right: 26px;
-  bottom: 84px;
+  right: 20px;
+  bottom: 20px;
   z-index: 50;
   display: flex;
   flex-direction: column;
-  width: 380px;
-  max-height: 540px;
+  width: min(480px, calc(100vw - 40px));
+  height: min(720px, calc(100dvh - var(--topbar-h) - 40px));
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 18px;
   background: var(--bg);
-  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.45);
   overflow: hidden;
+}
+
+.copilot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 12px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-soft);
+}
+
+.copilot-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--heading);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.copilot-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.copilot-close:hover {
+  border-color: var(--border);
+  background: var(--bg);
+  color: var(--heading);
 }
 
 .copilot-panel .chat {
@@ -1232,6 +1280,7 @@ body[data-theme='dark'] .scores-video {
   padding: 18px;
   list-style: none;
   overflow-y: auto;
+  overscroll-behavior: contain;
   min-height: 120px;
 }
 
@@ -1245,25 +1294,26 @@ body[data-theme='dark'] .scores-video {
 }
 
 .copilot-panel .chat li {
-  margin-bottom: 10px;
-  padding: 10px 14px;
-  border-radius: 14px;
+  margin-bottom: 14px;
   font-size: 14px;
-  line-height: 1.55;
-  max-width: 85%;
+  line-height: 1.6;
 }
 
 .copilot-panel .chat li.user {
   margin-left: auto;
+  padding: 9px 14px;
+  border-radius: 14px;
+  border-bottom-right-radius: 4px;
   background: var(--heading);
   color: var(--bg);
-  border-bottom-right-radius: 4px;
+  max-width: 85%;
+  width: fit-content;
 }
 
+/* The answer is the page's main content while it is open — no bubble, no width
+   cap, so a table or a code block gets the whole column. */
 .copilot-panel .chat li.assistant {
-  background: var(--bg-soft);
   color: var(--heading);
-  border-bottom-left-radius: 4px;
 }
 
 .copilot-panel form {
@@ -1272,6 +1322,23 @@ body[data-theme='dark'] .scores-video {
   padding: 12px;
   border-top: 1px solid var(--border);
   background: var(--bg-soft);
+}
+
+/* On a phone the panel is the screen; a floating card would waste the room the
+   answer needs. */
+@media (max-width: 700px) {
+  .copilot-panel {
+    right: 10px;
+    left: 10px;
+    bottom: 10px;
+    width: auto;
+    height: calc(100dvh - var(--topbar-h) - 20px);
+  }
+
+  .copilot-toggle {
+    right: 16px;
+    bottom: 16px;
+  }
 }
 
 .copilot-panel input {
@@ -1289,7 +1356,7 @@ body[data-theme='dark'] .scores-video {
   border-color: var(--accent);
 }
 
-.copilot-panel button[type='submit'] {
+.copilot-panel form button {
   padding: 10px 18px;
   border: none;
   border-radius: 10px;
@@ -1299,43 +1366,14 @@ body[data-theme='dark'] .scores-video {
   cursor: pointer;
 }
 
-.copilot-setup {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 18px;
-}
-
-.copilot-setup p {
-  margin: 0;
-  color: var(--text);
-  font-size: 13.5px;
-  line-height: 1.5;
-}
-
-.copilot-setup button {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 10px;
-  background: var(--heading);
-  color: var(--bg);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.copilot-setup button.secondary {
+.copilot-panel form button.secondary {
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--heading);
 }
 
-.copilot-setup progress {
-  width: 100%;
-  accent-color: var(--accent);
-}
-
 .copilot-panel .chat li.thinking {
-  color: var(--text-soft, var(--text));
+  color: var(--muted);
   font-style: italic;
 }
 
@@ -1354,13 +1392,59 @@ body[data-theme='dark'] .scores-video {
   }
 }
 
-/* Markdown formatting inside answers (tables, code, lists). */
-.copilot-panel .chat li :is(p, ul, ol, pre, table) {
+/* Markdown formatting inside answers (headings, tables, code, lists). An answer
+   is a chat bubble, not a document: the page's heading scale would give a 24px
+   <h2> its own border and eat the whole panel. */
+.copilot-panel .chat li :is(p, ul, ol, pre, table, blockquote, h1, h2, h3, h4, h5, h6) {
   margin: 0 0 8px;
 }
 
-.copilot-panel .chat li :is(p, ul, ol, pre, table):last-child {
+.copilot-panel .chat li :is(p, ul, ol, pre, table, blockquote, h1, h2, h3, h4, h5, h6):last-child {
   margin-bottom: 0;
+}
+
+.copilot-panel .chat li :is(h1, h2, h3, h4, h5, h6) {
+  padding: 0;
+  border: none;
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.copilot-panel .chat li :is(ul, ol) {
+  padding-left: 20px;
+}
+
+.copilot-panel .chat li li {
+  margin: 0 0 4px;
+  padding: 0;
+  max-width: none;
+  border-radius: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.copilot-panel .chat li blockquote {
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+  color: var(--text);
+}
+
+.copilot-panel .chat li hr {
+  margin: 10px 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.copilot-panel .chat li a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.copilot-panel .chat li.user a {
+  color: inherit;
 }
 
 .copilot-panel .chat li pre {
@@ -1375,7 +1459,11 @@ body[data-theme='dark'] .scores-video {
   font-size: 12.5px;
 }
 
+/* A three-column table is wider than a 420px panel: let it scroll on its own
+   instead of stretching the bubble. */
 .copilot-panel .chat li table {
+  display: block;
+  overflow-x: auto;
   border-collapse: collapse;
   font-size: 13px;
 }

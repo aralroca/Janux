@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { registry } from '@janux/agent/local';
-import { registerDocsTools } from './docs-tools';
+import { docsMap, registerDocsTools } from './docs-tools';
 
 const CORPUS = [
   {
@@ -43,12 +43,19 @@ describe('docs copilot tools', () => {
     expect(registry.get('read_doc')?.annotations.readOnlyHint).toBe(true);
   });
 
-  it('search_docs returns ranked matches with paths', async () => {
+  it('search_docs points at the matching section, not just the page', async () => {
     const { matches } = await toolText('search_docs', { query: 'islands' });
 
     expect(matches).toHaveLength(1);
-    expect(matches[0].path).toBe('/docs/guide/components');
-    expect(matches[0].title).toBe('Components');
+    expect(matches[0].path).toBe('/docs/guide/components#islands');
+    expect(matches[0].title).toBe('Components › Islands');
+  });
+
+  it('search_docs falls back to the page when no heading matches', async () => {
+    const { matches } = await toolText('search_docs', { query: 'tailwind' });
+
+    expect(matches[0].path).toBe('/docs/recipes/tailwind');
+    expect(matches[0].title).toBe('Tailwind');
   });
 
   it('read_doc returns the page text for a valid path', async () => {
@@ -57,10 +64,24 @@ describe('docs copilot tools', () => {
     expect(page.text).toContain('Tailwind');
   });
 
+  it('read_doc accepts the anchored path search_docs handed the model', async () => {
+    const page = await toolText('read_doc', { path: '/docs/guide/components#islands' });
+
+    expect(page.path).toBe('/docs/guide/components');
+    expect(page.text).toContain('Islands resume lazily');
+  });
+
+  it('the page map lists every page with its section anchors', async () => {
+    const map = await docsMap();
+
+    expect(map).toContain('/docs/guide/components — Components: Islands (#islands)');
+    expect(map).toContain('/docs/recipes/tailwind — Tailwind');
+  });
+
   it('search_docs survives question-shaped queries (stopwords + punctuation)', async () => {
     const { matches } = await toolText('search_docs', { query: 'How do I use islands in a component?' });
 
-    expect(matches[0].path).toBe('/docs/guide/components');
+    expect(matches[0].path).toBe('/docs/guide/components#islands');
   });
 
   it('read_doc guides the model on unknown paths', async () => {

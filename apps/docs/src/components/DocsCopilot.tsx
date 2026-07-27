@@ -1,67 +1,13 @@
-import { component, intent, schema, str, bool, enums, list, int } from 'janux';
-import type { Exchange } from '../copilot/controller';
-
-const DOWNLOAD_NOTE =
-  'Run an open-source model (Qwen3 0.6B, ~0.5 GB download, cached) entirely in your browser. ' +
-  'Your questions never leave your machine.';
+import { component, intent, schema, str, bool, enums, list } from 'janux';
+import { clearInput, controller, converse, scrollToLatest } from '../copilot/panel';
 
 /**
- * The agent runtime (gui-agent, ai, and — behind `localLlm` — the model itself)
- * loads only when the visitor actually uses Ask AI, and only once.
+ * Outside the schema on purpose: an AbortController is not state, it is a handle.
+ * Created by `send` before it awaits anything, because the first question waits
+ * on a dynamic import while the Stop button is already on screen — a Stop in that
+ * window used to be a silent no-op, and the answer arrived anyway.
  */
-let controllerModule: Promise<typeof import('../copilot/controller')> | undefined;
-
-function controller(): Promise<typeof import('../copilot/controller')> {
-  controllerModule ??= import('../copilot/controller');
-
-  return controllerModule;
-}
-
-async function converse(state: any, text: string): Promise<void> {
-  const { ask } = await controller();
-  const history: Exchange[] = state.messages
-    .slice(0, -1)
-    .map(({ role, text: line }: Exchange) => ({ role, text: line }));
-  const reply = await ask(text, history).catch((error: unknown) => ({
-    text: `Something went wrong: ${String(error)}`,
-    html: '',
-  }));
-
-  state.messages.push({ role: 'assistant', text: reply.text, html: reply.html });
-}
-
-/** Chat UX: the field empties the moment the question is sent (uncontrolled input). */
-function clearInput(): void {
-  const field = document.querySelector<HTMLInputElement>('.copilot-panel input[name="text"]');
-
-  if (field) field.value = '';
-}
-
-async function chooseMode(state: any): Promise<void> {
-  const { supportsLocalLlm, setupServer } = await controller();
-
-  state.mode = supportsLocalLlm() ? 'consent' : 'server';
-  if (state.mode === 'server') setupServer();
-}
-
-async function enableLocalModel(state: any): Promise<void> {
-  if (state.mode !== 'consent') return;
-  state.mode = 'loading';
-  const { setupLocal, setupServer } = await controller();
-
-  try {
-    await setupLocal((percent: number) => (state.progress = percent));
-    state.mode = 'local';
-  } catch (error) {
-    setupServer();
-    state.mode = 'server';
-    state.messages.push({
-      role: 'assistant',
-      text: `Local model unavailable (${String(error)}); using the server model.`,
-      html: '',
-    });
-  }
-}
+let run: AbortController | undefined;
 
 export const DocsCopilot = component({
   name: 'copilot',
@@ -71,8 +17,8 @@ export const DocsCopilot = component({
     messages: list({ role: enums(['user', 'assistant']), text: str(), html: str() }),
     busy: bool(),
     open: bool(),
-    mode: enums(['idle', 'consent', 'loading', 'local', 'server']),
-    progress: int(),
+    ready: bool(),
+    status: str(),
   }),
 
   intents: {
@@ -80,31 +26,43 @@ export const DocsCopilot = component({
       description: 'Open or close the copilot panel',
       run: async ({ state }: any) => {
         state.open = !state.open;
-        if (state.open && state.mode === 'idle') await chooseMode(state);
+        if (!state.open || state.ready) return;
+        const { setup } = await controller();
+
+        await setup();
+        state.ready = true;
       },
     }),
-    enableLocal: intent({
-      description: 'Download the in-browser model and answer locally',
-      run: ({ state }: any) => enableLocalModel(state),
-    }),
-    useServer: intent({
-      description: 'Skip the download and use the server model',
-      run: async ({ state }: any) => {
-        const { setupServer } = await controller();
-
-        setupServer();
-        state.mode = 'server';
+    stop: intent({
+      description: 'Stop the answer being written',
+      guard: 'forbidden',
+      run: ({ state }: any) => {
+        run?.abort();
+        state.busy = false;
       },
     }),
     send: intent({
       description: 'Ask the docs copilot a question',
+      // Human-only: an agent that can drive this intent can talk to itself.
+      guard: 'forbidden',
       input: schema({ text: str().min(1) }),
       run: async ({ state, input }: any) => {
+        /*
+         * One run at a time. Enter submits the form even while the Stop button is
+         * showing, and two runs share one `serverLlm` — so its chunk subscribers
+         * would splice the second answer's tokens into the first one's bubble.
+         */
+        if (state.busy) return;
         state.messages.push({ role: 'user', text: input.text, html: '' });
+        state.messages.push({ role: 'assistant', text: '', html: '' });
         state.busy = true;
+        state.status = 'Reading the docs…';
+        run = new AbortController();
         clearInput();
-        await converse(state, input.text).finally(() => {
+        scrollToLatest();
+        await converse(state, input.text, run.signal).finally(() => {
           state.busy = false;
+          state.status = '';
         });
       },
     }),
@@ -112,46 +70,57 @@ export const DocsCopilot = component({
 
   view: ({ state, intents }: any) => (
     <aside class={state.open ? 'copilot open' : 'copilot'}>
-      <button class="copilot-toggle" on={intents.toggle}>
-        {state.open ? '×' : 'Ask AI'}
-      </button>
+      {state.open ? null : (
+        <button class="copilot-toggle" on={intents.toggle}>
+          <span class="copilot-spark" aria-hidden="true">
+            ✦
+          </span>
+          Ask AI
+        </button>
+      )}
       {state.open ? (
-        <div class="copilot-panel">
-          {state.mode === 'consent' ? (
-            <div class="copilot-setup">
-              <p>{DOWNLOAD_NOTE}</p>
-              <button on={intents.enableLocal}>Run locally</button>
-              <button class="secondary" on={intents.useServer}>
-                Use server model
+        <div class="copilot-panel" role="dialog" aria-label="Ask AI about Janux">
+          <header class="copilot-head">
+            <span class="copilot-title">
+              <span class="copilot-spark" aria-hidden="true">
+                ✦
+              </span>
+              Ask AI
+            </span>
+            <button class="copilot-close" type="button" aria-label="Close" on={intents.toggle}>
+              <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+                <path
+                  d="M4 4l8 8M12 4l-8 8"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </button>
+          </header>
+          <ol class="chat">
+            {state.messages.map((message: any, index: number) => (
+              <li key={String(index)} class={message.role} dangerHTML={message.html || undefined}>
+                {message.html ? null : message.text}
+              </li>
+            ))}
+            {state.status ? (
+              <li key="status" class="assistant thinking">
+                {state.status}
+              </li>
+            ) : null}
+          </ol>
+          <form intent={intents.send}>
+            <input name="text" placeholder={state.ready ? 'Ask about Janux' : 'Starting…'} />
+            {state.busy ? (
+              <button type="button" class="secondary" on={intents.stop}>
+                Stop
               </button>
-            </div>
-          ) : null}
-          {state.mode === 'loading' ? (
-            <div class="copilot-setup">
-              <p>Downloading model… {state.progress}%</p>
-              <progress max="100" value={String(state.progress)} />
-            </div>
-          ) : null}
-          {state.mode === 'local' || state.mode === 'server' ? (
-            <>
-              <ol class="chat">
-                {state.messages.map((message: any, index: number) => (
-                  <li key={String(index)} class={message.role} dangerHTML={message.html || undefined}>
-                    {message.html ? null : message.text}
-                  </li>
-                ))}
-                {state.busy ? (
-                  <li key="thinking" class="assistant thinking">
-                    Thinking
-                  </li>
-                ) : null}
-              </ol>
-              <form intent={intents.send}>
-                <input name="text" placeholder={state.busy ? 'Thinking…' : `Ask about Janux (${state.mode})`} />
-                <button type="submit">Send</button>
-              </form>
-            </>
-          ) : null}
+            ) : (
+              <button type="submit">Send</button>
+            )}
+          </form>
         </div>
       ) : null}
     </aside>

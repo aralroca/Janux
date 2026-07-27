@@ -1,22 +1,16 @@
 import { defineTool } from '@janux/agent/local';
-import { searchPages, type SearchHit, type SearchPage } from '../search/score';
+import { hitHref, loadCorpus, searchPages, type SearchHit, type SearchPage } from '../search/score';
 
-let corpus: Promise<SearchPage[]> | undefined;
 let registered = false;
 
 const MAX_HITS = 5;
-const MAX_CHARS = 6000;
-
-/** Same static index the ⌘K modal uses — works on `output: "static"` deploys too. */
-function loadCorpus(): Promise<SearchPage[]> {
-  corpus ??= fetch('/search-index.json').then((response) => response.json());
-
-  return corpus;
-}
+/** Above the longest page (9.7k): a server model reads whole pages, not excerpts. */
+const MAX_CHARS = 12_000;
 
 export interface DocMatch {
   title: string;
   snippet: string;
+  /** `/docs/<section>/<slug>`, with the matching section's `#anchor` when there is one. */
   path: string;
 }
 
@@ -57,11 +51,30 @@ export async function searchMatches(query: string): Promise<DocMatch[]> {
   const direct = searchPages(pages, terms.join(' '), MAX_HITS);
   const hits = direct.length > 0 ? direct : mergePerTerm(pages, terms);
 
-  return hits.map(({ section, slug, title, snippet }) => ({
-    title,
+  return hits.map(({ section, slug, title, snippet, heading }) => ({
+    // The anchor is what turns "take me to proposals" into a scrolled page
+    // instead of a page the reader still has to search.
+    title: heading ? `${title} › ${heading.text}` : title,
     snippet,
-    path: `/docs/${section}/${slug}`,
+    path: hitHref({ section, slug, heading }),
   }));
+}
+
+/**
+ * Every page and every section heading, as one block. Cheap next to a 1M-token
+ * context window and it removes a whole round trip: the model already knows
+ * which page (and which anchor) answers the question before it searches.
+ */
+export async function docsMap(): Promise<string> {
+  const pages = await loadCorpus();
+
+  return pages
+    .map((page) => {
+      const sections = page.headings.map((heading) => `${heading.text} (#${heading.id})`).join(', ');
+
+      return `${hitHref(page)} — ${page.title}${sections ? `: ${sections}` : ''}`;
+    })
+    .join('\n');
 }
 
 async function search({ query }: { query: string }): Promise<unknown> {
@@ -77,11 +90,13 @@ export interface DocPage {
 /** Shared by the `read_doc` tool and the controller's pre-read of the top match. */
 export async function readPage(path: string, maxChars = MAX_CHARS): Promise<DocPage | undefined> {
   const pages = await loadCorpus();
-  const page = pages.find((entry) => `/docs/${entry.section}/${entry.slug}` === path);
+  // Search results carry `#anchor`, and the model hands them back verbatim.
+  const [pagePath] = path.split('#');
+  const page = pages.find((entry) => hitHref(entry) === pagePath);
 
   if (!page) return undefined;
 
-  return { title: page.title, path, text: page.text.slice(0, maxChars) };
+  return { title: page.title, path: pagePath!, text: page.text.slice(0, maxChars) };
 }
 
 async function read({ path }: { path: string }): Promise<unknown> {
