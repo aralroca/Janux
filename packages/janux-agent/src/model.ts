@@ -3,6 +3,8 @@ export interface ResolvedModel {
   model: string;
   apiKey: string;
   source: string;
+  /** Extra provider fields merged into every request (`reasoning`, `provider`, `temperature`…). */
+  options?: Record<string, unknown>;
 }
 
 export interface ModelEnv {
@@ -54,11 +56,22 @@ function sniffProvider(env: ModelEnv): ResolvedModel | undefined {
  * RFC §8.1 resolution order: explicit code → JANUX_MODEL env → provider key
  * sniffing → undefined (the app still boots; the agent answers with a setup card).
  */
-export function resolveModel(explicit: string | undefined, env: ModelEnv): ResolvedModel | undefined {
+function resolveIdentity(explicit: string | undefined, env: ModelEnv): ResolvedModel | undefined {
   if (explicit) return fromIdentifier(explicit, env, 'defineAgent({ model })');
   if (env.JANUX_MODEL) return fromIdentifier(env.JANUX_MODEL, env, 'JANUX_MODEL');
 
   return sniffProvider(env);
+}
+
+/** The resolved model, carrying the provider options every request should be sent with. */
+export function resolveModel(
+  explicit: string | undefined,
+  env: ModelEnv,
+  options?: Record<string, unknown>,
+): ResolvedModel | undefined {
+  const resolved = resolveIdentity(explicit, env);
+
+  return resolved && options ? { ...resolved, options } : resolved;
 }
 
 export function setupCard(): Record<string, unknown> {

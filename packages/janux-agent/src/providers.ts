@@ -26,6 +26,17 @@ export interface ProviderReply {
 
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 
+/**
+ * `modelOptions` ride under the request the framework builds, never over it:
+ * an app tunes `reasoning`, `provider` routing or `temperature`, and can never
+ * rewrite the model, the transcript or the tools the loop depends on.
+ */
+function withOptions(model: ResolvedModel, payload: Record<string, unknown>): string {
+  const { stream: _transport, ...options } = model.options ?? {};
+
+  return JSON.stringify({ ...options, ...payload });
+}
+
 function anthropicMessages(messages: ChatMessage[]): unknown[] {
   return messages.reduce<any[]>((acc, message) => {
     if (message.role === 'tool') {
@@ -61,15 +72,17 @@ async function callAnthropic(
   messages: ChatMessage[],
   tools: AgentTool[],
   fetchImpl: FetchLike,
+  signal?: AbortSignal,
 ): Promise<ProviderReply> {
   const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
     method: 'POST',
+    signal,
     headers: {
       'content-type': 'application/json',
       'x-api-key': model.apiKey,
       'anthropic-version': '2023-06-01',
     },
-    body: JSON.stringify({
+    body: withOptions(model, {
       model: model.model,
       max_tokens: 4096,
       system,
@@ -100,28 +113,49 @@ const OPENAI_COMPAT_URLS: Record<string, string> = {
   openrouter: 'https://openrouter.ai/api/v1/chat/completions',
 };
 
+export function openAiPayload(
+  model: ResolvedModel,
+  system: string,
+  messages: ChatMessage[],
+  tools: AgentTool[],
+): Record<string, unknown> {
+  return {
+    model: model.model,
+    messages: [
+      { role: 'system', content: system },
+      ...messages.map((message) => openAiMessage(message)),
+    ],
+    tools: tools.map((tool) => ({
+      type: 'function',
+      function: { name: tool.name.replace(/\./g, '__'), description: tool.description ?? '', parameters: tool.input ?? {} },
+    })),
+  };
+}
+
+/** The shared POST for every OpenAI-compatible provider; `stream: true` in `payload` opts into SSE. */
+export function postOpenAi(
+  model: ResolvedModel,
+  payload: Record<string, unknown>,
+  fetchImpl: FetchLike,
+  signal?: AbortSignal,
+): Promise<Response> {
+  return fetchImpl(OPENAI_COMPAT_URLS[model.provider]!, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${model.apiKey}` },
+    body: withOptions(model, payload),
+    signal,
+  });
+}
+
 async function callOpenAi(
   model: ResolvedModel,
   system: string,
   messages: ChatMessage[],
   tools: AgentTool[],
   fetchImpl: FetchLike,
+  signal?: AbortSignal,
 ): Promise<ProviderReply> {
-  const response = await fetchImpl(OPENAI_COMPAT_URLS[model.provider]!, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${model.apiKey}` },
-    body: JSON.stringify({
-      model: model.model,
-      messages: [
-        { role: 'system', content: system },
-        ...messages.map((message) => openAiMessage(message)),
-      ],
-      tools: tools.map((tool) => ({
-        type: 'function',
-        function: { name: tool.name.replace(/\./g, '__'), description: tool.description ?? '', parameters: tool.input ?? {} },
-      })),
-    }),
-  });
+  const response = await postOpenAi(model, openAiPayload(model, system, messages, tools), fetchImpl, signal);
 
   if (!response.ok) throw new Error(`OpenAI API error ${response.status}: ${await response.text()}`);
   const body: any = await response.json();
@@ -163,8 +197,9 @@ export async function callProvider(
   messages: ChatMessage[],
   tools: AgentTool[],
   fetchImpl: FetchLike,
+  signal?: AbortSignal,
 ): Promise<ProviderReply> {
-  if (model.provider === 'anthropic') return callAnthropic(model, system, messages, tools, fetchImpl);
+  if (model.provider === 'anthropic') return callAnthropic(model, system, messages, tools, fetchImpl, signal);
 
-  return callOpenAi(model, system, messages, tools, fetchImpl);
+  return callOpenAi(model, system, messages, tools, fetchImpl, signal);
 }

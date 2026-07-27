@@ -6,6 +6,7 @@ import { runProcessors } from './harness/processors';
 import { createRateLimiter, type RateLimitConfig, type RateLimiter } from './harness/rate-limit';
 import { createLlmHandler } from './llm-endpoint';
 import { resolveModel, setupCard, type ModelEnv } from './model';
+import { allowsTool, type ToolFilter } from './tool-filter';
 import { callProvider, type AgentTool, type ChatMessage, type FetchLike, type ToolCall } from './providers';
 
 export interface HarnessConfig {
@@ -21,8 +22,15 @@ export interface HarnessConfig {
 export interface AgentConfig {
   instructions?: string;
   model?: string;
+  /**
+   * Extra provider fields merged into every model request — `{ reasoning: { enabled: false } }`
+   * and `{ provider: { sort: 'throughput' } }` on OpenRouter, `temperature`, … The framework's
+   * own fields (model, messages, tools) always win.
+   */
+  modelOptions?: Record<string, unknown>;
   maxTurns?: number;
-  tools?: { include?: string[] };
+  /** Which mounted tools reach the model. Same semantics as `createCopilot({ tools })`. */
+  tools?: ToolFilter;
   harness?: HarnessConfig;
 }
 
@@ -49,17 +57,9 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 }
 
-function includeTool(name: string, patterns: string[] | undefined): boolean {
-  if (!patterns || patterns.length === 0) return true;
-
-  return patterns.some((pattern) =>
-    pattern.endsWith('*') ? name.startsWith(pattern.slice(0, -1)) : name === pattern,
-  );
-}
-
-function manifestTools(manifest: any, patterns: string[] | undefined): AgentTool[] {
+function manifestTools(manifest: any, filter: ToolFilter | undefined): AgentTool[] {
   return (manifest.tools ?? [])
-    .filter((tool: any) => includeTool(tool.name, patterns))
+    .filter((tool: any) => allowsTool(tool.name, filter))
     .map((tool: any) => ({
       name: tool.name,
       description: `${tool.description ?? ''} [guard:${tool.guard}]`.trim(),
@@ -77,6 +77,33 @@ function systemPrompt(config: AgentConfig, manifest: any): string {
   return [config.instructions, SYSTEM_PREAMBLE, `Mounted resources: ${resources}`, routeMap]
     .filter(Boolean)
     .join('\n\n');
+}
+
+/**
+ * Identity + rate limit, shared by both mounts. `/_janux/llm` is a model proxy
+ * with the app's key behind it: leaving it ungated while `/_janux/agent` is
+ * protected means the cheapest way to spend someone's budget is the other door.
+ * A `Response` back means rejected; a string is the caller's identity.
+ */
+function createGate(config: AgentConfig, limiter: RateLimiter | undefined) {
+  return async (req: Request): Promise<Response | string> => {
+    const raw = await config.harness?.identityFor?.(req);
+
+    // Fail closed when an identity resolver exists but rejects the caller. The
+    // `message` is what a UI shows: a refusal a person can act on beats a code.
+    if (config.harness?.identityFor && raw === undefined) {
+      return json({ type: 'error', error: 'unauthorized', message: 'Not authorized to use this agent.' }, 401);
+    }
+    const identity = raw ?? 'anonymous';
+
+    if (limiter && !(await limiter.allow(identity))) {
+      const message = 'Too many questions right now — give it a minute and try again.';
+
+      return json({ type: 'error', error: 'rate_limited', message }, 429);
+    }
+
+    return identity;
+  };
 }
 
 async function runServerCalls(calls: ToolCall[], deps: AgentDeps): Promise<ChatMessage[]> {
@@ -131,30 +158,24 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
   const limiter: RateLimiter | undefined = config.harness?.rateLimit
     ? createRateLimiter(config.harness.rateLimit)
     : undefined;
+  const gate = createGate(config, limiter);
 
   return {
-    handleLlm: createLlmHandler(config.model, env, fetchImpl),
+    handleLlm: createLlmHandler(config, env, fetchImpl, gate),
     async handle(req: Request, deps: AgentDeps): Promise<Response> {
-      const model = resolveModel(config.model, env);
+      const model = resolveModel(config.model, env, config.modelOptions);
 
       if (!model) return json(setupCard());
-      const rawIdentity = await config.harness?.identityFor?.(req);
+      const identity = await gate(req);
 
-      // Fail closed when an identity resolver exists but rejects the caller.
-      if (config.harness?.identityFor && rawIdentity === undefined) {
-        return json({ type: 'error', error: 'unauthorized' }, 401);
-      }
-      const identity = rawIdentity ?? 'anonymous';
-      if (limiter && !(await limiter.allow(identity))) {
-        return json({ type: 'error', error: 'rate_limited' }, 429);
-      }
+      if (identity instanceof Response) return identity;
       const body = (await req.json().catch(() => ({ messages: [] }))) as AgentRequestBody & {
         continuation?: boolean;
         toolResults?: { name: string; output: unknown }[];
       };
       const manifest: any = await deps.manifestFor(body.path ?? '/');
       const tools = [
-        ...manifestTools(manifest, config.tools?.include),
+        ...manifestTools(manifest, config.tools),
         ...CLIENT_TOOL_SPECS.map((spec) => ({ name: spec.name, description: spec.description, input: spec.parameters })),
       ];
       const system = systemPrompt(config, manifest);

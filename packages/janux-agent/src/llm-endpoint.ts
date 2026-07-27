@@ -1,5 +1,7 @@
 import { resolveModel, setupCard, type ModelEnv } from './model';
 import { callProvider, type AgentTool, type ChatMessage, type FetchLike, type ToolCall } from './providers';
+import { streamProvider } from './provider-stream';
+import { streamingResponse, turnChunks } from './llm-stream';
 
 /** One turn of the gui-agent remote-Llm protocol: `{ messages, tools }` in, `{ text, toolCalls }` out. */
 interface WireMessage {
@@ -24,6 +26,18 @@ interface WireTool {
 interface WireBody {
   messages?: WireMessage[];
   tools?: WireTool[];
+  stream?: boolean;
+}
+
+/** Either header or body opts in, so a plain `fetch` and an SSE client both work. */
+function wantsStream(req: Request, body: WireBody): boolean {
+  return body.stream === true || (req.headers.get('accept') ?? '').includes('text/event-stream');
+}
+
+/** The slice of `AgentConfig` this mount needs; `defineAgent` hands it its own. */
+export interface LlmHandlerConfig {
+  model?: string;
+  modelOptions?: Record<string, unknown>;
 }
 
 function json(body: unknown, status = 200): Response {
@@ -65,20 +79,37 @@ function toWireCalls(toolCalls: ToolCall[]): WireToolCall[] {
  * agent loops (`serverLlm()` from `@janux/agent/local`). The loop and the
  * tools stay in the page; only the model call crosses the wire.
  */
-export function createLlmHandler(model: string | undefined, env: ModelEnv, fetchImpl: FetchLike) {
+export function createLlmHandler(
+  config: LlmHandlerConfig,
+  env: ModelEnv,
+  fetchImpl: FetchLike,
+  gate?: (req: Request) => Promise<Response | string>,
+) {
   return async (req: Request): Promise<Response> => {
-    const resolved = resolveModel(model, env);
+    // POST-only: an EventSource (or a crawler) issuing GET would otherwise buy a
+    // billed provider turn for an empty transcript.
+    if (req.method !== 'POST') return json({ type: 'error', error: 'method_not_allowed' }, 405);
+    const resolved = resolveModel(config.model, env, config.modelOptions);
 
     if (!resolved) return json(setupCard(), 503);
+    const gated = await gate?.(req);
+
+    if (gated instanceof Response) return gated;
+    // Honest about what it cannot do: a client asking to resume gets told the
+    // stream is gone instead of silently receiving a second, duplicate turn.
+    if (req.headers.get('last-event-id')) return json({ type: 'error', error: 'stream_not_resumable' }, 422);
     const body = (await req.json().catch(() => ({}))) as WireBody;
     const messages = body.messages ?? [];
-    const reply = await callProvider(
-      resolved,
-      systemOf(messages),
-      toChatMessages(messages),
-      toAgentTools(body.tools ?? []),
-      fetchImpl,
-    );
+    const system = systemOf(messages);
+    const chat = toChatMessages(messages);
+    const tools = toAgentTools(body.tools ?? []);
+
+    if (wantsStream(req, body)) {
+      const turn = streamProvider(resolved, system, chat, tools, fetchImpl, req.signal);
+
+      return streamingResponse(turnChunks(turn), crypto.randomUUID());
+    }
+    const reply = await callProvider(resolved, system, chat, tools, fetchImpl);
 
     return json({ text: reply.text, toolCalls: toWireCalls(reply.toolCalls) });
   };
