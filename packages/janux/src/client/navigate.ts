@@ -338,6 +338,13 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
     throwIfAborted(signal);
     // The Navigation API drives the transition; diff directly (its own would be skipped).
     await diff(document, abortableStream(page, signal));
+    /*
+     * A superseded navigation must not report success: the diff can finish
+     * cleanly on a cancelled stream, having applied only the part that arrived,
+     * and the page that navigation was going to is not the page on screen.
+     * Whatever superseded it is already diffing the same document.
+     */
+    throwIfAborted(signal);
     await restorePersisted(mount, kept);
   } catch (error) {
     /*
