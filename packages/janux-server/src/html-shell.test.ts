@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { htmlDocument, type ShellOptions } from './html-shell';
+import { htmlDocument, shellParts, type ShellOptions } from './html-shell';
 
 const base: ShellOptions = {
   html: '<main>hi</main>',
@@ -57,6 +57,62 @@ describe('htmlDocument inline styles', () => {
     const html = htmlDocument({ ...base, inlineStyles: ['body{}'], description: 'D' });
 
     expect(html.indexOf('id="jx-style-0"')).toBeLessThan(html.indexOf('name="description"'));
+  });
+});
+
+/**
+ * The streaming response is `prelude + body chunks + epilogue`. These guard the
+ * invariant the whole feature rests on: reassembling the parts is byte-identical
+ * to the buffered document, whatever the options — so streaming can never change
+ * what the client diffs.
+ */
+describe('shellParts (streaming shell)', () => {
+  const variants: [string, ShellOptions][] = [
+    ['static page, no islands', base],
+    [
+      'islands with snapshots and runtime',
+      {
+        ...base,
+        snapshots: [{ uri: 'ui://cart#default', state: { items: [] } }],
+        islandNames: ['cart'],
+        runtimeUrl: '/client.js',
+        title: 'Shop',
+        description: 'D',
+        stylesheets: ['/styles.css'],
+        favicon: '/favicon.svg',
+        manifestUrl: '/_janux/manifest',
+      },
+    ],
+    [
+      'i18n page with payload',
+      {
+        ...base,
+        islandNames: ['cart'],
+        snapshots: [],
+        i18n: { locale: 'ar', dir: 'rtl', payload: { locale: 'ar', messages: { hi: 'x' } } },
+      },
+    ],
+    ['empty body html', { ...base, html: '' }],
+  ];
+
+  it.each(variants)('prelude + html + epilogue === htmlDocument (%s)', (_name, options) => {
+    const { prelude, epilogue } = shellParts(options);
+    const joined = [prelude, options.html, epilogue].filter(Boolean).join('\n');
+
+    expect(joined).toBe(htmlDocument(options));
+  });
+
+  it('keeps every render-dependent node in the epilogue, not the prelude', () => {
+    const options = variants[1]![1];
+    const { prelude, epilogue } = shellParts(options);
+
+    expect(prelude).toContain('</head>');
+    expect(prelude).toContain('<body>');
+    expect(prelude).not.toContain('janux+state');
+    expect(prelude).not.toContain('__JANUX_ISLANDS__');
+    expect(epilogue).toContain('janux+state');
+    expect(epilogue).toContain('__JANUX_ISLANDS__');
+    expect(epilogue).toContain('</html>');
   });
 });
 

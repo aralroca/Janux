@@ -48,7 +48,7 @@ function stateScripts(snapshots: ShellOptions['snapshots']): string {
     .join('\n');
 }
 
-function runtimeScripts(options: ShellOptions): string {
+function runtimeScripts(options: Omit<ShellOptions, 'html'>): string {
   if (options.islandNames.length === 0) return '';
   const modules = Object.fromEntries(
     options.islandNames.map((name) => [name, options.islandModules?.[name] ?? '']),
@@ -61,10 +61,16 @@ function runtimeScripts(options: ShellOptions): string {
 }
 
 /**
- * Full HTML document. Static pages (no islands) ship ZERO JavaScript:
- * no runtime script, no import map, no state — just HTML.
+ * The document split for streaming: everything before the page's HTML and
+ * everything after it. The prelude needs nothing from the render — title, meta
+ * and styles are resolved from the route before the body renders — so it can be
+ * flushed as the first chunk; the epilogue (state snapshots, island runtime,
+ * i18n payload) only exists once the render finished.
+ *
+ * `[prelude, html, epilogue].filter(Boolean).join('\n')` is byte-identical to
+ * `htmlDocument(...)` — htmlDocument is implemented on top of these parts.
  */
-export function htmlDocument(options: ShellOptions): string {
+export function shellParts(options: Omit<ShellOptions, 'html'>): { prelude: string; epilogue: string } {
   const manifestLink = options.manifestUrl
     ? `<link rel="janux-manifest" id="jx-manifest" href="${options.manifestUrl}">`
     : '';
@@ -108,7 +114,7 @@ export function htmlDocument(options: ShellOptions): string {
     description: options.description,
   });
 
-  return [
+  const prelude = [
     '<!doctype html>',
     `<html${htmlAttrs}>`,
     // Order matters for SPA-navigation diffing: persistent, keyed resource
@@ -117,7 +123,8 @@ export function htmlDocument(options: ShellOptions): string {
     // position — it stays put across the diff instead of being moved/re-resolved.
     `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${favicon}${manifestLink}${styleLinks}${description}${social}</head>`,
     '<body>',
-    options.html,
+  ].join('\n');
+  const epilogue = [
     i18nScript,
     options.islandNames.length > 0 ? stateScripts(options.snapshots) : '',
     runtimeScripts(options),
@@ -126,4 +133,16 @@ export function htmlDocument(options: ShellOptions): string {
   ]
     .filter(Boolean)
     .join('\n');
+
+  return { prelude, epilogue };
+}
+
+/**
+ * Full HTML document. Static pages (no islands) ship ZERO JavaScript:
+ * no runtime script, no import map, no state — just HTML.
+ */
+export function htmlDocument(options: ShellOptions): string {
+  const { prelude, epilogue } = shellParts(options);
+
+  return [prelude, options.html, epilogue].filter(Boolean).join('\n');
 }

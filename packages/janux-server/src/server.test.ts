@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import { component, intent, jsx, schema, str, int, list } from 'janux';
+import { component, intent, jsx, renderToString, schema, source, str, int, list } from 'janux';
 import { api } from './api';
+import { htmlDocument } from './html-shell';
 import { createJanuxServer } from './server';
 
 const orders = [
@@ -224,6 +225,100 @@ describe('staticExport', () => {
     const html = await (await get('/shop')).text();
 
     expect(html).toContain('rel="janux-manifest"');
+  });
+});
+
+/**
+ * Streaming SSR: the browser gets the head and every ready part of the page
+ * while slow islands are still loading their sources — instead of staring at
+ * the previous page until the last byte exists.
+ */
+describe('streaming pages', () => {
+  async function readUntil(res: Response, marker: string): Promise<{ received: string; reader: ReadableStreamDefaultReader<Uint8Array> }> {
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let received = '';
+
+    while (!received.includes(marker)) {
+      const { value, done } = await reader.read();
+
+      if (done) break;
+      received += decoder.decode(value, { stream: true });
+    }
+
+    return { received, reader };
+  }
+
+  async function readRest(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<string> {
+    const decoder = new TextDecoder();
+    let rest = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+
+      if (done) break;
+      rest += decoder.decode(value, { stream: true });
+    }
+
+    return rest;
+  }
+
+  it('flushes the head and earlier siblings before a slow island resolves', async () => {
+    let release!: (rows: string[]) => void;
+    const gate = new Promise<string[]>((resolve) => { release = resolve; });
+    const slow = component({
+      name: 'slow',
+      sources: { rows: source({ query: () => gate }) },
+      view: ({ sources }: any) => jsx('p', { children: `rows:${sources.rows.value.length}` }),
+    });
+    const streamServer = createJanuxServer({
+      title: 'Streamed',
+      routes: { '/': () => jsx('main', { children: [jsx('h1', { children: 'Fast' }), jsx(slow as any, {})] }) },
+      runtimeUrl: '/_janux/client.js',
+    });
+    const res = await streamServer.fetch(new Request('http://test/'));
+    const { received, reader } = await readUntil(res, '</h1>');
+
+    expect(received).toContain('<title>Streamed</title>');
+    expect(received).toContain('<h1>Fast</h1>');
+    expect(received).not.toContain('rows:');
+
+    release(['r1', 'r2']);
+    const full = received + (await readRest(reader));
+
+    expect(full).toContain('rows:2');
+    expect(full).toContain('</html>');
+  });
+
+  it('the streamed response is byte-identical to the buffered document', async () => {
+    const result = await renderToString(jsx('div', { children: jsx(cart as any, {}) }));
+    const expected = htmlDocument({
+      html: result.html,
+      snapshots: result.snapshots,
+      islandNames: ['cart'],
+      islandModules: { cart: '/islands/cart.js' },
+      runtimeUrl: '/_janux/client.js',
+      manifestUrl: `/_janux/manifest?path=${encodeURIComponent('/shop')}`,
+    });
+
+    expect(await (await get('/shop')).text()).toBe(expected);
+  });
+
+  it('a render that fails mid-stream reports in-page: janux:error script, closed document', async () => {
+    const failing = () => {
+      throw new Error('boom mid-render');
+    };
+    const streamServer = createJanuxServer({
+      routes: { '/': () => jsx('main', { children: [jsx('h1', { children: 'Fast' }), jsx(failing as any, {})] }) },
+    });
+    const res = await streamServer.fetch(new Request('http://test/'));
+    const html = await res.text();
+
+    expect(res.status).toBe(200); // the status line was already on the wire
+    expect(html).toContain('<h1>Fast</h1>');
+    expect(html).toContain('janux:error');
+    expect(html).toContain('boom mid-render');
+    expect(html.trimEnd()).toEndWith('</html>');
   });
 });
 
