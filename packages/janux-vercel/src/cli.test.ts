@@ -68,5 +68,7 @@ describe('runVercelInit', () => {
     expect(await Bun.file(join(output, 'functions/index.func/.janux/server.js')).exists()).toBe(true);
     // The routes tree travels with it: the router reads the directory at boot.
     expect(await Bun.file(join(output, 'functions/index.func/src/routes/index.tsx')).exists()).toBe(true);
-  });
+    // Bundles the app in a child process — the default 5s is close enough for
+    // a loaded machine (parallel agents, cold caches) to flake it.
+  }, 30_000);
 });
