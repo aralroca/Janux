@@ -153,6 +153,34 @@ describe('renderToStream', () => {
     for (let tick = 0; tick < 5; tick += 1) await new Promise((resolve) => setTimeout(resolve));
   };
 
+  /**
+   * Regression: the coalescer used to schedule a fresh 0ms timer per RAW chunk
+   * (~3 per element). A microtask-only render loop — a static export, a
+   * benchmark, a busy server draining back-to-back renders — never reaches the
+   * timer phase, so every one of those timers stays pending and pins its
+   * promise machinery: ~800KB retained per render, unbounded growth, OOM.
+   * The coalescer must keep at most ONE live timer per generator.
+   */
+  it('schedules O(1) timers per render, not one per chunk', async () => {
+    const page = jsx('div', {
+      children: Array.from({ length: 200 }, (_, i) => jsx('p', { children: `p${i}` })),
+    });
+    const realSetTimeout = globalThis.setTimeout;
+    let scheduled = 0;
+
+    globalThis.setTimeout = ((fn: any, ms?: number, ...rest: any[]) => {
+      scheduled += 1;
+
+      return realSetTimeout(fn, ms, ...rest);
+    }) as typeof setTimeout;
+    try {
+      await renderToString(page);
+    } finally {
+      globalThis.setTimeout = realSetTimeout;
+    }
+    expect(scheduled).toBeLessThanOrEqual(5);
+  });
+
   function slowComponent(gate: Promise<string[]>) {
     return component({
       name: 'slow',

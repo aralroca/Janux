@@ -518,32 +518,67 @@ export interface RenderStream {
  * its latency.
  */
 async function* coalesce(source: AsyncGenerator<string>): AsyncGenerator<string> {
-  const IDLE = Symbol('idle');
+  // Push pump, not a race per chunk: the previous shape raced every raw chunk
+  // against a macrotask timer, which allocated a timer (and a race reaction)
+  // for each of the ~3 chunks per element. Under a microtask-only render loop
+  // — a static export, a benchmark, a busy server draining back-to-back
+  // renders — none of those timers ever fired and each pinned its promise
+  // machinery: ~800KB retained per render, unbounded growth. Here the pump
+  // appends chunks to one buffer and arms AT MOST ONE 0ms timer per flush
+  // window; a timer still only fires on a macrotask boundary, which is
+  // exactly when the renderer has genuinely paused, so the flush semantics
+  // and the emitted bytes are unchanged.
+  const flushes: string[] = [];
   let buffer = '';
-  let pending = source.next();
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let finished = false;
+  let failure: unknown;
+  let abandoned = false;
+  let wake: (() => void) | undefined;
+
+  const notify = () => {
+    wake?.();
+    wake = undefined;
+  };
+  const flush = () => {
+    timer = null;
+    if (buffer) {
+      flushes.push(buffer);
+      buffer = '';
+    }
+    notify();
+  };
+
+  const pump = (async () => {
+    try {
+      for await (const chunk of source) {
+        if (abandoned) break;
+        buffer += chunk;
+        timer ??= setTimeout(flush, 0);
+      }
+    } catch (error) {
+      failure = error;
+    } finally {
+      if (timer) clearTimeout(timer);
+      // Also on error: what rendered before the failure still reaches the page.
+      flush();
+      finished = true;
+      notify();
+    }
+  })();
 
   try {
-    while (true) {
-      const idle = new Promise<typeof IDLE>((resolve) => setTimeout(() => resolve(IDLE), 0));
-      let result = await Promise.race([pending, idle]);
-
-      if (result === IDLE) {
-        if (buffer) {
-          yield buffer;
-          buffer = '';
-        }
-        result = await pending;
-      }
-      if (result.done) break;
-      buffer += result.value;
-      pending = source.next();
+    while (flushes.length > 0 || !finished) {
+      if (flushes.length > 0) yield flushes.shift()!;
+      else await new Promise<void>((resolve) => { wake = resolve; });
     }
+    if (failure !== undefined) throw failure;
   } finally {
-    // Also on error: what rendered before the failure still reaches the page.
-    if (buffer) yield buffer;
-    // And when the consumer abandons us, the abandonment must reach the
-    // renderer (its own finally is what stops further work).
+    // When the consumer abandons us, the abandonment must reach the renderer
+    // (its own finally is what stops further work).
+    abandoned = true;
     await source.return(undefined);
+    await pump;
   }
 }
 
