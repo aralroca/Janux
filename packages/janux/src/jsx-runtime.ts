@@ -1,7 +1,6 @@
 import type { ComponentDef } from './define/types';
-import type { JanuxElementProps } from './jsx-events';
 import type { CSSProperties as JanuxCSSProperties } from './jsx-attributes';
-import type { JanuxHTMLElements, JanuxSVGElements } from './jsx-elements';
+import type { JanuxElementProps, JanuxHTMLElements, JanuxSVGElements } from './jsx-elements';
 
 export type JanuxType = string | ((props: any) => unknown) | ComponentDef | symbol;
 

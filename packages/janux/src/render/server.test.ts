@@ -67,6 +67,13 @@ describe('renderToString', () => {
     expect(result.html).toBe('<button aria-selected="true" aria-expanded="false">ok</button>');
   });
 
+  it('stringifies enumerated booleans — draggable={false} absent would mean draggable', async () => {
+    const page = jsx('img', { draggable: false, contentEditable: false, spellcheck: true });
+    const result = await renderToString(page);
+
+    expect(result.html).toBe('<img draggable="false" contentEditable="false" spellcheck="true"/>');
+  });
+
   it('escapes text and attribute content', async () => {
     const page = jsx('p', { title: '"><script>', children: '<script>alert(1)</script>' });
     const result = await renderToString(page);

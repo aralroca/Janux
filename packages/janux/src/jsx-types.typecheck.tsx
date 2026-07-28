@@ -82,6 +82,16 @@ export const refusesPerTag = [
   <label htmlFor="email" />,
   // @ts-expect-error — an unknown attribute on a typed tag is refused.
   <div foo="bar" />,
+  // @ts-expect-error — SVG shares the core surface, not the HTML-only globals.
+  <circle enterKeyHint="go" />,
+  // @ts-expect-error — reset is the form directive; it means nothing elsewhere.
+  <span reset />,
+];
+
+export const acceptsBooleanish = [
+  <img draggable={false} />,
+  <div contentEditable={false} spellcheck={false} aria-hidden={true} />,
+  <svg tabIndex={0} class="icon" role="img" aria-label="logo" />,
 ];
 
 export const refuses = [

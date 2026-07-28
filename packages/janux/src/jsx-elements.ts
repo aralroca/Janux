@@ -1,5 +1,5 @@
 import type { JanuxEventAttributes } from './jsx-events';
-import type { JanuxHTMLAttributes } from './jsx-attributes';
+import type { JanuxCoreAttributes, JanuxHTMLAttributes } from './jsx-attributes';
 
 /**
  * Per-tag JSX typing: each intrinsic element accepts the global surface
@@ -12,6 +12,15 @@ import type { JanuxHTMLAttributes } from './jsx-attributes';
  * This file is a declaration table — its length is its coverage.
  */
 export interface HTMLAttributes extends JanuxHTMLAttributes, JanuxEventAttributes {}
+
+/**
+ * The prop surface a custom element (`my-widget`) accepts: the full HTML
+ * surface plus any other attribute — its definition owns that contract, not
+ * Janux.
+ */
+export interface JanuxElementProps extends HTMLAttributes {
+  [attribute: string]: unknown;
+}
 
 /** How the element handles cross-origin requests. https://developer.mozilla.org/docs/Web/HTML/Attributes/crossorigin */
 export type CrossOrigin = '' | 'anonymous' | 'use-credentials';
@@ -30,7 +39,17 @@ export type ReferrerPolicy =
 /** Browsing context a link or form targets. https://developer.mozilla.org/docs/Web/HTML/Element/a#target */
 export type Target = '_self' | '_blank' | '_parent' | '_top' | (string & {});
 
-export interface AnchorHTMLAttributes extends HTMLAttributes {
+/** Relative priority for fetching this resource. https://developer.mozilla.org/docs/Web/HTML/Attributes/fetchpriority */
+export type FetchPriority = 'high' | 'low' | 'auto';
+
+/** Defer fetching until the element nears the viewport, or fetch eagerly. https://developer.mozilla.org/docs/Web/HTML/Element/img#loading */
+export type Loading = 'eager' | 'lazy';
+
+/** What an invoker button does to its popover target. https://developer.mozilla.org/docs/Web/HTML/Element/button#popovertargetaction */
+export type PopoverTargetAction = 'show' | 'hide' | 'toggle';
+
+/** The attributes `<a>` and `<area>` share. https://developer.mozilla.org/docs/Web/HTML/Element/a */
+export interface HyperlinkHTMLAttributes extends HTMLAttributes {
   /** URL the hyperlink points to. https://developer.mozilla.org/docs/Web/HTML/Element/a#href */
   href?: string;
   /** Where to display the linked URL. https://developer.mozilla.org/docs/Web/HTML/Element/a#target */
@@ -39,35 +58,46 @@ export interface AnchorHTMLAttributes extends HTMLAttributes {
   download?: string | boolean;
   /** Relationship of the target object to the link object. https://developer.mozilla.org/docs/Web/HTML/Element/a#rel */
   rel?: string;
-  /** Language of the linked URL. https://developer.mozilla.org/docs/Web/HTML/Element/a#hreflang */
-  hrefLang?: string;
   /** Space-separated URLs pinged on follow. https://developer.mozilla.org/docs/Web/HTML/Element/a#ping */
   ping?: string;
   /** Referrer to send when fetching the URL. https://developer.mozilla.org/docs/Web/HTML/Element/a#referrerpolicy */
   referrerPolicy?: ReferrerPolicy;
+}
+
+/** The form-submission overrides `<button>` and `<input type="submit"/"image">` share. https://developer.mozilla.org/docs/Web/HTML/Element/button */
+export interface FormSubmitHTMLAttributes extends HTMLAttributes {
+  /** id of the form the control is associated with. https://developer.mozilla.org/docs/Web/HTML/Attributes/form */
+  form?: string;
+  /** Overrides the form's `action` for this control. https://developer.mozilla.org/docs/Web/HTML/Attributes/formaction */
+  formAction?: string;
+  /** Overrides the form's `enctype` for this control. https://developer.mozilla.org/docs/Web/HTML/Element/button#formenctype */
+  formEncType?: string;
+  /** Overrides the form's `method` for this control. https://developer.mozilla.org/docs/Web/HTML/Element/button#formmethod */
+  formMethod?: string;
+  /** Skips form validation for this control. https://developer.mozilla.org/docs/Web/HTML/Element/button#formnovalidate */
+  formNoValidate?: boolean;
+  /** Overrides the form's `target` for this control. https://developer.mozilla.org/docs/Web/HTML/Element/button#formtarget */
+  formTarget?: Target;
+  /** id of the popover element this control toggles. https://developer.mozilla.org/docs/Web/HTML/Element/button#popovertarget */
+  popoverTarget?: string;
+  /** What the control does to its popover target. https://developer.mozilla.org/docs/Web/HTML/Element/button#popovertargetaction */
+  popoverTargetAction?: PopoverTargetAction;
+}
+
+export interface AnchorHTMLAttributes extends HyperlinkHTMLAttributes {
+  /** Language of the linked URL. https://developer.mozilla.org/docs/Web/HTML/Element/a#hreflang */
+  hrefLang?: string;
   /** Hints the MIME type of the linked URL. https://developer.mozilla.org/docs/Web/HTML/Element/a#type */
   type?: string;
 }
 
-export interface AreaHTMLAttributes extends HTMLAttributes {
+export interface AreaHTMLAttributes extends HyperlinkHTMLAttributes {
   /** Alternative text for the area. https://developer.mozilla.org/docs/Web/HTML/Element/area#alt */
   alt?: string;
   /** Coordinates outlining the hot-spot region. https://developer.mozilla.org/docs/Web/HTML/Element/area#coords */
   coords?: string;
   /** Shape of the hot spot. https://developer.mozilla.org/docs/Web/HTML/Element/area#shape */
   shape?: 'rect' | 'circle' | 'poly' | 'default';
-  /** URL the hyperlink points to. https://developer.mozilla.org/docs/Web/HTML/Element/area#href */
-  href?: string;
-  /** Where to display the linked URL. https://developer.mozilla.org/docs/Web/HTML/Element/area#target */
-  target?: Target;
-  /** Prompts a download; an optional string suggests the filename. https://developer.mozilla.org/docs/Web/HTML/Element/area#download */
-  download?: string | boolean;
-  /** Space-separated URLs pinged on follow. https://developer.mozilla.org/docs/Web/HTML/Element/area#ping */
-  ping?: string;
-  /** Relationship of the target object to the link object. https://developer.mozilla.org/docs/Web/HTML/Element/area#rel */
-  rel?: string;
-  /** Referrer to send when fetching the URL. https://developer.mozilla.org/docs/Web/HTML/Element/area#referrerpolicy */
-  referrerPolicy?: ReferrerPolicy;
 }
 
 export interface MediaHTMLAttributes extends HTMLAttributes {
@@ -127,31 +157,15 @@ export interface ModHTMLAttributes extends HTMLAttributes {
   dateTime?: string;
 }
 
-export interface ButtonHTMLAttributes extends HTMLAttributes {
+export interface ButtonHTMLAttributes extends FormSubmitHTMLAttributes {
   /** Default behavior of the button. https://developer.mozilla.org/docs/Web/HTML/Element/button#type */
   type?: 'submit' | 'reset' | 'button';
   /** Prevents the user from interacting with the button. https://developer.mozilla.org/docs/Web/HTML/Element/button#disabled */
   disabled?: boolean;
-  /** id of the form the button is associated with. https://developer.mozilla.org/docs/Web/HTML/Element/button#form */
-  form?: string;
-  /** Overrides the form's `action` for this button. https://developer.mozilla.org/docs/Web/HTML/Element/button#formaction */
-  formAction?: string;
-  /** Overrides the form's `enctype` for this button. https://developer.mozilla.org/docs/Web/HTML/Element/button#formenctype */
-  formEncType?: string;
-  /** Overrides the form's `method` for this button. https://developer.mozilla.org/docs/Web/HTML/Element/button#formmethod */
-  formMethod?: string;
-  /** Skips form validation for this button. https://developer.mozilla.org/docs/Web/HTML/Element/button#formnovalidate */
-  formNoValidate?: boolean;
-  /** Overrides the form's `target` for this button. https://developer.mozilla.org/docs/Web/HTML/Element/button#formtarget */
-  formTarget?: Target;
   /** Name submitted with the form data. https://developer.mozilla.org/docs/Web/HTML/Element/button#name */
   name?: string;
   /** Value submitted with the form data. https://developer.mozilla.org/docs/Web/HTML/Element/button#value */
-  value?: string | number;
-  /** id of the popover element this button controls. https://developer.mozilla.org/docs/Web/HTML/Element/button#popovertarget */
-  popoverTarget?: string;
-  /** What the button does to its popover target. https://developer.mozilla.org/docs/Web/HTML/Element/button#popovertargetaction */
-  popoverTargetAction?: 'show' | 'hide' | 'toggle';
+  value?: number | string;
 }
 
 export interface CanvasHTMLAttributes extends HTMLAttributes {
@@ -169,7 +183,7 @@ export interface ColHTMLAttributes extends HTMLAttributes {
 
 export interface DataHTMLAttributes extends HTMLAttributes {
   /** Machine-readable translation of the content. https://developer.mozilla.org/docs/Web/HTML/Element/data#value */
-  value?: string | number;
+  value?: number | string;
 }
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
@@ -223,6 +237,8 @@ export interface FormHTMLAttributes extends HTMLAttributes {
   rel?: string;
   /** Name of the form, unique among forms. https://developer.mozilla.org/docs/Web/HTML/Element/form#name */
   name?: string;
+  /** `<form onSubmit reset>`: the runtime empties the form once the intent has the values. */
+  reset?: boolean;
 }
 
 export interface HtmlHTMLAttributes extends HTMLAttributes {
@@ -248,7 +264,7 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   /** Frame height in CSS pixels. https://developer.mozilla.org/docs/Web/HTML/Element/iframe#height */
   height?: number | string;
   /** Defers loading until the frame nears the viewport. https://developer.mozilla.org/docs/Web/HTML/Element/iframe#loading */
-  loading?: 'eager' | 'lazy';
+  loading?: Loading;
   /** Referrer to send when fetching the frame's resource. https://developer.mozilla.org/docs/Web/HTML/Element/iframe#referrerpolicy */
   referrerPolicy?: ReferrerPolicy;
 }
@@ -267,11 +283,11 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   /** Intrinsic height in pixels. https://developer.mozilla.org/docs/Web/HTML/Element/img#height */
   height?: number | string;
   /** Defers loading until the image nears the viewport. https://developer.mozilla.org/docs/Web/HTML/Element/img#loading */
-  loading?: 'eager' | 'lazy';
+  loading?: Loading;
   /** Decoding hint: off the main thread (`async`) or synchronously. https://developer.mozilla.org/docs/Web/HTML/Element/img#decoding */
   decoding?: 'sync' | 'async' | 'auto';
   /** Relative priority for fetching this image. https://developer.mozilla.org/docs/Web/HTML/Element/img#fetchpriority */
-  fetchPriority?: 'high' | 'low' | 'auto';
+  fetchPriority?: FetchPriority;
   /** How to handle cross-origin requests. https://developer.mozilla.org/docs/Web/HTML/Element/img#crossorigin */
   crossOrigin?: CrossOrigin;
   /** Referrer to send when fetching the image. https://developer.mozilla.org/docs/Web/HTML/Element/img#referrerpolicy */
@@ -282,7 +298,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   elementTiming?: string;
 }
 
-export interface InputHTMLAttributes extends HTMLAttributes {
+export interface InputHTMLAttributes extends FormSubmitHTMLAttributes {
   /** Kind of control to display. https://developer.mozilla.org/docs/Web/HTML/Element/input#type */
   type?:
     | 'button'
@@ -308,7 +324,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
     | 'url'
     | 'week';
   /** Current value of the control. https://developer.mozilla.org/docs/Web/HTML/Element/input#value */
-  value?: string | number;
+  value?: number | string;
   /** The checkbox or radio is selected. https://developer.mozilla.org/docs/Web/HTML/Element/input#checked */
   checked?: boolean;
   /** File types accepted by a `file` input. https://developer.mozilla.org/docs/Web/HTML/Element/input#accept */
@@ -321,18 +337,6 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   capture?: boolean | 'user' | 'environment';
   /** Prevents the user from interacting with the control. https://developer.mozilla.org/docs/Web/HTML/Element/input#disabled */
   disabled?: boolean;
-  /** id of the form the control is associated with. https://developer.mozilla.org/docs/Web/HTML/Element/input#form */
-  form?: string;
-  /** Overrides the form's `action` for `submit`/`image` inputs. https://developer.mozilla.org/docs/Web/HTML/Element/input#formaction */
-  formAction?: string;
-  /** Overrides the form's `enctype` for `submit`/`image` inputs. https://developer.mozilla.org/docs/Web/HTML/Element/input#formenctype */
-  formEncType?: string;
-  /** Overrides the form's `method` for `submit`/`image` inputs. https://developer.mozilla.org/docs/Web/HTML/Element/input#formmethod */
-  formMethod?: string;
-  /** Skips form validation for `submit`/`image` inputs. https://developer.mozilla.org/docs/Web/HTML/Element/input#formnovalidate */
-  formNoValidate?: boolean;
-  /** Overrides the form's `target` for `submit`/`image` inputs. https://developer.mozilla.org/docs/Web/HTML/Element/input#formtarget */
-  formTarget?: Target;
   /** Width of an `image` input in CSS pixels. https://developer.mozilla.org/docs/Web/HTML/Element/input#width */
   width?: number | string;
   /** Height of an `image` input in CSS pixels. https://developer.mozilla.org/docs/Web/HTML/Element/input#height */
@@ -367,10 +371,6 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   step?: number | string;
   /** Safari: renders a checkbox as a switch. https://developer.mozilla.org/docs/Web/HTML/Element/input/checkbox#switch */
   switch?: boolean;
-  /** id of the popover element this control toggles. https://developer.mozilla.org/docs/Web/HTML/Element/input#popovertarget */
-  popoverTarget?: string;
-  /** What the control does to its popover target. https://developer.mozilla.org/docs/Web/HTML/Element/input#popovertargetaction */
-  popoverTargetAction?: 'show' | 'hide' | 'toggle';
 }
 
 export interface LabelHTMLAttributes extends HTMLAttributes {
@@ -397,7 +397,7 @@ export interface LinkHTMLAttributes extends HTMLAttributes {
   /** Media the resource applies to. https://developer.mozilla.org/docs/Web/HTML/Element/link#media */
   media?: string;
   /** Relative priority for fetching this resource. https://developer.mozilla.org/docs/Web/HTML/Element/link#fetchpriority */
-  fetchPriority?: 'high' | 'low' | 'auto';
+  fetchPriority?: FetchPriority;
   /** Referrer to send when fetching the resource. https://developer.mozilla.org/docs/Web/HTML/Element/link#referrerpolicy */
   referrerPolicy?: ReferrerPolicy;
   /** Icon sizes for `rel="icon"`. https://developer.mozilla.org/docs/Web/HTML/Element/link#sizes */
@@ -490,7 +490,7 @@ export interface OptionHTMLAttributes extends HTMLAttributes {
   /** The option is initially selected. https://developer.mozilla.org/docs/Web/HTML/Element/option#selected */
   selected?: boolean;
   /** Value submitted with the form data. https://developer.mozilla.org/docs/Web/HTML/Element/option#value */
-  value?: string | number;
+  value?: number | string;
 }
 
 export interface OutputHTMLAttributes extends HTMLAttributes {
@@ -525,7 +525,7 @@ export interface ScriptHTMLAttributes extends HTMLAttributes {
   /** Skips the script in module-supporting browsers. https://developer.mozilla.org/docs/Web/HTML/Element/script#nomodule */
   noModule?: boolean;
   /** Relative priority for fetching this script. https://developer.mozilla.org/docs/Web/HTML/Element/script#fetchpriority */
-  fetchPriority?: 'high' | 'low' | 'auto';
+  fetchPriority?: FetchPriority;
   /** Referrer to send when fetching the script. https://developer.mozilla.org/docs/Web/HTML/Element/script#referrerpolicy */
   referrerPolicy?: ReferrerPolicy;
 }
@@ -627,7 +627,7 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   /** How line breaks are submitted. https://developer.mozilla.org/docs/Web/HTML/Element/textarea#wrap */
   wrap?: 'hard' | 'soft' | 'off';
   /** Initial value of the control. https://developer.mozilla.org/docs/Web/HTML/Element/textarea */
-  value?: string | number;
+  value?: number | string;
 }
 
 export interface TimeHTMLAttributes extends HTMLAttributes {
@@ -654,8 +654,12 @@ export interface TrackHTMLAttributes extends HTMLAttributes {
  * (`stroke-width`, never `strokeWidth`), while genuinely camelCased SVG names
  * (`viewBox`, `attributeName`, …) keep their casing. Both spellings serialize
  * correctly on the server and through `setAttribute` on the client.
+ *
+ * SVG shares the core surface (styling, ARIA, `data-*`, events) but not the
+ * HTML-only globals — `enterKeyHint` on a `<circle>` is as wrong as `cx` on a
+ * `<div>`.
  */
-export interface SVGAttributes extends HTMLAttributes {
+export interface SVGAttributes extends JanuxCoreAttributes, JanuxEventAttributes {
   // ── geometry and structure ────────────────────────────────────────────────
   /** Position/size of the viewport the SVG content maps into. https://developer.mozilla.org/docs/Web/SVG/Attribute/viewBox */
   viewBox?: string;
@@ -709,11 +713,11 @@ export interface SVGAttributes extends HTMLAttributes {
   'fill-rule'?: 'nonzero' | 'evenodd' | 'inherit';
   /** Paint of the outline. https://developer.mozilla.org/docs/Web/SVG/Attribute/stroke */
   stroke?: string;
-  'stroke-dasharray'?: string | number;
-  'stroke-dashoffset'?: string | number;
+  'stroke-dasharray'?: number | string;
+  'stroke-dashoffset'?: number | string;
   'stroke-linecap'?: 'butt' | 'round' | 'square' | 'inherit';
   'stroke-linejoin'?: 'miter' | 'round' | 'bevel' | 'inherit';
-  'stroke-miterlimit'?: string | number;
+  'stroke-miterlimit'?: number | string;
   'stroke-opacity'?: number | string;
   'stroke-width'?: number | string;
   opacity?: number | string;

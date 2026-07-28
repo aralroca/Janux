@@ -1,5 +1,4 @@
 import type { IntentRef } from './define/types';
-import type { JanuxHTMLAttributes } from './jsx-attributes';
 
 /**
  * Event props for intrinsic elements. Every event binds the same value type: a
@@ -138,13 +137,4 @@ export interface JanuxEventAttributes {
   onTransitionEnd?: IntentRef;
   /** Does not bubble; Janux delegates it via the capture phase. https://developer.mozilla.org/docs/Web/API/HTMLElement/toggle_event */
   onToggle?: IntentRef;
-}
-
-/**
- * The prop surface every intrinsic element accepts: the event family above,
- * the global attribute surface (`JanuxHTMLAttributes`), and — until per-tag
- * typing exists — any other attribute.
- */
-export interface JanuxElementProps extends JanuxEventAttributes, JanuxHTMLAttributes {
-  [attribute: string]: unknown;
 }

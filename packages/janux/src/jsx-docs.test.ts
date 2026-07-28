@@ -11,16 +11,28 @@ import { join } from 'node:path';
 const FIXTURE_PATH = join(import.meta.dir, '__hover_fixture__.tsx');
 const FIXTURE = `export const view = <div style={{ color: 'red' }} dangerHTML="<b>hi</b>" />;\n`;
 
-const OPTIONS: ts.CompilerOptions = {
-  strict: true,
-  noEmit: true,
-  skipLibCheck: true,
-  target: ts.ScriptTarget.ESNext,
-  module: ts.ModuleKind.ESNext,
-  moduleResolution: ts.ModuleResolutionKind.Bundler,
-  jsx: ts.JsxEmit.ReactJSX,
-  jsxImportSource: 'janux',
-};
+/**
+ * The package's real compiler options, so the hover this test reads is the
+ * hover the editor shows. Only `lib` is pinned: the default full ESNext lib
+ * set triples the test's cost without changing either assertion.
+ */
+function projectOptions(): ts.CompilerOptions {
+  const configPath = join(import.meta.dir, '..', 'tsconfig.json');
+  const config = ts.getParsedCommandLineOfConfigFile(
+    configPath,
+    { lib: ['lib.es2023.d.ts', 'lib.dom.d.ts'] },
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+        throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+      },
+    },
+  );
+
+  return config!.options;
+}
+
+const OPTIONS = projectOptions();
 
 const HOST: ts.LanguageServiceHost = {
   getScriptFileNames: () => [FIXTURE_PATH],
@@ -45,7 +57,7 @@ const service = ts.createLanguageService(HOST, ts.createDocumentRegistry());
 function hoverAt(marker: string): { type: string; docs: string } {
   const info = service.getQuickInfoAtPosition(FIXTURE_PATH, FIXTURE.indexOf(marker));
 
-  if (!info) return { type: '', docs: '' };
+  if (!info) throw new Error(`no quick info at "${marker}"`);
 
   return {
     type: ts.displayPartsToString(info.displayParts),

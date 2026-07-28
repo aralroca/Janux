@@ -91,6 +91,13 @@ function styleText(value: Record<string, unknown>): string {
 const EVENT_PROP = /^on[A-Z]/;
 /** ARIA state/property attribute — booleans stringify instead of toggling. */
 const ARIA_PREFIX = /^aria-/;
+/** Enumerated attributes where absent and "false" mean different things. */
+const ENUMERATED_BOOLEAN = new Set(['contentEditable', 'draggable', 'spellcheck']);
+
+/** Attributes whose booleans serialize as literal "true"/"false" tokens. */
+function stringifiesBooleans(name: string): boolean {
+  return ARIA_PREFIX.test(name) || ENUMERATED_BOOLEAN.has(name);
+}
 /** Anything the browser could read back as an inline handler attribute (`onclick="…"`). */
 const ON_PREFIX = /^on/i;
 /**
@@ -213,10 +220,11 @@ function propToAttr(name: string, value: unknown): [string, unknown] | undefined
 
     return undefined;
   }
-  // ARIA reads an absent attribute and an empty value both as invalid, so a
-  // boolean must land as the literal "true"/"false" token instead of the
-  // bare-attribute/omitted treatment booleans get elsewhere.
-  if (typeof value === 'boolean' && ARIA_PREFIX.test(name)) return [name, String(value)];
+  // ARIA and enumerated attributes read an absent attribute and an empty
+  // value differently from "false", so a boolean must land as the literal
+  // "true"/"false" token instead of the bare-attribute/omitted treatment
+  // booleans get elsewhere.
+  if (typeof value === 'boolean' && stringifiesBooleans(name)) return [name, String(value)];
   if (name === 'class' || name === 'className') return ['class', value];
   // An empty style object must leave no attribute behind, so `undefined` here.
   if (name === 'style' && isStyleObject(value)) return ['style', styleText(value) || undefined];
