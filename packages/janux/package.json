@@ -26,10 +26,11 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^18.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0"
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -62,6 +63,7 @@
     "src"
   ],
   "dependencies": {
+    "csstype": "^3.2.3",
     "diff-dom-streaming": "^0.6.8"
   }
 }

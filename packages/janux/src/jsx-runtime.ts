@@ -1,5 +1,6 @@
 import type { ComponentDef } from './define/types';
-import type { JanuxElementProps } from './jsx-events';
+import type { CSSProperties as JanuxCSSProperties } from './jsx-attributes';
+import type { JanuxElementProps, JanuxHTMLElements, JanuxSVGElements } from './jsx-elements';
 
 export type JanuxType = string | ((props: any) => unknown) | ComponentDef | symbol;
 
@@ -27,8 +28,11 @@ export function jsxDEV(
 
 export declare namespace JSX {
   type Element = JanuxNode;
-  interface IntrinsicElements {
-    [element: string]: JanuxElementProps;
+  /** The typed shape of a `style={{…}}` object — see `CSSProperties` in `janux`. */
+  type CSSProperties = JanuxCSSProperties;
+  interface IntrinsicElements extends JanuxHTMLElements, JanuxSVGElements {
+    /** A custom element accepts the global surface plus any attribute. */
+    [customElement: `${string}-${string}`]: JanuxElementProps;
   }
   interface IntrinsicAttributes {
     key?: string | number;

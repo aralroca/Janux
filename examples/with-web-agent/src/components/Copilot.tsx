@@ -58,7 +58,7 @@ export const Copilot = component({
         </div>
       ) : null}
       <form class="ask" onSubmit={intents.send} reset>
-        <input name="text" placeholder={state.busy ? 'Working…' : 'e.g. "invite jane@acme.com as admin"'} autocomplete="off" />
+        <input name="text" placeholder={state.busy ? 'Working…' : 'e.g. "invite jane@acme.com as admin"'} autoComplete="off" />
         <button class="primary" type="submit">
           Run
         </button>

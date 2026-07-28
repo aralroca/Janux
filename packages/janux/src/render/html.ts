@@ -89,6 +89,15 @@ function styleText(value: Record<string, unknown>): string {
 
 /** A JSX event prop: `on` + an uppercase letter (so `once`/`online` are not events). */
 const EVENT_PROP = /^on[A-Z]/;
+/** ARIA state/property attribute — booleans stringify instead of toggling. */
+const ARIA_PREFIX = /^aria-/i;
+/** Enumerated attributes where absent and "false" mean different things; matched lowercased, like the DOM does. */
+const ENUMERATED_BOOLEAN = new Set(['contenteditable', 'draggable', 'spellcheck']);
+
+/** Attributes whose booleans serialize as literal "true"/"false" tokens. */
+function stringifiesBooleans(name: string): boolean {
+  return ARIA_PREFIX.test(name) || ENUMERATED_BOOLEAN.has(name.toLowerCase());
+}
 /** Anything the browser could read back as an inline handler attribute (`onclick="…"`). */
 const ON_PREFIX = /^on/i;
 /**
@@ -216,6 +225,12 @@ function propToAttr(name: string, value: unknown): [string, unknown] | undefined
   if (name === 'style' && isStyleObject(value)) return ['style', styleText(value) || undefined];
   if (typeof value === 'function') return undefined;
   if (!VALID_ATTR_NAME.test(name)) return undefined;
+  // ARIA and enumerated attributes read an absent attribute and an empty
+  // value differently from "false", so a boolean must land as the literal
+  // "true"/"false" token instead of the bare-attribute/omitted treatment
+  // booleans get elsewhere. After VALID_ATTR_NAME on purpose: the name
+  // reaches the markup unescaped.
+  if (typeof value === 'boolean' && stringifiesBooleans(name)) return [name, String(value)];
   if (isBlockedUrl(name, value)) {
     console.warn(`Janux: blocked an executable URL in "${name}" — ${value.slice(0, 40)}`);
 

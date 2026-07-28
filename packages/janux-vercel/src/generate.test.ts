@@ -80,5 +80,8 @@ describe('a bundled function with no node_modules beside it', () => {
     expect(served.stderr.toString()).toBe('');
     expect(served.stdout.toString()).toStartWith('200 ');
     expect(served.stdout.toString()).toContain('Deployed');
-  });
+    // Builds and serves a real deployment across three processes — the default
+    // 5s is close enough for a loaded machine (parallel agents, cold caches)
+    // to flake it.
+  }, 30_000);
 });

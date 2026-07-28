@@ -48,7 +48,7 @@ export const Team = component({
         onInput={intents.setEmail}
       />
       <label for="invite-role">Role</label>
-      <select id="invite-role" value={state.role} onChange={intents.setRole}>
+      <select id="invite-role" onChange={intents.setRole}>
         {ROLES.map((role) => (
           <option key={role} value={role} selected={state.role === role}>
             {role}

@@ -18,11 +18,27 @@ view: ({ state, intents }) => (
 | `class="x"` or `className="x"` | `class="x"` | Both spellings work and mean the same thing. |
 | `disabled={true}` | `disabled` | Boolean attribute, no value. |
 | `disabled={false}` | *(omitted)* | So are `null` and `undefined` — no `="false"` ever renders. |
+| `aria-selected={false}` | `aria-selected="false"` | The one boolean exception: `aria-*` stringifies, because ARIA reads an absent attribute as invalid, not as false. |
 | `data-team={params.team}` | `data-team="acme"` | Any valid attribute name passes through, escaped. |
-| `style="color:red"` | `style="color:red"` | Styles are a string; there is no object form. |
+| `style="color:red"` | `style="color:red"` | A string passes through; an object serializes to CSS text (below). |
 | `onClick={() => {}}` | *(compile error, dropped with a warning)* | Event props take intents, not closures — wire behavior through intents (below). |
 
 Attribute names must match `/^[a-zA-Z][\w-]*$/`; anything else is dropped rather than emitting invalid HTML. Values are HTML-escaped, so interpolated user content is safe by default. The `on*` namespace is reserved for events: a string value there (`onclick="…"`) never renders, so an inline handler cannot be injected through props.
+
+Every tag has its own typed attribute surface: hover any attribute in your editor for what it does and a link to its reference, and a typo (`hreff`, or `checked` on an `<a>`) is a compile error. Custom elements (`my-widget`) accept the global surface plus any attribute.
+
+### Style objects
+
+`style` also takes an object, typed end to end — `CSSProperties` (exported from `janux`) is backed by [csstype](https://github.com/frenic/csstype), so every CSS property and `--*` custom property autocompletes:
+
+```tsx
+<div style={{ backgroundColor: 'red', width: '10px', '--accent': '#06f' }} />
+{/* → style="background-color:red;width:10px;--accent:#06f" */}
+```
+
+- camelCase serializes to kebab-case (`backgroundColor` → `background-color`); `--*` custom properties keep their casing.
+- `null`, `undefined`, `false` and `''` values are skipped; an empty object leaves no attribute behind.
+- Unlike React, a bare number never gets a unit: `{ width: 10 }` renders `width:10`. The guess is wrong for `lineHeight`, `flex`, `zIndex` and every unitless property, so Janux asks for the unit — write `'10px'` when you mean pixels.
 
 ## Wiring behavior: intents, not closures
 

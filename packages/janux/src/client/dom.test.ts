@@ -27,6 +27,29 @@ describe('toDomNodes', () => {
     expect(svg!.firstElementChild!.tagName).toBe('path');
   });
 
+  it('serializes a style object to CSS text, mirroring SSR', () => {
+    const node = jsx('div', { style: { backgroundColor: 'red', '--x': '1px' } });
+    const [div] = toDomNodes(node) as Element[];
+
+    expect(div!.getAttribute('style')).toBe('background-color:red;--x:1px');
+  });
+
+  it('stringifies aria-* booleans, mirroring SSR', () => {
+    const node = jsx('button', { 'aria-selected': true, 'aria-expanded': false });
+    const [button] = toDomNodes(node) as Element[];
+
+    expect(button!.getAttribute('aria-selected')).toBe('true');
+    expect(button!.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('stringifies enumerated booleans and drops malformed names, mirroring SSR', () => {
+    const node = jsx('img', { draggable: false, 'aria-x" onmouseover="alert(1)': true });
+    const [img] = toDomNodes(node) as Element[];
+
+    expect(img!.getAttribute('draggable')).toBe('false');
+    expect(img!.attributes.length).toBe(1);
+  });
+
   it('keeps html elements in the HTML namespace', () => {
     const [button] = toDomNodes(jsx('button', { children: 'Close' })) as Element[];
 

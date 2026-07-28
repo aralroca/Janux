@@ -44,6 +44,50 @@ describe('renderToString', () => {
     expect(result.snapshots).toHaveLength(0);
   });
 
+  it('serializes a style object to CSS text', async () => {
+    const page = jsx('div', {
+      style: { backgroundColor: 'red', width: 10, '--x': '1px', margin: undefined },
+      children: 'ok',
+    });
+    const result = await renderToString(page);
+
+    expect(result.html).toBe('<div style="background-color:red;width:10;--x:1px">ok</div>');
+  });
+
+  it('leaves no style attribute behind for an empty style object', async () => {
+    const result = await renderToString(jsx('div', { style: {}, children: 'ok' }));
+
+    expect(result.html).toBe('<div>ok</div>');
+  });
+
+  it('stringifies aria-* booleans — absent and empty both read as invalid ARIA', async () => {
+    const page = jsx('button', { 'aria-selected': true, 'aria-expanded': false, children: 'ok' });
+    const result = await renderToString(page);
+
+    expect(result.html).toBe('<button aria-selected="true" aria-expanded="false">ok</button>');
+  });
+
+  it('stringifies enumerated booleans — draggable={false} absent would mean draggable', async () => {
+    const page = jsx('img', { draggable: false, contentEditable: false, spellcheck: true });
+    const result = await renderToString(page);
+
+    expect(result.html).toBe('<img draggable="false" contentEditable="false" spellcheck="true"/>');
+  });
+
+  it('stringifies enumerated booleans in any spelling the DOM accepts', async () => {
+    const page = jsx('my-editor', { contenteditable: false, spellCheck: false, children: 'ok' });
+    const result = await renderToString(page);
+
+    expect(result.html).toBe('<my-editor contenteditable="false" spellCheck="false">ok</my-editor>');
+  });
+
+  it('still drops a malformed attribute name when its value is a boolean', async () => {
+    const page = jsx('div', { 'aria-x" onmouseover="alert(1)': true, children: 'ok' });
+    const result = await renderToString(page);
+
+    expect(result.html).toBe('<div>ok</div>');
+  });
+
   it('escapes text and attribute content', async () => {
     const page = jsx('p', { title: '"><script>', children: '<script>alert(1)</script>' });
     const result = await renderToString(page);

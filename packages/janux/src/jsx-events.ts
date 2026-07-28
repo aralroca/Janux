@@ -138,18 +138,3 @@ export interface JanuxEventAttributes {
   /** Does not bubble; Janux delegates it via the capture phase. https://developer.mozilla.org/docs/Web/API/HTMLElement/toggle_event */
   onToggle?: IntentRef;
 }
-
-/**
- * The prop surface every intrinsic element accepts: the event family above,
- * the island/form directives, and — until per-tag typing exists — any other
- * attribute.
- */
-export interface JanuxElementProps extends JanuxEventAttributes {
-  key?: string | number;
-  children?: unknown;
-  /** `<form onSubmit reset>`: the runtime empties the form once the intent has the values. */
-  reset?: boolean;
-  /** Extra intent input bound to this control, as a JSON object literal. Wins over event-derived facts. */
-  'data-input'?: string;
-  [attribute: string]: unknown;
-}

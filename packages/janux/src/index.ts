@@ -23,7 +23,9 @@ export type {
   RunBag,
   StoreHandle,
 } from './define/types';
-export type { JanuxEventAttributes, JanuxElementProps } from './jsx-events';
+export type { JanuxEventAttributes } from './jsx-events';
+export type * from './jsx-attributes';
+export type * from './jsx-elements';
 export { renderToStream, renderToString, type RenderResult, type RenderStream } from './render/server';
 export { buildManifest, type Manifest, type ManifestEntry } from './manifest';
 export {
