@@ -23,7 +23,7 @@ import { assertValidInput, errorStatus, evictOldestProposal, json, proposalId, t
 import { apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 import { createFsRouter, type Route } from './router';
-import { shellEpilogue, shellPrelude, type ShellOptions } from './html-shell';
+import { shellEpilogue, shellEpilogueRest, shellInterlude, shellPrelude, type ShellOptions } from './html-shell';
 import { safeJson } from './html-escape';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
@@ -283,10 +283,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const renderOptions = (ctx: Ctx) => ({ ctx, storeDefs: options.storeDefs, foreignImport: options.foreignImport });
 
-  const renderPageStream = async (pathname: string, ctx: Ctx) => {
+  const renderPageStream = async (pathname: string, ctx: Ctx, extra?: Parameters<typeof renderToStream>[1]) => {
     const page = await resolvePage(pathname, ctx);
 
-    return page && { ...renderToStream(page.vnode, renderOptions(ctx)), meta: page.meta };
+    return page && { ...renderToStream(page.vnode, { ...renderOptions(ctx), ...extra }), meta: page.meta };
   };
 
   /** Buffered render for consumers that need the whole page at once (manifest, markdown projections). */
@@ -466,7 +466,29 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return new Response(null, { status: 302, headers: { location } });
     }
     const ctx = localeCtx(await resolveCtx(req), locale);
-    const rendered = await renderPageStream(page, ctx);
+    /*
+     * Pages with pending suspense boundaries get the shell in three parts
+     * instead of two: an interlude (runtime + snapshots-so-far) goes out the
+     * moment the page's own HTML is complete, so the page is interactive while
+     * the boundary chunks stream; the tail then carries only what the
+     * interlude could not know (i18n keys and boundary snapshots).
+     */
+    const interludeUris = new Set<string>();
+    let interludeSent = false;
+    const rendered = await renderPageStream(page, ctx, {
+      onBeforeBoundaries: (summary) => {
+        const shell = shellFor(summary);
+
+        // Suspended islands may not have registered yet (their sources are
+        // still loading), but their modules are known: the map ships complete.
+        shell.islandNames = [...new Set([...shell.islandNames, ...Object.keys(options.islandModules ?? {})])];
+        shell.runtimeUrl = shell.islandNames.length > 0 ? options.runtimeUrl : undefined;
+        summary.snapshots.forEach((snapshot) => interludeUris.add(snapshot.uri));
+        interludeSent = true;
+
+        return `${shellInterlude(shell)}\n`;
+      },
+    });
 
     if (!rendered) return new Response('Not found', { status: 404 });
     /*
@@ -502,7 +524,11 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const body = documentStream(
       prelude,
       rendered.chunks,
-      async () => shellEpilogue(shellFor(await rendered.done)),
+      async () => {
+        const shell = shellFor(await rendered.done);
+
+        return interludeSent ? shellEpilogueRest(shell, interludeUris) : shellEpilogue(shell);
+      },
       rendered.cancel,
     );
 

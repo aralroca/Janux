@@ -352,6 +352,48 @@ describe('streaming pages', () => {
     expect(full).toContain('</html>');
   });
 
+  it('streams a suspense fallback, then the boundary chunk before the epilogue', async () => {
+    let release!: (rows: string[]) => void;
+    const gate = new Promise<string[]>((resolve) => { release = resolve; });
+    const slow = component({
+      name: 'slow',
+      sources: { rows: source({ query: () => gate }) },
+      suspense: () => jsx('p', { children: 'loading' }),
+      view: ({ sources }: any) => jsx('p', { children: `rows:${sources.rows.value.length}` }),
+    });
+    const streamServer = createJanuxServer({
+      routes: { '/': () => jsx('main', { children: [jsx(slow as any, {}), jsx('h1', { children: 'After' })] }) },
+      runtimeUrl: '/_janux/client.js',
+      islandModules: { slow: '/islands/slow.js' },
+    });
+    const res = await streamServer.fetch(new Request('http://test/'));
+    const { received, reader } = await readUntil(res, '</h1>');
+
+    // The fallback holds the island's place and the page does not block on it.
+    expect(received).toContain('data-jx-pending><p>loading</p></janux-island>');
+    expect(received).toContain('<h1>After</h1>');
+    expect(received).not.toContain('rows:');
+
+    release(['r1', 'r2']);
+    const full = received + (await readRest(reader));
+
+    expect(full).toContain('<template id="jxu:slow#default"');
+    expect(full).toContain('rows:2');
+    // The interlude ships the runtime BEFORE the boundary chunks — the page is
+    // interactive while they stream — and the classic-script kick exists
+    // because a module script would defer until the stream ends.
+    expect(full.indexOf('key="jx-runtime"')).toBeLessThan(full.indexOf('<template'));
+    expect(full.indexOf('id="jx-runtime-eager"')).toBeLessThan(full.indexOf('<template'));
+    // The boundary island's own snapshot can only exist after its sources
+    // resolved: it travels in the tail, after its template.
+    expect(full.indexOf('id="jxu:slow#default"')).toBeLessThan(full.indexOf('application/janux+state'));
+    expect(full).toContain('"value":["r1","r2"]');
+    // And nothing the interlude emitted is repeated by the tail.
+    expect(full.split('key="jx-runtime"')).toHaveLength(2);
+    expect(full.split('type="speculationrules"')).toHaveLength(2);
+    expect(full.trimEnd()).toEndWith('</html>');
+  });
+
   it('the streamed response is byte-identical to the buffered document', async () => {
     const result = await renderToString(jsx('div', { children: jsx(cart as any, {}) }));
     const expected = htmlDocument({
