@@ -55,12 +55,10 @@ const out =
 // Every target app gets the identical dataset (skip a target whose src/ dir
 // doesn't exist yet, so adding a new target is just creating its folder).
 const TARGETS = [
-	'octane-tsrx',
-	'octane-jsx',
+	'janux',
 	'solid',
 	'react',
 	'preact',
-	'ripple',
 	'svelte',
 	'vue-vapor',
 ];

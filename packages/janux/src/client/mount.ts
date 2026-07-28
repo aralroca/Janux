@@ -2,8 +2,8 @@ import { effect as watch, untrack } from '../signals';
 import { createInstance, type JanuxInstance } from '../runtime/instance';
 import type { ComponentDef } from '../define/types';
 import type { EventBus } from '../runtime/bus';
-import { toDomNodes, type PendingIsland, type RenderPass } from './dom';
-import { morph } from './morph';
+import type { PendingIsland, RenderPass } from './dom';
+import { reconcile } from './reconcile';
 import { persistStore } from './persist';
 import { registerDef, resolveDef, type ClientRegistry } from './registry';
 
@@ -158,7 +158,7 @@ function startRenderLoop(instance: JanuxInstance, root: Element, key: string, mo
         foreigns: [],
       };
 
-      morph(root, toDomNodes(instance.def.view!(instance.bag), pass));
+      reconcile(root, instance.def.view!(instance.bag), pass);
       untrack(() => {
         mountNewChildren(pass, root, mount);
         mountPassForeigns(pass, root, mount, instance);
