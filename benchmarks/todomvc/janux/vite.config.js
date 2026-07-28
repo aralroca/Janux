@@ -6,6 +6,12 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	mode: 'production',
 	define: { 'process.env.NODE_ENV': JSON.stringify('production') },
-	build: { target: 'esnext', minify: false },
+	build: {
+		target: 'esnext',
+		minify: false,
+		// Mirrors @janux/vite foreignExternals(): no React installed → the
+		// interop's lazy import stays external and never emits chunks.
+		rollupOptions: { external: ['react', 'react-dom', 'react-dom/client'] },
+	},
 	server: { port: 5240, strictPort: true },
 });
