@@ -67,14 +67,14 @@ intents: {
 view: ({ state, derived, intents }) => (
   <section class="board">
     <header><h2>Tasks</h2><span>{derived.remaining} left</span></header>
-    <form intent={intents.add}>
+    <form onSubmit={intents.add}>
       <input name="title" placeholder="What needs doing?" />
       <button type="submit">Add</button>
     </form>
     <ul>
       {state.tasks.map((task) => (
         <li key={task.id} class={task.done ? 'done' : undefined}>
-          <button on={intents.toggle} data-input={JSON.stringify({ id: task.id })}>✓</button>
+          <button onClick={intents.toggle} data-input={JSON.stringify({ id: task.id })}>✓</button>
           <span>{task.title}</span>
         </li>
       ))}
@@ -83,7 +83,7 @@ view: ({ state, derived, intents }) => (
 ),
 ```
 
-`<form intent={...}>` turns fields into the intent's input; buttons carry their input as `data-input` JSON. There are no event listeners on any element — one delegated listener resumes the island on your first click.
+`<form onSubmit={...}>` turns fields into the intent's input; buttons carry their input as `data-input` JSON (or bind it with [`.with()`](/docs/guide/events-and-interactions)). There are no event listeners on any element — one delegated listener resumes the island on your first click.
 
 ## See the second face
 

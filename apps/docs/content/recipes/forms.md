@@ -1,6 +1,6 @@
 # Forms
 
-A form is one intent. Put `intent={...}` on the `<form>` and the submitted fields become the intent's input — validated against its schema, guarded like any other action, and callable by an agent without a form at all.
+A form is one intent. Put `onSubmit={...}` on the `<form>` and the submitted fields become the intent's input — validated against its schema, guarded like any other action, and callable by an agent without a form at all.
 
 ```tsx
 export const Signup = component({
@@ -17,7 +17,7 @@ export const Signup = component({
     }),
   },
   view: ({ state, intents }) => (
-    <form intent={intents.submit}>
+    <form onSubmit={intents.submit}>
       <input name="email" type="email" required />
       <select name="plan">
         <option value="free">Free</option>

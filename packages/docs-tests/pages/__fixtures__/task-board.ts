@@ -44,12 +44,12 @@ const TaskBoard = component({
       class: 'board',
       children: [
         jsx('span', { children: `${derived.remaining} left` }),
-        jsx('form', { intent: intents.add, children: jsx('input', { name: 'title' }) }),
+        jsx('form', { onSubmit: intents.add, children: jsx('input', { name: 'title' }) }),
         jsx('ul', {
           children: state.tasks.map((task: any) =>
             jsx('li', {
               key: task.id,
-              children: jsx('button', { on: intents.toggle, 'data-input': JSON.stringify({ id: task.id }) }),
+              children: jsx('button', { onClick: intents.toggle, 'data-input': JSON.stringify({ id: task.id }) }),
             }),
           ),
         }),

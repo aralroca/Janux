@@ -31,8 +31,8 @@ const counter = component({
     jsx('div', {
       children: [
         jsx('output', { children: String(state.n) }),
-        jsx('button', { on: intents.inc, 'data-input': JSON.stringify({ by: 2 }) , children: '+2' }),
-        jsx('form', { intent: intents.inc, children: jsx('input', { name: 'by', value: '5' }) }),
+        jsx('button', { onClick: intents.inc, 'data-input': JSON.stringify({ by: 2 }) , children: '+2' }),
+        jsx('form', { onSubmit: intents.inc, children: jsx('input', { name: 'by', value: '5' }) }),
       ],
     }),
 });
@@ -59,7 +59,7 @@ describe('reference/client-tools.md', () => {
 });
 
 describe('reference/client-api.md — markers and the bridge', () => {
-  it('compiles on/intent props to data-jxa / data-jxform, with no per-element listeners', async () => {
+  it('compiles onClick/onSubmit props to data-jxa / data-jxform, with no per-element listeners', async () => {
     const { html } = await renderToString(jsx(counter as any, {}), {});
 
     expect(html).toContain('data-jxa="counter#default:inc"');

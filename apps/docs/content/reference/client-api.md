@@ -59,12 +59,13 @@ Called once in `src/client.ts`. It indexes islands and state snapshots, installs
 ## Markup conventions
 
 ```html
-<button on={intents.addItem} data-input='{"productId":"p1"}'>Add</button>
-<form intent={intents.send} reset><input name="text" /></form>
+<button onClick={intents.addItem} data-input='{"productId":"p1"}'>Add</button>
+<form onSubmit={intents.send} reset><input name="text" /></form>
 ```
 
-- `on={intents.x}` → delegated click; the element's `data-input` JSON becomes the input.
-- `<form intent={intents.x}>` → delegated submit; form fields become the input object.
+- `onClick={intents.x}` → delegated click; the element's `data-input` JSON becomes the input (`.with()` writes it for you).
+- `<form onSubmit={intents.x}>` → delegated submit; form fields become the input object.
+- Any other `on<Event>={intents.x}` → a delegated `data-jxe-<event>` marker; the listener for an event type installs only when a page actually uses it.
 - `reset` on that form restores its controls once the intent has the values — the chat-box case. State can't: a controlled write is skipped while the control has focus (no cursor jumps), and submitting with Enter never moves focus. It is the platform's `form.reset()`, so a field goes back to its rendered `value`: leave the field uncontrolled and that is the empty string.
 - Compiled to `data-jxa` / `data-jxform` / `data-jxreset` markers — no per-element listeners exist.
 
