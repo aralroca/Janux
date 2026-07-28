@@ -121,7 +121,7 @@ export const Cart = component({
               <span class="art">{ART[product.id] ?? '📦'}</span>
               <h3>{product.name}</h3>
               <p class="price">{(product.price / 100).toFixed(2)}€</p>
-              <button on={intents.addItem} data-input={JSON.stringify({ productId: product.id })}>
+              <button onClick={intents.addItem} data-input={JSON.stringify({ productId: product.id })}>
                 Add to cart
               </button>
             </article>
@@ -138,21 +138,21 @@ export const Cart = component({
               <span class="art">{ART[item.productId] ?? '📦'}</span>
               <span class="name">{item.name}</span>
               <span class="qty">
-                <button on={intents.changeQty} data-input={JSON.stringify({ productId: item.productId, delta: -1 })}>
+                <button onClick={intents.changeQty} data-input={JSON.stringify({ productId: item.productId, delta: -1 })}>
                   −
                 </button>
                 {item.qty}
-                <button on={intents.changeQty} data-input={JSON.stringify({ productId: item.productId, delta: 1 })}>
+                <button onClick={intents.changeQty} data-input={JSON.stringify({ productId: item.productId, delta: 1 })}>
                   +
                 </button>
               </span>
-              <button class="x" on={intents.removeItem} data-input={JSON.stringify({ productId: item.productId })}>
+              <button class="x" onClick={intents.removeItem} data-input={JSON.stringify({ productId: item.productId })}>
                 ✕
               </button>
             </li>
           ))}
         </ul>
-        <form class="coupon" intent={intents.applyCoupon}>
+        <form class="coupon" onSubmit={intents.applyCoupon}>
           <input name="code" placeholder="Coupon (try SAVE10)" />
           <button type="submit">Apply</button>
         </form>
@@ -169,7 +169,7 @@ export const Cart = component({
             Order confirmed — <a href={`/orders/${state.lastOrderId}`}>{state.lastOrderId}</a>
           </p>
         ) : null}
-        <button class="pay" on={intents.checkout}>
+        <button class="pay" onClick={intents.checkout}>
           Pay
         </button>
       </aside>

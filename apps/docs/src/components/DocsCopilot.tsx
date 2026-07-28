@@ -71,7 +71,7 @@ export const DocsCopilot = component({
   view: ({ state, intents }: any) => (
     <aside class={state.open ? 'copilot open' : 'copilot'}>
       {state.open ? null : (
-        <button class="copilot-toggle" on={intents.toggle}>
+        <button class="copilot-toggle" onClick={intents.toggle}>
           <span class="copilot-spark" aria-hidden="true">
             ✦
           </span>
@@ -87,7 +87,7 @@ export const DocsCopilot = component({
               </span>
               Ask AI
             </span>
-            <button class="copilot-close" type="button" aria-label="Close" on={intents.toggle}>
+            <button class="copilot-close" type="button" aria-label="Close" onClick={intents.toggle}>
               <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
                 <path
                   d="M4 4l8 8M12 4l-8 8"
@@ -111,10 +111,10 @@ export const DocsCopilot = component({
               </li>
             ) : null}
           </ol>
-          <form intent={intents.send}>
+          <form onSubmit={intents.send}>
             <input name="text" placeholder={state.ready ? 'Ask about Janux' : 'Starting…'} />
             {state.busy ? (
-              <button type="button" class="secondary" on={intents.stop}>
+              <button type="button" class="secondary" onClick={intents.stop}>
                 Stop
               </button>
             ) : (

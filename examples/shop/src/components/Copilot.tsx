@@ -135,11 +135,11 @@ export const Copilot = component({
       {state.messages.length === 0 ? (
         <div class="chips">
           {SUGGESTIONS.map((text) => (
-            <button key={text} class="chip" on={intents.send} data-input={JSON.stringify({ text })}>
+            <button key={text} class="chip" onClick={intents.send} data-input={JSON.stringify({ text })}>
               {text}
             </button>
           ))}
-          <button class="chip demo" on={intents.demo}>
+          <button class="chip demo" onClick={intents.demo}>
             ▶ Demo without API key
           </button>
         </div>
@@ -161,11 +161,11 @@ export const Copilot = component({
       {state.proposal ? (
         <div class="proposal">
           <p>The copilot wants to run “{state.proposal.tool}”.</p>
-          <button on={intents.approve}>Approve</button>
-          <button on={intents.reject}>Reject</button>
+          <button onClick={intents.approve}>Approve</button>
+          <button onClick={intents.reject}>Reject</button>
         </div>
       ) : null}
-      <form intent={intents.send}>
+      <form onSubmit={intents.send}>
         <input name="text" placeholder={state.busy ? 'Thinking…' : 'Ask the copilot'} />
         <button type="submit">Send</button>
       </form>

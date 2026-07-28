@@ -24,7 +24,7 @@ const counter = component({
   lifecycle: { detach: counterDetach },
   intents: { inc: intent({ run: ({ state }: any) => (state.n += 1) }) },
   view: ({ state, intents }: any) =>
-    jsx('div', { children: [jsx('output', { children: String(state.n) }), jsx('button', { on: intents.inc, children: '+' })] }),
+    jsx('div', { children: [jsx('output', { children: String(state.n) }), jsx('button', { onClick: intents.inc, children: '+' })] }),
 });
 
 const chat = component({

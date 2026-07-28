@@ -87,17 +87,39 @@ function styleText(value: Record<string, unknown>): string {
     .join(';');
 }
 
-/** Rich events: each becomes a delegated `data-jxe-*` marker (resumability intact). */
-export const EVENT_ATTRS: Record<string, string> = {
-  onInput: 'data-jxe-input',
-  onChange: 'data-jxe-change',
-  onKeyDown: 'data-jxe-keydown',
-  onKeyUp: 'data-jxe-keyup',
-  onFocus: 'data-jxe-focusin',
-  onBlur: 'data-jxe-focusout',
-  onPointerDown: 'data-jxe-pointerdown',
-  onPointerUp: 'data-jxe-pointerup',
+/** A JSX event prop: `on` + an uppercase letter (so `once`/`online` are not events). */
+const EVENT_PROP = /^on[A-Z]/;
+/** Anything the browser could read back as an inline handler attribute (`onclick="…"`). */
+const ON_PREFIX = /^on/i;
+/**
+ * JSX prop → DOM event where `slice(2).toLowerCase()` is not enough. Both the
+ * React (`onDoubleClick`) and the Preact/Brisa (`onDblClick`) spelling land on
+ * `dblclick`; focus/blur delegate via their bubbling variants.
+ */
+const EVENT_EXCEPTIONS: Record<string, string> = {
+  doubleclick: 'dblclick',
+  focus: 'focusin',
+  blur: 'focusout',
 };
+/** Derived names must be safe inside an attribute name — anything else is refused. */
+const EVENT_NAME = /^[a-z]+$/;
+
+/** `onDoubleClick` → `dblclick`; undefined when the prop is not an event binding. */
+export function eventNameFor(prop: string): string | undefined {
+  if (!EVENT_PROP.test(prop)) return undefined;
+  const raw = prop.slice(2).toLowerCase();
+  const name = EVENT_EXCEPTIONS[raw] ?? raw;
+
+  return EVENT_NAME.test(name) ? name : undefined;
+}
+
+/** click and submit keep their v0 markers; every other event gets a `data-jxe-*` one. */
+export function markerAttrFor(event: string): string {
+  if (event === 'click') return 'data-jxa';
+  if (event === 'submit') return 'data-jxform';
+
+  return `data-jxe-${event}`;
+}
 
 /** Attributes whose value the browser resolves as a URL, so its scheme executes. */
 const URL_ATTRS = new Set(['href', 'src', 'action', 'formaction', 'poster', 'cite', 'data', 'ping', 'background']);
@@ -154,16 +176,33 @@ function isBlockedUrl(name: string, value: unknown): value is string {
   return typeof value === 'string' && URL_ATTRS.has(name.toLowerCase()) && isExecutableUrl(value);
 }
 
-/** Maps a JSX prop to an HTML attribute pair; `on`/`intent`/`onX` become data markers for delegation. */
+/** Maps a JSX prop to an HTML attribute pair; `onX={intents.y}` becomes a data marker for delegation. */
 function propToAttr(name: string, value: unknown): [string, unknown] | undefined {
   if (name === 'children' || name === 'key' || name === 'dangerHTML') return undefined;
-  if (name === 'on') return ['data-jxa', intentMarker(value)];
-  if (name === 'intent') return ['data-jxform', intentMarker(value)];
-  // `<form intent reset>`: the runtime empties the form once the intent has the
-  // values, which state can't do — a controlled write is skipped while the
+  if (name === 'on' || name === 'intent') {
+    if ((value as any)?.$intent) {
+      console.warn(`Janux: "${name}" was removed — bind the event by name instead: onClick, onSubmit, …`);
+    }
+
+    return undefined;
+  }
+  // `<form onSubmit reset>`: the runtime empties the form once the intent has
+  // the values, which state can't do — a controlled write is skipped while the
   // control is focused, and submitting with Enter never moves focus.
   if (name === 'reset') return value === true ? ['data-jxreset', ''] : undefined;
-  if (EVENT_ATTRS[name]) return [EVENT_ATTRS[name], intentMarker(value)];
+  const event = eventNameFor(name);
+
+  if (event && (value as any)?.$intent) return [markerAttrFor(event), intentMarker(value)];
+  // The whole `on*` namespace is reserved: what isn't a bound intent must not
+  // reach the markup, where the browser would read it back as an inline
+  // handler attribute (`onclick="…"` executes its value).
+  if (ON_PREFIX.test(name)) {
+    if (typeof value === 'function') {
+      console.warn(`Janux: "${name}" expects a named intent — a plain function has no name, schema or guard, so it was dropped`);
+    }
+
+    return undefined;
+  }
   if (name === 'class' || name === 'className') return ['class', value];
   // An empty style object must leave no attribute behind, so `undefined` here.
   if (name === 'style' && isStyleObject(value)) return ['style', styleText(value) || undefined];

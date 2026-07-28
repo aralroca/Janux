@@ -82,7 +82,7 @@ const ask = component({
     send: intent({ input: schema({ text: str() }), run: ({ state, input }) => (state.sent = input.text) }),
   },
   view: ({ intents }: any) =>
-    jsx('form', { intent: intents.send, reset: true, children: jsx('input', { name: 'text' }) }),
+    jsx('form', { onSubmit: intents.send, reset: true, children: jsx('input', { name: 'text' }) }),
 });
 
 describe('rich delegated events', () => {

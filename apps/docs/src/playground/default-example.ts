@@ -32,10 +32,10 @@ export const Counter = component({
     <section class="flex min-h-screen flex-col items-center justify-center gap-6 font-sans">
       <h1 class="text-6xl font-extrabold text-indigo-950">{state.count}</h1>
       <div class="flex gap-3">
-        <button on={intents.dec} class="rounded-xl bg-slate-500 px-7 py-2.5 text-xl font-bold text-white shadow-lg hover:bg-slate-600">
+        <button onClick={intents.dec} class="rounded-xl bg-slate-500 px-7 py-2.5 text-xl font-bold text-white shadow-lg hover:bg-slate-600">
           −1
         </button>
-        <button on={intents.inc} class="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-7 py-2.5 text-xl font-bold text-white shadow-lg hover:opacity-90">
+        <button onClick={intents.inc} class="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-7 py-2.5 text-xl font-bold text-white shadow-lg hover:opacity-90">
           +1
         </button>
       </div>

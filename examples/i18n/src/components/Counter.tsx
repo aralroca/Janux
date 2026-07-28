@@ -17,7 +17,7 @@ export const Counter = component({
       <div class="counter">
         <output>{t('counter.label', { count: state.count })}</output>
         {state.count >= 5 && <p class="milestone">{t('counter.milestone')}</p>}
-        <button on={intents.add}>{t('counter.add')}</button>
+        <button onClick={intents.add}>{t('counter.add')}</button>
       </div>
     );
   },

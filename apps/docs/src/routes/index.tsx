@@ -53,12 +53,12 @@ export const Counter = component({
     <section class="flex flex-col items-center gap-5 pt-16 font-sans">
       <h1 class="text-6xl font-extrabold tracking-tight">{state.count}</h1>
       <div class="flex gap-3">
-        <button on={intents.inc}
+        <button onClick={intents.inc}
           class="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white
                  shadow-lg shadow-blue-600/30 hover:bg-blue-700">
           +1
         </button>
-        <button on={intents.reset}
+        <button onClick={intents.reset}
           class="rounded-xl border border-neutral-300 px-6 py-2.5
                  font-semibold text-neutral-500 hover:border-neutral-400">
           Reset

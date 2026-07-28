@@ -26,7 +26,7 @@ const counter = component({
     jsx('div', {
       children: [
         jsx('output', { children: `n=${state.n}` }),
-        jsx('button', { on: intents.inc, children: '+1' }),
+        jsx('button', { onClick: intents.inc, children: '+1' }),
       ],
     }),
 });

@@ -31,7 +31,7 @@ export const Toasts = component({
       {state.items.map((toast: any) => (
         <div key={toast.id} class="toast">
           <span>{toast.message}</span>
-          <button on={intents.dismiss} data-input={JSON.stringify({ id: toast.id })}>
+          <button onClick={intents.dismiss} data-input={JSON.stringify({ id: toast.id })}>
             ✕
           </button>
         </div>

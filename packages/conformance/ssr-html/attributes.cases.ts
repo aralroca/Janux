@@ -128,10 +128,9 @@ export const ATTRIBUTE_CASES: AttrRow[] = [
   { id: 'attr-unicode-name-is-refused', src: 'janux', props: { ñ: 'v' }, expected: '' },
 
   // ── intents become delegation markers ───────────────────────────────────────
-  { id: 'attr-on-intent-becomes-jxa-marker', src: 'janux', props: { on: intentOf('cart', 'add') }, expected: ' data-jxa="cart:add"' },
-  { id: 'attr-on-intent-with-key-includes-the-key', src: 'janux', props: { on: intentOf('cart', 'add', 'main') }, expected: ' data-jxa="cart#main:add"' },
-  { id: 'attr-form-intent-becomes-jxform-marker', src: 'janux', props: { intent: intentOf('cart', 'checkout') }, expected: ' data-jxform="cart:checkout"' },
-  { id: 'attr-on-without-intent-metadata-is-omitted', src: 'janux', props: { on: () => {} }, expected: '' },
+  { id: 'attr-onclick-intent-becomes-jxa-marker', src: 'janux', props: { onClick: intentOf('cart', 'add') }, expected: ' data-jxa="cart:add"' },
+  { id: 'attr-onclick-intent-with-key-includes-the-key', src: 'janux', props: { onClick: intentOf('cart', 'add', 'main') }, expected: ' data-jxa="cart#main:add"' },
+  { id: 'attr-onsubmit-intent-becomes-jxform-marker', src: 'janux', props: { onSubmit: intentOf('cart', 'checkout') }, expected: ' data-jxform="cart:checkout"' },
   { id: 'attr-on-input-becomes-its-event-marker', src: 'janux', props: { onInput: intentOf('form', 'typed') }, expected: ' data-jxe-input="form:typed"' },
   { id: 'attr-on-change-becomes-its-event-marker', src: 'janux', props: { onChange: intentOf('form', 'picked') }, expected: ' data-jxe-change="form:picked"' },
   { id: 'attr-on-keydown-becomes-its-event-marker', src: 'janux', props: { onKeyDown: intentOf('form', 'key') }, expected: ' data-jxe-keydown="form:key"' },
@@ -140,7 +139,19 @@ export const ATTRIBUTE_CASES: AttrRow[] = [
   { id: 'attr-on-blur-maps-to-focusout', src: 'janux', props: { onBlur: intentOf('form', 'blur') }, expected: ' data-jxe-focusout="form:blur"' },
   { id: 'attr-on-pointerdown-becomes-its-event-marker', src: 'janux', props: { onPointerDown: intentOf('c', 'down') }, expected: ' data-jxe-pointerdown="c:down"' },
   { id: 'attr-on-pointerup-becomes-its-event-marker', src: 'janux', props: { onPointerUp: intentOf('c', 'up') }, expected: ' data-jxe-pointerup="c:up"' },
-  { id: 'attr-event-marker-escapes-a-hostile-component-name', src: 'janux', props: { on: intentOf('c"x', 'add') }, expected: ' data-jxa="c&quot;x:add"' },
+  { id: 'attr-on-doubleclick-maps-to-dblclick', src: 'janux', props: { onDoubleClick: intentOf('list', 'open') }, expected: ' data-jxe-dblclick="list:open"' },
+  { id: 'attr-on-dblclick-also-maps-to-dblclick', src: 'preact:props#onDblClick', props: { onDblClick: intentOf('list', 'open') }, expected: ' data-jxe-dblclick="list:open"' },
+  { id: 'attr-on-pointermove-becomes-its-event-marker', src: 'janux', props: { onPointerMove: intentOf('c', 'track') }, expected: ' data-jxe-pointermove="c:track"' },
+  { id: 'attr-on-mouseenter-becomes-its-event-marker', src: 'janux', props: { onMouseEnter: intentOf('c', 'hover') }, expected: ' data-jxe-mouseenter="c:hover"' },
+  { id: 'attr-event-marker-escapes-a-hostile-component-name', src: 'janux', props: { onClick: intentOf('c"x', 'add') }, expected: ' data-jxa="c&quot;x:add"' },
+
+  // ── the removed v0 binding props and the reserved on* namespace ─────────────
+  { id: 'attr-removed-on-prop-is-dropped', src: 'janux', props: { on: intentOf('cart', 'add') }, expected: '' },
+  { id: 'attr-removed-intent-prop-is-dropped', src: 'janux', props: { intent: intentOf('cart', 'checkout') }, expected: '' },
+  { id: 'attr-on-without-intent-metadata-is-omitted', src: 'janux', props: { on: () => {} }, expected: '' },
+  { id: 'attr-inline-handler-string-is-refused', src: 'janux', props: { onclick: 'alert(1)' }, expected: '' },
+  { id: 'attr-event-prop-string-value-is-refused', src: 'janux', props: { onClick: 'alert(1)' }, expected: '' },
+  { id: 'attr-on-prefixed-name-never-reaches-the-markup', src: 'janux', props: { onLine: 'x' }, expected: '' },
 
   // ── ordering and multiplicity ───────────────────────────────────────────────
   { id: 'attr-order-follows-prop-insertion-order', src: 'janux', props: { b: '1', a: '2' }, expected: ' b="1" a="2"' },
