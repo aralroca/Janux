@@ -147,6 +147,85 @@ describe('reconcile', () => {
     expect(p.getAttribute('data-witness')).toBe('kept');
   });
 
+  it('skips attribute work when a fresh JSX node carries identical prop values', () => {
+    const root = document.createElement('div');
+
+    render(root, [jsx('p', { class: 'x', title: 't', children: 'static' })]);
+    const p = root.firstElementChild!;
+
+    p.setAttribute('data-witness', 'kept'); // an attr sync would remove it
+    render(root, [jsx('p', { class: 'x', title: 't', children: 'static' })]);
+    expect(root.firstElementChild).toBe(p);
+    expect(p.getAttribute('data-witness')).toBe('kept');
+  });
+
+  it('treats equivalent bound intents as unchanged props', () => {
+    const root = document.createElement('div');
+    const invoke = () => Promise.resolve();
+    const bound = (input: Record<string, unknown>) =>
+      Object.assign(() => invoke(), {
+        $intent: { component: 'bench', name: 'select' },
+        $input: input,
+      });
+
+    render(root, jsx('a', { onClick: bound({ id: 7 }), children: 'row' }));
+    const a = root.firstElementChild!;
+
+    a.setAttribute('data-witness', 'kept');
+    render(root, jsx('a', { onClick: bound({ id: 7 }), children: 'row' }));
+    expect(a.getAttribute('data-witness')).toBe('kept');
+
+    render(root, jsx('a', { onClick: bound({ id: 8 }), children: 'row' }));
+    expect(a.hasAttribute('data-witness')).toBe(false);
+  });
+
+  it('still syncs value controls when props are value-equal', () => {
+    const root = document.createElement('div');
+
+    render(root, jsx('input', { value: 'state' }));
+    const input = root.firstElementChild as HTMLInputElement;
+
+    input.value = 'drifted'; // unfocused DOM drift, state unchanged
+    render(root, jsx('input', { value: 'state' }));
+    expect(input.value).toBe('state');
+  });
+
+  it('moves a single displaced keyed row with one insertion, not a cascade', () => {
+    const root = document.createElement('ul');
+    const rows = (order: number[]) => order.map((id) => jsx('li', { children: `r${id}` }, id));
+
+    render(root, rows([1, 2, 3, 4, 5]));
+    const inserts: string[] = [];
+    const original = root.insertBefore.bind(root);
+
+    (root as any).insertBefore = (node: Node, ref: Node | null) => {
+      inserts.push(node.textContent ?? '?');
+
+      return original(node, ref);
+    };
+    render(root, rows([1, 5, 2, 3, 4]));
+    expect([...root.children].map((el) => el.textContent)).toEqual(['r1', 'r5', 'r2', 'r3', 'r4']);
+    expect(inserts).toEqual(['r5']);
+  });
+
+  it('rotates a keyed list with one move, not a cascade (LIS ordering)', () => {
+    const root = document.createElement('ul');
+    const rows = (order: number[]) => order.map((id) => jsx('li', { children: `r${id}` }, id));
+
+    render(root, rows([1, 2, 3, 4, 5]));
+    const inserts: string[] = [];
+    const original = root.insertBefore.bind(root);
+
+    (root as any).insertBefore = (node: Node, ref: Node | null) => {
+      inserts.push(node.textContent ?? '?');
+
+      return original(node, ref);
+    };
+    render(root, rows([2, 3, 4, 5, 1]));
+    expect([...root.children].map((el) => el.textContent)).toEqual(['r2', 'r3', 'r4', 'r5', 'r1']);
+    expect(inserts).toEqual(['r1']);
+  });
+
   it('applies dangerHTML only when it changed', () => {
     const root = document.createElement('div');
 

@@ -58,6 +58,40 @@ function isBoundarySlot(slot: Slot): boolean {
 /** The JSX node most recently reconciled into a live element — identical node ⇒ nothing to do. */
 const prevJsx = new WeakMap<Element, JanuxNode>();
 
+/**
+ * Value-equal props on a fresh JSX node ⇒ the serialized attributes cannot
+ * have changed, so the whole attr diff (serialize + DOM reads) is skipped.
+ * Children are excluded (recursion handles them); value controls still get
+ * their property sync — DOM value drift with unchanged state must heal.
+ */
+function sameProps(prev: Record<string, unknown> | undefined, next: Record<string, unknown>): boolean {
+  if (prev === undefined) return false;
+  if (prev === next) return true;
+  const prevKeys = Object.keys(prev);
+  const nextKeys = Object.keys(next);
+
+  if (prevKeys.length !== nextKeys.length) return false;
+
+  return nextKeys.every((key) => key === 'children' || sameValue(prev[key], next[key]));
+}
+
+/**
+ * `intents.foo.with(input)` builds a FRESH bound ref every render, so identity
+ * alone would re-serialize every row's event markers each pass. Two bound refs
+ * are the same prop when they name the same intent with value-equal input —
+ * which is exactly when their serialized marker + data-input are identical.
+ */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  const ia = (a as any)?.$intent;
+  const ib = (b as any)?.$intent;
+
+  if (!ia || !ib) return false;
+  if (ia.component !== ib.component || ia.name !== ib.name || ia.key !== ib.key) return false;
+
+  return sameProps(((a as any).$input ?? {}) as Record<string, unknown>, ((b as any).$input ?? {}) as Record<string, unknown>);
+}
+
 type ValueControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
 function isValueControl(el: Element): el is ValueControl {
@@ -111,13 +145,17 @@ function syncAttrs(el: Element, props: Record<string, unknown>): void {
   runtimeClasses.forEach((name) => el.classList.add(name));
 }
 
+const VALUE_CONTROL_TAGS = new Set(['input', 'textarea', 'select']);
+
 /** Reconciles a reused element in place: attrs, control properties, children. */
 function syncElement(el: Element, node: JanuxNode, pass: RenderPass, svg: boolean): void {
-  if (prevJsx.get(el) === node) return;
+  const prev = prevJsx.get(el);
+
+  if (prev === node) return;
   prevJsx.set(el, node);
   if (node.$k !== undefined) setNodeKey(el, node.$k);
-  syncAttrs(el, node.$p);
-  syncControl(el, node.$p);
+  if (!sameProps(prev?.$p, node.$p)) syncAttrs(el, node.$p);
+  if (VALUE_CONTROL_TAGS.has(node.$t as string)) syncControl(el, node.$p);
   if (typeof node.$p.dangerHTML === 'string') {
     if (el.innerHTML !== node.$p.dangerHTML) el.innerHTML = node.$p.dangerHTML;
 
@@ -149,7 +187,7 @@ function boundaryTarget(slot: JanuxNode, hosts: Map<string, Element>, pass: Rend
 
 function elementTarget(slot: JanuxNode, match: Match, index: number, pass: RenderPass, svg: boolean): Node {
   const key = slot.$k;
-  const survivor = key === undefined ? undefined : match.byKey.get(key);
+  const survivor = key === undefined ? undefined : match.byKey?.get(key);
 
   if (survivor && (survivor as Element).tagName.toLowerCase() === (slot.$t as string).toLowerCase()) {
     syncElement(survivor as Element, slot, pass, svg);
@@ -157,8 +195,8 @@ function elementTarget(slot: JanuxNode, match: Match, index: number, pass: Rende
     return survivor;
   }
   const fromKid = match.fromKids[index];
-  const fromKey = fromKid === undefined ? undefined : nodeKey(fromKid);
-  const claimedElsewhere = key === undefined ? fromKey !== undefined && match.toKeys.has(fromKey) : fromKey !== undefined;
+  const fromKey = fromKid === undefined || match.byKey === null ? undefined : nodeKey(fromKid);
+  const claimedElsewhere = key === undefined ? fromKey !== undefined && match.toKeys?.has(fromKey) === true : fromKey !== undefined;
   const reusable =
     fromKid !== undefined &&
     !claimedElsewhere &&
@@ -192,22 +230,32 @@ function textTarget(slot: string, match: Match, index: number): Node {
 
 interface Match {
   fromKids: ChildNode[];
-  byKey: Map<string | number, ChildNode>;
-  toKeys: Set<string | number>;
+  /** Built only when a live child carries a render key — the common unkeyed row pays nothing. */
+  byKey: Map<string | number, ChildNode> | null;
+  /** Built only when an incoming slot carries a key. */
+  toKeys: Set<string | number> | null;
 }
 
+/** One pass over the live children and one over the slots; the key machinery is lazy. */
 function matchState(root: Element, slots: Slot[]): Match {
-  const fromKids = [...root.childNodes];
-  const keyed = fromKids.filter((kid) => !isBoundaryHost(kid) && nodeKey(kid) !== undefined);
-  const slotKeys = slots
-    .map((slot) => (typeof slot === 'string' ? undefined : slot.$k))
-    .filter((key): key is string | number => key !== undefined);
+  const fromKids: ChildNode[] = [];
+  let byKey: Match['byKey'] = null;
 
-  return {
-    fromKids,
-    byKey: new Map(keyed.map((kid) => [nodeKey(kid)!, kid])),
-    toKeys: new Set(slotKeys),
-  };
+  for (let kid = root.firstChild; kid !== null; kid = kid.nextSibling) {
+    fromKids.push(kid);
+    if (kid.nodeType === Node.ELEMENT_NODE && !isBoundaryHost(kid)) {
+      const key = nodeKey(kid);
+
+      if (key !== undefined) (byKey ??= new Map()).set(key, kid);
+    }
+  }
+  let toKeys: Match['toKeys'] = null;
+
+  slots.forEach((slot) => {
+    if (typeof slot !== 'string' && slot.$k !== undefined) (toKeys ??= new Set()).add(slot.$k);
+  });
+
+  return { fromKids, byKey, toKeys };
 }
 
 function reconcileChildren(root: Element, children: unknown, pass: RenderPass, svg = false): void {
@@ -225,10 +273,75 @@ function reconcileChildren(root: Element, children: unknown, pass: RenderPass, s
     return elementTarget(slot, match, index, pass, svg);
   });
 
-  targets.forEach((node, index) => {
-    if (root.childNodes[index] !== node) root.insertBefore(node, root.childNodes[index] ?? null);
+  orderChildren(root, targets, match.fromKids, match.byKey !== null || match.toKeys !== null);
+}
+
+/**
+ * Longest-increasing-subsequence ordering (the keyed-list technique Ripple,
+ * Solid and Vue's reconcilers share): survivors whose relative order already
+ * matches stay put; everything else is inserted once, walking end→start so
+ * each insertion's anchor is already final. A swap moves 2 nodes, a rotation
+ * moves 1 — the positional loop this replaces cascaded ~n insertions for both.
+ */
+function orderChildren(root: Element, targets: Node[], fromKids: ChildNode[], keyed: boolean): void {
+  // Unkeyed children resolve positionally, so the naive index walk is already
+  // minimal — and the common leaf case (a row's cells) pays no Set/Map/LIS.
+  if (!keyed) {
+    targets.forEach((node, index) => {
+      if (root.childNodes[index] !== node) root.insertBefore(node, root.childNodes[index] ?? null);
+    });
+    while (root.childNodes.length > targets.length) root.removeChild(root.lastChild!);
+
+    return;
+  }
+  const targetSet = new Set(targets);
+
+  fromKids.forEach((kid) => {
+    if (!targetSet.has(kid)) root.removeChild(kid);
   });
-  while (root.childNodes.length > targets.length) root.removeChild(root.lastChild!);
+  const position = new Map(fromKids.map((kid, index) => [kid as Node, index]));
+  const keep = lisIndices(targets.map((node) => position.get(node) ?? -1));
+  let anchor: Node | null = null;
+
+  for (let index = targets.length - 1; index >= 0; index -= 1) {
+    const node = targets[index]!;
+
+    if (keep.has(index)) anchor = node;
+    else {
+      root.insertBefore(node, anchor);
+      anchor = node;
+    }
+  }
+}
+
+/** Indices forming a longest strictly-increasing subsequence of `seq` (-1 entries never qualify). */
+function lisIndices(seq: number[]): Set<number> {
+  const tailIndices: number[] = [];
+  const prevIndex = new Array<number>(seq.length).fill(-1);
+
+  seq.forEach((value, index) => {
+    if (value < 0) return;
+    let lo = 0;
+    let hi = tailIndices.length;
+
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+
+      if (seq[tailIndices[mid]!]! < value) lo = mid + 1;
+      else hi = mid;
+    }
+    if (lo > 0) prevIndex[index] = tailIndices[lo - 1]!;
+    tailIndices[lo] = index;
+  });
+  const keep = new Set<number>();
+  let cursor = tailIndices.length > 0 ? tailIndices[tailIndices.length - 1]! : -1;
+
+  while (cursor >= 0) {
+    keep.add(cursor);
+    cursor = prevIndex[cursor]!;
+  }
+
+  return keep;
 }
 
 /** Patches `root`'s children in place to match the JSX `children` of an island view. */
