@@ -1,9 +1,10 @@
 import { Fragment, type JanuxNode } from '../jsx-runtime';
 import { attrEntries } from '../render/html';
 import { isForeignDef } from '../interop';
-import { toDomNodes, type RenderPass } from './dom';
+import { isComponentDef, toDomNodes, type RenderPass } from './dom';
 import { ensureListenerForAttr } from './events';
-import { nodeKey, setNodeKey } from './keys';
+import { claimedElsewhere, nodeKey, setNodeKey } from './keys';
+import { isIsland, isValueControl, keepRuntimeClasses, VALUE_CONTROL_TAGS } from './morph';
 
 /**
  * JSX-against-DOM reconciliation for the island render loop. The previous
@@ -18,10 +19,6 @@ import { nodeKey, setNodeKey } from './keys';
  */
 
 type Slot = JanuxNode | string;
-
-function isComponentDef(type: unknown): boolean {
-  return typeof type === 'object' && type !== null && 'kind' in (type as any);
-}
 
 /** Flattens a view tree into element/island/foreign/text slots, invoking plain function components. */
 function normalize(node: unknown, out: Slot[]): Slot[] {
@@ -43,12 +40,6 @@ function normalize(node: unknown, out: Slot[]): Slot[] {
   out.push(jsxNode);
 
   return out;
-}
-
-const BOUNDARY_TAGS = new Set(['JANUX-ISLAND', 'JANUX-FOREIGN']);
-
-function isBoundaryHost(node: Node): node is Element {
-  return node.nodeType === Node.ELEMENT_NODE && BOUNDARY_TAGS.has((node as Element).tagName);
 }
 
 function isBoundarySlot(slot: Slot): boolean {
@@ -89,17 +80,13 @@ function sameValue(a: unknown, b: unknown): boolean {
   if (!ia || !ib) return false;
   if (ia.component !== ib.component || ia.name !== ib.name || ia.key !== ib.key) return false;
 
-  return sameProps(((a as any).$input ?? {}) as Record<string, unknown>, ((b as any).$input ?? {}) as Record<string, unknown>);
-}
+  const inputA = (a as any).$input as Record<string, unknown> | undefined;
+  const inputB = (b as any).$input as Record<string, unknown> | undefined;
 
-type ValueControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+  // The common unbound ref (`onClick={intents.run}`) carries no input at all.
+  if (inputA === undefined && inputB === undefined) return true;
 
-function isValueControl(el: Element): el is ValueControl {
-  return (
-    el instanceof HTMLInputElement ||
-    el instanceof HTMLTextAreaElement ||
-    el instanceof HTMLSelectElement
-  );
+  return sameProps(inputA ?? {}, inputB ?? {});
 }
 
 /** Controlled inputs: state → DOM property writes, never touching the focused control. */
@@ -130,22 +117,17 @@ function syncAttrs(el: Element, props: Record<string, unknown>): void {
     if (value === false || value === null || value === undefined) return;
     desired.set(name, value === true ? '' : String(value));
   });
-  const runtimeClasses = [...el.classList].filter((name) => name.startsWith('janux-'));
-
-  [...el.getAttributeNames()]
-    .filter((name) => !desired.has(name))
-    .forEach((name) => el.removeAttribute(name));
-  desired.forEach((value, name) => {
-    // A client render can bind an event the page had never used before this pass.
-    ensureListenerForAttr(name);
-    if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+  keepRuntimeClasses(el, () => {
+    el.getAttributeNames()
+      .filter((name) => !desired.has(name))
+      .forEach((name) => el.removeAttribute(name));
+    desired.forEach((value, name) => {
+      // A client render can bind an event the page had never used before this pass.
+      ensureListenerForAttr(name);
+      if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+    });
   });
-  // `janux-*` classes belong to the runtime (e.g. the agent glow) — views
-  // never render them, so re-renders must not wipe them.
-  runtimeClasses.forEach((name) => el.classList.add(name));
 }
-
-const VALUE_CONTROL_TAGS = new Set(['input', 'textarea', 'select']);
 
 /** Reconciles a reused element in place: attrs, control properties, children. */
 function syncElement(el: Element, node: JanuxNode, pass: RenderPass, svg: boolean): void {
@@ -168,15 +150,15 @@ function syncElement(el: Element, node: JanuxNode, pass: RenderPass, svg: boolea
 }
 
 /** A boundary slot reuses a live host with the same id; the placeholder path assigns ids in pass order. */
-function boundaryTarget(slot: JanuxNode, hosts: Map<string, Element>, pass: RenderPass, svg: boolean): Node {
+function boundaryTarget(slot: JanuxNode, hosts: Map<string, Element> | null, pass: RenderPass, svg: boolean): Node {
   // `toDomNodes` runs the id/key bookkeeping (pass.seq/used + pending lists)
   // for islands and foreigns — identical for a reused host and a fresh one.
   const placeholder = toDomNodes(slot, pass, svg)[0] as Element;
-  const host = hosts.get(placeholder.getAttribute('data-jx')!);
+  const host = hosts?.get(placeholder.getAttribute('data-jx')!);
 
   if (!host) return placeholder;
   // The host's own runtime owns its interior; only the host attrs sync.
-  [...placeholder.getAttributeNames()].forEach((name) => {
+  placeholder.getAttributeNames().forEach((name) => {
     if (host.getAttribute(name) !== placeholder.getAttribute(name)) {
       host.setAttribute(name, placeholder.getAttribute(name)!);
     }
@@ -189,20 +171,21 @@ function elementTarget(slot: JanuxNode, match: Match, index: number, pass: Rende
   const key = slot.$k;
   const survivor = key === undefined ? undefined : match.byKey?.get(key);
 
-  if (survivor && (survivor as Element).tagName.toLowerCase() === (slot.$t as string).toLowerCase()) {
+  // `localName` is already lowercase for HTML and preserves case for SVG
+  // (`foreignObject`), matching JSX intrinsics without per-slot allocations.
+  if (survivor && (survivor as Element).localName === slot.$t) {
     syncElement(survivor as Element, slot, pass, svg);
 
     return survivor;
   }
   const fromKid = match.fromKids[index];
   const fromKey = fromKid === undefined || match.byKey === null ? undefined : nodeKey(fromKid);
-  const claimedElsewhere = key === undefined ? fromKey !== undefined && match.toKeys?.has(fromKey) === true : fromKey !== undefined;
   const reusable =
     fromKid !== undefined &&
-    !claimedElsewhere &&
-    !isBoundaryHost(fromKid) &&
+    !claimedElsewhere(key, fromKey, match.toKeys) &&
+    !isIsland(fromKid) &&
     fromKid.nodeType === Node.ELEMENT_NODE &&
-    (fromKid as Element).tagName.toLowerCase() === (slot.$t as string).toLowerCase();
+    (fromKid as Element).localName === slot.$t;
 
   if (reusable) {
     syncElement(fromKid as Element, slot, pass, svg);
@@ -234,20 +217,26 @@ interface Match {
   byKey: Map<string | number, ChildNode> | null;
   /** Built only when an incoming slot carries a key. */
   toKeys: Set<string | number> | null;
+  /** Live boundary hosts by island id — built only when one exists among the children. */
+  hosts: Map<string, Element> | null;
 }
 
-/** One pass over the live children and one over the slots; the key machinery is lazy. */
+/** One pass over the live children and one over the slots; the key/host machinery is lazy. */
 function matchState(root: Element, slots: Slot[]): Match {
   const fromKids: ChildNode[] = [];
   let byKey: Match['byKey'] = null;
+  let hosts: Match['hosts'] = null;
 
   for (let kid = root.firstChild; kid !== null; kid = kid.nextSibling) {
     fromKids.push(kid);
-    if (kid.nodeType === Node.ELEMENT_NODE && !isBoundaryHost(kid)) {
-      const key = nodeKey(kid);
-
-      if (key !== undefined) (byKey ??= new Map()).set(key, kid);
+    if (kid.nodeType !== Node.ELEMENT_NODE) continue;
+    if (isIsland(kid)) {
+      (hosts ??= new Map()).set((kid as Element).getAttribute('data-jx')!, kid as Element);
+      continue;
     }
+    const key = nodeKey(kid);
+
+    if (key !== undefined) (byKey ??= new Map()).set(key, kid);
   }
   let toKeys: Match['toKeys'] = null;
 
@@ -255,20 +244,15 @@ function matchState(root: Element, slots: Slot[]): Match {
     if (typeof slot !== 'string' && slot.$k !== undefined) (toKeys ??= new Set()).add(slot.$k);
   });
 
-  return { fromKids, byKey, toKeys };
+  return { fromKids, byKey, toKeys, hosts };
 }
 
 function reconcileChildren(root: Element, children: unknown, pass: RenderPass, svg = false): void {
   const slots = normalize(children, []);
   const match = matchState(root, slots);
-  const hosts = new Map(
-    match.fromKids
-      .filter(isBoundaryHost)
-      .map((host) => [host.getAttribute('data-jx')!, host] as const),
-  );
   const targets = slots.map((slot, index) => {
     if (typeof slot === 'string') return textTarget(slot, match, index);
-    if (isBoundarySlot(slot)) return boundaryTarget(slot, hosts, pass, svg);
+    if (isBoundarySlot(slot)) return boundaryTarget(slot, match.hosts, pass, svg);
 
     return elementTarget(slot, match, index, pass, svg);
   });

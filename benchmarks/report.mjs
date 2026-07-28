@@ -6,12 +6,13 @@
 //   node benchmarks/report.mjs                # all results, markdown to stdout
 //   node benchmarks/report.mjs js-framework   # selected suites
 import fs from 'node:fs';
+import { scoreOf } from './lib/stats.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RESULTS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'results');
 
-const scoreOf = (stat) => stat?.score ?? stat?.median;
+
 const isBytes = (op) => /_(raw|gzip|brotli)$/.test(op);
 const isCount = (op) => /^(nodes|elements|text|comments|empty_text|whitespace_text)_/.test(op);
 

@@ -28,7 +28,7 @@ export interface RenderPass {
   foreigns: PendingForeign[];
 }
 
-function isComponentDef(type: unknown): type is ComponentDef {
+export function isComponentDef(type: unknown): type is ComponentDef {
   return typeof type === 'object' && type !== null && 'kind' in (type as any);
 }
 

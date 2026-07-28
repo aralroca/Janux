@@ -3,13 +3,11 @@
 //
 // Part 1 — news-page throughput: reuses benchmarks/news's production-build
 // methodology (vite build the SSR bundle, import the built entry-server, time
-// renderApp()) for seven targets — Octane, React, Preact, Solid, Svelte,
-// Ripple 'ripple/server' render (bundled in by its app's ssr.noExternal, so
-// the built entry is self-contained), and Vue 3.6 vue/server-renderer
-// renderToString (a vapor SFC compiles to the regular ssrRender codegen on
-// the server — vapor has no server codegen in 3.6; the vapor part is
-// client-side adoption, which this Node-only suite never runs) — at 50 and
-// 500 article cards. benchmarks/news is NEVER modified beyond its own
+// renderApp()) for six targets — Janux, React, Preact, Solid, Svelte, and
+// Vue 3.6 vue/server-renderer renderToString (a vapor SFC compiles to the
+// regular ssrRender codegen on the server — vapor has no server codegen in
+// 3.6; the vapor part is client-side adoption, which this Node-only suite
+// never runs) — at 50 and 500 article cards. benchmarks/news is NEVER modified beyond its own
 // gen.mjs re-writing src/data.js (invoked as a child process, deterministic,
 // restored to the tracked count-50 dataset afterwards); every build lands in
 // THIS suite's dist/ via an outDir override, so news's own dist is untouched.

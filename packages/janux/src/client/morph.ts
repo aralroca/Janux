@@ -1,29 +1,40 @@
-import { nodeKey, setNodeKey } from './keys';
+import { claimedElsewhere, nodeKey, setNodeKey } from './keys';
 
-function syncAttrs(from: Element, to: Element): void {
-  const runtimeClasses = [...from.classList].filter((name) => name.startsWith('janux-'));
+/**
+ * Runs an attribute sync preserving runtime-owned `janux-*` classes (e.g. the
+ * agent glow): views never render them, so re-renders must not wipe them. The
+ * capture is lazy — the common no-runtime-class element allocates nothing.
+ */
+export function keepRuntimeClasses(el: Element, sync: () => void): void {
+  let runtime: string[] | null = null;
 
-  [...from.getAttributeNames()]
-    .filter((name) => !to.hasAttribute(name))
-    .forEach((name) => from.removeAttribute(name));
-  to.getAttributeNames().forEach((name) => {
-    if (from.getAttribute(name) !== to.getAttribute(name)) {
-      from.setAttribute(name, to.getAttribute(name)!);
-    }
-  });
-  // `janux-*` classes belong to the runtime (e.g. the agent glow) — views
-  // never render them, so re-renders must not wipe them.
-  runtimeClasses.forEach((name) => from.classList.add(name));
+  for (const name of el.classList) {
+    if (name.startsWith('janux-')) (runtime ??= []).push(name);
+  }
+  sync();
+  runtime?.forEach((name) => el.classList.add(name));
 }
 
-type ValueControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+function syncAttrs(from: Element, to: Element): void {
+  keepRuntimeClasses(from, () => {
+    from
+      .getAttributeNames()
+      .filter((name) => !to.hasAttribute(name))
+      .forEach((name) => from.removeAttribute(name));
+    to.getAttributeNames().forEach((name) => {
+      if (from.getAttribute(name) !== to.getAttribute(name)) {
+        from.setAttribute(name, to.getAttribute(name)!);
+      }
+    });
+  });
+}
 
-function isValueControl(el: Element): el is ValueControl {
-  return (
-    el instanceof HTMLInputElement ||
-    el instanceof HTMLTextAreaElement ||
-    el instanceof HTMLSelectElement
-  );
+export type ValueControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
+export const VALUE_CONTROL_TAGS = new Set(['input', 'textarea', 'select']);
+
+export function isValueControl(el: Element): el is ValueControl {
+  return VALUE_CONTROL_TAGS.has(el.localName);
 }
 
 /** Controlled inputs: state → DOM property writes, never touching the focused control. */
@@ -42,7 +53,7 @@ function syncValue(from: Element, to: Element): void {
 const BOUNDARY_TAGS = new Set(['JANUX-ISLAND', 'JANUX-FOREIGN']);
 
 /** Islands and foreign roots are opaque: their own runtime owns everything inside. */
-function isIsland(node: Node): boolean {
+export function isIsland(node: Node): node is Element {
   return node.nodeType === Node.ELEMENT_NODE && BOUNDARY_TAGS.has((node as Element).tagName);
 }
 
@@ -99,9 +110,8 @@ function targetNode(match: ChildMatch, toKid: ChildNode, index: number): ChildNo
   }
   const fromKid = match.fromKids[index];
   const fromKey = fromKid === undefined ? undefined : nodeKey(fromKid);
-  const claimedElsewhere = key === undefined ? fromKey !== undefined && match.toKeys.has(fromKey) : fromKey !== undefined;
 
-  if (fromKid && !isIsland(fromKid) && !claimedElsewhere && sameKind(fromKid, toKid)) {
+  if (fromKid && !isIsland(fromKid) && !claimedElsewhere(key, fromKey, match.toKeys) && sameKind(fromKid, toKid)) {
     if (key !== undefined) setNodeKey(fromKid, key);
     morphNode(fromKid, toKid);
 

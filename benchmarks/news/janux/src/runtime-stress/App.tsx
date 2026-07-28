@@ -235,7 +235,6 @@ export const FormPanel = component({
 // The bridge from the framework-agnostic store into island state: listeners
 // coalesce a notification burst into one `sync` intent per microtask (Janux
 // state can only move inside a declared run body — RFC §4.4).
-let scheduledStoreSync = false;
 
 export const StorePanel = component({
 	name: 'stress-store',
@@ -295,12 +294,15 @@ export const StorePanel = component({
 			run: ({ state, intents }: any) => {
 				if (!state.visible) return undefined;
 				const store = getRuntimeStress().store;
+				// Local to the effect run, like SelectorPanel's: the flag dies with
+				// the subscription instead of surviving an unmount at module scope.
+				let scheduled = false;
 				const schedule = () => {
-					if (scheduledStoreSync) return;
-					scheduledStoreSync = true;
+					if (scheduled) return;
+					scheduled = true;
 					queueMicrotask(() => {
-						scheduledStoreSync = false;
-						void intents.sync();
+						scheduled = false;
+						intents.sync().catch(() => {});
 					});
 				};
 				// One DISTINCT listener per subscriber: the store holds them in a

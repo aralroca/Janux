@@ -20,8 +20,8 @@
 		"op": "update",
 		"target": "janux",
 		"reference": "react",
-		"note": "krausest update (recorded 6.67x, ×1.5 headroom)",
-		"maxRatio": 10
+		"note": "krausest update (recorded 6.67x; widened to 12 — react denominator is sub-ms and quick-mode wobbles past a 1.5x ceiling)",
+		"maxRatio": 12
 	},
 	{
 		"suite": "js-framework",

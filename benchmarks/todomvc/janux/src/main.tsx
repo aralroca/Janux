@@ -125,13 +125,17 @@ export const TodoMvc = component({
 	},
 
 	view: ({ state, intents }: any) => {
+		// One pass over the list per render: this body runs inside the measured
+		// interaction window, so no throwaway arrays just to count.
+		let remaining = 0;
+
+		for (const todo of state.todos) if (!todo.completed) remaining += 1;
 		const visible =
 			state.filter === 'active'
 				? state.todos.filter((todo: Todo) => !todo.completed)
 				: state.filter === 'completed'
 					? state.todos.filter((todo: Todo) => todo.completed)
 					: state.todos;
-		const remaining = state.todos.filter((todo: Todo) => !todo.completed).length;
 		const anyCompleted = state.todos.length - remaining > 0;
 
 		return (

@@ -38,6 +38,7 @@
 // See benchmarks/README.md for the manifest / how to add a suite.
 
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
+import { scoreOf } from './lib/stats.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -354,7 +355,7 @@ function runHarness(suite, run, outPath) {
 	if (fs.existsSync(outPath)) fs.rmSync(outPath);
 	const label = run.label ? `${suite.name}/${run.label}` : suite.name;
 	console.error(
-		`  ▶ node ${args.join(' ')}  (iter=${QUICK ? suite.iter.quick : suite.iter.normal})`,
+		`  ▶ node ${args.join(' ')}  (iter=${n})`,
 	);
 	const res = spawnSync('node', args, {
 		cwd: path.join(BENCH, suite.cwd),
@@ -375,38 +376,27 @@ function runHarness(suite, run, outPath) {
 function printHydrationInteractivityUx(result) {
 	if (result.suite !== 'hydration-interactivity' && result.suite !== 'hydration-stress') return;
 
-	const measured = result.targets.filter((target) => target.meta?.userExperience?.samples > 0);
-	if (measured.length === 0) return;
+	const TABLES = [
+		['userExperience', 'search-and-Send', 'Send handled '],
+		['keyboardExperience', 'keyboard-and-Send', 'Enter handled'],
+	];
+	for (const [metaKey, title, handledLabel] of TABLES) {
+		const measured = result.targets.filter((target) => target.meta?.[metaKey]?.samples > 0);
+		if (measured.length === 0) return;
 
-	console.error('\n  Pre-hydration search-and-Send UX correctness');
-	console.error('  framework       outcome  Send handled  query saved   delivered');
-	for (const target of measured) {
-		const ux = target.meta.userExperience;
-		const fraction = (count) => `${count}/${ux.samples}`;
-		console.error(
-			`  ${target.name.padEnd(15)} ${ux.status.toUpperCase().padEnd(8)} ${fraction(
-				ux.deliveredSendClicks,
-			).padEnd(13)} ${fraction(ux.preservedSearches).padEnd(13)} ${fraction(ux.exactDeliveries)}`,
-		);
-		if (ux.issues.length > 0) {
-			console.error(`    UX failure: ${ux.issues.join('; ')}`);
-		}
-	}
-
-	const keyboard = result.targets.filter((target) => target.meta?.keyboardExperience?.samples > 0);
-	if (keyboard.length === 0) return;
-	console.error('\n  Pre-hydration keyboard-and-Send UX correctness');
-	console.error('  framework       outcome  Enter handled query saved   delivered');
-	for (const target of keyboard) {
-		const ux = target.meta.keyboardExperience;
-		const fraction = (count) => `${count}/${ux.samples}`;
-		console.error(
-			`  ${target.name.padEnd(15)} ${ux.status.toUpperCase().padEnd(8)} ${fraction(
-				ux.deliveredSendClicks,
-			).padEnd(13)} ${fraction(ux.preservedSearches).padEnd(13)} ${fraction(ux.exactDeliveries)}`,
-		);
-		if (ux.issues.length > 0) {
-			console.error(`    UX failure: ${ux.issues.join('; ')}`);
+		console.error(`\n  Pre-hydration ${title} UX correctness`);
+		console.error(`  framework       outcome  ${handledLabel} query saved   delivered`);
+		for (const target of measured) {
+			const ux = target.meta[metaKey];
+			const fraction = (count) => `${count}/${ux.samples}`;
+			console.error(
+				`  ${target.name.padEnd(15)} ${ux.status.toUpperCase().padEnd(8)} ${fraction(
+					ux.deliveredSendClicks,
+				).padEnd(13)} ${fraction(ux.preservedSearches).padEnd(13)} ${fraction(ux.exactDeliveries)}`,
+			);
+			if (ux.issues.length > 0) {
+				console.error(`    UX failure: ${ux.issues.join('; ')}`);
+			}
 		}
 	}
 }
@@ -474,7 +464,7 @@ async function runSuite(suite) {
 
 // ── baseline compare (noise-aware) ────────────────────────────────────────────
 
-const scoreOf = (stat) => stat?.score ?? stat?.median;
+
 
 // Regression iff score > base.score*1.15 AND min > base.min*1.10. For ops with
 // base score < 1ms, additionally require an absolute excess > 0.1ms so timer
