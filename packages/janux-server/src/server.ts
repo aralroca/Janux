@@ -323,7 +323,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const id = proposalId('api');
 
     evictOldestProposal(proposals);
-    proposals.set(id, { id, tool: tool.name, input: parsed, execute: () => invokeApi(tool, parsed, ctx, 'human', options.onAudit) });
+    // The approved call still CAME through the agent surface — a human only
+    // authorized it. Executing as 'agent' keeps run()/guards/audit consistent
+    // with the client-side approval path and with the documented origin rules.
+    proposals.set(id, { id, tool: tool.name, input: parsed, execute: () => invokeApi(tool, parsed, ctx, 'agent', options.onAudit) });
     // `proposed`, not `ok` — nothing ran yet, and an audit trail that records an
     // unapproved proposal as a success is worse than no trail at all.
     options.onAudit?.(apiAuditEntry(tool, 'agent', 'confirm', ctx, { input: parsed, ok: true, proposed: true }));
@@ -368,7 +371,22 @@ export function createJanuxServer(options: ServerOptions = {}) {
     }
   };
 
+  /**
+   * Approval is a HUMAN act: a caller identifying as an agent may not approve
+   * (or reject) — otherwise the proposer could settle its own proposal with
+   * the unguessable id it was just handed. Same-page JS omitting the header
+   * stays out of the threat model, as documented for `origin`.
+   */
+  const refuseAgentSettlement = (req: Request): Response | undefined => {
+    if (req.headers.get('x-janux-origin') !== 'agent') return undefined;
+
+    return json({ ok: false, error: 'a proposal is settled by a human, not by an agent' }, 403);
+  };
+
   const handleApprove = async (req: Request): Promise<Response> => {
+    const refused = refuseAgentSettlement(req);
+
+    if (refused) return refused;
     const { id } = (await req.json().catch(() => ({}))) as { id?: string };
     const proposal = id ? proposals.get(id) : undefined;
 
@@ -501,6 +519,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
     if (pathname.startsWith('/_janux/api/')) return handleApi(req, pathname.slice('/_janux/api/'.length));
     if (pathname === '/_janux/approve') return handleApprove(req);
     if (pathname === '/_janux/reject') {
+      const refused = refuseAgentSettlement(req);
+
+      if (refused) return refused;
       const { id } = (await req.json().catch(() => ({}))) as { id?: string };
 
       return json({ ok: id ? proposals.delete(id) : false });

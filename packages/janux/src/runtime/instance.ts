@@ -33,13 +33,25 @@ export interface IntentInvoke extends IntentRef {
  * other — and a bound ref called directly runs with its bound input underneath
  * the caller's.
  */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function bindIntent(
   invoke: (input?: unknown, opts?: { origin?: Origin }) => Promise<unknown>,
   meta: IntentMeta,
   bound?: Record<string, unknown>,
 ): IntentInvoke {
-  const call = (input?: unknown, opts?: { origin?: Origin }) =>
-    invoke(bound ? { ...bound, ...(input as Record<string, unknown> | undefined) } : input, opts);
+  // Merging only makes sense object-into-object: a primitive caller input goes
+  // through verbatim (and fails schema validation exactly like an unbound call
+  // would) instead of being spread into character-index garbage.
+  const merged = (input?: unknown) => {
+    if (!bound) return input;
+    if (input === undefined) return bound;
+
+    return isPlainObject(input) ? { ...bound, ...input } : input;
+  };
+  const call = (input?: unknown, opts?: { origin?: Origin }) => invoke(merged(input), opts);
 
   return Object.assign(call, {
     $intent: meta,

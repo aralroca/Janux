@@ -67,6 +67,27 @@ describe('instance: state, derived, intents', () => {
       { id: 'a', qty: 1 },
       { id: 'b', qty: 1 },
     ]);
+
+    // A primitive caller input is NOT spread into character-index garbage: it
+    // goes through verbatim and fails validation exactly like an unbound call.
+    expect(addA('draft' as any)).rejects.toThrow(/Invalid input/);
+    expect(cart.snapshot().items).toHaveLength(2);
+  });
+
+  it('an approved proposal execution reaches the audit trail, not just the proposal', async () => {
+    const entries: any[] = [];
+    let proposal: Proposal | undefined;
+    const cart = createInstance(cartDef(), { onAudit: (entry) => entries.push(entry), onProposal: (p) => (proposal = p) });
+
+    await cart.intents.clear!({}, { origin: 'agent' });
+    expect(entries).toEqual([expect.objectContaining({ tool: 'cart.clear', proposed: true })]);
+
+    await proposal!.execute();
+    expect(entries).toEqual([
+      expect.objectContaining({ tool: 'cart.clear', proposed: true }),
+      expect.objectContaining({ tool: 'cart.clear', origin: 'agent', guard: 'confirm', ok: true }),
+    ]);
+    expect(entries[1].proposed).toBeUndefined();
   });
 
   it('async intents may mutate state after awaits (regression)', async () => {

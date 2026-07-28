@@ -143,24 +143,39 @@ function listenInput(): void {
 
   document.addEventListener('input', (event) => {
     if (!(event as InputEvent).isComposing) commitInput(event);
-  }, true);
-  document.addEventListener('compositionend', commitInput, true);
+  });
+  document.addEventListener('compositionend', commitInput);
 }
 
-function listenRich(type: string): void {
-  document.addEventListener(
-    type,
-    (event) => {
-      const found = markerTarget(event, `${JXE_PREFIX}${type}`);
-      const { mount, track } = context();
+/**
+ * Enter/leave events dispatch once PER element of the entered/left chain, so
+ * the marker must be the dispatch target itself: resolving via `closest` would
+ * also fire on every internal boundary crossing (moving between the marked
+ * element's own children) and double-fire on a single entry.
+ */
+const ENTER_LEAVE = new Set(['mouseenter', 'mouseleave', 'pointerenter', 'pointerleave']);
 
-      if (found) track(invokeMarker(found.marker, found.root, mount, eventInput(event, found.el)));
-    },
-    // Capture phase: it visits every ancestor of the target even for events
-    // that do not bubble (mouseenter, scroll, media events, …), so ANY DOM
-    // event delegates with no curated bubbling list to keep in sync.
-    true,
-  );
+function listenRich(type: string): void {
+  const dispatch = (event: Event) => {
+    const found = markerTarget(event, `${JXE_PREFIX}${type}`);
+    const { mount, track } = context();
+
+    if (!found) return;
+    if (ENTER_LEAVE.has(type) && found.el !== event.target) return;
+    track(invokeMarker(found.marker, found.root, mount, eventInput(event, found.el)));
+  };
+
+  // Bubbling events delegate in the bubble phase, so component code (e.g. an
+  // embedded foreign editor) can still suppress them with stopPropagation().
+  // Non-bubbling events can only be seen in the capture phase, which visits
+  // every ancestor of the target regardless — each event picks its lane by its
+  // own `bubbles` flag, so no curated list can drift.
+  document.addEventListener(type, (event) => {
+    if (!event.bubbles) dispatch(event);
+  }, true);
+  document.addEventListener(type, (event) => {
+    if (event.bubbles) dispatch(event);
+  });
 }
 
 /**
@@ -184,13 +199,25 @@ export function ensureListenerForAttr(name: string): void {
   if (name.startsWith(JXE_PREFIX)) ensureListener(name.slice(JXE_PREFIX.length));
 }
 
+function ensureElementListeners(el: Element): void {
+  for (let index = 0; index < el.attributes.length; index += 1) {
+    ensureListenerForAttr(el.attributes[index]!.name);
+  }
+}
+
 /** Discovers the event types the document's islands bind, so their listeners exist before first interaction. */
 export function scanMarkers(root: ParentNode): void {
-  root.querySelectorAll('janux-island *').forEach((el) => {
-    for (let index = 0; index < el.attributes.length; index += 1) {
-      ensureListenerForAttr(el.attributes[index]!.name);
-    }
-  });
+  root.querySelectorAll('janux-island *').forEach(ensureElementListeners);
+}
+
+/**
+ * Same discovery for one just-inserted subtree — the streamed navigation diff
+ * writes elements chunk by chunk, and a marker must be listenable the moment it
+ * paints, not when the stream ends.
+ */
+export function scanTree(root: Element): void {
+  ensureElementListeners(root);
+  root.querySelectorAll('*').forEach(ensureElementListeners);
 }
 
 /** Installs the delegated listeners: click/submit always, the open event family on sight. */

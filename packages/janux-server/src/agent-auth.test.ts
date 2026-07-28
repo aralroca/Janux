@@ -164,6 +164,10 @@ describe('api audit trail', () => {
 
     expect(entries[0]).toMatchObject({ tool: 'api.shop.pay', origin: 'agent', guard: 'confirm', ok: true });
     expect(typeof entries[0]?.agent).toBe('string');
-    expect(entries[1]).toMatchObject({ tool: 'api.shop.pay', origin: 'human', ok: true });
+    // The approved execution keeps the AGENT origin (a human only authorized
+    // it) and stays attributed to the verified agent key — matching the
+    // client-side approval path.
+    expect(entries[1]).toMatchObject({ tool: 'api.shop.pay', origin: 'agent', ok: true });
+    expect(typeof entries[1]?.agent).toBe('string');
   });
 });

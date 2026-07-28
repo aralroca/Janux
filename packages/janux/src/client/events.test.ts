@@ -246,6 +246,39 @@ describe('arbitrary delegated events', () => {
     expect(((await client.read('ui://board#default')) as any).state.hovered).toBe(true);
   });
 
+  it('enter/leave fire only when the marked element itself is entered — never for its children', async () => {
+    const calls: string[] = [];
+    const nest = component({
+      name: 'nest',
+      intents: { show: intent({ run: () => calls.push('show') }) },
+      view: ({ intents }: any) =>
+        jsx('div', { class: 'card', onMouseEnter: intents.show, children: jsx('span', { class: 'inner', children: 'x' }) }),
+    });
+    const { client } = await serveAndBoot(nest);
+
+    // Entering the marked element: the browser dispatches one event per element
+    // of the entered chain — only the card's own dispatch may invoke.
+    document.querySelector('.card')!.dispatchEvent(new Event('mouseenter', { bubbles: false }));
+    document.querySelector('.inner')!.dispatchEvent(new Event('mouseenter', { bubbles: false }));
+    await client.settled();
+    expect(calls).toEqual(['show']);
+
+    // Crossing an internal boundary re-dispatches only for the child: no re-fire.
+    document.querySelector('.inner')!.dispatchEvent(new Event('mouseenter', { bubbles: false }));
+    await client.settled();
+    expect(calls).toEqual(['show']);
+  });
+
+  it('component code can still suppress a bubbling delegated event with stopPropagation', async () => {
+    const { client } = await serveAndBoot();
+    const input = document.querySelector('.q') as HTMLInputElement;
+
+    input.addEventListener('keydown', (event) => event.stopPropagation());
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await client.settled();
+    expect(((await client.read('ui://search#default')) as any).state.lastKey).toBe('');
+  });
+
   it('a marker first created by a client re-render gets its listener installed', async () => {
     const { client } = await serveAndBoot(board);
 

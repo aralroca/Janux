@@ -249,19 +249,46 @@ function boundInputAttr(bound: [string, Record<string, unknown>][], explicit: un
     return undefined;
   }
   try {
-    return ['data-input', JSON.stringify(input)];
-  } catch {
-    console.warn(`Janux: the .with() input on "${name}" is not JSON-serializable — dropped`);
+    const json = JSON.stringify(input);
 
-    return undefined;
+    // `JSON.stringify` can also fail by RETURNING undefined (toJSON tricks).
+    if (typeof json === 'string') return ['data-input', json];
+  } catch {
+    // fall through to the shared warning
   }
+  console.warn(`Janux: the .with() input on "${name}" is not JSON-serializable — dropped`);
+
+  return undefined;
+}
+
+/**
+ * Alias spellings can collide on one marker (`onFocus`+`onFocusIn`,
+ * `onDoubleClick`+`onDblClick`): the first prop wins — a duplicate attribute
+ * would be invalid HTML the browser resolves the same way, silently.
+ */
+function dedupeMarkers(entries: [string, unknown][]): [string, unknown][] {
+  const seen = new Set<string>();
+
+  return entries.filter(([name]) => {
+    if (!isMarkerAttr(name)) return true;
+    if (seen.has(name)) {
+      console.warn(`Janux: two event props resolve to the same marker "${name}" — the first one wins`);
+
+      return false;
+    }
+    seen.add(name);
+
+    return true;
+  });
 }
 
 export function attrEntries(props: Record<string, unknown>): [string, unknown][] {
   const pairs = Object.entries(props);
-  const entries = pairs
-    .map(([name, value]) => propToAttr(name, value))
-    .filter((entry): entry is [string, unknown] => entry !== undefined);
+  const entries = dedupeMarkers(
+    pairs
+      .map(([name, value]) => propToAttr(name, value))
+      .filter((entry): entry is [string, unknown] => entry !== undefined),
+  );
   const bound = pairs.flatMap(([name, value]) => {
     const input = boundInputOf(name, value);
 

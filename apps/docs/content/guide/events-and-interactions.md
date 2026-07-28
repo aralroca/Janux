@@ -100,6 +100,8 @@ save: intent({
 
 The manifest advertises the guard **as the agent sees it** (`confirm` here), so an agent knows the call will propose rather than execute. `api()` tools get the same two signals: `run(({ input, ctx, origin }) => …)` and origin-aware guards, with the caller identified by the `x-janux-origin` header.
 
+Approving a proposal executes it **with the agent origin** — the call came through the agent surface; the human only authorized it — and the execution lands in the audit trail alongside its `proposed` entry. `/_janux/approve` and `/_janux/reject` refuse callers identifying as agents: a proposal is settled by a human, never by its proposer.
+
 **Trust model, stated plainly:** `origin` distinguishes Janux's own agent surface from DOM interaction — it is a UX and governance signal, not an anti-automation mechanism. An external driver clicking real DOM (Playwright, a computer-use agent) reads as `'human'`; agents that identify themselves cryptographically are a separate, stronger signal ([Web Bot Auth](/docs/reference/server-api), surfaced as `ctx.agent`).
 
 ## Visualizing agent activity: the glow

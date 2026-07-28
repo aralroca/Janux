@@ -147,6 +147,9 @@ export const ATTRIBUTE_CASES: AttrRow[] = [
   { id: 'attr-on-pointermove-becomes-its-event-marker', src: 'janux', props: { onPointerMove: intentOf('c', 'track') }, expected: ' data-jxe-pointermove="c:track"' },
   { id: 'attr-on-mouseenter-becomes-its-event-marker', src: 'janux', props: { onMouseEnter: intentOf('c', 'hover') }, expected: ' data-jxe-mouseenter="c:hover"' },
   { id: 'attr-event-marker-escapes-a-hostile-component-name', src: 'janux', props: { onClick: intentOf('c"x', 'add') }, expected: ' data-jxa="c&quot;x:add"' },
+  { id: 'attr-alias-collision-first-event-prop-wins', src: 'janux', props: { onDoubleClick: intentOf('list', 'open'), onDblClick: intentOf('list', 'close') }, expected: ' data-jxe-dblclick="list:open"' },
+  { id: 'attr-focus-alias-collision-first-wins', src: 'janux', props: { onFocus: intentOf('form', 'a'), onFocusIn: intentOf('form', 'b') }, expected: ' data-jxe-focusin="form:a"' },
+  { id: 'attr-with-tojson-undefined-drops-only-the-data-input', src: 'janux', props: { onClick: withInput(intentOf('cart', 'add'), { toJSON: () => undefined } as never) }, expected: ' data-jxa="cart:add"' },
 
   // ── .with(): bound input rides the control's data-input ─────────────────────
   { id: 'attr-with-input-serializes-to-data-input', src: 'janux', props: { onClick: withInput(intentOf('cart', 'add'), { productId: 'p1' }) }, expected: ' data-jxa="cart:add" data-input="{&quot;productId&quot;:&quot;p1&quot;}"' },

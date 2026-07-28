@@ -133,8 +133,22 @@ export async function invokeIntent(
 
     if (origin === 'agent' && guard === 'confirm') {
       audit(hooks, { tool, origin, guard, input: parsed, ok: true, proposed: true });
+      // The approved execution must reach the trail too — `proposed: true`
+      // followed by silence would leave approvals unaccounted for.
+      const runAudited = async () => {
+        try {
+          const result = await run();
 
-      return propose(tool, parsed, run, hooks, dryRunDiff(def, bag, parsed));
+          audit(hooks, { tool, origin, guard, input: parsed, ok: true });
+
+          return result;
+        } catch (error) {
+          audit(hooks, { tool, origin, guard, input: parsed, ok: false, error: String(error) });
+          throw error;
+        }
+      };
+
+      return propose(tool, parsed, runAudited, hooks, dryRunDiff(def, bag, parsed));
     }
     const result = await run();
 
