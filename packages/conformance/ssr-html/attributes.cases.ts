@@ -24,14 +24,6 @@ const intentOf = (component: string, name: string, key?: string) => ({
 /** The same intent after `.with(input)`: identical marker plus a bound `$input`. */
 const withInput = (ref: ReturnType<typeof intentOf>, input: Record<string, unknown>) => ({ ...ref, $input: input });
 
-const circular = (): Record<string, unknown> => {
-  const loop: Record<string, unknown> = {};
-
-  loop.self = loop;
-
-  return loop;
-};
-
 export const ATTRIBUTE_CASES: AttrRow[] = [
   // ── presence and absence ────────────────────────────────────────────────────
   { id: 'attr-string-value', src: 'react:Attributes#string', props: { id: 'x' }, expected: ' id="x"' },
@@ -160,7 +152,7 @@ export const ATTRIBUTE_CASES: AttrRow[] = [
   { id: 'attr-with-input-serializes-to-data-input', src: 'janux', props: { onClick: withInput(intentOf('cart', 'add'), { productId: 'p1' }) }, expected: ' data-jxa="cart:add" data-input="{&quot;productId&quot;:&quot;p1&quot;}"' },
   { id: 'attr-with-input-works-on-any-event', src: 'janux', props: { onDoubleClick: withInput(intentOf('list', 'open'), { row: 3 }) }, expected: ' data-jxe-dblclick="list:open" data-input="{&quot;row&quot;:3}"' },
   { id: 'attr-explicit-data-input-wins-over-with', src: 'janux', props: { onClick: withInput(intentOf('cart', 'add'), { productId: 'p1' }), 'data-input': '{"productId":"p9"}' }, expected: ' data-jxa="cart:add" data-input="{&quot;productId&quot;:&quot;p9&quot;}"' },
-  { id: 'attr-with-unserializable-input-drops-only-the-data-input', src: 'janux', props: { onClick: withInput(intentOf('cart', 'add'), circular()) }, expected: ' data-jxa="cart:add"' },
+  { id: 'attr-with-unserializable-input-drops-only-the-data-input', src: 'janux', props: { onClick: withInput(intentOf('cart', 'add'), { big: 10n }) }, expected: ' data-jxa="cart:add"' },
 
   // ── the removed v0 binding props and the reserved on* namespace ─────────────
   { id: 'attr-removed-on-prop-is-dropped', src: 'janux', props: { on: intentOf('cart', 'add') }, expected: '' },
