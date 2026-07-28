@@ -4,7 +4,7 @@ import { component, intent, source, store } from '../define/factories';
 import { jsx } from '../jsx-runtime';
 import { int, list, schema, str } from '../schema';
 import { renderToString } from '../render/server';
-import { boot, shouldIntercept, type JanuxClient } from './boot';
+import { boot, navigateAction, type JanuxClient } from './boot';
 
 beforeAll(() => GlobalRegistrator.register());
 afterAll(() => GlobalRegistrator.unregister());
@@ -570,36 +570,94 @@ describe('navigation config from the shell', () => {
 });
 
 /**
- * Which clicks the router takes over. The identical-URL case is the one that
- * broke a page: clicking the current page's own link re-diffed it, tearing
- * islands down and re-mounting them against DOM that had just been replaced —
- * /playground came back with an empty editor and an empty example list.
+ * What the router does with each navigation. The identical-URL case has now
+ * bitten twice, once in each direction: intercepting it re-diffed the page
+ * against itself (an emptied /playground editor), and refusing to intercept it
+ * handed the click back to the browser, whose default action is a full
+ * cross-document reload — every island lost, the open assistant included. The
+ * router's answer is 'cancel': same URL, nothing to do, so nothing happens.
  */
-describe('shouldIntercept', () => {
-  const HERE = 'http://localhost:3000/playground';
-  const navigateEvent = (url: string, extra: Record<string, unknown> = {}) => ({
-    canIntercept: true,
-    hashChange: false,
-    downloadRequest: null,
-    formData: null,
-    destination: { url },
-    ...extra,
-  });
+const HERE = 'http://localhost:3000/playground';
+const navigateEvent = (url: string, extra: Record<string, unknown> = {}) => ({
+  canIntercept: true,
+  cancelable: true,
+  hashChange: false,
+  downloadRequest: null,
+  formData: null,
+  navigationType: 'push',
+  destination: { url },
+  ...extra,
+});
 
+describe('navigateAction', () => {
   beforeAll(() => {
     Object.defineProperty(window, 'location', { configurable: true, value: new URL(HERE) });
   });
 
   it('takes over a link to another page', () => {
-    expect(shouldIntercept(navigateEvent('http://localhost:3000/docs'))).toBe(true);
+    expect(navigateAction(navigateEvent('http://localhost:3000/docs'))).toBe('intercept');
   });
 
-  it('leaves the page we are already on alone', () => {
-    expect(shouldIntercept(navigateEvent(HERE))).toBe(false);
+  it('cancels a navigation to the page we are already on', () => {
+    expect(navigateAction(navigateEvent(HERE))).toBe('cancel');
+  });
+
+  it('lets a reload reload, even though its destination is the current URL', () => {
+    expect(navigateAction(navigateEvent(HERE, { navigationType: 'reload' }))).toBe('default');
+  });
+
+  it('lets a data-native link to the current page keep its native reload', () => {
+    const sourceElement = { closest: () => ({}) };
+
+    expect(navigateAction(navigateEvent(HERE, { sourceElement }))).toBe('default');
   });
 
   it('still leaves query-only changes and other origins to the app', () => {
-    expect(shouldIntercept(navigateEvent(`${HERE}?tab=two`))).toBe(false);
-    expect(shouldIntercept(navigateEvent('https://example.com/'))).toBe(false);
+    expect(navigateAction(navigateEvent(`${HERE}?tab=two`))).toBe('default');
+    expect(navigateAction(navigateEvent('https://example.com/'))).toBe('default');
+  });
+});
+
+describe('same-page navigation is a no-op', () => {
+  beforeAll(() => {
+    Object.defineProperty(window, 'location', { configurable: true, value: new URL(HERE) });
+  });
+
+  it('cancels the navigate event instead of letting the browser reload', () => {
+    let onNavigate: ((event: unknown) => void) | undefined;
+
+    (window as any).navigation = { addEventListener: (_: string, listener: any) => (onNavigate = listener) };
+    document.body.innerHTML = '';
+    boot({ defs: [] });
+    const preventDefault = mock(() => {});
+    const intercept = mock(() => {});
+
+    onNavigate!(navigateEvent(HERE, { preventDefault, intercept }));
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(intercept).not.toHaveBeenCalled();
+
+    onNavigate!(navigateEvent(HERE, { navigationType: 'reload', preventDefault, intercept }));
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(intercept).not.toHaveBeenCalled();
+    delete (window as any).navigation;
+  });
+
+  it('client.navigate() to the current URL resolves without navigating', async () => {
+    const navigate = mock(() => ({ finished: Promise.resolve() }));
+
+    (window as any).navigation = { addEventListener() {}, navigate };
+    document.body.innerHTML = '';
+    const client = boot({ defs: [] });
+
+    await client.navigate(HERE);
+
+    expect(navigate).not.toHaveBeenCalled();
+
+    await client.navigate('/docs');
+
+    expect(navigate).toHaveBeenCalledWith('http://localhost:3000/docs');
+    delete (window as any).navigation;
   });
 });

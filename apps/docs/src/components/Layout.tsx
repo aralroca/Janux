@@ -1,4 +1,5 @@
 import { SECTIONS, docIndex, type SectionDef, type SectionGroup } from '../server/docs.api';
+import { DocsCopilot } from './DocsCopilot';
 import { SearchModal } from './SearchModal';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -113,6 +114,13 @@ export function Layout({ children, current, sidebar = true }: { children: unknow
         ) : null}
         <div class="content">{children}</div>
       </div>
+      {/*
+        Owned by the layout, not by each route: a persisted island is disposed
+        the moment a page fails to render it, so "every route" must be
+        structural, not a convention each new route remembers. Touring the menu
+        through /playground with the panel open is exactly how that was learned.
+      */}
+      <DocsCopilot persist />
     </div>
   );
 }

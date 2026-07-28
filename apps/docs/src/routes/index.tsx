@@ -1,6 +1,5 @@
 import { buildManifest, component, intent, schema, int, type PageMeta } from 'janux';
 import { Layout } from '../components/Layout';
-import { DocsCopilot } from '../components/DocsCopilot';
 import { renderMarkdown } from '../server/markdown';
 import { absolute, SOCIAL_IMAGE } from '../site';
 
@@ -387,7 +386,6 @@ export default async function Home() {
           <span>MIT © Aral Roca</span>
         </footer>
       </main>
-      <DocsCopilot persist />
     </Layout>
   );
 }
