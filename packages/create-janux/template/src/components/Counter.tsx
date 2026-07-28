@@ -28,10 +28,10 @@ export const Counter = component({
     <section class="counter">
       <h1>{state.count}</h1>
       <div class="row">
-        <button class="dec" on={intents.dec}>
+        <button class="dec" onClick={intents.dec}>
           −1
         </button>
-        <button class="inc" on={intents.inc}>
+        <button class="inc" onClick={intents.inc}>
           +1
         </button>
       </div>

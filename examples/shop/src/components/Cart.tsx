@@ -121,7 +121,7 @@ export const Cart = component({
               <span class="art">{ART[product.id] ?? '📦'}</span>
               <h3>{product.name}</h3>
               <p class="price">{(product.price / 100).toFixed(2)}€</p>
-              <button onClick={intents.addItem} data-input={JSON.stringify({ productId: product.id })}>
+              <button onClick={intents.addItem.with({ productId: product.id })}>
                 Add to cart
               </button>
             </article>
@@ -138,15 +138,15 @@ export const Cart = component({
               <span class="art">{ART[item.productId] ?? '📦'}</span>
               <span class="name">{item.name}</span>
               <span class="qty">
-                <button onClick={intents.changeQty} data-input={JSON.stringify({ productId: item.productId, delta: -1 })}>
+                <button onClick={intents.changeQty.with({ productId: item.productId, delta: -1 })}>
                   −
                 </button>
                 {item.qty}
-                <button onClick={intents.changeQty} data-input={JSON.stringify({ productId: item.productId, delta: 1 })}>
+                <button onClick={intents.changeQty.with({ productId: item.productId, delta: 1 })}>
                   +
                 </button>
               </span>
-              <button class="x" onClick={intents.removeItem} data-input={JSON.stringify({ productId: item.productId })}>
+              <button class="x" onClick={intents.removeItem.with({ productId: item.productId })}>
                 ✕
               </button>
             </li>

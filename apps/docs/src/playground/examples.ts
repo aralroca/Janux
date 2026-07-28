@@ -24,7 +24,7 @@ export const Cart = component({
   },
   view: ({ state, derived, intents }) => (
     <section class="mx-auto mt-10 max-w-sm rounded-2xl border border-slate-200 p-6 font-sans shadow-xl">
-      <button onClick={intents.add} data-input='{"id":"sneakers"}' class="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2 font-semibold text-white">
+      <button onClick={intents.add.with({ id: 'sneakers' })} class="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2 font-semibold text-white">
         Add sneakers (9.99)
       </button>
       <ul class="my-4 divide-y divide-slate-100">

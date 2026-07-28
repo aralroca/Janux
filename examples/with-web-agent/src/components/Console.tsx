@@ -28,8 +28,7 @@ export const Console = component({
             key={tab}
             role="tab"
             aria-selected={String(state.tab === tab)}
-            onClick={intents.goToTab}
-            data-input={JSON.stringify({ tab })}
+            onClick={intents.goToTab.with({ tab })}
           >
             {label(tab)}
           </button>

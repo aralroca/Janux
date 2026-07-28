@@ -59,7 +59,7 @@ export const Catalog = component({
       <section class="catalog">
         <div class="tags">
           {TAGS.map((tag) => (
-            <button class={state.tag === tag ? 'tag on' : 'tag'} onClick={intents.filter} data-input={JSON.stringify({ tag })}>
+            <button class={state.tag === tag ? 'tag on' : 'tag'} onClick={intents.filter.with({ tag })}>
               {tag}
             </button>
           ))}

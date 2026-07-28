@@ -115,7 +115,7 @@ export const AgentPanel = component({
           <span class={`guard ${tool.guard}`}>{tool.guard}</span>
           <small>{tool.description}</small>
           {tool.example ? <code class="example">{tool.example}</code> : null}
-          <button onClick={intents.callTool} data-input={JSON.stringify({ tool: tool.name, example: tool.example })}>
+          <button onClick={intents.callTool.with({ tool: tool.name, example: tool.example })}>
             Call as agent
           </button>
         </div>

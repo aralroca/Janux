@@ -51,7 +51,7 @@ export const Copilot = component({
       {state.messages.length === 1 ? (
         <div class="chips">
           {EXAMPLE_GOALS.map((text) => (
-            <button key={text} class="chip" onClick={intents.send} data-input={JSON.stringify({ text })}>
+            <button key={text} class="chip" onClick={intents.send.with({ text })}>
               {text}
             </button>
           ))}
