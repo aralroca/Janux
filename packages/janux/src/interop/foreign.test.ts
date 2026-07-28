@@ -61,8 +61,8 @@ const shell = component({
   view: ({ state, intents }: any) =>
     jsx('section', {
       children: [
-        jsx('button', { class: 'up', on: intents.up, children: '+' }),
-        jsx('button', { class: 'toggle', on: intents.toggle, children: 't' }),
+        jsx('button', { class: 'up', onClick: intents.up, children: '+' }),
+        jsx('button', { class: 'toggle', onClick: intents.toggle, children: 't' }),
         state.showGauge ? jsx(GaugeIsland as any, { state }) : null,
       ],
     }),

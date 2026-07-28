@@ -27,7 +27,7 @@ export const Counter = component({
   view: ({ state, intents }) => (
     <section class="flex flex-col items-center gap-4 pt-16 font-sans">
       <h1 class="text-5xl font-extrabold text-indigo-950">{state.count}</h1>
-      <button on={intents.inc} class="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-2 font-bold text-white shadow-lg">
+      <button onClick={intents.inc} class="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-2 font-bold text-white shadow-lg">
         +1
       </button>
     </section>

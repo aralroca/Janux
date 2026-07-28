@@ -46,12 +46,12 @@ export class JanuxIntentError extends Error {
   }
 }
 
-export function resolveGuard(def: IntentDef, ctx: Ctx): GuardValue {
+export function resolveGuard(def: IntentDef, ctx: Ctx, origin: Origin): GuardValue {
   const guard = def.guard ?? 'auto';
 
   if (typeof guard !== 'function') return guard;
   try {
-    return guard({ ctx });
+    return guard({ ctx, origin });
   } catch {
     // A guard that cannot decide denies. Letting the throw escape took the whole
     // manifest down with it, so one bad guard blanked the entire agent surface —
@@ -92,8 +92,8 @@ function audit(hooks: IntentHooks, entry: Omit<AuditEntry, 'at'>): void {
   hooks.onAudit?.({ ...entry, at: Date.now() });
 }
 
-async function execute(def: IntentDef, bag: RunBag, input: unknown, gate: MutationGate): Promise<unknown> {
-  return withGate(gate, () => def.run({ ...bag, input }));
+async function execute(def: IntentDef, bag: RunBag, input: unknown, origin: Origin, gate: MutationGate): Promise<unknown> {
+  return withGate(gate, () => def.run({ ...bag, input, origin }));
 }
 
 function propose(
@@ -121,7 +121,7 @@ export async function invokeIntent(
   hooks: IntentHooks,
 ): Promise<unknown> {
   const tool = `${componentName}.${intentName}`;
-  const guard = resolveGuard(def, bag.ctx);
+  const guard = resolveGuard(def, bag.ctx, origin);
 
   try {
     if (origin === 'agent' && guard === 'forbidden') {
@@ -129,12 +129,26 @@ export async function invokeIntent(
     }
     checkInvocable(tool, def, bag);
     const parsed = parseInput(tool, def, input);
-    const run = () => hooks.trackPending(execute(def, bag, parsed, hooks.gate));
+    const run = () => hooks.trackPending(execute(def, bag, parsed, origin, hooks.gate));
 
     if (origin === 'agent' && guard === 'confirm') {
       audit(hooks, { tool, origin, guard, input: parsed, ok: true, proposed: true });
+      // The approved execution must reach the trail too — `proposed: true`
+      // followed by silence would leave approvals unaccounted for.
+      const runAudited = async () => {
+        try {
+          const result = await run();
 
-      return propose(tool, parsed, run, hooks, dryRunDiff(def, bag, parsed));
+          audit(hooks, { tool, origin, guard, input: parsed, ok: true });
+
+          return result;
+        } catch (error) {
+          audit(hooks, { tool, origin, guard, input: parsed, ok: false, error: String(error) });
+          throw error;
+        }
+      };
+
+      return propose(tool, parsed, runAudited, hooks, dryRunDiff(def, bag, parsed));
     }
     const result = await run();
 

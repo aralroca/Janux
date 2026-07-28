@@ -1,4 +1,4 @@
-import { EVENT_ATTRS } from '../render/html';
+import { isMarkerAttr } from '../render/html';
 
 export const GLOW_CLASS = 'janux-agent-glow';
 
@@ -74,8 +74,14 @@ export function glowElement(el: Element, duration = 700): void {
   setTimeout(() => el.classList.remove(GLOW_CLASS), duration);
 }
 
-/** Every attribute an intent's delegation marker can land on: click, submit, rich events. */
-const MARKER_ATTRS = ['data-jxa', 'data-jxform', ...Object.values(EVENT_ATTRS)];
+/**
+ * Whether one of this element's attributes is `marker`'s delegation marker.
+ * Events are open-ended (`data-jxe-<any event>`), so this checks the attribute
+ * name's shape instead of enumerating a closed list.
+ */
+function carriesMarker(el: Element, marker: string): boolean {
+  return [...el.attributes].some(({ name, value }) => value === marker && isMarkerAttr(name));
+}
 
 /**
  * `display: none` is not inherited, so the chain has to be walked; the loop
@@ -114,8 +120,8 @@ function declares(el: Element, input: unknown): boolean {
 }
 
 /**
- * The element that carries the intent's delegation marker (`on={intents.x}`,
- * `<form intent>`, `onInput={intents.x}` …), so the glow points at the exact
+ * The element that carries the intent's delegation marker (`onClick={intents.x}`,
+ * `<form onSubmit={intents.x}>`, `onInput={intents.x}` …), so the glow points at the exact
  * control the agent "pressed" — `input` picks between controls that share the
  * intent. Falls back to the whole island when the intent has no element in the
  * view, and to nothing at all when the target isn't painted — a ring around a
@@ -128,7 +134,7 @@ export function glowTargetFor(tool: string, input?: unknown, scope: ParentNode =
 
   if (!island) return undefined;
   const marker = `${island.getAttribute('data-jx')}:${intentName}`;
-  const marked = [...island.querySelectorAll(MARKER_ATTRS.map((attr) => `[${attr}="${marker}"]`).join(','))];
+  const marked = [...island.querySelectorAll('*')].filter((el) => carriesMarker(el, marker));
   const bound = marked.find((el) => declares(el, input)) ?? marked[0];
 
   // A painted control implies a painted island, so that is the only walk needed.

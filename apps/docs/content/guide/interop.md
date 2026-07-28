@@ -71,7 +71,7 @@ export function Gauge({ level }: { level: number }) {
 }
 ```
 
-4. **Never mix runtimes in one file.** A file is either Janux JSX (`class`, `on={intents.x}`) or React JSX (`className`, `onClick`). Cross the boundary only with `foreign()`.
+4. **Never mix runtimes in one file.** A file is either Janux JSX (`class`, `onClick={intents.x}`) or React JSX (`className`, `onClick`). Cross the boundary only with `foreign()`.
 5. **Mount it** from a Janux view via `foreign()` (see above) — Janux SSRs it, hydrates a real React root, and bridges props/events.
 6. **One React, resolved from your app.** The Vite plugin resolves `react`/`react-dom` from your project root and dedupes them, so a linked or nested dependency can never introduce a second React (the classic "invalid hook call" trap). If you see hook errors, check `bun pm ls react` for duplicates.
 

@@ -39,7 +39,7 @@ export const ThemeToggle = component({
   },
 
   view: ({ intents }: any) => (
-    <button class="theme-toggle" type="button" on={intents.cycle} aria-label="Toggle color theme">
+    <button class="theme-toggle" type="button" onClick={intents.cycle} aria-label="Toggle color theme">
       <span class="theme-icon icon-system">◐</span>
       <span class="theme-icon icon-light">☀</span>
       <span class="theme-icon icon-dark">☾</span>

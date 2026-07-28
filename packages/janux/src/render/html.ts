@@ -87,17 +87,47 @@ function styleText(value: Record<string, unknown>): string {
     .join(';');
 }
 
-/** Rich events: each becomes a delegated `data-jxe-*` marker (resumability intact). */
-export const EVENT_ATTRS: Record<string, string> = {
-  onInput: 'data-jxe-input',
-  onChange: 'data-jxe-change',
-  onKeyDown: 'data-jxe-keydown',
-  onKeyUp: 'data-jxe-keyup',
-  onFocus: 'data-jxe-focusin',
-  onBlur: 'data-jxe-focusout',
-  onPointerDown: 'data-jxe-pointerdown',
-  onPointerUp: 'data-jxe-pointerup',
+/** A JSX event prop: `on` + an uppercase letter (so `once`/`online` are not events). */
+const EVENT_PROP = /^on[A-Z]/;
+/** Anything the browser could read back as an inline handler attribute (`onclick="…"`). */
+const ON_PREFIX = /^on/i;
+/**
+ * JSX prop → DOM event where `slice(2).toLowerCase()` is not enough. Both the
+ * React (`onDoubleClick`) and the Preact/Brisa (`onDblClick`) spelling land on
+ * `dblclick`; focus/blur delegate via their bubbling variants.
+ */
+const EVENT_EXCEPTIONS: Record<string, string> = {
+  doubleclick: 'dblclick',
+  focus: 'focusin',
+  blur: 'focusout',
 };
+/** Derived names must be safe inside an attribute name — anything else is refused. */
+const EVENT_NAME = /^[a-z]+$/;
+
+/** `onDoubleClick` → `dblclick`; undefined when the prop is not an event binding. */
+export function eventNameFor(prop: string): string | undefined {
+  if (!EVENT_PROP.test(prop)) return undefined;
+  const raw = prop.slice(2).toLowerCase();
+  const name = EVENT_EXCEPTIONS[raw] ?? raw;
+
+  return EVENT_NAME.test(name) ? name : undefined;
+}
+
+/** The one place the marker wire format lives: v0 names for click/submit, `data-jxe-*` for the rest. */
+export const JXE_PREFIX = 'data-jxe-';
+
+/** click and submit keep their v0 markers; every other event gets a `data-jxe-*` one. */
+export function markerAttrFor(event: string): string {
+  if (event === 'click') return 'data-jxa';
+  if (event === 'submit') return 'data-jxform';
+
+  return `${JXE_PREFIX}${event}`;
+}
+
+/** Whether an attribute name is one of the delegation markers `markerAttrFor` can emit. */
+export function isMarkerAttr(name: string): boolean {
+  return name === 'data-jxa' || name === 'data-jxform' || name.startsWith(JXE_PREFIX);
+}
 
 /** Attributes whose value the browser resolves as a URL, so its scheme executes. */
 const URL_ATTRS = new Set(['href', 'src', 'action', 'formaction', 'poster', 'cite', 'data', 'ping', 'background']);
@@ -154,16 +184,33 @@ function isBlockedUrl(name: string, value: unknown): value is string {
   return typeof value === 'string' && URL_ATTRS.has(name.toLowerCase()) && isExecutableUrl(value);
 }
 
-/** Maps a JSX prop to an HTML attribute pair; `on`/`intent`/`onX` become data markers for delegation. */
+/** Maps a JSX prop to an HTML attribute pair; `onX={intents.y}` becomes a data marker for delegation. */
 function propToAttr(name: string, value: unknown): [string, unknown] | undefined {
   if (name === 'children' || name === 'key' || name === 'dangerHTML') return undefined;
-  if (name === 'on') return ['data-jxa', intentMarker(value)];
-  if (name === 'intent') return ['data-jxform', intentMarker(value)];
-  // `<form intent reset>`: the runtime empties the form once the intent has the
-  // values, which state can't do — a controlled write is skipped while the
+  if (name === 'on' || name === 'intent') {
+    if ((value as any)?.$intent) {
+      console.warn(`Janux: "${name}" was removed — bind the event by name instead: onClick, onSubmit, …`);
+    }
+
+    return undefined;
+  }
+  // `<form onSubmit reset>`: the runtime empties the form once the intent has
+  // the values, which state can't do — a controlled write is skipped while the
   // control is focused, and submitting with Enter never moves focus.
   if (name === 'reset') return value === true ? ['data-jxreset', ''] : undefined;
-  if (EVENT_ATTRS[name]) return [EVENT_ATTRS[name], intentMarker(value)];
+  const event = eventNameFor(name);
+
+  if (event && (value as any)?.$intent) return [markerAttrFor(event), intentMarker(value)];
+  // The whole `on*` namespace is reserved: what isn't a bound intent must not
+  // reach the markup, where the browser would read it back as an inline
+  // handler attribute (`onclick="…"` executes its value).
+  if (ON_PREFIX.test(name)) {
+    if (typeof value === 'function') {
+      console.warn(`Janux: "${name}" expects a named intent — a plain function has no name, schema or guard, so it was dropped`);
+    }
+
+    return undefined;
+  }
   if (name === 'class' || name === 'className') return ['class', value];
   // An empty style object must leave no attribute behind, so `undefined` here.
   if (name === 'style' && isStyleObject(value)) return ['style', styleText(value) || undefined];
@@ -178,10 +225,78 @@ function propToAttr(name: string, value: unknown): [string, unknown] | undefined
   return [name, value];
 }
 
+/** The input a `.with()`-bound event prop carries, when `name` is an event prop at all. */
+function boundInputOf(name: string, value: unknown): Record<string, unknown> | undefined {
+  const ref = value as { $intent?: unknown; $input?: Record<string, unknown> } | null;
+
+  // Cheapest test first: almost no prop on a plain element carries $intent.
+  return ref?.$intent && ref.$input && eventNameFor(name) ? ref.$input : undefined;
+}
+
+/**
+ * The `data-input` the element's `.with()` bindings ask for — unless it
+ * declares its own, which wins (and makes the binding pointless, so dev hears
+ * about it). Serialization failures drop only the input, never the marker.
+ */
+function boundInputAttr(bound: [string, Record<string, unknown>][], explicit: unknown): [string, unknown] | undefined {
+  if (bound.length === 0) return undefined;
+  const [[name, input]] = bound as [[string, Record<string, unknown>]];
+
+  if (bound.length > 1) console.warn(`Janux: several .with() bindings on one element — "${name}" wins, data-input is per element`);
+  if (explicit !== undefined) {
+    console.warn(`Janux: an explicit data-input wins over the .with() binding on "${name}"`);
+
+    return undefined;
+  }
+  try {
+    const json = JSON.stringify(input);
+
+    // `JSON.stringify` can also fail by RETURNING undefined (toJSON tricks).
+    if (typeof json === 'string') return ['data-input', json];
+  } catch {
+    // fall through to the shared warning
+  }
+  console.warn(`Janux: the .with() input on "${name}" is not JSON-serializable — dropped`);
+
+  return undefined;
+}
+
+/**
+ * Alias spellings can collide on one marker (`onFocus`+`onFocusIn`,
+ * `onDoubleClick`+`onDblClick`): the first prop wins — a duplicate attribute
+ * would be invalid HTML the browser resolves the same way, silently.
+ */
+function dedupeMarkers(entries: [string, unknown][]): [string, unknown][] {
+  const seen = new Set<string>();
+
+  return entries.filter(([name]) => {
+    if (!isMarkerAttr(name)) return true;
+    if (seen.has(name)) {
+      console.warn(`Janux: two event props resolve to the same marker "${name}" — the first one wins`);
+
+      return false;
+    }
+    seen.add(name);
+
+    return true;
+  });
+}
+
 export function attrEntries(props: Record<string, unknown>): [string, unknown][] {
-  return Object.entries(props)
-    .map(([name, value]) => propToAttr(name, value))
-    .filter((entry): entry is [string, unknown] => entry !== undefined);
+  const pairs = Object.entries(props);
+  const entries = dedupeMarkers(
+    pairs
+      .map(([name, value]) => propToAttr(name, value))
+      .filter((entry): entry is [string, unknown] => entry !== undefined),
+  );
+  const bound = pairs.flatMap(([name, value]) => {
+    const input = boundInputOf(name, value);
+
+    return input ? [[name, input] as [string, Record<string, unknown>]] : [];
+  });
+  const extra = boundInputAttr(bound, props['data-input']);
+
+  return extra ? [...entries, extra] : entries;
 }
 
 export function renderAttrs(props: Record<string, unknown>): string {

@@ -24,7 +24,7 @@ const counter = component({
   lifecycle: { detach: counterDetach },
   intents: { inc: intent({ run: ({ state }: any) => (state.n += 1) }) },
   view: ({ state, intents }: any) =>
-    jsx('div', { children: [jsx('output', { children: String(state.n) }), jsx('button', { on: intents.inc, children: '+' })] }),
+    jsx('div', { children: [jsx('output', { children: String(state.n) }), jsx('button', { onClick: intents.inc, children: '+' })] }),
 });
 
 const chat = component({
@@ -106,6 +106,27 @@ describe('SPA navigation (streamed diff)', () => {
     // rule 3: the counter was disposed (detach ran) and is gone from the page
     expect(counterDetach).toHaveBeenCalledTimes(1);
     expect(document.querySelector('janux-island[data-jx="counter#default"]')).toBeNull();
+  });
+
+  it('installs the listener for an event type the new page introduces', async () => {
+    const gallery = component({
+      name: 'gallery',
+      state: schema({ opened: bool() }),
+      intents: { open: intent({ run: ({ state }: any) => (state.opened = true) }) },
+      view: ({ intents }: any) => jsx('figure', { class: 'shot', onDoubleClick: intents.open }),
+    });
+    const pageA = await pageHtml('Page A', jsx(counter as any, {}));
+    const pageB = await pageHtml('Page B', jsx(gallery as any, {}));
+
+    document.write(pageA);
+    document.close();
+    const client = boot({ defs: [counter, gallery] });
+
+    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageB).body }));
+    await client.navigate('/b');
+    document.querySelector('.shot')!.dispatchEvent(new Event('dblclick', { bubbles: true }));
+    await client.settled();
+    expect(((await client.read('ui://gallery#default')) as any).state.opened).toBe(true);
   });
 
   /**

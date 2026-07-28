@@ -38,6 +38,27 @@ export const MANIFEST_CASES: ScenarioCase[] = [
     expected: ['cart.add:auto cart.pay:confirm'],
   },
   {
+    id: 'manifest-resolves-origin-aware-guards-as-the-agent-sees-them',
+    src: 'janux',
+    run: (log) => {
+      const gated = component({
+        name: 'gated',
+        description: 'Origin-aware guards',
+        intents: {
+          save: intent({
+            description: 'Auto for humans, approval for agents',
+            guard: ({ origin }) => (origin === 'agent' ? 'confirm' : 'auto'),
+            run: () => {},
+          }),
+        },
+        view: () => jsx('div', {}),
+      });
+
+      log.push(tools(buildManifest([{ def: gated as never }])));
+    },
+    expected: ['gated.save:confirm'],
+  },
+  {
     id: 'manifest-omits-a-forbidden-intent-entirely',
     src: 'janux',
     run: (log) => {

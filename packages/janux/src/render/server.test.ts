@@ -29,7 +29,7 @@ const cart = component({
     jsx('section', {
       children: [
         jsx('p', { children: `${state.items.length} items / ${sources.catalog.value.length} products` }),
-        jsx('button', { on: intents.checkout, children: 'Pay' }),
+        jsx('button', { onClick: intents.checkout, children: 'Pay' }),
       ],
     }),
 });

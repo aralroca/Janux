@@ -1,7 +1,5 @@
+import { JXE_PREFIX, markerAttrFor } from '../render/html';
 import { mountIsland, type MountContext } from './mount';
-
-/** Bubbling events delegated at the document level; focus/blur delegate via focusin/focusout. */
-const DELEGATED = ['input', 'change', 'keydown', 'keyup', 'pointerdown', 'pointerup', 'focusin', 'focusout'] as const;
 
 interface MarkerHit {
   marker: string;
@@ -45,7 +43,8 @@ function eventInput(event: Event, el: Element): Record<string, unknown> {
   const facts: Record<string, unknown> = value === undefined ? {} : { value };
 
   if (event instanceof KeyboardEvent) Object.assign(facts, keyboardPayload(event));
-  if (event instanceof PointerEvent) Object.assign(facts, { x: event.clientX, y: event.clientY });
+  // The whole mouse family (pointer, drag, dblclick…) reports where it happened.
+  if (event instanceof MouseEvent) Object.assign(facts, { x: event.clientX, y: event.clientY });
 
   return { ...facts, ...elementInput(el) };
 }
@@ -71,6 +70,14 @@ interface EventContext {
 /** Listeners install once per document and dispatch to the CURRENT boot context (re-boot/HMR safe). */
 const CURRENT = Symbol.for('janux.eventContext');
 const INSTALLED = Symbol.for('janux.eventsInstalled');
+const RICH = Symbol.for('janux.richListeners');
+
+/** Event types whose delegated listener is already installed on this document. */
+function richListeners(): Set<string> {
+  const doc = document as any;
+
+  return (doc[RICH] ??= new Set<string>());
+}
 
 function context(): EventContext {
   return (document as any)[CURRENT];
@@ -78,7 +85,7 @@ function context(): EventContext {
 
 function listenClicks(): void {
   document.addEventListener('click', (event) => {
-    const found = markerTarget(event, 'data-jxa');
+    const found = markerTarget(event, markerAttrFor('click'));
 
     if (!found) return;
     event.preventDefault();
@@ -91,7 +98,7 @@ function listenClicks(): void {
 
 function listenForms(): void {
   document.addEventListener('submit', (event) => {
-    const found = markerTarget(event, 'data-jxform');
+    const found = markerTarget(event, markerAttrFor('submit'));
 
     if (!found) return;
     event.preventDefault();
@@ -123,10 +130,11 @@ function inputCommitGate(): (el: Element) => boolean {
   };
 }
 
-function listenRichEvents(): void {
+/** `input` is special: composition keystrokes hold back, `compositionend` commits once. */
+function listenInput(): void {
   const shouldCommit = inputCommitGate();
   const commitInput = (event: Event) => {
-    const found = markerTarget(event, 'data-jxe-input');
+    const found = markerTarget(event, `${JXE_PREFIX}input`);
     const { mount, track } = context();
 
     if (found && shouldCommit(found.el)) {
@@ -134,32 +142,115 @@ function listenRichEvents(): void {
     }
   };
 
-  DELEGATED.forEach((type) => {
-    document.addEventListener(type, (event) => {
-      if (type === 'input') {
-        if (!(event as InputEvent).isComposing) commitInput(event);
-
-        return;
-      }
-      const found = markerTarget(event, `data-jxe-${type}`);
-      const { mount, track } = context();
-
-      if (found) track(invokeMarker(found.marker, found.root, mount, eventInput(event, found.el)));
-    });
+  document.addEventListener('input', (event) => {
+    if (!(event as InputEvent).isComposing) commitInput(event);
   });
   document.addEventListener('compositionend', commitInput);
 }
 
-/** Installs every delegated listener: click/submit (v0) plus the rich-event marker family. */
+/**
+ * Enter/leave events dispatch once PER element of the entered/left chain, so
+ * the marker must be the dispatch target itself: resolving via `closest` would
+ * also fire on every internal boundary crossing (moving between the marked
+ * element's own children) and double-fire on a single entry.
+ */
+const ENTER_LEAVE = new Set(['mouseenter', 'mouseleave', 'pointerenter', 'pointerleave']);
+
+/**
+ * The platform only fires `drop` on an element whose `dragover` was
+ * preventDefault'd. The `data-jxe-drop` marker already declares the zone, so
+ * binding `onDrop` is all a view does — the runtime does the enabling here
+ * (capture phase: enabling a declared zone must not depend on page code).
+ */
+function enableDropZones(): void {
+  document.addEventListener(
+    'dragover',
+    (event) => {
+      if ((event.target as Element | null)?.closest?.(`[${JXE_PREFIX}drop]`)) event.preventDefault();
+    },
+    true,
+  );
+}
+
+function listenRich(type: string): void {
+  if (type === 'drop') enableDropZones();
+  const dispatch = (event: Event) => {
+    const found = markerTarget(event, `${JXE_PREFIX}${type}`);
+    const { mount, track } = context();
+
+    if (!found) return;
+    if (ENTER_LEAVE.has(type) && found.el !== event.target) return;
+    // A handled drop must also cancel the browser default (navigating to a
+    // dragged link or opening a dropped file over the page).
+    if (type === 'drop') event.preventDefault();
+    track(invokeMarker(found.marker, found.root, mount, eventInput(event, found.el)));
+  };
+
+  // Bubbling events delegate in the bubble phase, so component code (e.g. an
+  // embedded foreign editor) can still suppress them with stopPropagation().
+  // Non-bubbling events can only be seen in the capture phase, which visits
+  // every ancestor of the target regardless — each event picks its lane by its
+  // own `bubbles` flag, so no curated list can drift.
+  document.addEventListener(type, (event) => {
+    if (!event.bubbles) dispatch(event);
+  }, true);
+  document.addEventListener(type, (event) => {
+    if (event.bubbles) dispatch(event);
+  });
+}
+
+/**
+ * Installs the delegated listener for one event type, once per document. Events
+ * are open-ended (`onWheel`, `onDoubleClick`, …): a listener exists only for the
+ * types whose marker has actually been seen — in the SSR HTML at boot or after a
+ * navigation (`scanMarkers`), or the moment a client render creates one
+ * (`setAttr` in dom.ts).
+ */
+export function ensureListener(type: string): void {
+  const installed = richListeners();
+
+  if (installed.has(type)) return;
+  installed.add(type);
+  if (type === 'input') return listenInput();
+  listenRich(type);
+}
+
+/** `ensureListener`, keyed by the marker attribute a renderer just wrote (no-op for other attributes). */
+export function ensureListenerForAttr(name: string): void {
+  if (name.startsWith(JXE_PREFIX)) ensureListener(name.slice(JXE_PREFIX.length));
+}
+
+function ensureElementListeners(el: Element): void {
+  for (let index = 0; index < el.attributes.length; index += 1) {
+    ensureListenerForAttr(el.attributes[index]!.name);
+  }
+}
+
+/** Discovers the event types the document's islands bind, so their listeners exist before first interaction. */
+export function scanMarkers(root: ParentNode): void {
+  root.querySelectorAll('janux-island *').forEach(ensureElementListeners);
+}
+
+/**
+ * Same discovery for one just-inserted subtree — the streamed navigation diff
+ * writes elements chunk by chunk, and a marker must be listenable the moment it
+ * paints, not when the stream ends.
+ */
+export function scanTree(root: Element): void {
+  ensureElementListeners(root);
+  root.querySelectorAll('*').forEach(ensureElementListeners);
+}
+
+/** Installs the delegated listeners: click/submit always, the open event family on sight. */
 export function listen(mount: MountContext, track: Track): void {
   const doc = document as any;
 
   doc[CURRENT] = { mount, track } satisfies EventContext;
+  scanMarkers(document);
   if (doc[INSTALLED]) return;
   doc[INSTALLED] = true;
   listenClicks();
   listenForms();
-  listenRichEvents();
 }
 
 export { invokeMarker, markerTarget };

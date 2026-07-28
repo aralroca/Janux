@@ -3,22 +3,63 @@ import type { JanuxNode } from '../jsx-runtime';
 import type { I18n } from '../i18n/types';
 
 export type GuardValue = 'auto' | 'confirm' | 'forbidden';
-export type Guard = GuardValue | ((bag: { ctx: Ctx }) => GuardValue);
+/**
+ * A dynamic guard sees who is asking: `origin` is `'human'` for a DOM
+ * interaction and `'agent'` for any call through the agent surface (bridge,
+ * WebMCP, hosted MCP, `/_janux/api`). The canonical origin-aware guard:
+ * `({ origin }) => (origin === 'agent' ? 'confirm' : 'auto')`.
+ */
+export type Guard = GuardValue | ((bag: { ctx: Ctx; origin: Origin }) => GuardValue);
 export type Ctx = { i18n?: I18n } & Record<string, unknown>;
 export type Origin = 'human' | 'agent';
 export type Cleanup = (() => void) | undefined;
+
+/** What the runtime stamps on a bound intent: enough to write its delegation marker. */
+export interface IntentMeta {
+  component: string;
+  key?: string;
+  name: string;
+}
+
+/**
+ * A bound, invocable intent as a view receives it — the only value an event
+ * prop (`onClick`, `onSubmit`, `on<Event>`) accepts. A plain closure has no
+ * name, schema or guard, so it can appear neither in the HTML marker nor on
+ * the agent surface.
+ */
+export interface IntentRef {
+  (input?: unknown): Promise<unknown>;
+  $intent: IntentMeta;
+  /** Input bound by `.with()`; the renderer serializes it to the control's `data-input`. */
+  $input?: Record<string, unknown>;
+  /**
+   * Binds extra input to the control this ref is placed on:
+   * `onClick={intents.add.with({ productId })}` renders
+   * `data-input='{"productId":…}'` for you. Chainable; later keys win. The
+   * input must be JSON-serializable, and the intent's schema still validates
+   * it at invocation.
+   */
+  with(input: Record<string, unknown>): IntentRef;
+}
 
 export interface RunBag {
   state: any;
   derived: Record<string, unknown>;
   sources: Record<string, SourceReader>;
-  intents: Record<string, (input?: unknown) => Promise<unknown>>;
+  intents: Record<string, IntentRef>;
   use: Record<string, StoreHandle>;
   emit: (event: string, payload: unknown) => void;
   ctx: Ctx;
   input?: any;
   event?: any;
   signal?: AbortSignal;
+  /**
+   * Who invoked the running intent — set during intent runs only. `'human'`
+   * is a DOM interaction; `'agent'` is Janux's own agent surface. An external
+   * driver clicking real DOM (Playwright, computer-use) reads as `'human'`:
+   * this is a UX/governance signal, not an anti-automation mechanism.
+   */
+  origin?: Origin;
 }
 
 export interface SourceReader {

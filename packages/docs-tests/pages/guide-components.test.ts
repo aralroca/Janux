@@ -33,7 +33,7 @@ const Board = component({
   view: ({ state, intents }: any) =>
     jsx('section', {
       children: [
-        jsx('button', { on: intents.add, children: '+ card' }),
+        jsx('button', { onClick: intents.add, children: '+ card' }),
         ...Array.from({ length: state.cards }, (_, index) => jsx(Card as any, { key: `c${index}` })),
       ],
     }),

@@ -55,7 +55,7 @@ export const Team = component({
           </option>
         ))}
       </select>
-      <button class="primary" id="invite-send" on={intents.invite}>
+      <button class="primary" id="invite-send" onClick={intents.invite}>
         Send invite
       </button>
       {state.toast ? <div class="toast">{state.toast}</div> : null}

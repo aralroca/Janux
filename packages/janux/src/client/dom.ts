@@ -2,6 +2,7 @@ import { Fragment, type JanuxNode } from '../jsx-runtime';
 import { attrEntries, dedupeKey, safeKey } from '../render/html';
 import { isForeignDef, type ForeignDef } from '../interop';
 import type { ComponentDef } from '../define/types';
+import { ensureListenerForAttr } from './events';
 
 /** A nested island found while expanding a parent view; mount.ts resolves it after the morph. */
 export interface PendingIsland {
@@ -32,6 +33,8 @@ function isComponentDef(type: unknown): type is ComponentDef {
 
 function setAttr(el: Element, name: string, value: unknown): void {
   if (value === false || value === null || value === undefined) return;
+  // A client render can bind an event the page had never used before this pass.
+  ensureListenerForAttr(name);
 
   el.setAttribute(name, value === true ? '' : String(value));
 }

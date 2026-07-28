@@ -54,4 +54,15 @@ describe('glowTargetFor', () => {
 
     expect(glowTargetFor('users.unbound')!.tagName).toBe('JANUX-ISLAND');
   });
+
+  it('resolves markers for events outside the old allowlist — the marker family is open-ended', () => {
+    document.body.innerHTML = `
+      <janux-island data-jx="gallery#default">
+        <figure id="shot" data-jxe-dblclick="gallery#default:open"></figure>
+        <div id="pad" data-jxe-wheel="gallery#default:zoom"></div>
+      </janux-island>`;
+
+    expect(glowTargetFor('gallery.open')!.id).toBe('shot');
+    expect(glowTargetFor('gallery.zoom')!.id).toBe('pad');
+  });
 });

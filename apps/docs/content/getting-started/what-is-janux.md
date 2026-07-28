@@ -11,7 +11,7 @@ export const Counter = component({
     inc: intent({ description: 'Increment', input: schema({ by: int().default(1) }), run: ({ state, input }) => (state.count += input.by) }),
   },
   view: ({ state, intents }) => (
-    <button on={intents.inc}>{state.count}</button>
+    <button onClick={intents.inc}>{state.count}</button>
   ),
 });
 ```

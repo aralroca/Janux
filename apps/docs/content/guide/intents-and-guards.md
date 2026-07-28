@@ -25,7 +25,7 @@ Every intent (and every `api()`) declares who may invoke it:
 | `confirm` | runs | returns a **proposal**; a human approves or rejects |
 | `forbidden` | runs | invisible in the manifest; invocation rejected |
 
-Guards can be dynamic: `guard: ({ ctx }) => ctx.role === 'admin' ? 'auto' : 'confirm'`.
+Guards can be dynamic, and they see both the request context and **who is asking**: `guard: ({ ctx, origin }) => (ctx.role === 'admin' || origin === 'human' ? 'auto' : 'confirm')`. The most common origin-aware guard — instant for people, approval for agents — is `({ origin }) => (origin === 'agent' ? 'confirm' : 'auto')`; the manifest advertises it as the agent will experience it (`confirm`). `run()` receives the same `origin`, so an intent can also branch its behavior (see [Human vs. agent behavior](/docs/guide/events-and-interactions)).
 
 ### Proposals
 
@@ -44,10 +44,11 @@ Tip: give your copilot component human-only intents (`guard: 'forbidden'`) for `
 
 ## Binding intents to the view
 
-- Click: `<button on={intents.addItem} data-input='{"productId":"p1"}'>Add</button>` — the element carries its input as JSON.
-- Form: `<form intent={intents.send}><input name="text" /></form>` — form fields become the input object.
+- Click: `<button onClick={intents.addItem.with({ productId: 'p1' })}>Add</button>` — `.with()` renders the element's `data-input` for you.
+- Form: `<form onSubmit={intents.send}><input name="text" /></form>` — form fields become the input object.
+- Any other event the same way: `onDoubleClick={intents.open}`, `onWheel={intents.zoom}`, …
 
-Both compile to `data-jxa` / `data-jxform` markers handled by one delegated listener; no per-element handlers exist in the DOM.
+All compile to `data-jxa` / `data-jxform` / `data-jxe-*` markers handled by delegated listeners; no per-element handlers exist in the DOM.
 
 ## Errors and audit
 

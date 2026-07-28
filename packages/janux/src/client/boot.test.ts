@@ -36,7 +36,7 @@ const counter = component({
     return jsx('div', {
       children: [
         jsx('output', { children: `n=${state.n}` }),
-        jsx('button', { on: intents.inc, children: '+1' }),
+        jsx('button', { onClick: intents.inc, children: '+1' }),
       ],
     });
   },
@@ -142,7 +142,7 @@ describe('client boot (resume without hydration)', () => {
         jsx('div', {
           children: [
             jsx('output', { children: String(state.picks) }),
-            jsx('button', { on: intents.pick, children: 'pick' }),
+            jsx('button', { onClick: intents.pick, children: 'pick' }),
           ],
         }),
     });

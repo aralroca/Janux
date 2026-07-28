@@ -51,13 +51,13 @@ export const Copilot = component({
       {state.messages.length === 1 ? (
         <div class="chips">
           {EXAMPLE_GOALS.map((text) => (
-            <button key={text} class="chip" on={intents.send} data-input={JSON.stringify({ text })}>
+            <button key={text} class="chip" onClick={intents.send.with({ text })}>
               {text}
             </button>
           ))}
         </div>
       ) : null}
-      <form class="ask" intent={intents.send} reset>
+      <form class="ask" onSubmit={intents.send} reset>
         <input name="text" placeholder={state.busy ? 'Working…' : 'e.g. "invite jane@acme.com as admin"'} autocomplete="off" />
         <button class="primary" type="submit">
           Run

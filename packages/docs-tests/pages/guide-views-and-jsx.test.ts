@@ -61,14 +61,14 @@ describe('guide/views-and-jsx.md — intents become delegation markers', () => {
     view: ({ state, intents }: any) =>
       jsx('div', {
         children: [
-          jsx('button', { on: intents.inc, children: '+1' }),
-          jsx('form', { intent: intents.save }),
+          jsx('button', { onClick: intents.inc, children: '+1' }),
+          jsx('form', { onSubmit: intents.save }),
           jsx('input', { onInput: intents.filter, value: state.query }),
         ],
       }),
   });
 
-  it('emits data-jxa for on, data-jxform for intent and data-jxe-input for onInput', async () => {
+  it('emits data-jxa for onClick, data-jxform for onSubmit and data-jxe-input for onInput', async () => {
     const out = await html(jsx(Widget as any, {}));
 
     // The marker carries the island id, so a keyed sibling's events stay its own.

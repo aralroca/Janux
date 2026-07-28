@@ -1,6 +1,7 @@
 import diff from 'diff-dom-streaming';
 import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
+import { scanMarkers, scanTree } from './events';
 import { consumePrefetched, NAVIGATION_HEADERS } from './prefetch';
 import { runScriptsWhileStreaming } from './scripts';
 import { rescopeSpeculationRules } from './speculation';
@@ -328,9 +329,29 @@ export function abortableStream(
  * persisted nodes are re-attached, no island disposed). Disposal happens after,
  * driven by what the diff removed from the document.
  */
+/**
+ * A page can bind an event type this document never listened for, and the user
+ * can interact with a control the moment the stream paints it — several hundred
+ * ms before the diff completes. Install listeners as elements arrive.
+ */
+function installListenersWhileStreaming(): () => void {
+  const observer = new MutationObserver((records) => {
+    records.forEach(({ addedNodes }) =>
+      addedNodes.forEach((node) => {
+        if (node instanceof Element) scanTree(node);
+      }),
+    );
+  });
+
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  return () => observer.disconnect();
+}
+
 async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, signal?: AbortSignal): Promise<void> {
   const kept = extractPersisted(mount);
   const stopRestoring = restoreWhileStreaming(kept);
+  const stopInstallingListeners = installListenersWhileStreaming();
   const stopRunningScripts = runScriptsWhileStreaming();
   const restoreStyles = keepRuntimeStyles();
   const restoreRuntimeNodes = keepRuntimeNodes();
@@ -362,6 +383,7 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
   } finally {
     stopRunningScripts();
     stopRestoring();
+    stopInstallingListeners();
     restoreStyles();
     restoreRuntimeNodes();
     stopWatchingModals();
@@ -375,6 +397,8 @@ function reportNavigationError(error: unknown): void {
 /** Everything that happens once the new page is on screen. */
 async function wireUpPage(mount: MountContext): Promise<void> {
   reindexSnapshots(mount);
+  // The new page can bind event types this document has never listened for.
+  scanMarkers(document);
   // The incoming page brought the server's document-wide speculation rules.
   rescopeSpeculationRules();
   installI18n(mount.ctx);

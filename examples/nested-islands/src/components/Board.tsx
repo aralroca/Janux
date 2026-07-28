@@ -9,7 +9,7 @@ export const Badge = component({
     toggle: intent({ description: 'Toggle the badge', run: ({ state }) => (state.on = !state.on) }),
   },
   view: ({ state, intents }: any) => (
-    <button class={`badge ${state.on ? 'badge-on' : ''}`} on={intents.toggle}>
+    <button class={`badge ${state.on ? 'badge-on' : ''}`} onClick={intents.toggle}>
       {state.on ? '★' : '☆'}
     </button>
   ),
@@ -26,7 +26,7 @@ export const Card = component({
   view: ({ state, intents }: any) => (
     <div class="card">
       <output>{state.n}</output>
-      <button on={intents.inc}>+1</button>
+      <button onClick={intents.inc}>+1</button>
       <Badge />
     </div>
   ),
@@ -54,8 +54,8 @@ export const Board = component({
       <input value={state.title} onInput={intents.rename} aria-label="Board title" />
       <h2>{state.title}</h2>
       <div class="row">
-        <button on={intents.add}>+ card</button>
-        <button on={intents.remove}>− card</button>
+        <button onClick={intents.add}>+ card</button>
+        <button onClick={intents.remove}>− card</button>
       </div>
       <div class="cards">
         {Array.from({ length: state.cards }, (_, index) => (

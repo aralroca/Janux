@@ -44,7 +44,7 @@ export const Cart = component({
   view: ({ state, derived, intents }) => (
     <section>
       {state.items.map((i) => <li key={i.productId}>{i.productId} ×{i.qty}</li>)}
-      <button on={intents.addItem} data-input='{"productId":"p1"}'>Add</button>
+      <button onClick={intents.addItem} data-input='{"productId":"p1"}'>Add</button>
     </section>
   ),
 });
@@ -77,7 +77,7 @@ export const Board = component({
   intents: { add: intent({ run: ({ state }) => (state.cards += 1) }) },
   view: ({ state, intents }) => (
     <section>
-      <button on={intents.add}>+ card</button>
+      <button onClick={intents.add}>+ card</button>
       {Array.from({ length: state.cards }, (_, i) => <Card key={`c${i}`} />)}
     </section>
   ),

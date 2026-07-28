@@ -23,7 +23,7 @@ const row = component({
     jsx('div', {
       children: [
         jsx('output', { class: 'row-v', children: `v=${state.v}` }),
-        jsx('button', { class: 'row-btn', on: intents.bump, children: '+' }),
+        jsx('button', { class: 'row-btn', onClick: intents.bump, children: '+' }),
       ],
     }),
 });
@@ -43,8 +43,8 @@ const panel = component({
       children: [
         state.warn ? jsx('p', { class: 'warn', children: '!' }) : null,
         jsx('output', { class: 'panel-n', children: `n=${state.n}` }),
-        jsx('button', { class: 'panel-inc', on: intents.inc, children: '+' }),
-        jsx('button', { class: 'panel-toggle', on: intents.toggle, children: 'toggle' }),
+        jsx('button', { class: 'panel-inc', onClick: intents.inc, children: '+' }),
+        jsx('button', { class: 'panel-toggle', onClick: intents.toggle, children: 'toggle' }),
         state.open ? jsx(row as any, {}) : null,
       ],
     });

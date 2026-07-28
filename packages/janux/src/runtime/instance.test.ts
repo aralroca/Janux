@@ -48,6 +48,48 @@ describe('instance: state, derived, intents', () => {
     expect(cart.derived.count).toBe(3);
   });
 
+  it('.with() binds input without touching the original: same marker, own $input, still invocable', async () => {
+    const cart = createInstance(cartDef(), { key: 'main' });
+    const add = cart.intents.addItem!;
+    const addA = add.with({ id: 'a' });
+    const addB = add.with({ id: 'b', qty: 3 });
+
+    // Two bindings from one map must not clobber each other or the base.
+    expect(add.$input).toBeUndefined();
+    expect(addA.$input).toEqual({ id: 'a' });
+    expect(addB.$input).toEqual({ id: 'b', qty: 3 });
+    expect(addA.$intent).toEqual(add.$intent);
+
+    // A bound ref runs with its bound input; caller input merges on top.
+    await addA();
+    await addB({ qty: 1 });
+    expect(cart.snapshot().items).toEqual([
+      { id: 'a', qty: 1 },
+      { id: 'b', qty: 1 },
+    ]);
+
+    // A primitive caller input is NOT spread into character-index garbage: it
+    // goes through verbatim and fails validation exactly like an unbound call.
+    expect(addA('draft' as any)).rejects.toThrow(/Invalid input/);
+    expect(cart.snapshot().items).toHaveLength(2);
+  });
+
+  it('an approved proposal execution reaches the audit trail, not just the proposal', async () => {
+    const entries: any[] = [];
+    let proposal: Proposal | undefined;
+    const cart = createInstance(cartDef(), { onAudit: (entry) => entries.push(entry), onProposal: (p) => (proposal = p) });
+
+    await cart.intents.clear!({}, { origin: 'agent' });
+    expect(entries).toEqual([expect.objectContaining({ tool: 'cart.clear', proposed: true })]);
+
+    await proposal!.execute();
+    expect(entries).toEqual([
+      expect.objectContaining({ tool: 'cart.clear', proposed: true }),
+      expect.objectContaining({ tool: 'cart.clear', origin: 'agent', guard: 'confirm', ok: true }),
+    ]);
+    expect(entries[1].proposed).toBeUndefined();
+  });
+
   it('async intents may mutate state after awaits (regression)', async () => {
     const def = component({
       name: 'async-cart',
@@ -85,6 +127,48 @@ describe('instance: state, derived, intents', () => {
     expect(entries).toEqual([
       expect.objectContaining({ tool: 'cart.addItem', origin: 'human', guard: 'auto', ok: true }),
     ]);
+  });
+});
+
+describe('instance: origin', () => {
+  const doorDef = () =>
+    component({
+      name: 'door',
+      state: schema({ openedBy: str().default('') }),
+      intents: {
+        open: intent({ run: ({ state, origin }: any) => (state.openedBy = origin) }),
+        lock: intent({
+          guard: ({ origin }: any) => (origin === 'agent' ? 'confirm' : 'auto'),
+          run: ({ state, origin }: any) => (state.openedBy = `locked:${origin}`),
+        }),
+      },
+      view: noopView,
+    });
+
+  it('run() sees who invoked it: human via the view, agent via the bridge channel', async () => {
+    const door = createInstance(doorDef());
+
+    await door.intents.open!({});
+    expect(door.snapshot().openedBy).toBe('human');
+    await door.intents.open!({}, { origin: 'agent' });
+    expect(door.snapshot().openedBy).toBe('agent');
+  });
+
+  it('a dynamic guard can branch on origin: auto for humans, confirm for agents', async () => {
+    let proposal: Proposal | undefined;
+    const door = createInstance(doorDef(), { onProposal: (p) => (proposal = p) });
+
+    // The same intent runs straight through for a human…
+    await door.intents.lock!({});
+    expect(door.snapshot().openedBy).toBe('locked:human');
+
+    // …and only proposes for an agent, until a human approves.
+    const result: any = await door.intents.lock!({}, { origin: 'agent' });
+
+    expect(result.status).toBe('proposal');
+    expect(door.snapshot().openedBy).toBe('locked:human');
+    await proposal!.execute();
+    expect(door.snapshot().openedBy).toBe('locked:agent');
   });
 });
 

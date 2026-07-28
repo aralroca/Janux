@@ -25,7 +25,8 @@ export function dryRunDiff(def: IntentDef, bag: RunBag, input: unknown): StateDi
       emit: () => {},
       intents: {},
     };
-    const result = withGate(gate, () => def.run({ ...shadowBag, input }));
+    // Dry runs only exist for agent proposals, so the shadow sees that origin.
+    const result = withGate(gate, () => def.run({ ...shadowBag, input, origin: 'agent' }));
 
     // Async intents may keep mutating after we snapshot — refuse rather than lie.
     if (result instanceof Promise) return undefined;

@@ -6,7 +6,7 @@ A `view` is a pure function of the bag it receives (`{ state, derived, intents, 
 view: ({ state, intents }) => (
   <section class="cart">
     <h2>{state.items.length} items</h2>
-    <button on={intents.checkout}>Pay</button>
+    <button onClick={intents.checkout}>Pay</button>
   </section>
 ),
 ```
@@ -20,31 +20,30 @@ view: ({ state, intents }) => (
 | `disabled={false}` | *(omitted)* | So are `null` and `undefined` — no `="false"` ever renders. |
 | `data-team={params.team}` | `data-team="acme"` | Any valid attribute name passes through, escaped. |
 | `style="color:red"` | `style="color:red"` | Styles are a string; there is no object form. |
-| `onClick={fn}` | *(dropped)* | Plain function props are not serialized — wire behavior through intents (below). |
+| `onClick={() => {}}` | *(compile error, dropped with a warning)* | Event props take intents, not closures — wire behavior through intents (below). |
 
-Attribute names must match `/^[a-zA-Z][\w-]*$/`; anything else is dropped rather than emitting invalid HTML. Values are HTML-escaped, so interpolated user content is safe by default.
+Attribute names must match `/^[a-zA-Z][\w-]*$/`; anything else is dropped rather than emitting invalid HTML. Values are HTML-escaped, so interpolated user content is safe by default. The `on*` namespace is reserved for events: a string value there (`onclick="…"`) never renders, so an inline handler cannot be injected through props.
 
-## Wiring behavior: intents, not handlers
+## Wiring behavior: intents, not closures
 
-There are no inline event handlers. You bind an **intent**, and the runtime delegates the event — which is what keeps a page resumable (no listener needs to exist before the first interaction).
+Events use their standard names — any DOM event works — and bind an **intent**; the runtime delegates the event, which is what keeps a page resumable (no listener needs to exist before the first interaction).
 
 ```tsx
-<button on={intents.inc}>+1</button>                    {/* click */}
-<form intent={intents.save}>…</form>                    {/* submit, with form fields as input */}
-<input onInput={intents.filter} value={state.query} />   {/* rich events */}
+<button onClick={intents.inc}>+1</button>                {/* click */}
+<form onSubmit={intents.save}>…</form>                   {/* submit, with form fields as input */}
+<input onInput={intents.filter} value={state.query} />   {/* controlled input */}
+<li onDoubleClick={intents.open.with({ id: 'p1' })} />   {/* any event, with bound input */}
 ```
 
 | Prop | Fires on | Marker emitted |
 |---|---|---|
-| `on` | click | `data-jxa` |
-| `intent` | form submit | `data-jxform` |
-| `onInput` | input | `data-jxe-input` |
-| `onChange` | change | `data-jxe-change` |
-| `onKeyDown` / `onKeyUp` | keydown / keyup | `data-jxe-keydown` / `-keyup` |
+| `onClick` | click | `data-jxa` |
+| `onSubmit` | form submit | `data-jxform` |
+| `onDoubleClick` / `onDblClick` | dblclick | `data-jxe-dblclick` |
 | `onFocus` / `onBlur` | focusin / focusout | `data-jxe-focusin` / `-focusout` |
-| `onPointerDown` / `onPointerUp` | pointerdown / pointerup | `data-jxe-pointerdown` / `-pointerup` |
+| any other `on<Event>` | the event, lowercased | `data-jxe-<event>` |
 
-Focus and blur map to the **bubbling** variants (`focusin`/`focusout`) on purpose: delegation from the document root requires events that bubble. See [Events and interactions](/docs/guide/events-and-interactions) for the delegation model and controlled inputs.
+Focus and blur map to the **bubbling** variants (`focusin`/`focusout`) on purpose; events that don't bubble at all (`onMouseEnter`, `onScroll`, …) delegate through the capture phase. See [Events and interactions](/docs/guide/events-and-interactions) for the delegation model, `.with()` and controlled inputs.
 
 ## Fragments, conditionals and children
 

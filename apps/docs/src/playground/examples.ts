@@ -24,7 +24,7 @@ export const Cart = component({
   },
   view: ({ state, derived, intents }) => (
     <section class="mx-auto mt-10 max-w-sm rounded-2xl border border-slate-200 p-6 font-sans shadow-xl">
-      <button on={intents.add} data-input='{"id":"sneakers"}' class="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2 font-semibold text-white">
+      <button onClick={intents.add.with({ id: 'sneakers' })} class="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2 font-semibold text-white">
         Add sneakers (9.99)
       </button>
       <ul class="my-4 divide-y divide-slate-100">
@@ -33,7 +33,7 @@ export const Cart = component({
         ))}
       </ul>
       <p class="text-lg font-extrabold text-indigo-950">Total: {(derived.total / 100).toFixed(2)}€</p>
-      <button on={intents.checkout} class="mt-3 w-full rounded-lg bg-indigo-950 py-2 font-bold text-white">
+      <button onClick={intents.checkout} class="mt-3 w-full rounded-lg bg-indigo-950 py-2 font-bold text-white">
         Checkout
       </button>
     </section>
@@ -55,7 +55,7 @@ export const Guestbook = component({
   },
   view: ({ state, intents }) => (
     <section class="mx-auto mt-10 max-w-sm p-6 font-sans">
-      <form intent={intents.sign} class="flex gap-2">
+      <form onSubmit={intents.sign} class="flex gap-2">
         <input name="name" placeholder="Your name" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500" />
         <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">
           Sign

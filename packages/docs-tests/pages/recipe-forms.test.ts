@@ -24,7 +24,7 @@ const Signup = component({
   },
   view: ({ intents }: any) =>
     jsx('form', {
-      intent: intents.submit,
+      onSubmit: intents.submit,
       children: [jsx('input', { name: 'email' }), jsx('input', { name: 'age' })],
     }),
 });

@@ -115,7 +115,7 @@ export const AgentPanel = component({
           <span class={`guard ${tool.guard}`}>{tool.guard}</span>
           <small>{tool.description}</small>
           {tool.example ? <code class="example">{tool.example}</code> : null}
-          <button on={intents.callTool} data-input={JSON.stringify({ tool: tool.name, example: tool.example })}>
+          <button onClick={intents.callTool.with({ tool: tool.name, example: tool.example })}>
             Call as agent
           </button>
         </div>
@@ -136,10 +136,10 @@ export const AgentPanel = component({
           </p>
           <p class="proposal-why">guard: confirm — nothing happens until you decide.</p>
           <div class="proposal-actions">
-            <button class="approve" on={intents.approve}>
+            <button class="approve" onClick={intents.approve}>
               Approve
             </button>
-            <button class="reject" on={intents.reject}>
+            <button class="reject" onClick={intents.reject}>
               Reject
             </button>
           </div>

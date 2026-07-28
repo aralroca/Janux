@@ -79,7 +79,7 @@ function guardOf(mount: MountContext, component: string, intentName: string): st
 
   // `unknown`, not `auto`. Anything watching `janux:tool-call` to audit agent
   // activity was being told a tool it could not even resolve was unguarded.
-  return intentDef ? resolveGuard(intentDef, mount.ctx) : 'unknown';
+  return intentDef ? resolveGuard(intentDef, mount.ctx, 'agent') : 'unknown';
 }
 
 /**

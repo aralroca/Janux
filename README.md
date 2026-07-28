@@ -105,7 +105,7 @@ export const Cart = component({
           <li key={i.productId}>{i.productId} × {i.qty}</li>
         ))}
       </ul>
-      <button on={intents.checkout}>Pay ({derived.total}¢)</button>
+      <button onClick={intents.checkout}>Pay ({derived.total}¢)</button>
     </section>
   ),
 });

@@ -29,7 +29,7 @@ const Toggle = component({
       run: ({ state }: any) => (state.status = state.status === 'on' ? 'off' : 'on'),
     }),
   },
-  view: ({ state, intents }: any) => jsx('button', { class: 'toggle', on: intents.flip, children: state.status }),
+  view: ({ state, intents }: any) => jsx('button', { class: 'toggle', onClick: intents.flip, children: state.status }),
 });
 
 
