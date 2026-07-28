@@ -52,11 +52,80 @@ The intent's input is derived from the event and merged under the bound input (w
 |---|---|
 | `onInput` / `onChange` | `{ value }` — the control's value (`checked` for checkbox/radio) |
 | `onKeyDown` / `onKeyUp` | `{ key, code, altKey, ctrlKey, metaKey, shiftKey }` |
-| `onPointerDown` / `onPointerUp` | `{ x, y }` (client coordinates) |
+| mouse family (`onPointerDown`, `onDoubleClick`, `onDrop`, …) | `{ x, y }` (client coordinates) |
 | `onSubmit` | the form's fields, as an object |
+| `onFocus` / `onBlur` on a form control | `{ value }` |
 | everything else | `{}` (plus your bound input, if any) |
 
 Unknown keys are stripped by the intent's input schema, so declare only what you consume.
+
+## The native event
+
+An intent never receives the raw `Event` object, and that is the point: the same intent is a tool an agent invokes with a JSON input, and in *that* call there is no DOM event. If `run()` depended on a native event, it would work on click and break (or diverge) under an agent — and an `Event` isn't serializable, so it could never ride the static marker that makes pages resumable. What crosses the boundary is the table above: **facts derived from the event**, merged with what you bind via `.with()`.
+
+When you genuinely need something only the native event has (`relatedTarget` on a blur, `clipboardData`, fine-grained `preventDefault`), wire that trigger yourself in `lifecycle.attach` and extract what you need before calling the intent — the mutation still goes through a named, validated, agent-visible action:
+
+```tsx
+lifecycle: {
+  attach: ({ intents }) => {
+    const onBlur = (event: FocusEvent) => {
+      const goingTo = (event.relatedTarget as HTMLElement)?.id ?? null;
+
+      intents.leaveField({ goingTo });
+    };
+    const field = document.querySelector('#email')!;
+
+    field.addEventListener('blur', onBlur);
+
+    return () => field.removeEventListener('blur', onBlur);
+  },
+},
+```
+
+## Drag & drop
+
+HTML5 drag & drop is two intents and no listener code. The trick the platform normally makes you write — `event.preventDefault()` on `dragover`, or `drop` never fires — is done by the runtime: **binding `onDrop` declares the zone, and the runtime enables it**.
+
+```tsx
+export const Board = component({
+  name: 'board',
+  state: schema({ dragging: str().default(''), done: list({ id: str() }) }),
+  intents: {
+    pick: intent({
+      description: 'Start dragging a card',
+      input: schema({ card: str() }),
+      run: ({ state, input }) => (state.dragging = input.card),
+    }),
+    dropOn: intent({
+      description: 'Move the dragged card into a column',
+      input: schema({ column: str() }),
+      run: ({ state, input }) => {
+        if (state.dragging) state.done.push({ id: state.dragging });
+        state.dragging = '';
+      },
+    }),
+  },
+  view: ({ state, intents }) => (
+    <div class="board">
+      {cards.map((card) => (
+        <article draggable="true" onDragStart={intents.pick.with({ card: card.id })}>
+          {card.title}
+        </article>
+      ))}
+      <section class="column" onDrop={intents.dropOn.with({ column: 'done' })}>
+        Done
+      </section>
+    </div>
+  ),
+});
+```
+
+The payload travels through **island state**, not `dataTransfer`: `onDragStart` records *what* is being dragged (`.with()` says which card each element means), `onDrop` reads it back. That keeps the whole gesture on the agent surface — `board.pick` and `board.dropOn` are ordinary tools, so a copilot can move the card with two calls and no mouse. The runtime also cancels the browser's default drop handling (navigating to a dragged link), and the drop intent receives `{ x, y }` for position-sensitive targets.
+
+Two escape hatches, when you need them:
+
+- **Pointer-based DnD** (custom ghosts, touch support): `onPointerDown` / `onPointerMove` / `onPointerUp` are ordinary delegated events with `{ x, y }` — same state-carrying pattern.
+- **Real `dataTransfer`** (files dropped from the OS, dragging out of the page): that data only exists on the native event, so wire those specific listeners in `lifecycle.attach` (see [The native event](#the-native-event)) and hand the extracted result to an intent.
 
 ## Controlled inputs
 

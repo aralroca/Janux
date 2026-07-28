@@ -43,7 +43,8 @@ function eventInput(event: Event, el: Element): Record<string, unknown> {
   const facts: Record<string, unknown> = value === undefined ? {} : { value };
 
   if (event instanceof KeyboardEvent) Object.assign(facts, keyboardPayload(event));
-  if (event instanceof PointerEvent) Object.assign(facts, { x: event.clientX, y: event.clientY });
+  // The whole mouse family (pointer, drag, dblclick…) reports where it happened.
+  if (event instanceof MouseEvent) Object.assign(facts, { x: event.clientX, y: event.clientY });
 
   return { ...facts, ...elementInput(el) };
 }
@@ -155,13 +156,33 @@ function listenInput(): void {
  */
 const ENTER_LEAVE = new Set(['mouseenter', 'mouseleave', 'pointerenter', 'pointerleave']);
 
+/**
+ * The platform only fires `drop` on an element whose `dragover` was
+ * preventDefault'd. The `data-jxe-drop` marker already declares the zone, so
+ * binding `onDrop` is all a view does — the runtime does the enabling here
+ * (capture phase: enabling a declared zone must not depend on page code).
+ */
+function enableDropZones(): void {
+  document.addEventListener(
+    'dragover',
+    (event) => {
+      if ((event.target as Element | null)?.closest?.(`[${JXE_PREFIX}drop]`)) event.preventDefault();
+    },
+    true,
+  );
+}
+
 function listenRich(type: string): void {
+  if (type === 'drop') enableDropZones();
   const dispatch = (event: Event) => {
     const found = markerTarget(event, `${JXE_PREFIX}${type}`);
     const { mount, track } = context();
 
     if (!found) return;
     if (ENTER_LEAVE.has(type) && found.el !== event.target) return;
+    // A handled drop must also cancel the browser default (navigating to a
+    // dragged link or opening a dropped file over the page).
+    if (type === 'drop') event.preventDefault();
     track(invokeMarker(found.marker, found.root, mount, eventInput(event, found.el)));
   };
 

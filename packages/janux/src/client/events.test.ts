@@ -269,6 +269,58 @@ describe('arbitrary delegated events', () => {
     expect(calls).toEqual(['show']);
   });
 
+  it('binding onDrop enables the zone: the runtime preventDefaults dragover over the marker', async () => {
+    const moves: unknown[] = [];
+    const kanban = component({
+      name: 'kanban',
+      state: schema({ dragging: str().default('') }),
+      intents: {
+        pick: intent({ input: schema({ card: str() }), run: ({ state, input }) => (state.dragging = input.card) }),
+        dropOn: intent({
+          input: schema({ column: str() }),
+          run: ({ state, input }) => moves.push(`${state.dragging}→${input.column}`),
+        }),
+      },
+      view: ({ intents }: any) =>
+        jsx('div', {
+          children: [
+            jsx('article', { class: 'card', draggable: true, onDragStart: intents.pick.with({ card: 'bug-7' }) }),
+            jsx('section', { class: 'col', onDrop: intents.dropOn.with({ column: 'done' }), children: jsx('span', { class: 'hint', children: 'Drop here' }) }),
+            jsx('section', { class: 'other', children: 'not a drop zone' }),
+          ],
+        }),
+    });
+    const { client, html } = await serveAndBoot(kanban);
+
+    expect(html).toContain('data-jxe-dragstart="kanban#default:pick"');
+    expect(html).toContain('data-jxe-drop="kanban#default:dropOn"');
+
+    // The platform only fires `drop` if dragover was preventDefault'd — the
+    // marker declares the zone, so the runtime does the enabling (also over
+    // the zone's children, where the browser actually dispatches).
+    const overZone = new Event('dragover', { bubbles: true, cancelable: true });
+    const overChild = new Event('dragover', { bubbles: true, cancelable: true });
+    const overElsewhere = new Event('dragover', { bubbles: true, cancelable: true });
+
+    document.querySelector('.col')!.dispatchEvent(overZone);
+    document.querySelector('.hint')!.dispatchEvent(overChild);
+    document.querySelector('.other')!.dispatchEvent(overElsewhere);
+    expect(overZone.defaultPrevented).toBe(true);
+    expect(overChild.defaultPrevented).toBe(true);
+    expect(overElsewhere.defaultPrevented).toBe(false);
+
+    // The full flow: pick up (state carries the payload, not dataTransfer)…
+    document.querySelector('.card')!.dispatchEvent(new Event('dragstart', { bubbles: true }));
+    await client.settled();
+    // …then drop: the intent gets the .with() input and the browser default is cancelled.
+    const drop = new Event('drop', { bubbles: true, cancelable: true });
+
+    document.querySelector('.hint')!.dispatchEvent(drop);
+    await client.settled();
+    expect(moves).toEqual(['bug-7→done']);
+    expect(drop.defaultPrevented).toBe(true);
+  });
+
   it('component code can still suppress a bubbling delegated event with stopPropagation', async () => {
     const { client } = await serveAndBoot();
     const input = document.querySelector('.q') as HTMLInputElement;

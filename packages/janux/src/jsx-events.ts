@@ -104,9 +104,14 @@ export interface JanuxEventAttributes {
   onDragEnter?: IntentRef;
   /** https://developer.mozilla.org/docs/Web/API/HTMLElement/dragleave_event */
   onDragLeave?: IntentRef;
-  /** https://developer.mozilla.org/docs/Web/API/HTMLElement/dragover_event */
+  /** Rarely needed: binding `onDrop` already enables the zone. https://developer.mozilla.org/docs/Web/API/HTMLElement/dragover_event */
   onDragOver?: IntentRef;
-  /** https://developer.mozilla.org/docs/Web/API/HTMLElement/drop_event */
+  /**
+   * Binding this ENABLES the drop zone: the runtime preventDefaults `dragover`
+   * over the marked element for you. Carry the payload in island state via
+   * `onDragStart={intents.pick.with(...)}`, not in `dataTransfer`.
+   * https://developer.mozilla.org/docs/Web/API/HTMLElement/drop_event
+   */
   onDrop?: IntentRef;
 
   // ── scroll, touch and the rest ────────────────────────────────────────────

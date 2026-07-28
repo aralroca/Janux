@@ -61,6 +61,30 @@ describe('guide/events-and-interactions.md', () => {
     expect(html).toBe('<div>x</div>');
   });
 
+  it('binding onDrop declares the zone: the marker is what the runtime enables dragover on', async () => {
+    const board = component({
+      name: 'board',
+      description: 'Drag & drop board',
+      state: schema({ dragging: str().default('') }),
+      intents: {
+        pick: intent({ description: 'Start dragging', input: schema({ card: str() }), run: ({ state, input }: any) => (state.dragging = input.card) }),
+        dropOn: intent({ description: 'Drop into a column', input: schema({ column: str() }), run: () => {} }),
+      },
+      view: ({ intents }: any) =>
+        jsx('div', {
+          children: [
+            jsx('article', { draggable: 'true', onDragStart: intents.pick.with({ card: 'c1' }) }),
+            jsx('section', { onDrop: intents.dropOn.with({ column: 'done' }) }),
+          ],
+        }),
+    });
+    const { html } = await renderToString(jsx(board as any, {}), {});
+
+    expect(html).toContain('data-jxe-dragstart="board#default:pick"');
+    expect(html).toContain('data-jxe-drop="board#default:dropOn"');
+    expect(html).toContain('data-input="{&quot;card&quot;:&quot;c1&quot;}"');
+  });
+
   it('run() sees the origin, and the origin-aware guard proposes only for agents', async () => {
     let proposal: any;
     const instance = createInstance(Gallery, { onProposal: (p) => (proposal = p) });
