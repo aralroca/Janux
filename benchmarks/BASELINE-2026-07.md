@@ -11,7 +11,7 @@ y `update` costaba 1816ms).
 
 ## Lecturas clave (tras el bucle de optimización)
 
-- **Paridad o victoria en suites de app completa**: lifecycle 1.00×react, stores 0.83-1.27×, submit 0.92×, reset 0.40×, scheduler 1.48×, composition 1.26×, suspense-recovery ≈1.0×.
+- **Paridad o victoria en suites de app completa**: lifecycle 1.00×react, stores 0.83-1.27× (outlier: tanstack invalidation 1.62×), submit 0.92×, reset 0.40×, scheduler 1.48×, composition 1.26×, suspense-recovery 1.01-1.10×.
 - **Resume aplasta a la hidratación**: news hydrate 0.13×react; hydration 6× throttle 0.19-0.20×; hydration_work 0.22-0.24×.
 - **Bundle**: 24.7KB js_gzip total = 0.40×react; 4º de 6 (preact 10.0, solid 14.1, svelte 18.4, janux 24.7≈vue-vapor 24.1, react 62.1).
 - **Creación masiva**: runlots 0.64×, clear 0.75×.

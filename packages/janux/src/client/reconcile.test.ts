@@ -134,17 +134,100 @@ describe('reconcile', () => {
     expect(root.firstElementChild!.firstElementChild!.namespaceURI).toBe('http://www.w3.org/2000/svg');
   });
 
-  it('skips an identical JSX node entirely (memoization seam)', () => {
+  it('re-invokes function components inside identity-stable JSX (no stale skip)', () => {
     const root = document.createElement('div');
-    const stable = jsx('p', { class: 'x', children: 'static' });
+    let n = 1;
+    const Dyn = () => jsx('span', { children: String(n) });
+    // Hoisted, identity-stable wrapper around dynamic content — a legitimate
+    // authoring pattern that must never freeze.
+    const hoisted = jsx('section', { children: jsx(Dyn as any, {}) });
 
-    render(root, [stable]);
+    render(root, [hoisted]);
+    expect(root.textContent).toBe('1');
+    n = 2;
+    render(root, [hoisted]);
+    expect(root.textContent).toBe('2');
+  });
+
+  it('syncs a select whose value and options change in the same pass', () => {
+    const root = document.createElement('div');
+    const sel = (value: string, options: string[]) =>
+      jsx('select', {
+        value,
+        children: options.map((o) => jsx('option', { value: o, children: o }, o)),
+      });
+
+    render(root, sel('a', ['a']));
+    const select = root.firstElementChild as HTMLSelectElement;
+
+    render(root, sel('b', ['a', 'b']));
+    expect(select.value).toBe('b');
+  });
+
+  it('sets a freshly created select to its value prop', () => {
+    const root = document.createElement('div');
+
+    render(
+      root,
+      jsx('select', {
+        value: 'b',
+        children: ['a', 'b'].map((o) => jsx('option', { value: o, children: o }, o)),
+      }),
+    );
+    expect((root.firstElementChild as HTMLSelectElement).value).toBe('b');
+  });
+
+  it('heals textarea drift from numeric children', () => {
+    const root = document.createElement('div');
+
+    render(root, jsx('textarea', { children: 5 }));
+    const area = root.firstElementChild as HTMLTextAreaElement;
+
+    area.value = 'user typed';
+    render(root, jsx('textarea', { children: 6 }));
+    expect(area.value).toBe('6');
+  });
+
+  it('re-serializes when a bound intent input differs only in a children key', () => {
+    const root = document.createElement('div');
+    const bound = (input: Record<string, unknown>) =>
+      Object.assign(() => Promise.resolve(), {
+        $intent: { component: 'x', name: 'go' },
+        $input: input,
+      });
+
+    render(root, jsx('a', { onClick: bound({ children: 5 }) }));
+    const a = root.firstElementChild!;
+
+    a.setAttribute('data-witness', 'kept');
+    render(root, jsx('a', { onClick: bound({ children: 6 }) }));
+    expect(a.hasAttribute('data-witness')).toBe(false);
+  });
+
+  it('re-serializes a style object mutated in place', () => {
+    const root = document.createElement('div');
+    const style: Record<string, string> = { color: 'red' };
+
+    render(root, jsx('p', { style, children: 'x' }));
     const p = root.firstElementChild!;
 
-    p.setAttribute('data-witness', 'kept'); // would be wiped by an attr sync
-    render(root, [stable]);
-    expect(root.firstElementChild).toBe(p);
-    expect(p.getAttribute('data-witness')).toBe('kept');
+    style.color = 'blue';
+    render(root, jsx('p', { style, children: 'x' }));
+    expect(p.getAttribute('style')).toContain('blue');
+  });
+
+  it('drops host attrs an island stops declaring', () => {
+    const root = document.createElement('div');
+    const island = document.createElement('janux-island');
+
+    island.setAttribute('data-jx', 'kid#p.1.1');
+    island.setAttribute('data-jx-persist', '');
+    root.appendChild(island);
+    const kidDef = { kind: 'ui', name: 'kid', view: () => null } as any;
+
+    render(root, [jsx(kidDef, {})]); // no persist prop this pass
+    expect(root.firstElementChild).toBe(island);
+    expect(island.hasAttribute('data-jx-persist')).toBe(false);
   });
 
   it('skips attribute work when a fresh JSX node carries identical prop values', () => {

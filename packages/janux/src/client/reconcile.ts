@@ -46,7 +46,13 @@ function isBoundarySlot(slot: Slot): boolean {
   return typeof slot !== 'string' && (isComponentDef(slot.$t) || isForeignDef(slot.$t));
 }
 
-/** The JSX node most recently reconciled into a live element — identical node ⇒ nothing to do. */
+/**
+ * The JSX node most recently reconciled into a live element — its props feed
+ * the `sameProps` attr-diff skip. Identity of the node itself must NOT skip
+ * the subtree: hoisted JSX wraps dynamic content (function components,
+ * signal reads), and skipping recursion would freeze it AND drop the render
+ * effect's re-tracked subscriptions.
+ */
 const prevJsx = new WeakMap<Element, JanuxNode>();
 
 /**
@@ -73,20 +79,34 @@ function sameProps(prev: Record<string, unknown> | undefined, next: Record<strin
  * which is exactly when their serialized marker + data-input are identical.
  */
 function sameValue(a: unknown, b: unknown): boolean {
-  if (Object.is(a, b)) return true;
   const ia = (a as any)?.$intent;
   const ib = (b as any)?.$intent;
 
-  if (!ia || !ib) return false;
-  if (ia.component !== ib.component || ia.name !== ib.name || ia.key !== ib.key) return false;
+  if (ia && ib) {
+    if (ia.component !== ib.component || ia.name !== ib.name || ia.key !== ib.key) return false;
+    const inputA = (a as any).$input as Record<string, unknown> | undefined;
+    const inputB = (b as any).$input as Record<string, unknown> | undefined;
 
-  const inputA = (a as any).$input as Record<string, unknown> | undefined;
-  const inputB = (b as any).$input as Record<string, unknown> | undefined;
+    // The common unbound ref (`onClick={intents.run}`) carries no input at all.
+    if (inputA === undefined && inputB === undefined) return true;
 
-  // The common unbound ref (`onClick={intents.run}`) carries no input at all.
-  if (inputA === undefined && inputB === undefined) return true;
+    return sameRecord(inputA ?? {}, inputB ?? {});
+  }
+  // A mutable object (a `style`, an arbitrary bag) can be edited in place, so
+  // its identity proves nothing — always re-serialize.
+  if (typeof a === 'object' && a !== null) return false;
 
-  return sameProps(inputA ?? {}, inputB ?? {});
+  return Object.is(a, b);
+}
+
+/** Shallow value equality over every key — the `$input` comparison excludes nothing. */
+function sameRecord(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+
+  if (aKeys.length !== bKeys.length) return false;
+
+  return bKeys.every((key) => sameValue(a[key], b[key]));
 }
 
 /** Controlled inputs: state → DOM property writes, never touching the focused control. */
@@ -99,11 +119,12 @@ function syncControl(el: Element, props: Record<string, unknown>): void {
 
     return;
   }
+  const children = props.children;
   const value =
     props.value !== null && props.value !== undefined
       ? String(props.value)
-      : el instanceof HTMLTextAreaElement && typeof props.children === 'string'
-        ? props.children
+      : el instanceof HTMLTextAreaElement && (typeof children === 'string' || typeof children === 'number')
+        ? String(children)
         : null;
 
   if (value !== null && el.value !== value) el.value = value;
@@ -129,24 +150,25 @@ function syncAttrs(el: Element, props: Record<string, unknown>): void {
   });
 }
 
-/** Reconciles a reused element in place: attrs, control properties, children. */
+/** Reconciles a reused element in place: attrs, children, then control properties. */
 function syncElement(el: Element, node: JanuxNode, pass: RenderPass, svg: boolean): void {
   const prev = prevJsx.get(el);
 
-  if (prev === node) return;
   prevJsx.set(el, node);
   if (node.$k !== undefined) setNodeKey(el, node.$k);
   if (!sameProps(prev?.$p, node.$p)) syncAttrs(el, node.$p);
-  if (VALUE_CONTROL_TAGS.has(node.$t as string)) syncControl(el, node.$p);
   if (typeof node.$p.dangerHTML === 'string') {
     if (el.innerHTML !== node.$p.dangerHTML) el.innerHTML = node.$p.dangerHTML;
+  } else {
+    const tag = node.$t as string;
+    const inSvg = svg || tag === 'svg';
 
-    return;
+    reconcileChildren(el, node.$p.children, pass, inSvg && tag !== 'foreignObject');
   }
-  const tag = node.$t as string;
-  const inSvg = svg || tag === 'svg';
-
-  reconcileChildren(el, node.$p.children, pass, inSvg && tag !== 'foreignObject');
+  // AFTER the children: `<select>.value` can only select an <option> that
+  // already exists — written first, a value+options change in one pass left
+  // the old selection in place.
+  if (VALUE_CONTROL_TAGS.has(node.$t as string)) syncControl(el, node.$p);
 }
 
 /** A boundary slot reuses a live host with the same id; the placeholder path assigns ids in pass order. */
@@ -157,7 +179,12 @@ function boundaryTarget(slot: JanuxNode, hosts: Map<string, Element> | null, pas
   const host = hosts?.get(placeholder.getAttribute('data-jx')!);
 
   if (!host) return placeholder;
-  // The host's own runtime owns its interior; only the host attrs sync.
+  // The host's own runtime owns its interior; only the host attrs sync —
+  // including dropping the ones this pass no longer declares (persist/eager).
+  host
+    .getAttributeNames()
+    .filter((name) => !placeholder.hasAttribute(name))
+    .forEach((name) => host.removeAttribute(name));
   placeholder.getAttributeNames().forEach((name) => {
     if (host.getAttribute(name) !== placeholder.getAttribute(name)) {
       host.setAttribute(name, placeholder.getAttribute(name)!);
@@ -194,7 +221,13 @@ function elementTarget(slot: JanuxNode, match: Match, index: number, pass: Rende
   }
   const created = toDomNodes(slot, pass, svg)[0]!;
 
-  if (created.nodeType === Node.ELEMENT_NODE) prevJsx.set(created as Element, slot);
+  if (created.nodeType === Node.ELEMENT_NODE) {
+    prevJsx.set(created as Element, slot);
+    // `elementFor` writes `value` as an ATTRIBUTE, which selects nothing on a
+    // fresh <select> (and is only a default for <textarea>) — the property
+    // write must run once the options/children exist.
+    if (VALUE_CONTROL_TAGS.has(slot.$t as string)) syncControl(created as Element, slot.$p);
+  }
 
   return created;
 }

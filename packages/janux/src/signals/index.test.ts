@@ -85,6 +85,20 @@ describe('signals', () => {
     expect(runs).toHaveBeenCalledTimes(2);
   });
 
+  it('a chained computed read mid-batch sees the in-batch writes', () => {
+    const a = signal(1);
+    const c1 = computed(() => a.value + 1);
+    const c2 = computed(() => c1.value * 10);
+    let seen = 0;
+
+    batch(() => {
+      a.value = 5;
+      seen = c2.value;
+    });
+    expect(seen).toBe(60);
+    expect(c2.value).toBe(60);
+  });
+
   it('untrack reads without subscribing', () => {
     const a = signal(1);
     const runs = mock(() => {});

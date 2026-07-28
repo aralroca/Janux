@@ -162,7 +162,7 @@ Zero config — first match wins:
 
 ## Documentation
 
-**[janux.build docs](https://janux.build)** — 75 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build docs](https://janux.build)** — 76 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -191,7 +191,7 @@ Dominic Gannaway; `js-framework` fixtures derive from
 | Resume vs hydration | **0.13–0.24× react** — 0.33ms to make the news page interactive (react 2.58) |
 | Shipped JS | 24.2KB gzip total vs react 60.7 (preact 9.8 · solid 13.7 · svelte 17.9); islands-free pages ship 0KB |
 | Mass DOM work | 10k rows: 84.9ms vs react 131.8; clear 36.0 vs 48.4; 512-field reset 15.4 vs 39.0 |
-| Whole-app suites | parity: lifecycle 1.00×, store integrations 0.83–1.14×, suspense recovery ~1.0× |
+| Whole-app suites | parity: lifecycle 1.00×, store integrations 0.83–1.14× (TanStack invalidation outlier 1.62×), suspense recovery 1.0–1.1× |
 | Keyed micro-ops | behind: select-1-of-1000 7.7ms vs react 0.46 — needs the fine-grained list primitive (RFC) |
 | SSR throughput | behind: 4.5× react on buffered renders; streaming end-to-end at parity |
 

@@ -3,6 +3,8 @@ type Cleanup = (() => void) | undefined;
 interface Runner {
   run: () => void;
   deps: Set<Set<Runner>>;
+  /** Computed runners are pure and safe to flush early on a mid-batch read. */
+  computed?: boolean;
 }
 
 export interface Sig<T> {
@@ -159,6 +161,7 @@ export function computed<T>(fn: () => T): ReadonlySig<T> {
     if (disposed) return;
     out.value = runWithOwner(scope, () => runTracked(runner, fn as () => Cleanup)) as T;
   };
+  runner.computed = true;
   runner.run();
   const dispose = function dispose() {
     if (disposed) return;
@@ -168,12 +171,24 @@ export function computed<T>(fn: () => T): ReadonlySig<T> {
 
   owner?.cleanups.push(dispose);
   // A batch queues this runner like any other; a read mid-batch must not see
-  // the pre-batch value, so the pending recompute runs on demand (pull) and
-  // leaves the queue with nothing to redo.
+  // the pre-batch value, so pending recomputes run on demand (pull) and leave
+  // the queue with nothing to redo. ALL queued computed runners flush, to a
+  // fixed point: a chain (c2 reads c1 reads a) only queues c2 once c1 has
+  // re-run, so draining just this runner would serve c2 its pre-batch value.
+  // Computeds are pure by contract, so early evaluation is unobservable;
+  // effects stay queued for the batch's own flush.
   const fresh = () => {
-    if (batching?.has(runner)) {
-      batching.delete(runner);
-      runner.run();
+    if (batching === null) return;
+    let ran = true;
+
+    while (ran) {
+      ran = false;
+      for (const queued of [...batching]) {
+        if (!queued.computed) continue;
+        batching.delete(queued);
+        queued.run();
+        ran = true;
+      }
     }
   };
 

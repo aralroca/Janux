@@ -40,16 +40,17 @@ express.
 |---|---|---|---|---|---|---|
 | total | 9.8KB | 13.7KB | 17.9KB | **24.2KB** | 23.5KB | 60.7KB |
 
-**Mass DOM work.** Creating 10,000 rows: 84.9ms vs react's 131.8 (solid 18.5,
-vue-vapor 27.6). Clearing them: 36.0ms vs react's 48.4. Resetting a 512-field
+**Mass DOM work.** Creating 10,000 rows: 84.9ms vs react's 131.8 (solid 15.4,
+svelte 27.6). Clearing them: 36.0ms vs react's 48.4. Resetting a 512-field
 form: 15.4ms vs react's 39.0.
 
 **Whole-app parity.** On the application-shaped suites the gap to the
 compiled frameworks mostly disappears: mount/update/unmount lifecycle cycles
 at 1.00× react with exact cleanup accounting, zustand/jotai/TanStack Query
-integration ops between 0.83× and 1.14×, suspense error/retry/cancel recovery
-at ~1.0×, a 512-subscriber selector store with **zero selector calls** across
-20 unrelated parent re-renders.
+integration ops between 0.83× and 1.14× (one outlier: TanStack invalidation
+at 1.62×), suspense error/retry/cancel recovery between 1.01× and 1.10×, a
+512-subscriber selector store with **zero selector calls** across 20
+unrelated parent re-renders.
 
 ## Where Janux does not win (yet)
 
