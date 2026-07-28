@@ -125,3 +125,114 @@ describe('hosted MCP endpoint (/_janux/mcp)', () => {
     expect([res.status, alt.status]).toContain(200);
   });
 });
+
+const META = 'io.modelcontextprotocol/';
+const modernMeta = {
+  [`${META}protocolVersion`]: '2026-07-28',
+  [`${META}clientInfo`]: { name: 'test-client', version: '1' },
+  [`${META}clientCapabilities`]: {},
+};
+
+function modernHeaders(method: string, name?: string) {
+  return {
+    'mcp-protocol-version': '2026-07-28',
+    'mcp-method': method,
+    ...(name ? { 'mcp-name': name } : {}),
+  };
+}
+
+describe('hosted MCP endpoint — 2026-07-28 modern era', () => {
+  it('answers server/discover with versions, capabilities and identity', async () => {
+    const { body } = await rpc(server(), 'server/discover', { _meta: modernMeta }, modernHeaders('server/discover'));
+
+    expect(body.result.supportedVersions).toEqual(['2026-07-28', '2025-06-18']);
+    expect(body.result.capabilities).toHaveProperty('tools');
+    expect(body.result.capabilities).toHaveProperty('resources');
+    expect(body.result._meta[`${META}serverInfo`].name).toBe('demo');
+  });
+
+  it('serves a modern tools/list without any handshake and marks it cacheable', async () => {
+    const { status, body } = await rpc(
+      server(),
+      'tools/list',
+      { _meta: modernMeta },
+      modernHeaders('tools/list'),
+    );
+
+    expect(status).toBe(200);
+    expect(body.result.tools.map((tool: any) => tool.name)).toContain('demo.greet');
+    expect(body.result.ttlMs).toBeGreaterThan(0);
+    expect(body.result.cacheScope).toBe('public');
+    expect(body.result.resultType).toBe('complete');
+    expect(body.result._meta[`${META}serverInfo`].name).toBe('demo');
+  });
+
+  it('marks results private when the endpoint requires auth', async () => {
+    const target = server({ mcpAuth: { verify: (token: string) => (token === 'good' ? { sub: 'u1' } : null) } });
+    const { body } = await rpc(target, 'tools/list', { _meta: modernMeta }, {
+      ...modernHeaders('tools/list'),
+      authorization: 'Bearer good',
+    });
+
+    expect(body.result.cacheScope).toBe('private');
+  });
+
+  it('rejects an unsupported modern version with -32022 and the supported list', async () => {
+    const meta = { ...modernMeta, [`${META}protocolVersion`]: '2099-01-01' };
+    const { status, body } = await rpc(server(), 'tools/list', { _meta: meta }, {
+      'mcp-protocol-version': '2099-01-01',
+      'mcp-method': 'tools/list',
+    });
+
+    expect(status).toBe(400);
+    expect(body.error.code).toBe(-32022);
+    expect(body.error.data.supported).toContain('2026-07-28');
+    expect(body.error.data.requested).toBe('2099-01-01');
+  });
+
+  it('rejects a header/body mismatch with -32020', async () => {
+    const mismatchedMethod = await rpc(server(), 'tools/list', { _meta: modernMeta }, modernHeaders('resources/list'));
+
+    expect(mismatchedMethod.status).toBe(400);
+    expect(mismatchedMethod.body.error.code).toBe(-32020);
+
+    const missingHeader = await rpc(server(), 'tools/list', { _meta: modernMeta });
+
+    expect(missingHeader.status).toBe(400);
+    expect(missingHeader.body.error.code).toBe(-32020);
+  });
+
+  it('requires Mcp-Name on tools/call and decodes the Base64 sentinel', async () => {
+    const params = { _meta: modernMeta, name: 'demo.greet', arguments: { name: 'ada' } };
+    const unnamed = await rpc(server(), 'tools/call', params, modernHeaders('tools/call'));
+
+    expect(unnamed.status).toBe(400);
+    expect(unnamed.body.error.code).toBe(-32020);
+
+    const sentinel = `=?base64?${btoa('demo.greet')}?=`;
+    const named = await rpc(server(), 'tools/call', params, modernHeaders('tools/call', sentinel));
+
+    expect(named.status).toBe(200);
+    expect(named.body.result.content[0].text).toBe('"hola ada"');
+
+    const malformed = await rpc(server(), 'tools/call', params, modernHeaders('tools/call', '=?base64?!not-b64!?='));
+
+    expect(malformed.status).toBe(400);
+    expect(malformed.body.error.code).toBe(-32020);
+  });
+
+  it('answers -32602 for an unknown resource', async () => {
+    const { body } = await rpc(server(), 'resources/read', { uri: 'janux://page/nope' });
+
+    expect(body.error.code).toBe(-32602);
+  });
+
+  it('leaves pre-modern versions on the legacy path, however old', async () => {
+    const { status, body } = await rpc(server(), 'tools/list', undefined, {
+      'mcp-protocol-version': '2025-03-26',
+    });
+
+    expect(status).toBe(200);
+    expect(body.result.tools.length).toBeGreaterThan(0);
+  });
+});

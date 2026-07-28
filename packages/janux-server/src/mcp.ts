@@ -1,6 +1,7 @@
 import type { Ctx } from 'janux';
 import type { ApiTool } from './api';
 import { mcpLandingPage } from './mcp-landing';
+import { decorateResult, discoverResult, modernGate } from './mcp-modern';
 
 /**
  * Hosted MCP endpoint (RFC 0002 §13.2): `/_janux/mcp` speaks MCP over
@@ -38,8 +39,8 @@ function rpcResult(id: RpcRequest['id'], result: unknown): Record<string, unknow
   return { jsonrpc: '2.0', id: id ?? null, result };
 }
 
-function rpcError(id: RpcRequest['id'], code: number, message: string): Record<string, unknown> {
-  return { jsonrpc: '2.0', id: id ?? null, error: { code, message } };
+function rpcError(id: RpcRequest['id'], code: number, message: string, data?: unknown): Record<string, unknown> {
+  return { jsonrpc: '2.0', id: id ?? null, error: { code, message, ...(data !== undefined ? { data } : {}) } };
 }
 
 function toolDescriptor(tool: ApiTool) {
@@ -70,6 +71,8 @@ async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx): Promise<R
       return undefined;
     case 'ping':
       return rpcResult(id, {});
+    case 'server/discover':
+      return rpcResult(id, discoverResult());
     case 'tools/list':
       return rpcResult(id, { tools: deps.tools.map(toolDescriptor) });
     case 'tools/call': {
@@ -95,7 +98,7 @@ async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx): Promise<R
       const path = uri?.startsWith('janux://page') ? uri.slice('janux://page'.length) || '/' : undefined;
       const text = path ? await deps.readPage(path, ctx) : undefined;
 
-      if (text === undefined) return rpcError(id, -32002, `Unknown resource: ${uri}`);
+      if (text === undefined) return rpcError(id, -32602, `Unknown resource: ${uri}`);
 
       return rpcResult(id, { contents: [{ uri, mimeType: 'text/markdown', text }] });
     }
@@ -138,8 +141,24 @@ export function createMcpEndpoint(deps: McpDeps) {
     const body = (await req.json().catch(() => undefined)) as RpcRequest | RpcRequest[] | undefined;
 
     if (!body) return Response.json(rpcError(null, -32700, 'Parse error'), { status: 400 });
+    if (!Array.isArray(body)) {
+      // Batches are a legacy-only construct; modern requests are one message per POST.
+      const gate = modernGate(body, req.headers);
+
+      if (gate) return Response.json(rpcError(body.id ?? null, gate.code, gate.message, gate.data), { status: 400 });
+    }
     const batch = Array.isArray(body) ? body : [body];
-    const replies = (await Promise.all(batch.map((rpc) => handleMethod(rpc, deps, ctx)))).filter(
+    const respond = async (rpc: RpcRequest) => {
+      const reply = await handleMethod(rpc, deps, ctx);
+
+      if (!reply || !('result' in reply)) return reply;
+
+      return {
+        ...reply,
+        result: decorateResult(rpc.method, reply.result as Record<string, unknown>, deps.serverName, deps.auth !== undefined),
+      };
+    };
+    const replies = (await Promise.all(batch.map(respond))).filter(
       (reply): reply is Record<string, unknown> => reply !== undefined,
     );
 
