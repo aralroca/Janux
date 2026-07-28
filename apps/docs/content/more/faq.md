@@ -18,7 +18,7 @@ No. `approve` endpoints/bridges execute a stored closure exactly once, and appro
 
 ## What happens if my component throws during resume?
 
-The island fails in isolation — other islands and the static page keep working. Errors surface as `janux:error` DOM events.
+The island fails in isolation — other islands and the static page keep working. Errors surface as `janux:error` DOM events. The same holds during SSR: an island's throw renders its [`error` view](/docs/guide/ssr-and-resumability#error-boundaries) (or the closest ancestor's), never a dead page.
 
 ## Is `x-janux-origin` spoofable?
 
