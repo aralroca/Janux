@@ -1,0 +1,186 @@
+[
+	{
+		"suite": "js-framework",
+		"op": "run",
+		"target": "janux",
+		"reference": "react",
+		"note": "krausest run (recorded 1.78x, ×1.5 headroom)",
+		"maxRatio": 2.7
+	},
+	{
+		"suite": "js-framework",
+		"op": "replace",
+		"target": "janux",
+		"reference": "react",
+		"note": "krausest replace (recorded 1.33x, ×1.5 headroom)",
+		"maxRatio": 2
+	},
+	{
+		"suite": "js-framework",
+		"op": "update",
+		"target": "janux",
+		"reference": "react",
+		"note": "krausest update (recorded 6.67x, ×1.5 headroom)",
+		"maxRatio": 10
+	},
+	{
+		"suite": "js-framework",
+		"op": "select",
+		"target": "janux",
+		"reference": "react",
+		"note": "krausest select (recorded 16.83x, ×1.5 headroom)",
+		"maxRatio": 25.3
+	},
+	{
+		"suite": "js-framework",
+		"op": "swap",
+		"target": "janux",
+		"reference": "react",
+		"note": "krausest swap (recorded 1.93x, ×1.5 headroom)",
+		"maxRatio": 2.9
+	},
+	{
+		"suite": "js-framework",
+		"op": "remove",
+		"target": "janux",
+		"reference": "react",
+		"note": "krausest remove (recorded 20.12x, ×1.5 headroom)",
+		"maxRatio": 30.2
+	},
+	{
+		"suite": "js-framework",
+		"op": "add",
+		"target": "janux",
+		"reference": "react",
+		"note": "krausest add (recorded 4.34x, ×1.5 headroom)",
+		"maxRatio": 6.6
+	},
+	{
+		"suite": "js-framework",
+		"op": "runlots",
+		"target": "janux",
+		"reference": "react",
+		"note": "mass create win — advantage guard: must stay ≤1x react (recorded 0.64x)",
+		"maxRatio": 1
+	},
+	{
+		"suite": "js-framework",
+		"op": "clear",
+		"target": "janux",
+		"reference": "react",
+		"note": "mass clear win — advantage guard: must stay ≤1x react (recorded 0.75x)",
+		"maxRatio": 1
+	},
+	{
+		"suite": "todomvc",
+		"op": "add100",
+		"target": "janux",
+		"reference": "react",
+		"note": "todomvc bulk add (recorded 2.95x, ×1.5 headroom)",
+		"maxRatio": 4.5
+	},
+	{
+		"suite": "todomvc",
+		"op": "complete25",
+		"target": "janux",
+		"reference": "react",
+		"note": "todomvc interaction batch (recorded 1.91x, ×1.5 headroom)",
+		"maxRatio": 2.9
+	},
+	{
+		"suite": "lifecycle-memory",
+		"op": "cycle",
+		"target": "janux",
+		"reference": "react",
+		"note": "mount/update/unmount cycle parity (recorded 1.00x, ×1.5 headroom)",
+		"maxRatio": 1.5
+	},
+	{
+		"suite": "controlled-form",
+		"op": "typing",
+		"target": "janux",
+		"reference": "react",
+		"note": "512-field typing (recorded 1.72x, ×1.5 headroom)",
+		"maxRatio": 2.6
+	},
+	{
+		"suite": "scaling-curves",
+		"op": "update_512",
+		"target": "janux",
+		"reference": "react",
+		"note": "worst-case island update fan-out (recorded 11.45x, ×1.5 headroom)",
+		"maxRatio": 17.2
+	},
+	{
+		"suite": "scheduler-responsiveness",
+		"op": "input_during_updates",
+		"target": "janux",
+		"reference": "react",
+		"note": "typing under store churn (recorded 1.48x, ×1.5 headroom)",
+		"maxRatio": 2.3
+	},
+	{
+		"suite": "external-store-fanout",
+		"op": "narrow_write",
+		"target": "janux",
+		"reference": "react",
+		"note": "store narrow write parity (recorded 1.27x, ×1.5 headroom)",
+		"maxRatio": 2
+	},
+	{
+		"suite": "store-selector-fanout",
+		"op": "parent_rerenders",
+		"target": "janux",
+		"reference": "react",
+		"note": "unrelated re-renders with selectors (recorded 1.47x, ×1.5 headroom)",
+		"maxRatio": 2.3
+	},
+	{
+		"suite": "news",
+		"op": "hydrate",
+		"target": "janux",
+		"reference": "react",
+		"note": "resume beats hydration — advantage guard: must stay ≤1x react (recorded 0.13x)",
+		"maxRatio": 0.2
+	},
+	{
+		"suite": "hydration-interactivity",
+		"op": "uncontrolled_6x_hydration",
+		"target": "janux",
+		"reference": "react",
+		"note": "throttled hydration win — advantage guard: must stay ≤1x react (recorded 0.20x)",
+		"maxRatio": 0.4
+	},
+	{
+		"suite": "ssr-throughput",
+		"op": "render",
+		"target": "news-50/janux",
+		"reference": "news-50/react",
+		"note": "news-50 SSR render (recorded 4.55x, ×1.5 headroom)",
+		"maxRatio": 6.9
+	},
+	{
+		"suite": "streaming-ssr",
+		"op": "total_staggered",
+		"target": "janux",
+		"reference": "react",
+		"note": "staggered stream end-to-end (recorded 0.99x, ×1.5 headroom)",
+		"maxRatio": 1.5
+	},
+	{
+		"suite": "bundle-size",
+		"op": "js_gzip",
+		"target": "janux",
+		"reference": "react",
+		"maxRatio": 0.5,
+		"note": "deterministic bytes — janux ships 40% of react's js_gzip (×1.1 headroom)"
+	},
+	{
+		"suite": "bundle-size",
+		"op": "fw_gzip",
+		"target": "janux",
+		"reference": "react",
+		"maxRatio": 0.5,
+		"note": "deterministic bytes — janux ships 38% of react's fw_gzip (×1.1 headroom)"
+	}
+]
