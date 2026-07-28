@@ -3,7 +3,8 @@ import { createInstance, type JanuxInstance } from '../runtime/instance';
 import type { EventBus } from '../runtime/bus';
 import type { ComponentDef, Ctx } from '../define/types';
 import { isForeignDef, type ForeignDef } from '../interop';
-import { dedupeKey, escapeHtml, renderAttrs, safeKey, VOID_ELEMENTS } from './html';
+import { dedupeKey, escapeHtml, renderAttrs, safeJson, safeKey, VOID_ELEMENTS } from './html';
+import { UNSUSPENSE_RUNTIME } from './unsuspense';
 
 export interface IslandRecord {
   def: ComponentDef;
@@ -27,6 +28,32 @@ export interface RenderOptions {
    * same one the app's own React components import — two copies break hooks.
    */
   foreignImport?: (spec: string) => Promise<any>;
+  /**
+   * Resolve suspense islands in place instead of streaming trailing chunks.
+   * `renderToString` forces it: buffered consumers (agent-facing Markdown
+   * projections, static export) must never see a skeleton with the real
+   * content parked in a `<template>` no one will execute.
+   */
+  inlineSuspense?: boolean;
+  /**
+   * Called once when the page's own HTML is complete but suspense boundaries
+   * are still pending; the returned markup is emitted before the trailing
+   * chunks. The server shell uses it to ship the runtime and the snapshots
+   * that already exist — the page becomes interactive while boundaries stream.
+   */
+  onBeforeBoundaries?: (summary: Omit<RenderResult, 'html'>) => string;
+}
+
+/** What a suspended island resolves to — the swap script is error-agnostic. */
+interface BoundaryResult {
+  html: string;
+  /** Set only when the island had no `error` view: reported via `janux:error`. */
+  failed?: unknown;
+}
+
+interface BoundaryRecord {
+  id: string;
+  content: Promise<BoundaryResult>;
 }
 
 interface RenderScope extends RenderOptions {
@@ -38,6 +65,16 @@ interface RenderScope extends RenderOptions {
   island?: { name: string; key: string; keySeq: Map<string, number>; usedKeys: Set<string> };
   /** An abandoned stream (client gone) stops descending into new work. */
   halted?: () => boolean;
+  /** Suspended islands register here; the stream flushes them in resolution order. */
+  boundaries?: BoundaryRecord[];
+  /** An ancestor island declared `error`: a failing island rethrows to it instead of failing soft. */
+  underErrorBoundary?: boolean;
+  /**
+   * Rendering into a discardable buffer, not the stream: a throwing sibling
+   * may reject immediately (nothing has streamed, the whole buffer is dropped)
+   * instead of waiting for every sibling to settle first.
+   */
+  buffered?: boolean;
 }
 
 function isComponentDef(type: unknown): type is ComponentDef {
@@ -98,6 +135,121 @@ function islandCtx(scope: RenderScope): RenderOptions['ctx'] {
 /** Where rendered HTML goes: pushed as produced, in document order. */
 type Emit = (chunk: string) => void;
 
+/** The failure is reported in-page: same `janux:error` channel a failed navigation uses. */
+function failSoftScript(id: string, error: unknown): string {
+  const detail = safeJson(String(error));
+
+  return `<script id="jxe:${id}" key="jxe:${id}">document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: island failed",${detail})</script>`;
+}
+
+/**
+ * Children of a guarded or suspended island register apart — islands and
+ * boundaries both — so a discarded subtree neither boots on the client nor
+ * flushes trailing content for a host that will never exist.
+ */
+function isolatedScope(scope: RenderScope): RenderScope {
+  return {
+    ...scope,
+    registry: { islands: [], stores: scope.registry.stores },
+    boundaries: scope.boundaries && [],
+    buffered: true,
+  };
+}
+
+/**
+ * The error view renders with a fresh key sequence: the discarded attempt
+ * consumed keys the client's depth-first walk will never see, and an island
+ * keyed off that drift ships state under an identity no client can compute.
+ */
+function errorScope(scope: RenderScope): RenderScope {
+  return { ...scope, island: { ...scope.island!, keySeq: new Map(), usedKeys: new Set() } };
+}
+
+/**
+ * The fallback's nested islands live in a `~fb` key namespace: they are real
+ * islands until the swap removes them, and they must never collide with the
+ * keys the real content assigns. Boundaries are disabled inside a fallback —
+ * its whole subtree is discarded at swap time, so a trailing chunk registered
+ * there could outlive its host.
+ */
+function fallbackScope(scope: RenderScope): RenderScope {
+  const island = scope.island!;
+
+  return {
+    ...scope,
+    island: { ...island, key: `${island.key}~fb`, keySeq: new Map(), usedKeys: new Set() },
+    // No boundaries and no registrations: the whole subtree dies at swap time,
+    // so nothing in it may flush trailing chunks, boot, or ship a snapshot.
+    boundaries: undefined,
+    registry: { islands: [], stores: scope.registry.stores },
+  };
+}
+
+/**
+ * An island body under a boundary: sources load, the island registers, and the
+ * subtree renders isolated and buffered — streamed chunks cannot be unstreamed,
+ * and an `error` view replaces the content wholesale. A failure with no
+ * `error` view comes back as `failed` and the island fails soft on its own:
+ * a boundary island never bubbles to an ancestor, whose markup may already be
+ * on the wire by the time the failure exists.
+ */
+async function renderBoundaryContent(def: ComponentDef, instance: JanuxInstance, scope: RenderScope): Promise<BoundaryResult> {
+  await loadSources(instance);
+  scope.registry.islands.push({ def, key: scope.island!.key, instance });
+  const isolated = isolatedScope(scope);
+
+  try {
+    const html = await renderNode(def.view!(instance.bag), isolated);
+
+    scope.registry.islands.push(...isolated.registry.islands);
+    scope.boundaries?.push(...(isolated.boundaries ?? []));
+
+    return { html };
+  } catch (error) {
+    if (def.error) return { html: await renderNode(def.error({ ...instance.bag, error }), errorScope(scope)) };
+
+    return { html: '', failed: error };
+  }
+}
+
+const IDLE = Symbol('idle');
+
+/**
+ * Streaming suspense: the real content renders concurrently; if it settles
+ * before the fallback would even flush, it is inlined and no boundary exists.
+ * The race is deterministic, not load-dependent: the macrotask timer can only
+ * fire once the microtask queue drains, which happens exactly when the content
+ * either settled or parked on real I/O — so "lost the race" means "actually
+ * waits on something".
+ */
+async function renderSuspended(def: ComponentDef, instance: JanuxInstance, scope: RenderScope, emit: Emit, id: string, open: string): Promise<void> {
+  const content = renderBoundaryContent(def, instance, scope);
+  const first = await Promise.race([
+    content,
+    new Promise<typeof IDLE>((resolve) => setTimeout(() => resolve(IDLE), 0)),
+  ]);
+
+  if (first !== IDLE) return emitBoundaryInline(first, emit, id, open);
+  emit(`${open} data-jx-pending>`);
+  try {
+    await renderInto(def.suspense!(instance.bag), fallbackScope(scope), emit);
+  } catch (error) {
+    // A broken fallback must not break the boundary: the island still closes,
+    // the content still swaps in, and the failure is reported.
+    emit(failSoftScript(id, error));
+  }
+  emit('</janux-island>');
+  scope.boundaries!.push({ id, content });
+}
+
+/** A boundary resolved in place: content (or error view) between the island's own tags. */
+function emitBoundaryInline(result: BoundaryResult, emit: Emit, id: string, open: string): void {
+  emit(`${open}>`);
+  emit(result.html);
+  emit('</janux-island>');
+  if (result.failed !== undefined) emit(failSoftScript(id, result.failed));
+}
+
 async function renderIsland(def: ComponentDef, props: any, scope: RenderScope, emit: Emit): Promise<void> {
   const key = nextKey(scope, def, props.key ?? props.id);
   const stores = storeInstances(scope);
@@ -112,7 +264,9 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope, e
   const childScope: RenderScope = {
     ...scope,
     island: { name: def.name, key, keySeq: new Map(), usedKeys: new Set() },
+    underErrorBoundary: scope.underErrorBoundary || def.error !== undefined,
   };
+  const open = `<janux-island key="${id}" data-jx="${id}"${persist}${eager}`;
 
   /*
    * `key` is the same id, for the navigation diff rather than for us: it matches
@@ -125,10 +279,25 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope, e
    * The open tag goes out before the sources load: a slow island holds back its
    * own children, not the rest of the page.
    */
-  emit(`<janux-island key="${id}" data-jx="${id}"${persist}${eager}>`);
+  if (def.suspense && scope.boundaries) return renderSuspended(def, instance, childScope, emit, id, open);
+  if (def.suspense || def.error) {
+    // Buffered: an `error` view must be able to replace the content wholesale,
+    // and a suspense island in an inline render (`renderToString`, agent-facing
+    // projections) resolves in place instead of streaming a trailing chunk.
+    return emitBoundaryInline(await renderBoundaryContent(def, instance, childScope), emit, id, open);
+  }
+  emit(`${open}>`);
   await loadSources(instance);
   scope.registry.islands.push({ def, key, instance });
-  await renderInto(def.view!(instance.bag), childScope, emit);
+  try {
+    await renderInto(def.view!(instance.bag), childScope, emit);
+  } catch (error) {
+    // What streamed before the throw stays (elements close on unwind), the
+    // island closes, and the failure is dispatched — unless an ancestor island
+    // declared `error`, which is the boundary the throw belongs to.
+    if (childScope.underErrorBoundary) throw error;
+    emit(failSoftScript(id, error));
+  }
   emit('</janux-island>');
 }
 
@@ -198,9 +367,14 @@ async function renderElement(node: JanuxNode, scope: RenderScope, emit: Emit): P
 
   if (VOID_ELEMENTS.has(tag)) return emit(`<${tag}${attrs}/>`);
   emit(`<${tag}${attrs}>`);
-  if (typeof node.$p.dangerHTML === 'string') emit(node.$p.dangerHTML);
-  else await renderInto(node.$p.children, scope, emit);
-  emit(`</${tag}>`);
+  try {
+    if (typeof node.$p.dangerHTML === 'string') emit(node.$p.dangerHTML);
+    else await renderInto(node.$p.children, scope, emit);
+  } finally {
+    // Also on a throw: elements close as the stack unwinds, so an error
+    // boundary up the tree always receives balanced markup.
+    emit(`</${tag}>`);
+  }
 }
 
 /**
@@ -224,17 +398,33 @@ async function renderSiblings(nodes: unknown[], scope: RenderScope, emit: Emit):
     }
   };
 
-  await Promise.all(
-    nodes.map((child, index) =>
-      renderInto(child, scope, (chunk) => {
-        if (index === live) emit(chunk);
-        else buffers[index]!.push(chunk);
-      }).then(() => {
-        finished[index] = true;
-        if (index === live) advanceLive();
-      }),
-    ),
+  const renders = nodes.map((child, index) =>
+    renderInto(child, scope, (chunk) => {
+      if (index === live) emit(chunk);
+      else buffers[index]!.push(chunk);
+    }).finally(() => {
+      // Also on rejection: a failed child releases the cursor, so what its
+      // later siblings rendered still reaches the page before the throw does.
+      finished[index] = true;
+      if (index === live) advanceLive();
+    }),
   );
+
+  // Into a discardable buffer, fail fast: nothing has streamed, the whole
+  // buffer is dropped by the boundary above, and waiting would park the error
+  // view behind a sibling that may never settle. Into the stream, wait for
+  // every sibling: a throwing child must not leave its still-running siblings
+  // emitting into a document someone above already closed.
+  if (scope.buffered) {
+    await Promise.all(renders);
+
+    return;
+  }
+  const results = await Promise.allSettled(renders);
+
+  for (const result of results) {
+    if (result.status === 'rejected') throw result.reason;
+  }
 }
 
 async function renderInto(node: unknown, scope: RenderScope, emit: Emit): Promise<void> {
@@ -357,10 +547,65 @@ async function* coalesce(source: AsyncGenerator<string>): AsyncGenerator<string>
   }
 }
 
+const HALT = Symbol('halt');
+
+/**
+ * One boundary's trailing chunk: content template + self-removing swap call.
+ * The call script carries its own `id` so the navigation script-runner keys it
+ * individually instead of by its (per-page-identical) shape.
+ */
+function completionChunk(boundary: BoundaryRecord, result: BoundaryResult, runtimeSent: boolean): string {
+  const runtime = runtimeSent ? '' : UNSUSPENSE_RUNTIME;
+  const call = `<script data-jxu-run id="jxs:${boundary.id}" key="jxu:${boundary.id}">${runtime}jx$u(${safeJson(boundary.id)},document.currentScript)</script>`;
+  const failed = result.failed === undefined ? '' : failSoftScript(boundary.id, result.failed);
+
+  // The trailing empty template is for the NAVIGATION diff: its walker holds a
+  // chunk's last node until a following sibling proves it complete, which
+  // would delay this chunk's swap until the NEXT boundary arrives — boundaries
+  // would all reveal together at stream end instead of one by one. The inert
+  // sentinel is that following sibling, so the template and the call script
+  // apply the moment their own chunk lands. (A first load's parser inserts
+  // nodes as they arrive and just ignores it.)
+  return `<template id="jxu:${boundary.id}" key="jxt:${boundary.id}">${result.html}</template>${call}${failed}<template data-jxs></template>`;
+}
+
+/**
+ * Trailing chunks flush in resolution order — the runtime rides the first one.
+ * The list can grow while flushing: a boundary nested in another's content
+ * registers mid-loop. `halt` breaks the wait for a stream the client abandoned,
+ * whose gated sources may never resolve.
+ */
+async function flushBoundaries(scope: RenderScope, emit: Emit, halt: Promise<typeof HALT>): Promise<void> {
+  const list = scope.boundaries!;
+  let runtimeSent = false;
+
+  while (list.length > 0) {
+    const next = await Promise.race([
+      halt,
+      // A rejecting content promise (an `error` view that itself throws)
+      // degrades that one boundary to a fail-soft swap instead of killing
+      // every boundary still in flight.
+      ...list.map((boundary) =>
+        boundary.content.then(
+          (result) => ({ boundary, result }),
+          (error) => ({ boundary, result: { html: '', failed: error } }),
+        ),
+      ),
+    ]);
+
+    if (next === HALT) return;
+    list.splice(list.indexOf(next.boundary), 1);
+    emit(completionChunk(next.boundary, next.result, runtimeSent));
+    runtimeSent = true;
+  }
+}
+
 /**
  * Streaming render: HTML goes out as it is produced instead of after the last
  * island resolves — a slow source holds back its own island, not the page. The
- * joined chunks are byte-identical to `renderToString(...).html`.
+ * joined chunks are byte-identical to `renderToString(...).html`, except for
+ * suspense boundaries: the stream carries fallback + trailing swap chunks,
+ * where the buffered render resolves them in place.
  */
 export function renderToStream(node: unknown, options: RenderOptions = {}): RenderStream {
   const registry: RenderRegistry = { islands: [], stores: new Map() };
@@ -377,25 +622,40 @@ export function renderToStream(node: unknown, options: RenderOptions = {}): Rend
     usedKeys: new Set(),
     i18nKeys,
     halted: () => abandoned,
+    boundaries: options.inlineSuspense ? undefined : [],
   };
   const { promise: done, resolve: finish } = Promise.withResolvers<Omit<RenderResult, 'html'>>();
+  const { promise: halt, resolve: releaseHalt } = Promise.withResolvers<typeof HALT>();
   const notify = () => {
     wake?.();
     wake = undefined;
   };
 
   (async () => {
+    const emit = (chunk: string) => {
+      queue.push(chunk);
+      notify();
+    };
+
     try {
-      await renderInto(node, scope, (chunk) => {
-        queue.push(chunk);
-        notify();
-      });
+      await renderInto(node, scope, emit);
+      if (scope.boundaries?.length) {
+        const interlude = options.onBeforeBoundaries?.({
+          registry,
+          snapshots: collectSnapshots(registry),
+          i18nKeys: [...(i18nKeys ?? [])],
+        });
+
+        if (interlude) emit(interlude);
+        await flushBoundaries(scope, emit, halt);
+      }
     } catch (error) {
       failure = error;
     } finally {
       finished = true;
       notify();
-      if (!failure) finish({ registry, snapshots: collectSnapshots(registry), i18nKeys: [...(i18nKeys ?? [])] });
+      // Also on failure: no promise left dangling per failed render.
+      finish({ registry, snapshots: collectSnapshots(registry), i18nKeys: [...(i18nKeys ?? [])] });
     }
   })();
 
@@ -414,20 +674,27 @@ export function renderToStream(node: unknown, options: RenderOptions = {}): Rend
     } finally {
       // Also reached when the consumer abandons the generator directly.
       abandoned = true;
+      releaseHalt(HALT);
     }
   }
 
   const cancel = () => {
     abandoned = true;
+    releaseHalt(HALT);
     notify();
   };
 
   return { chunks: coalesce(chunks()), done, cancel };
 }
 
-/** Server-renders a page tree: static components inline, bifacial components as islands. */
+/**
+ * Server-renders a page tree: static components inline, bifacial components as
+ * islands. Suspense islands are resolved in place — a buffered render has no
+ * stream for a fallback to be swapped in, so the joined output matches what a
+ * streamed page settles into, not the bytes it traveled as.
+ */
 export async function renderToString(node: unknown, options: RenderOptions = {}): Promise<RenderResult> {
-  const { chunks, done } = renderToStream(node, options);
+  const { chunks, done } = renderToStream(node, { ...options, inlineSuspense: true });
   const parts: string[] = [];
 
   for await (const chunk of chunks) parts.push(chunk);

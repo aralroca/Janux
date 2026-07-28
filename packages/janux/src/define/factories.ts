@@ -47,6 +47,15 @@ function assertIntentNames(def: { name: string; intents?: Record<string, unknown
   });
 }
 
+/** `suspense`/`error` are views too: anything else would throw mid-render. */
+function assertBoundaryViews(def: ComponentInput): void {
+  (['suspense', 'error'] as const).forEach((name) => {
+    if (def[name] !== undefined && typeof def[name] !== 'function') {
+      throw new Error(`Janux: component "${def.name}" ${name} must be a function`);
+    }
+  });
+}
+
 /** Defines a bifacial component: view for humans, resource+tools for agents. */
 export function component(def: ComponentInput): ComponentTag {
   assertName(def.name, 'component()');
@@ -54,6 +63,7 @@ export function component(def: ComponentInput): ComponentTag {
   if (typeof def.view !== 'function') {
     throw new Error(`Janux: component "${def.name}" requires a view`);
   }
+  assertBoundaryViews(def);
 
   return Object.freeze({ ...def, kind: 'component' as const }) as ComponentTag;
 }

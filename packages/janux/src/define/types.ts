@@ -128,6 +128,18 @@ export interface ComponentDef {
   lifecycle?: LifecycleDef;
   use?: Record<string, ComponentDef>;
   view?: (bag: RunBag) => unknown;
+  /**
+   * Streaming fallback: rendered in place while the island's sources load; the
+   * real content streams later in the same response and swaps in. With no
+   * `suspense`, a slow island holds back its own children (never the page).
+   */
+  suspense?: (bag: RunBag) => unknown;
+  /**
+   * Error boundary for the island's whole SSR subtree (view + static children;
+   * nested islands without their own `error` bubble up to it). The thrown
+   * value arrives as `bag.error`.
+   */
+  error?: (bag: RunBag & { error: unknown }) => unknown;
   scope?: 'app' | 'route';
   persist?: 'local' | 'none';
   /** Extra i18n keys (exact or prefix strings, or RegExp) this island uses only after interaction — shipped to the client along with the keys recorded during SSR. */

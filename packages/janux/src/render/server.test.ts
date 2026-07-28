@@ -268,6 +268,365 @@ describe('renderToStream', () => {
   });
 });
 
+describe('error boundaries', () => {
+  it('renders the error view in place and keeps the rest of the page alive', async () => {
+    const card = component({
+      name: 'card',
+      error: ({ error }) => jsx('p', { children: `failed:${(error as Error).message}` }),
+      view: () => {
+        throw new Error('nope');
+      },
+    });
+    const page = jsx('main', { children: [jsx(card as any, {}), jsx('h1', { children: 'alive' })] });
+    const { html } = await renderToString(page);
+
+    expect(html).toContain(
+      '<janux-island key="card#default" data-jx="card#default"><p>failed:nope</p></janux-island>',
+    );
+    expect(html).toContain('<h1>alive</h1>');
+  });
+
+  it('bubbles a nested island error to the closest ancestor error view', async () => {
+    const broken = component({
+      name: 'broken',
+      view: () => {
+        throw new Error('inner');
+      },
+    });
+    const shell = component({
+      name: 'shell',
+      error: ({ error }) => jsx('p', { children: `caught:${(error as Error).message}` }),
+      view: () => jsx('section', { children: jsx(broken as any, {}) }),
+    });
+    const { html, registry } = await renderToString(jsx(shell as any, {}));
+
+    expect(html).toContain('caught:inner');
+    // The partial subtree is discarded, DOM and registry both.
+    expect(html).not.toContain('<section>');
+    expect(registry.islands.map((record) => record.def.name)).toEqual(['shell']);
+  });
+
+  /**
+   * The discarded attempt consumed nested keys the client's depth-first walk
+   * will never see: the error view must start a fresh sequence, or its islands
+   * ship state under identities no client can recompute.
+   */
+  it('the error view starts a fresh nested key sequence', async () => {
+    const kid = component({ name: 'kid', view: () => jsx('b', { children: 'k' }) });
+    // Throws while RENDERING, after the kid island already consumed a key.
+    function Bomb(): never {
+      throw new Error('after the kid');
+    }
+    const shell = component({
+      name: 'shell-keys',
+      error: () => jsx('div', { children: jsx(kid as any, {}) }),
+      view: () => [jsx(kid as any, {}), jsx(Bomb as any, {})],
+    });
+    const { html } = await renderToString(jsx(shell as any, {}));
+
+    expect(html).toContain('data-jx="kid#shell-keys.default.1"');
+    expect(html).not.toContain('data-jx="kid#shell-keys.default.2"');
+  });
+
+  it('fails soft without any error view: the page completes and janux:error is dispatched', async () => {
+    const broken = component({
+      name: 'broken',
+      view: () => {
+        throw new Error('inner');
+      },
+    });
+    const page = jsx('main', { children: [jsx(broken as any, {}), jsx('h1', { children: 'alive' })] });
+    const { html } = await renderToString(page);
+
+    expect(html).toContain('janux:error');
+    expect(html).toContain('</janux-island>');
+    expect(html).toContain('<h1>alive</h1>');
+  });
+
+  it('a failing render still settles done', async () => {
+    const Bomb = () => {
+      throw new Error('boom');
+    };
+    const { chunks, done } = renderToStream(jsx('main', { children: jsx(Bomb as any, {}) }));
+    const drained = (async () => {
+      for await (const chunk of chunks) chunk;
+    })();
+
+    await expect(drained).rejects.toThrow('boom');
+    await done;
+  });
+});
+
+describe('suspense boundaries', () => {
+  const settle = async () => {
+    for (let tick = 0; tick < 5; tick += 1) await new Promise((resolve) => setTimeout(resolve));
+  };
+
+  function gated(name: string) {
+    let release!: (products: string[]) => void;
+    const gate = new Promise<string[]>((resolve) => {
+      release = resolve;
+    });
+    const def = component({
+      name,
+      sources: { data: source({ query: () => gate }) },
+      suspense: () => jsx('p', { children: 'wait' }),
+      view: ({ sources }) => jsx('p', { children: `got:${sources.data.value.length}` }),
+    });
+
+    return { def, release: (products: string[]) => release(products) };
+  }
+
+  it('streams the fallback and swaps the real content in a trailing template', async () => {
+    const { def, release } = gated('slow');
+    const page = jsx('main', { children: [jsx(def as any, {}), jsx('h1', { children: 'after' })] });
+    const { chunks, done } = renderToStream(page);
+    const collected: string[] = [];
+    const drained = (async () => {
+      for await (const chunk of chunks) collected.push(chunk);
+    })();
+
+    await settle();
+    const early = collected.join('');
+
+    expect(early).toContain('data-jx="slow#default" data-jx-pending><p>wait</p></janux-island>');
+    expect(early).toContain('<h1>after</h1>');
+    expect(early).not.toContain('got:');
+
+    release(['a', 'b']);
+    await drained;
+    const full = collected.join('');
+    const summary = await done;
+
+    expect(full).toContain('<template id="jxu:slow#default" key="jxt:slow#default"><p>got:2</p></template>');
+    expect(full).toContain('jx$u("slow#default",document.currentScript)');
+    expect(full).toContain('self.jx$u=');
+    expect(summary.snapshots[0]?.sources).toEqual({ data: { value: ['a', 'b'] } });
+  });
+
+  const drainStream = async (page: unknown) => {
+    const { chunks } = renderToStream(page);
+    const collected: string[] = [];
+
+    for await (const chunk of chunks) collected.push(chunk);
+
+    return collected.join('');
+  };
+
+  it('inlines the content when sources settle before the fallback would flush', async () => {
+    const fast = component({
+      name: 'fast',
+      sources: { data: source({ query: async () => ['a'] }) },
+      suspense: () => jsx('p', { children: 'wait' }),
+      view: ({ sources }) => jsx('p', { children: `got:${sources.data.value.length}` }),
+    });
+    const html = await drainStream(jsx(fast as any, {}));
+
+    expect(html).toContain('data-jx="fast#default"><p>got:1</p></janux-island>');
+    expect(html).not.toContain('data-jx-pending');
+    expect(html).not.toContain('<template');
+  });
+
+  it('renderToString resolves a slow suspense island in place (agent-facing renders)', async () => {
+    const slow = component({
+      name: 'slow-inline',
+      sources: { data: source({ query: () => new Promise((resolve) => setTimeout(() => resolve(['a']), 5)) }) },
+      suspense: () => jsx('p', { children: 'wait' }),
+      view: ({ sources }) => jsx('p', { children: `got:${sources.data.value.length}` }),
+    });
+    const { html } = await renderToString(jsx(slow as any, {}));
+
+    expect(html).toContain('<p>got:1</p>');
+    expect(html).not.toContain('data-jx-pending');
+    expect(html).not.toContain('<template');
+  });
+
+  it('a discarded guarded subtree flushes no boundaries', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const nested = component({
+      name: 'nested-suspended',
+      sources: { data: source({ query: () => gate.then(() => []) }) },
+      suspense: () => jsx('p', { children: 'wait' }),
+      view: () => jsx('p', { children: 'never shown' }),
+    });
+    // A static sibling that throws while rendering — AFTER the suspended
+    // island already registered its boundary and emitted its fallback.
+    function Bomb(): never {
+      throw new Error('shell failed');
+    }
+    const shell = component({
+      name: 'discarding-shell',
+      error: () => jsx('p', { children: 'error view' }),
+      view: () => jsx('div', { children: [jsx(nested as any, {}), jsx(Bomb as any, {})] }),
+    });
+    const drained = drainStream(jsx(shell as any, {}));
+
+    release();
+    const html = await drained;
+
+    expect(html).toContain('error view');
+    expect(html).not.toContain('<template');
+    expect(html).not.toContain('jx$u');
+  });
+
+  it('flushes boundaries in resolution order and ships the runtime once', async () => {
+    const first = gated('first');
+    const second = gated('second');
+    const page = jsx('main', { children: [jsx(first.def as any, {}), jsx(second.def as any, {})] });
+    const { chunks } = renderToStream(page);
+    const collected: string[] = [];
+    const drained = (async () => {
+      for await (const chunk of chunks) collected.push(chunk);
+    })();
+
+    await settle();
+    second.release(['b']);
+    await settle();
+    first.release(['a', 'b']);
+    await drained;
+    const full = collected.join('');
+
+    expect(full.indexOf('id="jxu:second#default"')).toBeLessThan(full.indexOf('id="jxu:first#default"'));
+    expect(full.split('self.jx$u=')).toHaveLength(2);
+  });
+
+  it('renders the error view into the template when suspended content throws', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const def = component({
+      name: 'sboom',
+      sources: { data: source({ query: () => gate.then(() => []) }) },
+      suspense: () => jsx('p', { children: 'wait' }),
+      error: ({ error }) => jsx('p', { children: `bad:${(error as Error).message}` }),
+      view: () => {
+        throw new Error('late');
+      },
+    });
+    const { chunks } = renderToStream(jsx(def as any, {}));
+    const collected: string[] = [];
+    const drained = (async () => {
+      for await (const chunk of chunks) collected.push(chunk);
+    })();
+
+    await settle();
+    release();
+    await drained;
+    const full = collected.join('');
+
+    expect(full).toContain('data-jx="sboom#default" data-jx-pending><p>wait</p>');
+    expect(full).toContain('<template id="jxu:sboom#default" key="jxt:sboom#default"><p>bad:late</p></template>');
+  });
+
+  it('a suspended island failing without an error view swaps to empty and reports janux:error', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const def = component({
+      name: 'sfail',
+      sources: { data: source({ query: () => gate.then(() => []) }) },
+      suspense: () => jsx('p', { children: 'wait' }),
+      view: () => {
+        throw new Error('late');
+      },
+    });
+    const { chunks } = renderToStream(jsx(def as any, {}));
+    const collected: string[] = [];
+    const drained = (async () => {
+      for await (const chunk of chunks) collected.push(chunk);
+    })();
+
+    await settle();
+    release();
+    await drained;
+    const full = collected.join('');
+
+    expect(full).toContain('<template id="jxu:sfail#default" key="jxt:sfail#default"></template>');
+    expect(full).toContain('janux:error');
+  });
+
+  it('emits the onBeforeBoundaries interlude between the body and the first boundary chunk', async () => {
+    const { def, release } = gated('mid');
+    const page = jsx('main', { children: jsx(def as any, {}) });
+    const { chunks } = renderToStream(page, { onBeforeBoundaries: () => '<!--interlude-->' });
+    const collected: string[] = [];
+    const drained = (async () => {
+      for await (const chunk of chunks) collected.push(chunk);
+    })();
+
+    await settle();
+    release(['a']);
+    await drained;
+    const full = collected.join('');
+
+    expect(full.indexOf('</main>')).toBeLessThan(full.indexOf('<!--interlude-->'));
+    expect(full.indexOf('<!--interlude-->')).toBeLessThan(full.indexOf('<template'));
+  });
+
+  it('skips the interlude when every boundary resolved inline', async () => {
+    const fast = component({
+      name: 'fast-mid',
+      sources: { data: source({ query: async () => ['a'] }) },
+      suspense: () => jsx('p', { children: 'wait' }),
+      view: ({ sources }) => jsx('p', { children: `got:${sources.data.value.length}` }),
+    });
+    const { chunks } = renderToStream(jsx(fast as any, {}), { onBeforeBoundaries: () => '<!--interlude-->' });
+    const collected: string[] = [];
+
+    for await (const chunk of chunks) collected.push(chunk);
+
+    expect(collected.join('')).not.toContain('<!--interlude-->');
+  });
+
+  it('a throwing suspense view still closes the island and swaps the content in', async () => {
+    let release!: (rows: string[]) => void;
+    const gate = new Promise<string[]>((resolve) => {
+      release = resolve;
+    });
+    const def = component({
+      name: 'bad-fallback',
+      sources: { data: source({ query: () => gate }) },
+      suspense: () => {
+        throw new Error('fallback boom');
+      },
+      view: ({ sources }) => jsx('p', { children: `got:${sources.data.value.length}` }),
+    });
+    const page = jsx('main', { children: [jsx(def as any, {}), jsx('h1', { children: 'after' })] });
+    const { chunks } = renderToStream(page);
+    const collected: string[] = [];
+    const drained = (async () => {
+      for await (const chunk of chunks) collected.push(chunk);
+    })();
+
+    await settle();
+    release(['a']);
+    await drained;
+    const full = collected.join('');
+
+    // The island closed (siblings are outside it), the failure was reported
+    // in place, and the boundary still delivered its content.
+    expect(full).toContain('</script></janux-island><h1>after</h1>');
+    expect(full).toContain('janux:error');
+    expect(full).toContain('<template id="jxu:bad-fallback#default"');
+    expect(full).toContain('got:1');
+  });
+
+  it('an abandoned stream stops waiting on pending boundaries and settles done', async () => {
+    const { def } = gated('stuck');
+    const { chunks, done, cancel } = renderToStream(jsx('main', { children: jsx(def as any, {}) }));
+
+    await chunks.next();
+    cancel();
+
+    await done;
+  });
+});
+
 describe('buildManifest', () => {
   const session = store({
     name: 'session',
