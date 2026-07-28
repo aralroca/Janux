@@ -117,7 +117,7 @@ export const Cart = component({
           <p>Loading catalog…</p>
         ) : (
           sources.catalog.value.products.map((product: any) => (
-            <article key={product.id} class="product">
+            <article key={product.id} class="product" onDoubleClick={intents.addItem.with({ productId: product.id })}>
               <span class="art">{ART[product.id] ?? '📦'}</span>
               <h3>{product.name}</h3>
               <p class="price">{(product.price / 100).toFixed(2)}€</p>
