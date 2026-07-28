@@ -38,6 +38,7 @@ const ROW_COUNT_LARGE = 10000; // matches the canonical suite's runlots / clear 
 const TARGETS = process.env.TARGETS
 	? JSON.parse(process.env.TARGETS)
 	: [
+			{ name: 'janux', url: 'http://localhost:5176/', ready: '#run' },
 			{ name: 'react', url: 'http://localhost:5175/', ready: '#run' },
 			{ name: 'solid', url: 'http://localhost:5179/', ready: '#run' },
 			{ name: 'vue-vapor', url: 'http://localhost:5180/', ready: '#run' },

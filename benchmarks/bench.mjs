@@ -76,6 +76,7 @@ const perTarget = (targets) =>
 	}));
 
 const JS_FRAMEWORK_SERVERS = [
+	{ filter: 'janux-jsbench', port: 5176 },
 	{ filter: 'react-jsbench', port: 5175 },
 	{ filter: 'solid-jsbench', port: 5179 },
 	{ filter: 'vue-vapor-jsbench', port: 5180 },
