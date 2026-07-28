@@ -145,7 +145,7 @@
       "name": "janux",
       "version": "0.3.2",
       "dependencies": {
-        "diff-dom-streaming": "file:../../vendor/diff-dom-streaming-0.6.8.tgz",
+        "diff-dom-streaming": "^0.6.8",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^18.0.0",
@@ -747,7 +747,7 @@
 
     "devtools-protocol": ["devtools-protocol@0.0.1663043", "", {}, "sha512-33aOY3ZnBP1dgZsshgaL+/XlsQleiFZgyUaDtdZkEa1nbZhVY1MoDeWjk+wxg25fU924l1ZJfoGNmjjeA/5s1w=="],
 
-    "diff-dom-streaming": ["diff-dom-streaming@../../vendor/diff-dom-streaming-0.6.8.tgz", {}, "sha512-fKEFT7g1yeCMuR/Rnkyxqa5QAUbcCJuz9XHgUcZQ7Dtf+zeeBeoUikNHDAfdC8/vej2uQf0RiFdmsbWQoav7Og=="],
+    "diff-dom-streaming": ["diff-dom-streaming@0.6.8", "", {}, "sha512-fKEFT7g1yeCMuR/Rnkyxqa5QAUbcCJuz9XHgUcZQ7Dtf+zeeBeoUikNHDAfdC8/vej2uQf0RiFdmsbWQoav7Og=="],
 
     "dot-prop": ["dot-prop@9.0.0", "", { "dependencies": { "type-fest": "^4.18.2" } }, "sha512-1gxPBJpI/pcjQhKgIU91II6Wkay+dLcN3M6rf2uwP8hRur3HtQXjVrdAK3sjC0piaEuxzMwjXChcETiJl47lAQ=="],
 
