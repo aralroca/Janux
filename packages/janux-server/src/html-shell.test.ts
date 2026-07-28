@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { htmlDocument, type ShellOptions } from './html-shell';
+import { htmlDocument, shellParts, type ShellOptions } from './html-shell';
 
 const base: ShellOptions = {
   html: '<main>hi</main>',
@@ -57,6 +57,100 @@ describe('htmlDocument inline styles', () => {
     const html = htmlDocument({ ...base, inlineStyles: ['body{}'], description: 'D' });
 
     expect(html.indexOf('id="jx-style-0"')).toBeLessThan(html.indexOf('name="description"'));
+  });
+});
+
+/**
+ * The streaming response is `prelude + body chunks + epilogue`. These guard the
+ * invariant the whole feature rests on: reassembling the parts is byte-identical
+ * to the buffered document, whatever the options — so streaming can never change
+ * what the client diffs.
+ */
+describe('shellParts (streaming shell)', () => {
+  const variants: [string, ShellOptions][] = [
+    ['static page, no islands', base],
+    [
+      'islands with snapshots and runtime',
+      {
+        ...base,
+        snapshots: [{ uri: 'ui://cart#default', state: { items: [] } }],
+        islandNames: ['cart'],
+        runtimeUrl: '/client.js',
+        title: 'Shop',
+        description: 'D',
+        stylesheets: ['/styles.css'],
+        favicon: '/favicon.svg',
+        manifestUrl: '/_janux/manifest',
+      },
+    ],
+    [
+      'i18n page with payload',
+      {
+        ...base,
+        islandNames: ['cart'],
+        snapshots: [],
+        i18n: { locale: 'ar', dir: 'rtl', payload: { locale: 'ar', messages: { hi: 'x' } } },
+      },
+    ],
+    ['empty body html', { ...base, html: '' }],
+  ];
+
+  it.each(variants)('prelude + html + epilogue === htmlDocument (%s)', (_name, options) => {
+    const { prelude, epilogue } = shellParts(options);
+    const joined = [prelude, options.html, epilogue].filter(Boolean).join('\n');
+
+    expect(joined).toBe(htmlDocument(options));
+  });
+
+  it('keeps every render-dependent node in the epilogue, not the prelude', () => {
+    const options = variants[1]![1];
+    const { prelude, epilogue } = shellParts(options);
+
+    expect(prelude).toContain('</head>');
+    expect(prelude).toContain('<body>');
+    expect(prelude).not.toContain('janux+state');
+    expect(prelude).not.toContain('__JANUX_ISLANDS__');
+    expect(epilogue).toContain('janux+state');
+    expect(epilogue).toContain('__JANUX_ISLANDS__');
+    expect(epilogue).toContain('</html>');
+  });
+});
+
+/**
+ * Speculation rules are for the navigations the browser drives itself: they do
+ * not apply to the SPA path's fetch. So the shell emits them for every internal
+ * link, and the client narrows them once it starts intercepting.
+ */
+describe('htmlDocument navigation and speculation rules', () => {
+  it('prefetches internal links on hover by default', () => {
+    const html = htmlDocument(base);
+
+    expect(html).toContain('<script type="speculationrules" key="jx-speculation" id="jx-speculation">');
+    expect(html).toContain('"eagerness":"moderate"');
+    expect(html).toContain('"href_matches":"/*"');
+  });
+
+  it('reflects the configured eagerness and exclusions', () => {
+    const html = htmlDocument({
+      ...base,
+      navigation: { speculationRules: { eagerness: 'conservative', exclude: ['/logout'] } },
+    });
+    const rules = JSON.parse(html.match(/type="speculationrules"[^>]*>([^<]+)</)![1]!);
+
+    expect(rules.prefetch[0].eagerness).toBe('conservative');
+    expect(rules.prefetch[0].where.and).toContainEqual({ not: { href_matches: '/logout' } });
+  });
+
+  it('emits none when they are turned off', () => {
+    expect(htmlDocument({ ...base, navigation: { speculationRules: false } })).not.toContain('speculationrules');
+  });
+
+  it('ships the navigation config to the client, and nothing when it is empty', () => {
+    const configured = htmlDocument({ ...base, navigation: { prefetch: false } });
+
+    expect(configured).toContain('type="application/janux+config" key="jx-config"');
+    expect(configured).toContain('"prefetch":false');
+    expect(htmlDocument(base)).not.toContain('janux+config');
   });
 });
 

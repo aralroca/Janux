@@ -88,7 +88,13 @@ When you click a link, go back/forward, or call `janux.navigate()`:
 
 Because a navigation is just a re-render from the incoming page's snapshots, it costs **no hydration** — the same resume you already get on first load. There's no client router, no route manifest, no data-loader waterfall.
 
+Nothing is buffered on either side: the server flushes the page [as it renders it](/docs/guide/ssr-and-resumability#streaming) and the client diffs it as it arrives, so on a slow link the new heading and the parts that already exist appear while the rest is still on the wire.
+
 > **Note:** the Navigation API is [Baseline 2026](https://web.dev/blog/baseline-navigation-api) (Chrome, Edge, Firefox, Safari). Browsers without it fall back to normal full-page navigation — which already works in Janux — so there's no legacy History-API code path to reason about.
+
+### Clicking faster than the pages arrive
+
+Navigations are serialized and each one **cancels the one before it**: the superseded fetch is aborted, its stream is torn down mid-diff, and only the last click you made decides where you end up. A superseded navigation never reports itself as finished (no `janux:navigate` `after` event) and never disposes an island — so clicking three sidebar entries in a second leaves you on the third, with your assistant still open, and with two requests the server stopped sending.
 
 ## Why diff, not swap
 
@@ -116,6 +122,8 @@ This is the part a plain MPA (or native cross-document view transitions) can't g
 // A shared store — read by islands on every route — never resets:
 export const theme = store({ name: 'theme', scope: 'app', /* ... */ });
 ```
+
+> **`persist` has one requirement: every route must render the island.** It's lifted out of the document before the diff and grafted back over whatever the incoming page rendered for it — and if that page doesn't render it, there is nothing to graft onto and the live instance is disposed. Render it from a shared layout and it survives the whole session; forget it on one route and it closes the moment the user goes there — with a console warning naming the island and the route when it does.
 
 The mental model is the same one that powers resume: **islands are ephemeral, stores and the server are durable.** State that must outlive a navigation belongs in a store (or on the server), not in a plain route island. Put it there and it survives; leave it in a route island and it re-resumes from the fresh page — by design, not by accident.
 
@@ -146,13 +154,46 @@ It's a per-link escape hatch, not a workaround — reach for it whenever a diffe
 
 > **Rule of thumb:** if the destination isn't a Janux page, or its first paint depends on the browser having fully laid out a fresh document, use `data-native`. Everything else should stay a diffed navigation — that's what keeps the shell, scroll and focus intact.
 
-To turn SPA navigation off everywhere instead of per-link:
+## Prefetching and speculation rules
+
+Two mechanisms warm the next page, and which one applies depends on who performs the navigation.
+
+**Janux prefetch — for the links Janux intercepts.** Hovering a same-origin link fetches it and keeps the *stream*, which the diff then consumes directly, so the click usually starts painting immediately. Entries live 30 seconds and are used once. It's skipped when the user has data saver on, and in browsers without the Navigation API (nothing would ever read that cache there).
+
+**Speculation rules — for the links the browser navigates itself.** Janux emits a [`<script type="speculationrules">`](https://developer.mozilla.org/en-US/docs/Web/API/Speculation_Rules_API) on every page, prefetching internal URLs with `moderate` eagerness. Its cache only applies to full document navigations, never to a `fetch()`, so once `boot()` installs interception the script is rewritten to cover only `[data-native]` links — otherwise Chrome would speculate documents the SPA path never uses, and hover would fetch the page twice. Pages with no islands keep the document-wide rules: every navigation away from them is a real document load, which is exactly the case the API is for.
+
+Both are configured in `janux.config.ts`:
+
+```ts
+import { defineConfig } from 'janux';
+
+export default defineConfig({
+  navigation: {
+    spa: true,                    // SPA navigation (default: true)
+    prefetch: { ttl: 60_000 },    // or `false` to stop hover-prefetching
+    speculationRules: {
+      eagerness: 'moderate',      // 'conservative' | 'moderate' | 'eager'
+      exclude: ['/logout', '/checkout/*'],
+    },
+  },
+});
+```
+
+| Option | Default | What it does |
+|---|---|---|
+| `spa` | `true` | Intercept navigations and diff the next page. `false` leaves every link to the browser |
+| `prefetch` | `true` | Hover-warm the page a link points at. `{ ttl }` in ms, or `false` |
+| `speculationRules` | `true` | Emit the rules script. `false` omits it; `{ eagerness, exclude }` tunes it |
+
+`exclude` is what keeps a speculative GET away from URLs with side effects — sign-out links, one-time tokens, anything that charges or consumes something. The server can also spot these requests by their `Sec-Purpose: prefetch` header.
+
+Support is uneven (Chromium ships it; Safari and Firefox don't yet), which costs nothing: browsers that don't understand the script ignore it, and the ones without a Navigation API are the ones the rules help most.
+
+To turn SPA navigation off for a single app without touching the config, `boot()` still wins:
 
 ```ts
 boot({ defs: [...], navigation: false });        // disable SPA navigation entirely
 ```
-
-Same-origin links that *aren't* opted out are **prefetched on hover** (30-second cache), so by the time the click lands the HTML is usually already in hand.
 
 ## Programmatic and agent navigation
 

@@ -1,5 +1,6 @@
 import {
   buildManifest,
+  renderToStream,
   renderToString,
   selectMessages,
   translateCore,
@@ -8,6 +9,7 @@ import {
   type Ctx,
   type I18n,
   type I18nConfig,
+  type NavigationConfig,
   type PageMeta,
   type RenderResult,
 } from 'janux';
@@ -21,7 +23,8 @@ import { assertValidInput, errorStatus, evictOldestProposal, json, proposalId, t
 import { apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 import { createFsRouter, type Route } from './router';
-import { htmlDocument } from './html-shell';
+import { shellEpilogue, shellPrelude, type ShellOptions } from './html-shell';
+import { safeJson } from './html-escape';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
 
@@ -80,6 +83,8 @@ export interface ServerOptions {
    * exist there. Without it every static page fetches a 404 manifest.
    */
   staticExport?: boolean;
+  /** SPA navigation, prefetching and speculation rules (`navigation` in the app config). */
+  navigation?: NavigationConfig;
 }
 
 async function resolveMeta(
@@ -104,6 +109,69 @@ async function resolveStaticParams(rawParams: unknown): Promise<Array<Record<str
   }
 }
 
+
+type RenderSummary = Omit<RenderResult, 'html'>;
+
+/**
+ * A render that fails after the first flush cannot change the status line
+ * anymore, so the failure is reported in-page: `janux:error` for the app (the
+ * same event a failed navigation fetch dispatches) plus a console trace, and
+ * the document is closed so the parser is never left mid-tag. No auto-reload:
+ * a deterministic render error would just fail the same way again.
+ */
+function streamErrorScript(error: unknown): string {
+  const detail = safeJson(String(error));
+
+  return `\n<script key="jx-stream-error">document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: render failed mid-stream",${detail})</script>\n</body>\n</html>`;
+}
+
+/**
+ * prelude → body chunks → epilogue, byte-identical to the buffered
+ * `htmlDocument()` (see shellPrelude/shellEpilogue). Lazily pulled, so a slow
+ * reader applies backpressure to the encoder.
+ */
+function documentStream(
+  prelude: string,
+  body: AsyncGenerator<string>,
+  epilogue: () => Promise<string>,
+  onCancel: () => void,
+): ReadableStream<Uint8Array> {
+  async function* document(): AsyncGenerator<string> {
+    let sentBody = false;
+
+    yield `${prelude}\n`;
+    try {
+      for await (const chunk of body) {
+        // Skip empty chunks: `htmlDocument` drops empty html the same way.
+        if (!chunk) continue;
+        sentBody = true;
+        yield chunk;
+      }
+      yield `${sentBody ? '\n' : ''}${await epilogue()}`;
+    } catch (error) {
+      yield streamErrorScript(error);
+    }
+  }
+
+  // `ReadableStream.from` is not everywhere yet; this is the same adapter.
+  const chunks = document();
+  const encoder = new TextEncoder();
+
+  return new ReadableStream({
+    async pull(controller) {
+      const { value, done } = await chunks.next();
+
+      if (done) controller.close();
+      else controller.enqueue(encoder.encode(value));
+    },
+    cancel() {
+      // The renderer first — a generator parked on its own await cannot be
+      // return()ed until it yields, which for an abandoned response is never.
+      onCancel();
+      chunks.return(undefined).catch(() => {});
+    },
+  });
+}
 
 /** The Janux fullstack server: pages, api() endpoints, manifest, proposals and the agent mount. */
 export function createJanuxServer(options: ServerOptions = {}) {
@@ -197,7 +265,8 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return wrapped;
   };
 
-  const renderPage = async (pathname: string, ctx: Ctx) => {
+  /** Route resolution up to the renderable tree: what both render flavours share. */
+  const resolvePage = async (pathname: string, ctx: Ctx) => {
     const route = findRoute(pathname);
 
     if (!route) return undefined;
@@ -208,13 +277,23 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const render = 'render' in route ? route.render : module.default;
     const meta = await resolveMeta(module?.meta, ctx, route.params);
     const vnode = await applyLayouts(await render({ ctx, params: route.params }), route.layouts, ctx, route.params);
-    const result = await renderToString(vnode, {
-      ctx,
-      storeDefs: options.storeDefs,
-      foreignImport: options.foreignImport,
-    });
 
-    return { ...result, meta };
+    return { vnode, meta };
+  };
+
+  const renderOptions = (ctx: Ctx) => ({ ctx, storeDefs: options.storeDefs, foreignImport: options.foreignImport });
+
+  const renderPageStream = async (pathname: string, ctx: Ctx) => {
+    const page = await resolvePage(pathname, ctx);
+
+    return page && { ...renderToStream(page.vnode, renderOptions(ctx)), meta: page.meta };
+  };
+
+  /** Buffered render for consumers that need the whole page at once (manifest, markdown projections). */
+  const renderPage = async (pathname: string, ctx: Ctx) => {
+    const page = await resolvePage(pathname, ctx);
+
+    return page && { ...(await renderToString(page.vnode, renderOptions(ctx))), meta: page.meta };
   };
 
   const manifestFor = async (pathname: string, ctx: Ctx): Promise<unknown> => {
@@ -299,11 +378,17 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return json({ ok: true, result: await proposal.execute() });
   };
 
-  /** The client payload ships only what the page's islands consume: SSR-recorded keys + declared `i18nKeys`. */
-  const shellI18n = (locale: string | undefined, result: RenderResult): ShellI18n | undefined => {
+  /**
+   * The client payload ships only what the page's islands consume:
+   * SSR-recorded keys + declared `i18nKeys`. Without a render result (the
+   * prelude, flushed before the body renders) it is just the locale and its
+   * direction — the payload only exists once the render finished.
+   */
+  const shellI18n = (locale: string | undefined, result?: RenderSummary): ShellI18n | undefined => {
     const config = options.i18n;
 
     if (!locale || !config) return undefined;
+    if (!result) return { locale, dir: localeDir(locale) };
     const islands = result.registry.islands;
     const declared = islands.flatMap(({ def }) => def.i18nKeys ?? []);
     const messages = selectMessages(config.messages?.[locale] ?? {}, result.i18nKeys, declared, config.keySeparator);
@@ -363,29 +448,47 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return new Response(null, { status: 302, headers: { location } });
     }
     const ctx = localeCtx(await resolveCtx(req), locale);
-    const result = await renderPage(page, ctx);
+    const rendered = await renderPageStream(page, ctx);
 
-    if (!result) return new Response('Not found', { status: 404 });
-    const islandNames = [...new Set(result.registry.islands.map(({ def }) => def.name))];
-    const html = htmlDocument({
-      html: result.html,
-      title: result.meta?.title ?? options.title,
-      description: result.meta?.description,
-      lang: options.lang,
-      meta: result.meta,
-      siteUrl,
-      snapshots: result.snapshots,
-      islandNames,
-      islandModules: options.islandModules,
-      runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
-      manifestUrl: options.staticExport ? undefined : `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
-      stylesheets: options.stylesheets,
-      inlineStyles: navigating ? undefined : options.inlineStyles,
-      favicon: options.favicon,
-      i18n: shellI18n(locale, result),
-    });
+    if (!rendered) return new Response('Not found', { status: 404 });
+    /*
+     * The same options build both shell parts, in two moments: the prelude
+     * before the body renders (nothing in it may depend on the render — title,
+     * meta and styles come from the route), the epilogue once the render is
+     * done and snapshots/island names/i18n payload exist. The byte-identity
+     * test in server.test.ts is what keeps this split honest.
+     */
+    const shellFor = (result?: RenderSummary): Omit<ShellOptions, 'html'> => {
+      const islandNames = [...new Set((result?.registry.islands ?? []).map(({ def }) => def.name))];
 
-    return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+      return {
+        title: rendered.meta?.title ?? options.title,
+        description: rendered.meta?.description,
+        lang: options.lang,
+        meta: rendered.meta,
+        siteUrl,
+        snapshots: result?.snapshots ?? [],
+        islandNames,
+        islandModules: options.islandModules,
+        runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
+        manifestUrl: options.staticExport ? undefined : `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
+        stylesheets: options.stylesheets,
+        inlineStyles: navigating ? undefined : options.inlineStyles,
+        favicon: options.favicon,
+        i18n: shellI18n(locale, result),
+        navigation: options.navigation,
+        navigating,
+      };
+    };
+    const prelude = shellPrelude(shellFor());
+    const body = documentStream(
+      prelude,
+      rendered.chunks,
+      async () => shellEpilogue(shellFor(await rendered.done)),
+      rendered.cancel,
+    );
+
+    return new Response(body, { headers: { 'content-type': 'text/html; charset=utf-8' } });
   };
 
   const fetch = async (req: Request): Promise<Response> => {

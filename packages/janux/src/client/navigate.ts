@@ -3,6 +3,7 @@ import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { consumePrefetched, NAVIGATION_HEADERS } from './prefetch';
 import { runScriptsWhileStreaming } from './scripts';
+import { rescopeSpeculationRules } from './speculation';
 
 export interface NavigateOptions {
   signal?: AbortSignal;
@@ -70,16 +71,31 @@ function restoreWhileStreaming(kept: PersistedIsland[]): () => void {
   return () => observer.disconnect();
 }
 
+/**
+ * A persisted island the incoming page does not render is disposed — that is
+ * the contract (`persist` keeps the instance across pages that render it), but
+ * when it bites it looks like "my assistant closed itself on navigation", so
+ * it is said out loud, like every other developer-mistake warning here.
+ */
+function warnDroppedPersist(id: string): void {
+  console.warn(
+    `Janux: persisted island "${id}" is not rendered by ${location.pathname}, so its live instance was disposed. Render it on every route (e.g. from a shared layout) to keep it alive across navigations.`,
+  );
+}
+
 async function restorePersisted(mount: MountContext, kept: PersistedIsland[]): Promise<void> {
   await Promise.all(
     kept.map(async ({ id, node }) => {
       const incoming = document.querySelector(persistedSelector(id));
 
       if (incoming) incoming.replaceWith(node);
-      else if (mount.registry.foreigns.has(id)) {
-        mount.registry.foreigns.get(id)!.dispose();
-        mount.registry.foreigns.delete(id);
-      } else await mount.registry.mounted.get(id)?.dispose();
+      else {
+        warnDroppedPersist(id);
+        if (mount.registry.foreigns.has(id)) {
+          mount.registry.foreigns.get(id)!.dispose();
+          mount.registry.foreigns.delete(id);
+        } else await mount.registry.mounted.get(id)?.dispose();
+      }
     }),
   );
 }
@@ -148,7 +164,10 @@ async function sweepDisconnected(mount: MountContext): Promise<void> {
 async function fetchPage(url: string, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>> {
   const cached = await consumePrefetched(url);
 
-  if (cached !== undefined) return cached;
+  // The contract: the returned stream dies with the navigation's signal. A
+  // fresh fetch is signal-bound natively; a prefetched body was fetched before
+  // any navigation existed, so it gets wrapped.
+  if (cached !== undefined) return abortableStream(cached, signal);
   const response = await fetch(url, { signal, headers: NAVIGATION_HEADERS });
 
   if (!response.ok) throw new Error(`navigation fetch failed (${response.status})`);
@@ -255,6 +274,55 @@ function keepRuntimeNodes(): () => void {
 }
 
 /**
+ * The page stream tied to the navigation's own signal. The fetch dies with its
+ * signal, but a prefetched body has no fetch signal of its own — without this,
+ * a superseded navigation keeps consuming (and keeps diffing) while the next
+ * one waits behind it in the chain. Aborting also cancels the source, so the
+ * network gives the connection back.
+ */
+export function abortableStream(
+  page: ReadableStream<Uint8Array>,
+  signal?: AbortSignal,
+): ReadableStream<Uint8Array> {
+  if (!signal) return page;
+  const reader = page.getReader();
+  const abortError = () => signal.reason ?? new DOMException('navigation superseded', 'AbortError');
+  const aborted = new Promise<never>((_, reject) => {
+    const onAbort = () => {
+      // Reject first: cancelling resolves an in-flight read() as done, which
+      // would win the race and read as a cleanly-finished page.
+      reject(abortError());
+      reader.cancel(abortError()).catch(() => {});
+    };
+
+    if (signal.aborted) onAbort();
+    else signal.addEventListener('abort', onAbort, { once: true });
+  });
+
+  // The abort may fire after the stream was fully consumed; nobody is racing then.
+  aborted.catch(() => {});
+
+  return new ReadableStream({
+    async pull(controller) {
+      try {
+        // `aborted` first: with both settled (abort before the first pull, which
+        // also resolves the cancelled read as done), race takes the first entry.
+        const { value, done } = await Promise.race([aborted, reader.read()]);
+
+        if (done) controller.close();
+        else controller.enqueue(value!);
+      } catch (error) {
+        // Explicit: some stream implementations drop a pull rejection silently.
+        controller.error(error);
+      }
+    },
+    cancel(reason: unknown) {
+      return reader.cancel(reason);
+    },
+  });
+}
+
+/**
  * Diff-then-dispose: nothing is destroyed before the DOM actually changes, so
  * an abort before/during the diff leaves the current page fully intact (kept
  * persisted nodes are re-attached, no island disposed). Disposal happens after,
@@ -272,6 +340,13 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
     throwIfAborted(signal);
     // The Navigation API drives the transition; diff directly (its own would be skipped).
     await diff(document, page);
+    /*
+     * A superseded navigation must not report success: the diff can finish
+     * cleanly on a cancelled stream, having applied only the part that arrived,
+     * and the page that navigation was going to is not the page on screen.
+     * Whatever superseded it is already diffing the same document.
+     */
+    throwIfAborted(signal);
     await restorePersisted(mount, kept);
   } catch (error) {
     /*
@@ -300,6 +375,8 @@ function reportNavigationError(error: unknown): void {
 /** Everything that happens once the new page is on screen. */
 async function wireUpPage(mount: MountContext): Promise<void> {
   reindexSnapshots(mount);
+  // The incoming page brought the server's document-wide speculation rules.
+  rescopeSpeculationRules();
   installI18n(mount.ctx);
   await sweepDisconnected(mount);
   sweepDisconnectedForeigns(mount);

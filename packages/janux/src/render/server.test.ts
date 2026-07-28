@@ -3,7 +3,7 @@ import { component, intent, source, store } from '../define/factories';
 import { jsx, Fragment } from '../jsx-runtime';
 import { int, list, schema, str } from '../schema';
 import { buildManifest } from '../manifest';
-import { renderToString } from './server';
+import { renderToStream, renderToString } from './server';
 
 function PriceTag({ amount }: { amount: number }) {
   return jsx('span', { class: 'price', children: `${amount}¢` });
@@ -100,6 +100,127 @@ describe('renderToString', () => {
     const result = await renderToString(jsx('div', { 'onmouseover=alert(1) x': 'y', title: 'ok' }));
 
     expect(result.html).toBe('<div title="ok"></div>');
+  });
+});
+
+describe('renderToStream', () => {
+  // Several timer ticks: chunk coalescing flushes on its own macrotask.
+  const settle = async () => {
+    for (let tick = 0; tick < 5; tick += 1) await new Promise((resolve) => setTimeout(resolve));
+  };
+
+  function slowComponent(gate: Promise<string[]>) {
+    return component({
+      name: 'slow',
+      sources: { catalog: source({ query: () => gate }) },
+      view: ({ sources }: any) => jsx('p', { children: `slow:${sources.catalog.value.length}` }),
+    });
+  }
+
+  it('emits earlier siblings while a later island is still loading its sources', async () => {
+    let release!: (products: string[]) => void;
+    const gate = new Promise<string[]>((resolve) => { release = resolve; });
+    const page = jsx('main', {
+      children: [jsx('h1', { children: 'Shop' }), jsx(slowComponent(gate) as any, {})],
+    });
+    const { chunks } = renderToStream(page);
+    const collected: string[] = [];
+    const drained = (async () => {
+      for await (const chunk of chunks) collected.push(chunk);
+    })();
+
+    await settle();
+    expect(collected.join('')).toContain('<h1>Shop</h1>');
+    expect(collected.join('')).not.toContain('slow:');
+
+    release(['p1', 'p2']);
+    await drained;
+    expect(collected.join('')).toContain('slow:2');
+  });
+
+  it('joined chunks are byte-identical to renderToString, with the same snapshots', async () => {
+    const page = jsx(Fragment, { children: [jsx('h1', { children: 'Shop' }), jsx(cart as any, {})] });
+    const options = { initialState: { 'ui://cart#default': { items: [{ id: 'a', qty: 1 }] } } };
+    const expected = await renderToString(page, options);
+    const { chunks, done } = renderToStream(page, options);
+    const collected: string[] = [];
+
+    for await (const chunk of chunks) collected.push(chunk);
+    const summary = await done;
+
+    expect(collected.join('')).toBe(expected.html);
+    expect(summary.snapshots).toEqual(expected.snapshots);
+  });
+
+  /**
+   * The client re-renders island views with a synchronous depth-first walk, so
+   * SSR must assign nested keys in exactly that order — a scheduling change
+   * that keyed the deeper sibling second made two same-typed nested islands
+   * swap state on the parent's first re-render.
+   */
+  it('assigns nested island keys in client traversal order (deep-first, by index)', async () => {
+    const badge = component({ name: 'badge', view: () => jsx('b', { children: 'x' }) });
+    const parent = component({
+      name: 'parent',
+      view: () =>
+        jsx('div', {
+          children: [jsx('section', { children: jsx(badge as any, {}) }), jsx(badge as any, {})],
+        }),
+    });
+    const { html } = await renderToString(jsx(parent as any, {}));
+    const keys = [...html.matchAll(/data-jx="(badge#[^"]+)"/g)].map((match) => match[1]);
+
+    expect(keys).toEqual(['badge#parent.default.1', 'badge#parent.default.2']);
+    // And .1 is the nested one: it sits inside the <section>.
+    expect(html).toContain('<section><janux-island key="badge#parent.default.1"');
+  });
+
+  it('an abandoned stream settles `done` and stops descending into new work', async () => {
+    let releaseParent!: () => void;
+    const gate = new Promise<void>((resolve) => { releaseParent = resolve; });
+    let nestedQueries = 0;
+    const nested = component({
+      name: 'nested',
+      sources: { data: source({ query: async () => { nestedQueries += 1; return []; } }) },
+      view: () => jsx('i', { children: 'n' }),
+    });
+    const slowParent = component({
+      name: 'slow-parent',
+      sources: { data: source({ query: () => gate.then(() => []) }) },
+      view: () => jsx(nested as any, {}),
+    });
+    const { chunks, done, cancel } = renderToStream(jsx('main', { children: jsx(slowParent as any, {}) }));
+
+    await chunks.next(); // the first flush is on the wire
+    cancel(); // ...and the client disconnects
+
+    releaseParent();
+    await done; // settles anyway — no promise left dangling per aborted request
+    expect(nestedQueries).toBe(0); // the parent's children were never started
+  });
+
+  it('keeps sibling islands loading in parallel, not serialized by document order', async () => {
+    // `a` only resolves once `b` has started: serialized rendering would deadlock here.
+    let bStarted!: () => void;
+    const gate = new Promise<void>((resolve) => { bStarted = resolve; });
+    const first = component({
+      name: 'first',
+      sources: { data: source({ query: async () => { await gate; return ['a']; } }) },
+      view: ({ sources }: any) => jsx('span', { children: sources.data.value[0] }),
+    });
+    const second = component({
+      name: 'second',
+      sources: { data: source({ query: async () => { bStarted(); return ['b']; } }) },
+      view: ({ sources }: any) => jsx('span', { children: sources.data.value[0] }),
+    });
+    const page = jsx('div', { children: [jsx(first as any, {}), jsx(second as any, {})] });
+    const { chunks } = renderToStream(page);
+    const collected: string[] = [];
+
+    for await (const chunk of chunks) collected.push(chunk);
+
+    expect(collected.join('')).toContain('<span>a</span>');
+    expect(collected.join('')).toContain('<span>b</span>');
   });
 });
 

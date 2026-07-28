@@ -474,6 +474,102 @@ describe('client boot (resume without hydration)', () => {
 });
 
 /**
+ * `janux.config.ts` reaches the client through a keyed script in the shell:
+ * there is no other channel, and `boot()` runs in the app's own code, so an
+ * option set in the config must not need repeating there.
+ */
+describe('navigation config from the shell', () => {
+  const shellConfig = (config: unknown) => {
+    document.body.innerHTML = '';
+    document.head.innerHTML = `<script type="application/janux+config" id="jx-config">${JSON.stringify(config)}</script>`;
+  };
+
+  /** What `boot()` subscribed to, which is how "navigation was installed" shows. */
+  function listenersInstalledBy(run: () => void): string[] {
+    const installed: string[] = [];
+    const originalAdd = document.addEventListener.bind(document);
+
+    (document as any).addEventListener = (type: string, ...rest: unknown[]) => {
+      installed.push(type);
+
+      return originalAdd(type, ...(rest as [any]));
+    };
+    try {
+      run();
+    } finally {
+      (document as any).addEventListener = originalAdd;
+    }
+
+    return installed;
+  }
+
+  beforeEach(() => {
+    (window as any).navigation = { addEventListener() {} };
+    document.getElementById('jx-speculation')?.remove();
+  });
+
+  it('turns SPA navigation off when the config says so', () => {
+    shellConfig({ navigation: { spa: false } });
+
+    expect(listenersInstalledBy(() => boot({ defs: [] }))).not.toContain('mouseover');
+  });
+
+  it('lets boot() options win over the shell config', () => {
+    shellConfig({ navigation: { spa: false } });
+
+    expect(listenersInstalledBy(() => boot({ defs: [], navigation: true }))).toContain('mouseover');
+  });
+
+  it('skips hover prefetching when the config turns it off', () => {
+    shellConfig({ navigation: { prefetch: false } });
+
+    expect(listenersInstalledBy(() => boot({ defs: [] }))).not.toContain('mouseover');
+  });
+
+  /**
+   * Without interception a hover fetch is pure waste: the browser navigates the
+   * document itself and never looks at a stream sitting in a JS Map. That case
+   * is what the speculation rules are for.
+   */
+  it('does not hover-prefetch in a browser with no Navigation API', () => {
+    delete (window as any).navigation;
+    shellConfig({});
+
+    expect(listenersInstalledBy(() => boot({ defs: [] }))).not.toContain('mouseover');
+  });
+
+  /**
+   * A document-wide speculation rule is waste once Janux intercepts clicks: the
+   * speculated document is never used, and hover pays for the page twice. The
+   * rules the server emitted are rewritten to cover only what the browser still
+   * navigates itself.
+   */
+  it('rescopes the server speculation rules to native links once installed', () => {
+    document.body.innerHTML = '';
+    document.head.innerHTML =
+      '<script type="speculationrules" id="jx-speculation">{"prefetch":[{"where":{"href_matches":"/*"},"eagerness":"moderate"}]}</script>';
+    (window as any).navigation = { addEventListener() {} };
+    boot({ defs: [] });
+
+    const rules = JSON.parse(document.getElementById('jx-speculation')!.textContent!);
+
+    expect(rules.prefetch[0].where).toEqual({ selector_matches: 'a[data-native]' });
+  });
+
+  it('leaves them alone in a browser with no Navigation API', () => {
+    delete (window as any).navigation;
+    document.body.innerHTML = '';
+    document.head.innerHTML =
+      '<script type="speculationrules" id="jx-speculation">{"prefetch":[{"where":{"href_matches":"/*"},"eagerness":"moderate"}]}</script>';
+    boot({ defs: [] });
+
+    const rules = JSON.parse(document.getElementById('jx-speculation')!.textContent!);
+
+    expect(rules.prefetch[0].where).toEqual({ href_matches: '/*' });
+  });
+});
+
+/**
  * Which clicks the router takes over. The identical-URL case is the one that
  * broke a page: clicking the current page's own link re-diffed it, tearing
  * islands down and re-mounting them against DOM that had just been replaced —

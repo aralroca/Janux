@@ -22,5 +22,28 @@ export async function toFetchRequest(req: IncomingMessage): Promise<Request> {
 
 export async function sendFetchResponse(res: ServerResponse, response: Response): Promise<void> {
   res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-  res.end(Buffer.from(await response.arrayBuffer()));
+  if (!response.body) {
+    res.end();
+
+    return;
+  }
+  // Piped chunk by chunk, not buffered: pages are streamed SSR now, and
+  // collecting the body first would hold every chunk until the slowest
+  // island resolved — exactly what streaming exists to avoid. A full socket
+  // buffer pauses the pipe (and, through it, the renderer) until it drains —
+  // or until the client goes away, which must not leave this hanging on a
+  // 'drain' that will never fire. Breaking out cancels `response.body`.
+  let clientGone = false;
+  const closed = new Promise<void>((resolve) =>
+    res.once('close', () => {
+      clientGone = true;
+      resolve();
+    }),
+  );
+
+  for await (const chunk of response.body) {
+    if (clientGone) break;
+    if (!res.write(chunk)) await Promise.race([new Promise((resolve) => res.once('drain', resolve)), closed]);
+  }
+  res.end();
 }

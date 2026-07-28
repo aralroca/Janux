@@ -8,8 +8,10 @@ import { mountDocumentForeigns, mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
 import { enableAgentGlow, type GlowOptions } from './glow';
 import { installI18n } from './i18n';
+import type { NavigationConfig } from '../config';
 import { mountEagerIslands, performNavigation } from './navigate';
-import { prefetch } from './prefetch';
+import { configurePrefetch, prefetch } from './prefetch';
+import { rescopeSpeculationRules, shellNavigationConfig } from './speculation';
 import { installWebMCP } from './webmcp';
 
 export interface BootOptions {
@@ -18,7 +20,11 @@ export interface BootOptions {
   ctx?: Record<string, unknown>;
   /** Highlight islands while an agent operates them. `true` or `{ duration }`. */
   glow?: boolean | GlowOptions;
-  /** SPA navigation via the Navigation API + streamed DOM diff. Default: true. */
+  /**
+   * SPA navigation via the Navigation API + streamed DOM diff. Default: true.
+   * Overrides `navigation` from `janux.config.ts`, which is where an app
+   * normally configures this.
+   */
   navigation?: boolean;
   /** Register mounted tools with `document.modelContext` (WebMCP), polyfilled when absent. Default: true. */
   webmcp?: boolean;
@@ -91,9 +97,11 @@ export function shouldIntercept(event: any): boolean {
 
 /**
  * Navigation API interception (Baseline 2026). Browsers without it keep
- * native MPA links — which already work — so there is no History fallback.
+ * native MPA links — which already work — so there is no History fallback,
+ * and no hover-prefetch either: without interception nothing would ever
+ * consume that cache (the speculation rules cover those browsers instead).
  */
-function installNavigation(mount: MountContext): void {
+function installNavigation(mount: MountContext, config: NavigationConfig): void {
   const nav = (window as any).navigation;
 
   document.addEventListener(
@@ -103,7 +111,8 @@ function installNavigation(mount: MountContext): void {
     },
     true,
   );
-  nav?.addEventListener('navigate', (event: any) => {
+  if (!nav) return; // No interception: the server's document-wide rules stand.
+  nav.addEventListener('navigate', (event: any) => {
     if (!shouldIntercept(event)) return;
     event.intercept({
       scroll: 'after-transition',
@@ -111,6 +120,9 @@ function installNavigation(mount: MountContext): void {
         awaitTracked(mount, performNavigation(event.destination.url, mount, { signal: event.signal })),
     });
   });
+  rescopeSpeculationRules();
+  if (config.prefetch === false) return;
+  configurePrefetch(typeof config.prefetch === 'object' ? config.prefetch : undefined);
   document.addEventListener('mouseover', (event) => {
     const link = (event.target as Element | null)?.closest?.('a[href^="/"]:not([data-native])');
 
@@ -145,7 +157,9 @@ export function boot(options: BootOptions = {}): JanuxClient {
   installI18n(mount.ctx);
   listen(mount, (work) => trackInflight(mount, work));
   if (options.glow) enableAgentGlow(options.glow === true ? {} : options.glow);
-  if (options.navigation !== false) installNavigation(mount);
+  const navigation = shellNavigationConfig();
+
+  if (options.navigation ?? navigation.spa ?? true) installNavigation(mount, navigation);
   const bridge = createBridge(mount, proposals);
   const client: JanuxClient = {
     ...bridge,
