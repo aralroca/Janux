@@ -14,7 +14,7 @@ import {
 import { summarizeSamples, timingStatForJson } from '../lib/stats.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const TARGETS = ['react', 'preact', 'solid', 'svelte', 'vue-vapor'];
+const TARGETS = ['janux', 'react', 'preact', 'solid', 'svelte', 'vue-vapor'];
 const WRITE_VALUE = 7;
 const REWRITE_VALUE = 9;
 const WRITE_TOTAL = String(WRITE_VALUE * SELECTOR_INPUT_SIZE);

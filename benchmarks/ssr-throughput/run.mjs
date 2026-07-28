@@ -69,7 +69,7 @@ const CONFIG_FILTER = process.env.CONFIGS
 			.filter(Boolean)
 	: null;
 
-const NEWS_TARGETS = ['react', 'preact', 'solid', 'svelte', 'vue-vapor'];
+const NEWS_TARGETS = ['janux', 'react', 'preact', 'solid', 'svelte', 'vue-vapor'];
 const CARD_COUNTS = quick ? [50] : [50, 500];
 
 // ── build phase ───────────────────────────────────────────────────────────────

@@ -17,7 +17,7 @@ import {
 import { summarizeSamples, timingStatForJson } from '../lib/stats.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const TARGETS = ['react', 'preact', 'solid', 'svelte', 'vue-vapor'];
+const TARGETS = ['janux', 'react', 'preact', 'solid', 'svelte', 'vue-vapor'];
 const SUITES = [
 	'lifecycle-memory',
 	'controlled-form',

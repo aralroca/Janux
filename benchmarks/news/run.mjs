@@ -31,6 +31,7 @@ import { summarizeSamples, timingStatForJson } from '../lib/stats.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TARGET_PORTS = {
+	janux: 5191,
 	solid: 5192,
 	react: 5193,
 	preact: 5270,

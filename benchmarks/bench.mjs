@@ -65,8 +65,7 @@ const HARNESS_FAILURE_ALLOWLIST = {};
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 // The frameworks measured by the build-based (per-target) suites.
-// TODO(janux fixture): prepend 'janux' once benchmarks/news/janux exists.
-const FRAMEWORKS = ['react', 'preact', 'solid', 'svelte', 'vue-vapor'];
+const FRAMEWORKS = ['janux', 'react', 'preact', 'solid', 'svelte', 'vue-vapor'];
 
 const perTarget = (targets) =>
 	targets.map((target) => ({
