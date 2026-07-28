@@ -1,6 +1,5 @@
 import type { PageMeta } from 'janux';
 import { Layout } from '../../../components/Layout';
-import { DocsCopilot } from '../../../components/DocsCopilot';
 import { docContent, docIndex, groupLabel, sectionLabel } from '../../../server/docs.api';
 import { renderMarkdown, summarize, type TocEntry } from '../../../server/markdown';
 import { absolute, SOCIAL_IMAGE } from '../../../site';
@@ -149,7 +148,6 @@ export default async function DocPage({ params }: { params: { section: string; s
         </main>
         {rendered ? <Toc toc={rendered.toc} /> : null}
       </div>
-      <DocsCopilot persist />
     </Layout>
   );
 }
