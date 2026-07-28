@@ -84,14 +84,15 @@ describe('reference/agent-mcp-client.md', () => {
     expect(calls.at(-1)).toMatchObject({ method: 'tools/call', params: { name: 'search' } }); // bare name on the wire
   });
 
-  it('initializes once and forwards the caller token as a bearer', async () => {
+  it('speaks modern MCP with no handshake and forwards the caller token as a bearer', async () => {
     const { fetchImpl, calls } = remote([]);
     const connection = connectMcp({ url: 'https://remote/mcp', token: 'user-token', fetchImpl });
 
     await connection.tools();
     await connection.tools();
 
-    expect(calls.filter((call) => call.method === 'initialize')).toHaveLength(1);
+    expect(calls.filter((call) => call.method === 'initialize')).toHaveLength(0);
+    expect(calls[0]!.params._meta['io.modelcontextprotocol/protocolVersion']).toBe('2026-07-28');
     expect(calls[0]!.auth).toBe('Bearer user-token');
   });
 

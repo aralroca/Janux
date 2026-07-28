@@ -1,19 +1,22 @@
 import type { AgentTool } from '../providers';
+import { CLIENT_INFO, encodeHeaderValue, isLegacySignal, rpc } from './mcp-wire';
 
 /**
  * Outbound MCP client (RFC 0002 §24): connects the agent to remote MCP servers
- * over streamable HTTP. Per-token clients are cached by a caller-supplied key
- * and evicted when the connection goes dead — the didit-assistant pattern for
- * acting as the signed-in user against a hosted MCP.
+ * over streamable HTTP. Dual-era (spec 2026-07-28): requests go out with modern
+ * per-request `_meta` and mirrored headers; a 400 whose body is not a modern
+ * error marks the server legacy and the client falls back to the `initialize`
+ * handshake, caching the era for the connection's lifetime. Per-token clients
+ * are cached by a caller-supplied key and evicted when the connection goes
+ * dead — the didit-assistant pattern for acting as the signed-in user against
+ * a hosted MCP.
  */
-
-type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
 export interface McpClientOptions {
   url: string;
   /** Bearer token forwarded as the user (omit for public servers). */
   token?: string;
-  fetchImpl?: FetchLike;
+  fetchImpl?: (url: string, init?: RequestInit) => Promise<Response>;
   /** Prefix remote tool names to avoid collisions (e.g. 'didit'). */
   namespace?: string;
 }
@@ -22,77 +25,90 @@ export interface RemoteTool extends AgentTool {
   call(input: unknown): Promise<unknown>;
 }
 
-let rpcSeq = 0;
-
-async function rpc(options: McpClientOptions, method: string, params?: unknown): Promise<any> {
-  const doFetch: FetchLike = options.fetchImpl ?? ((url, init) => fetch(url, init));
-  const response = await doFetch(options.url, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      accept: 'application/json, text/event-stream',
-      ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
-    },
-    body: JSON.stringify({ jsonrpc: '2.0', id: (rpcSeq += 1), method, params }),
-  });
-
-  if (!response.ok) throw new Error(`mcp_http_${response.status}`);
-  const type = response.headers.get('content-type') ?? '';
-  const payload = type.includes('text/event-stream')
-    ? parseSseJson(await response.text())
-    : await response.json();
-
-  if (payload?.error) throw new Error(`mcp_error_${payload.error.code}: ${payload.error.message}`);
-
-  return payload?.result;
-}
-
-/** Streamable-HTTP servers may answer a single JSON-RPC response as one SSE event. */
-function parseSseJson(text: string): any {
-  const data = text
-    .split('\n')
-    .filter((line) => line.startsWith('data:'))
-    .map((line) => line.slice(5).trim())
-    .join('');
-
-  return data ? JSON.parse(data) : undefined;
-}
-
 export interface McpConnection {
   tools(): Promise<RemoteTool[]>;
   call(name: string, input: unknown): Promise<unknown>;
 }
 
+interface HeaderParam {
+  param: string;
+  header: string;
+}
+
+/** `x-mcp-header` annotations in a tool's inputSchema, to mirror on tools/call. */
+function headerAnnotations(inputSchema: any): HeaderParam[] {
+  return Object.entries(inputSchema?.properties ?? {})
+    .filter(([, prop]) => (prop as any)?.['x-mcp-header'])
+    .map(([param, prop]) => ({ param, header: (prop as any)['x-mcp-header'] }));
+}
+
+function paramHeaders(annotations: HeaderParam[] | undefined, input: unknown): Record<string, string> | undefined {
+  if (!annotations?.length) return undefined;
+
+  return Object.fromEntries(
+    annotations
+      .filter(({ param }) => (input as Record<string, unknown>)?.[param] !== undefined)
+      .map(({ param, header }) => [
+        `mcp-param-${header.toLowerCase()}`,
+        encodeHeaderValue((input as Record<string, unknown>)[param]),
+      ]),
+  );
+}
+
 export function connectMcp(options: McpClientOptions): McpConnection {
+  let era: 'modern' | 'legacy' | undefined;
   let initialized: Promise<void> | undefined;
+  const mirrored = new Map<string, HeaderParam[]>();
+
   const ensureInit = () => {
-    initialized ??= rpc(options, 'initialize', {
-      protocolVersion: '2025-06-18',
-      capabilities: {},
-      clientInfo: { name: 'janux-agent', version: '1' },
-    }).then(() => undefined);
+    initialized ??= rpc(
+      options,
+      'initialize',
+      { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: CLIENT_INFO },
+      { modern: false },
+    ).then(() => undefined);
 
     return initialized;
+  };
+  const request = async (method: string, params?: unknown, headers?: Record<string, string>) => {
+    if (era !== 'legacy') {
+      try {
+        const result = await rpc(options, method, params, { modern: true, paramHeaders: headers });
+
+        era = 'modern';
+
+        return result;
+      } catch (error) {
+        if (era === 'modern' || !isLegacySignal(error)) throw error;
+        era = 'legacy';
+      }
+    }
+    await ensureInit();
+
+    return rpc(options, method, params, { modern: false });
   };
   const prefixed = (name: string) => (options.namespace ? `${options.namespace}.${name}` : name);
   const bare = (name: string) => (options.namespace ? name.slice(options.namespace.length + 1) : name);
 
   return {
     async tools() {
-      await ensureInit();
-      const result = await rpc(options, 'tools/list');
+      const result = await request('tools/list');
 
-      return (result?.tools ?? []).map((tool: any) => ({
-        name: prefixed(tool.name),
-        description: tool.description ?? '',
-        input: tool.inputSchema,
-        call: (input: unknown) => this.call(prefixed(tool.name), input),
-      }));
+      return (result?.tools ?? []).map((tool: any) => {
+        mirrored.set(tool.name, headerAnnotations(tool.inputSchema));
+
+        return {
+          name: prefixed(tool.name),
+          description: tool.description ?? '',
+          input: tool.inputSchema,
+          call: (input: unknown) => this.call(prefixed(tool.name), input),
+        };
+      });
     },
     async call(name: string, input: unknown) {
-      await ensureInit();
+      const wireName = bare(name);
 
-      return rpc(options, 'tools/call', { name: bare(name), arguments: input ?? {} });
+      return request('tools/call', { name: wireName, arguments: input ?? {} }, paramHeaders(mirrored.get(wireName), input));
     },
   };
 }

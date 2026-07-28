@@ -26,7 +26,7 @@ await remote.call('example.search', { q: 'x' });
 | `namespace` | Prefix for remote tool names, so `search` from two servers doesn't collide with your own tools |
 | `fetchImpl` | Inject a `fetch` — for tests, retries, or an outbound proxy |
 
-`McpConnection` is `{ tools(), call(name, input) }`. `initialize` is sent **lazily and once** (protocol `2025-06-18`), so constructing a connection costs nothing until you actually use it. Accept covers both `application/json` and `text/event-stream`, so servers that answer over SSE work unchanged.
+`McpConnection` is `{ tools(), call(name, input) }` and is **dual-era**: requests go out speaking MCP `2026-07-28` (per-request `_meta`, no handshake, mirrored `Mcp-*` headers — including `Mcp-Param-*` for params the server annotates with `x-mcp-header`). A server that rejects that with a legacy `400` gets the `initialize` handshake (protocol `2025-06-18`) instead, sent **lazily and once**, and the connection remembers the era — so constructing a connection costs nothing until you actually use it, and no request re-probes. Accept covers both `application/json` and `text/event-stream`, so servers that answer over SSE work unchanged.
 
 `RemoteTool` extends the agent's own `AgentTool` shape and adds `call(input)` — which is why remote tools can go straight into the model's tool list next to your local ones.
 
