@@ -103,6 +103,7 @@ const SUITES = [
 		name: 'todomvc',
 		cwd: 'todomvc',
 		servers: [
+			{ filter: 'janux-todomvc', port: 5240 },
 			{ filter: 'react-todomvc', port: 5241 },
 			{ filter: 'solid-todomvc', port: 5242 },
 			{ filter: 'vue-vapor-todomvc', port: 5244 },

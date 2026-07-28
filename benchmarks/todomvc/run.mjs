@@ -36,6 +36,7 @@ const N = 100; // todos per populated state
 const TARGETS = process.env.TARGETS
 	? JSON.parse(process.env.TARGETS)
 	: [
+			{ name: 'janux', url: 'http://localhost:5240/' },
 			{ name: 'react', url: 'http://localhost:5241/' },
 			{ name: 'solid', url: 'http://localhost:5242/' },
 			{ name: 'vue-vapor', url: 'http://localhost:5244/' },

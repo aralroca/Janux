@@ -51,7 +51,7 @@ const SETS = [
 	{
 		root: TODOMVC,
 		prefix: 'todo_',
-		targets: ['react', 'preact', 'solid', 'svelte', 'vue-vapor'],
+		targets: ['janux', 'react', 'preact', 'solid', 'svelte', 'vue-vapor'],
 	},
 ];
 
