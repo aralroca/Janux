@@ -4,8 +4,14 @@
  * assertion: if the surface ever accepts what it must refuse, tsc fails here.
  */
 import type { IntentRef } from './define/types';
+import type { CSSProperties } from 'janux';
+import type { JSX } from './jsx-runtime';
 
 declare const intents: Record<string, IntentRef>;
+
+// The style object type is reachable from the package root and the JSX namespace.
+export const typedStyle: CSSProperties = { color: 'red', '--x': 1 };
+export const namespacedStyle: JSX.CSSProperties = typedStyle;
 
 export const accepts = [
   <button onClick={intents.add}>ok</button>,
@@ -22,6 +28,22 @@ export const accepts = [
   // .with() binds input for this control; the ref stays a valid event value.
   <button onClick={intents.add.with({ productId: 'p1' })}>ok</button>,
   <li onDoubleClick={intents.open.with({ row: 3 }).with({ from: 'list' })} />,
+];
+
+export const acceptsStyle = [
+  <div style="color:red" />,
+  // Object form: typed by csstype; a number never gets a unit appended.
+  <div style={{ backgroundColor: 'red', width: 10, '--x': '1px' }} />,
+  <div style={undefined} />,
+];
+
+export const refusesStyle = [
+  // @ts-expect-error — unknown CSS property (typo of `color`).
+  <div style={{ colr: 'red' }} />,
+  // @ts-expect-error — an array is not CSS text nor a style object.
+  <div style={[]} />,
+  // @ts-expect-error — a property value must be string | number.
+  <div style={{ color: true }} />,
 ];
 
 export const refuses = [

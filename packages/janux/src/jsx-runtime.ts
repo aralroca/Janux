@@ -1,5 +1,6 @@
 import type { ComponentDef } from './define/types';
 import type { JanuxElementProps } from './jsx-events';
+import type { CSSProperties as JanuxCSSProperties } from './jsx-attributes';
 
 export type JanuxType = string | ((props: any) => unknown) | ComponentDef | symbol;
 
@@ -27,6 +28,8 @@ export function jsxDEV(
 
 export declare namespace JSX {
   type Element = JanuxNode;
+  /** The typed shape of a `style={{…}}` object — see `CSSProperties` in `janux`. */
+  type CSSProperties = JanuxCSSProperties;
   interface IntrinsicElements {
     [element: string]: JanuxElementProps;
   }

@@ -1,4 +1,5 @@
 import type { IntentRef } from './define/types';
+import type { CSSProperties } from './jsx-attributes';
 
 /**
  * Event props for intrinsic elements. Every event binds the same value type: a
@@ -151,5 +152,21 @@ export interface JanuxElementProps extends JanuxEventAttributes {
   reset?: boolean;
   /** Extra intent input bound to this control, as a JSON object literal. Wins over event-derived facts. */
   'data-input'?: string;
+  /**
+   * Inline style: CSS text or a typed style object (`CSSProperties`). An
+   * object serializes camelCase → kebab-case (`backgroundColor` →
+   * `background-color`), `--*` custom properties keep their casing, and an
+   * empty object leaves no attribute behind. Unlike React, a bare number is
+   * never given a unit: write `'10px'`, not `10`, when you mean pixels.
+   *
+   * Example:
+   *
+   * ```tsx
+   * <div style={{ color: 'red', width: '10px' }} />
+   * ```
+   *
+   * - [MDN reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/style)
+   */
+  style?: string | CSSProperties | undefined;
   [attribute: string]: unknown;
 }

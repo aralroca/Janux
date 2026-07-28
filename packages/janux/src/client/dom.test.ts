@@ -27,6 +27,13 @@ describe('toDomNodes', () => {
     expect(svg!.firstElementChild!.tagName).toBe('path');
   });
 
+  it('serializes a style object to CSS text, mirroring SSR', () => {
+    const node = jsx('div', { style: { backgroundColor: 'red', '--x': '1px' } });
+    const [div] = toDomNodes(node) as Element[];
+
+    expect(div!.getAttribute('style')).toBe('background-color:red;--x:1px');
+  });
+
   it('keeps html elements in the HTML namespace', () => {
     const [button] = toDomNodes(jsx('button', { children: 'Close' })) as Element[];
 

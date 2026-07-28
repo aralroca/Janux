@@ -44,6 +44,22 @@ describe('renderToString', () => {
     expect(result.snapshots).toHaveLength(0);
   });
 
+  it('serializes a style object to CSS text', async () => {
+    const page = jsx('div', {
+      style: { backgroundColor: 'red', width: 10, '--x': '1px', margin: undefined },
+      children: 'ok',
+    });
+    const result = await renderToString(page);
+
+    expect(result.html).toBe('<div style="background-color:red;width:10;--x:1px">ok</div>');
+  });
+
+  it('leaves no style attribute behind for an empty style object', async () => {
+    const result = await renderToString(jsx('div', { style: {}, children: 'ok' }));
+
+    expect(result.html).toBe('<div>ok</div>');
+  });
+
   it('escapes text and attribute content', async () => {
     const page = jsx('p', { title: '"><script>', children: '<script>alert(1)</script>' });
     const result = await renderToString(page);

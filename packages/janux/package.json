@@ -62,6 +62,7 @@
     "src"
   ],
   "dependencies": {
+    "csstype": "^3.2.3",
     "diff-dom-streaming": "^0.6.8"
   }
 }
