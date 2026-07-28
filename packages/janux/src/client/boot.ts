@@ -212,6 +212,12 @@ export function boot(options: BootOptions = {}): JanuxClient {
   if (options.webmcp !== false) installWebMCP(bridge);
   mountEagerIslands(mount).catch(reportIntentError);
   mountDocumentForeigns(mount).catch(reportIntentError);
+  // The runtime can boot mid-stream (pages with suspense boundaries ship it
+  // before the trailing chunks): content a later swap reveals may carry eager
+  // islands this initial pass could not see.
+  document.addEventListener('janux:unsuspense', () => {
+    mountEagerIslands(mount).catch(reportIntentError);
+  });
 
   return client;
 }

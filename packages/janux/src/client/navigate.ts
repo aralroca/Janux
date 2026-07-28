@@ -127,6 +127,8 @@ function reindexSnapshots(mount: MountContext): void {
   [...mount.registry.snapshots.keys()]
     .filter((uri) => uri.startsWith('ui://'))
     .forEach((uri) => mount.registry.snapshots.delete(uri));
+  // A new page is a new resume cycle: its scripts are fresh state, not leftovers.
+  mount.registry.consumedSnapshots.clear();
   document.querySelectorAll('script[type="application/janux+state"]').forEach((script) => {
     const uri = script.getAttribute('data-uri');
 
@@ -148,12 +150,28 @@ export async function mountEagerIslands(mount: MountContext): Promise<void> {
   await Promise.all(pending.map((node) => mountIsland(node.getAttribute('data-jx')!, node, mount)));
 }
 
-async function sweepDisconnected(mount: MountContext): Promise<void> {
-  const gone = [...mount.registry.mounted.entries()].filter(
-    ([id]) => !document.querySelector(`janux-island[data-jx="${esc(id)}"]`)?.isConnected,
-  );
+/**
+ * A navigation hands every non-persisted island the incoming page's DOM, so a
+ * live instance that survived the diff (same key on both pages, morphed in
+ * place) is stale: the DOM shows the new server render, the instance holds the
+ * old state, and the next click would continue from state the page no longer
+ * displays. Dispose them all — the next interaction re-resumes from the new
+ * page's snapshot. Only islands in a persisted subtree keep their instance:
+ * opting into surviving navigations is what `persist` is.
+ */
+async function sweepStaleInstances(mount: MountContext): Promise<void> {
+  const stale = [...mount.registry.mounted.entries()].filter(([id]) => {
+    const host = document.querySelector(`janux-island[data-jx="${esc(id)}"]`);
 
-  await Promise.all(gone.map(([, instance]) => instance.dispose()));
+    if (!host?.isConnected) return true;
+    if (host.closest('janux-island[data-jx-persist]')) return false;
+
+    // Born during THIS navigation: the user interacted while the page was
+    // still streaming in. That state is the new page's, not a leftover.
+    return (mount.registry.mountedEpoch.get(id) ?? 0) < (mount.epoch ?? 0);
+  });
+
+  await Promise.all(stale.map(([, instance]) => instance.dispose()));
 }
 
 /**
@@ -402,7 +420,7 @@ async function wireUpPage(mount: MountContext): Promise<void> {
   // The incoming page brought the server's document-wide speculation rules.
   rescopeSpeculationRules();
   installI18n(mount.ctx);
-  await sweepDisconnected(mount);
+  await sweepStaleInstances(mount);
   sweepDisconnectedForeigns(mount);
   await disposeRouteStores(mount);
   await mountEagerIslands(mount);
@@ -414,6 +432,8 @@ async function wireUpPage(mount: MountContext): Promise<void> {
 async function runNavigation(url: string, mount: MountContext, options: NavigateOptions): Promise<void> {
   const from = location.href;
 
+  // Everything mounted before this line belongs to the page being left.
+  mount.epoch = (mount.epoch ?? 0) + 1;
   emitNavigate('before', from, url);
   try {
     throwIfAborted(options.signal);

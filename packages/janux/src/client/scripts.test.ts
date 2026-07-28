@@ -34,6 +34,25 @@ describe('runScriptsWhileStreaming', () => {
     stop();
   });
 
+  /**
+   * Regression: `script.id` is `''` (never null) for a script without the
+   * attribute, so identity used to collapse every no-src/no-id script — data
+   * blocks included — to `""`, and any page carrying one silently skipped all
+   * incoming inline scripts. Novel code must run; same code must not.
+   */
+  it('runs a novel no-id inline script even when the page already carries one', async () => {
+    document.head.innerHTML = '<script>restoreTheme();</script>';
+    document.body.innerHTML = '';
+    const stop = runScriptsWhileStreaming();
+    const novel = insertInert({}, 'globalThis.__novel = 1;');
+
+    await settle();
+
+    expect(novel.isConnected).toBe(false);
+    expect([...document.scripts].some((script) => script.dataset.jxRan === '' && script.textContent === 'globalThis.__novel = 1;')).toBe(true);
+    stop();
+  });
+
   /** The identity rule: src, then id, then the code — a page's theme snippet is the same text on every page. */
   it('leaves alone what the document already runs', async () => {
     document.head.innerHTML = '<script src="/client.js"></script><script>restoreTheme();</script>';

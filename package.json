@@ -28,6 +28,7 @@
     "dev:shop": "bun run --cwd examples/shop dev",
     "dev:i18n": "bun run --cwd examples/i18n dev",
     "dev:web-agent": "bun run --cwd examples/with-web-agent dev",
+    "dev:suspense": "bun run --cwd examples/with-suspense dev",
     "release": "bun scripts/release.ts"
   },
   "devDependencies": {

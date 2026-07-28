@@ -19,12 +19,58 @@ State is plain JSON by construction (schema-typed), so serialization is `JSON.st
 The server does not wait for the page to finish rendering before it starts answering. The document goes out in three parts:
 
 1. **The head, immediately** — title, meta, styles and the manifest link come from the route, not from the render, so the browser can start fetching stylesheets while the body is still being produced.
-2. **The body, as each part resolves** — in document order. Sibling islands still load their sources *in parallel* (nothing is serialized by putting it later in the page); what changes is that an island that is ready is flushed instead of waiting behind a slow one. A slow source holds back its own island's children, not the page.
+2. **The body, as each part resolves** — in document order. Sibling islands still load their sources *in parallel* (nothing is serialized by putting it later in the page); what changes is that an island that is ready is flushed instead of waiting behind a slow one. A slow source holds back its own island's children, not the page — and an island with a `suspense` view holds back nothing at all (next section).
 3. **The tail, once the render is done** — state snapshots, the island map and the i18n payload, which can only be known after every island has rendered.
 
 Both a first load and a [client navigation](/docs/guide/navigation) are served this way, and the client consumes them the same way: the navigation diff patches the document as chunks arrive.
 
-If a render throws **after** the first flush, the status line is already on the wire and cannot be changed to a 500. Janux closes the document and reports it in-page instead: a `janux:error` event (the same one a failed navigation fetch dispatches) plus a console trace. It does not reload — a deterministic render error would fail again the same way. A failure *before* the first flush is still a normal 500.
+## Suspense boundaries
+
+A slow island normally holds back its own children. Give it a `suspense` view and it stops holding back even those: the fallback streams in place, the page never waits, and the real content arrives later **in the same response** and swaps in.
+
+```tsx
+import { component, source } from 'janux';
+
+export const SlowStats = component({
+  name: 'slow-stats',
+  sources: { stats: source({ query: () => fetchStats() }) }, // deliberately slow
+  suspense: () => <p class="skeleton">Loading stats…</p>,
+  view: ({ sources }) => <p>{sources.stats.value.length} stats</p>,
+});
+```
+
+How it travels: the island is emitted with its fallback and a `data-jx-pending` marker, and when its sources resolve, a trailing chunk delivers the content as an inert `<template>` plus a tiny inline swap call — no extra request, no render-blocking script. Boundaries flush in **resolution order**, not document order: two slow islands swap independently, whichever is ready first. If a source settles immediately (a cache hit), the content is inlined and no boundary exists at all.
+
+The page does not wait for the boundaries to become interactive: the moment its own HTML is complete, an **interlude** ships the runtime, the snapshots that already exist and the navigation scripts — before the trailing chunks. A counter next to a slow island reacts to clicks while the skeleton is still shimmering. (The interlude kicks the runtime with a classic inline `import()`: a `<script type="module">` would defer until the document finishes parsing, which for a streaming response means after the last boundary.) Only what cannot exist mid-stream travels in the tail: the i18n payload and the boundary islands' own snapshots — a resumed suspense island never re-fetches what the server already loaded.
+
+The same mechanism runs during a [client navigation](/docs/guide/navigation): the streaming diff paints the fallback, the trailing chunk arrives, the swap executes. The swap machinery removes itself, so the settled DOM is byte-for-byte what a non-streamed render would have produced.
+
+Suspense is opt-in per island and coexists with reading `sources.x.pending` / `sources.x.error` in the view — use whichever fits: a boundary for first-paint layout, reactive reads for in-place refreshes. Keep fallbacks static markup (a skeleton, not more islands): they are discarded at swap time.
+
+## Error boundaries
+
+An `error` view makes an island its own containment: if anything in its SSR subtree throws — its `view`, a static child, or a nested island without an `error` view of its own — the island renders the error view instead, and the rest of the page never notices. The thrown value arrives as `bag.error`.
+
+```tsx
+import { component } from 'janux';
+
+export const Report = component({
+  name: 'report',
+  error: ({ error }) => <p class="error">Report failed: {String(error)}</p>,
+  view: () => {
+    throw new Error('the data was corrupt');
+  },
+});
+```
+
+Failures route to the nearest boundary, React-style: a nested island's throw bubbles up until an ancestor island declares `error`. With no boundary anywhere above, the island **fails soft** — what streamed before the throw stays (elements close cleanly), the island closes, and the failure is reported via a `janux:error` event plus a server-side log. Either way the page survives and stays interactive.
+
+Two interactions worth knowing:
+
+- **With suspense:** if a suspended island's content throws, the error view is what swaps in — the fallback never gets stuck. A suspended island resolves its own failure and never bubbles to an ancestor: by the time the failure exists, the ancestor's markup is already on the wire. Give a suspended island its own `error` view if its failure needs UI.
+- **With sources:** a *rejecting source* is not a throw. It lands in `sources.x.error` for the view to render as it chooses; the `error` view is for renders that fail.
+
+If a render throws **outside any island** after the first flush, the status line is already on the wire and cannot be changed to a 500. Janux closes the document and reports it in-page instead: a `janux:error` event (the same one a failed navigation fetch dispatches) plus a console trace. It does not reload — a deterministic render error would fail again the same way. A failure *before* the first flush is still a normal 500.
 
 `renderToStream()` is the API behind this if you assemble a server yourself; see the [core API reference](/docs/reference/core-api#rendertostreamnode-options).
 

@@ -1,0 +1,139 @@
+:root {
+  --ink: #0f172a;
+  --blue: #0062ff;
+  --border: #e2e8f0;
+  --muted: #64748b;
+  --error: #b91c1c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+  color: var(--ink);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: 700;
+}
+
+.bar nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.bar a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.bar a.active {
+  color: var(--blue);
+  font-weight: 600;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.stat {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.news {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.news li {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+}
+
+.skeleton {
+  color: transparent;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+  border-color: transparent;
+}
+
+.skeleton-line {
+  min-height: 2.9rem;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.counter {
+  justify-self: start;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.card-error {
+  border-color: var(--error);
+  color: var(--error);
+  background: #fef2f2;
+}
+
+.card-error code {
+  font-size: 0.85rem;
+}

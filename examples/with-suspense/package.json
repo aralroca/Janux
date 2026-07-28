@@ -1,0 +1,17 @@
+{
+  "name": "janux-example-with-suspense",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev",
+    "build": "janux build",
+    "start": "janux start"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*"
+  }
+}

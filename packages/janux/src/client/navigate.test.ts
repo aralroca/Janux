@@ -108,6 +108,41 @@ describe('SPA navigation (streamed diff)', () => {
     expect(document.querySelector('janux-island[data-jx="counter#default"]')).toBeNull();
   });
 
+  /**
+   * The same island (same key) rendered by BOTH pages: the diff morphs the
+   * host in place, so it survives connected — but the DOM now shows the
+   * incoming page's server render. Keeping the old live instance would make
+   * the next click continue from state the page no longer displays.
+   */
+  it('re-resumes a surviving non-persist island from the incoming page state', async () => {
+    const pageA = await pageHtml('Page A', [jsx('h1', { children: 'A' }), jsx(counter as any, {})]);
+    const pageB = await pageHtml('Page B', [jsx('h1', { children: 'B' }), jsx(counter as any, {})]);
+
+    document.write(pageA);
+    document.close();
+    const client = boot({ defs: [counter, chat, theme] });
+
+    await client.call('counter.inc');
+    await client.call('counter.inc');
+    await client.settled();
+    expect(((await client.read('ui://counter')) as any).state.n).toBe(2);
+    counterDetach.mockClear();
+
+    (globalThis as any).fetch = mock(async () => ({
+      ok: true,
+      body: new Response(pageB).body,
+    }));
+    await client.navigate('/b2');
+
+    // The stale live instance was disposed with the old page...
+    expect(counterDetach).toHaveBeenCalledTimes(1);
+
+    // ...and the next interaction resumes from the incoming page's snapshot.
+    await client.call('counter.inc');
+    await client.settled();
+    expect(((await client.read('ui://counter')) as any).state.n).toBe(1);
+  });
+
   it('installs the listener for an event type the new page introduces', async () => {
     const gallery = component({
       name: 'gallery',

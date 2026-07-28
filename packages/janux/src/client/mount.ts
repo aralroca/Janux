@@ -14,6 +14,12 @@ export interface MountContext {
   inflight: Set<Promise<unknown>>;
   onProposal: (proposal: unknown) => void;
   onAudit?: (entry: unknown) => void;
+  /**
+   * Navigation epoch, bumped as each navigation starts. Islands stamp it when
+   * they mount, so the post-navigation sweep can tell a stale pre-navigation
+   * instance from one the user created by interacting mid-stream.
+   */
+  epoch?: number;
 }
 
 /** Client-discovered nested islands seed their def (already imported by the parent) and props. */
@@ -231,6 +237,23 @@ export function sweepDisconnectedForeigns(mount: MountContext): void {
   sweepForeigns('', mount);
 }
 
+/**
+ * A snapshot the boot pass did not index: the runtime boots mid-stream on
+ * pages with suspense boundaries, and the boundary islands' own snapshots
+ * arrive in the document tail — read them from the DOM at mount time.
+ */
+function readLateSnapshot(id: string, name: string): unknown {
+  const script =
+    document.querySelector(`script[type="application/janux+state"][data-uri="ui://${id}"]`) ??
+    document.querySelector(`script[type="application/janux+state"][data-uri="ui://${name}"]`);
+
+  try {
+    return script ? JSON.parse(script.textContent ?? '{}') : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Resumes one island: instance from its SSR snapshot, reactive render loop, no replay. */
 export function mountIsland(
   id: string,
@@ -264,7 +287,8 @@ async function doMountIsland(
   if (seed?.def) registerDef(registry, seed.def);
   const def = await resolveDef(registry, name!);
   const snapKey = registry.snapshots.has(`ui://${id}`) ? `ui://${id}` : `ui://${name}`;
-  const snap = registry.snapshots.get(snapKey) as any;
+  const late = registry.consumedSnapshots.has(`ui://${id}`) ? undefined : readLateSnapshot(id, name!);
+  const snap = (registry.snapshots.get(snapKey) as any) ?? late;
   const instance = createInstance(def, {
     key,
     bus: mount.bus,
@@ -277,6 +301,7 @@ async function doMountIsland(
   });
 
   registry.mounted.set(id, instance);
+  registry.mountedEpoch.set(id, mount.epoch ?? 0);
   const stopRender = startRenderLoop(instance, root, key!, mount);
   const dispose = instance.dispose.bind(instance);
   let disposed = false;
@@ -288,6 +313,7 @@ async function doMountIsland(
     disposed = true;
     stopRender();
     registry.mounted.delete(id);
+    registry.mountedEpoch.delete(id);
     await disposeDescendants(name!, key!, mount);
     await dispose();
   };
@@ -301,6 +327,7 @@ async function doMountIsland(
   // A snapshot resumes an island exactly once — consumed only after the mount
   // actually succeeded, so a failed mount can retry with the SSR state intact.
   registry.snapshots.delete(snapKey);
+  registry.consumedSnapshots.add(`ui://${id}`);
   // The host may have left the document while this mount was in flight (SPA
   // navigation): tear down immediately instead of leaking live sources.
   if (!root.isConnected) {

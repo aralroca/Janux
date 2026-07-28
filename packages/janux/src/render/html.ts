@@ -25,6 +25,11 @@ export function escapeHtml(value: unknown): string {
   return String(value).replace(/[&<>"]/g, (char) => ESCAPES[char]!);
 }
 
+/** JSON safe to embed in an inline `<script>`: `<` escaped so `</script>` cannot break out. */
+export function safeJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
 /** Explicit island keys must survive marker parsing (`:`), selectors (`"`) and id parsing (`#`). */
 export function safeKey(explicit: unknown): string {
   return String(explicit).replace(/[^\w.-]/g, '_');

@@ -161,20 +161,64 @@ export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
   ].join('\n');
 }
 
+function i18nScript(options: Omit<ShellOptions, 'html'>): string {
+  return options.i18n?.payload
+    ? `<script type="application/janux+i18n" key="jx-i18n" id="jx-i18n">${safeJson(options.i18n.payload)}</script>`
+    : '';
+}
+
 /**
  * Everything after the page's HTML: state snapshots, island runtime, i18n
  * payload — the parts that only exist once the render finished.
  */
 export function shellEpilogue(options: Omit<ShellOptions, 'html'>): string {
-  const i18nScript = options.i18n?.payload
-    ? `<script type="application/janux+i18n" key="jx-i18n" id="jx-i18n">${safeJson(options.i18n.payload)}</script>`
-    : '';
-
   return [
-    i18nScript,
+    i18nScript(options),
     options.islandNames.length > 0 ? stateScripts(options.snapshots) : '',
     navigationScripts(options),
     runtimeScripts(options),
+    '</body>',
+    '</html>',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+/**
+ * Mid-stream shell for a page whose suspense boundaries are still pending:
+ * everything the client needs to become interactive NOW — the snapshots that
+ * already exist, the navigation scripts and the runtime — emitted before the
+ * trailing boundary chunks instead of after them. The kick script is a classic
+ * inline `import()`: a `<script type="module">` defers until the document
+ * finishes parsing, which for a streaming response means after the LAST
+ * boundary resolves — exactly what this exists to avoid.
+ */
+export function shellInterlude(options: Omit<ShellOptions, 'html'>): string {
+  const kick = options.runtimeUrl
+    ? `<script key="jx-runtime-eager" id="jx-runtime-eager">import(${safeJson(options.runtimeUrl)})</script>`
+    : '';
+
+  return [
+    options.islandNames.length > 0 ? stateScripts(options.snapshots) : '',
+    navigationScripts(options),
+    runtimeScripts(options),
+    kick,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+/**
+ * The tail of a page that already shipped `shellInterlude`: only what could
+ * not exist mid-stream — the i18n payload (keys recorded during boundary
+ * renders too) and the boundary islands' own snapshots.
+ */
+export function shellEpilogueRest(options: Omit<ShellOptions, 'html'>, emittedUris: Set<string>): string {
+  const rest = options.snapshots.filter((snapshot) => !emittedUris.has(snapshot.uri));
+
+  return [
+    i18nScript(options),
+    options.islandNames.length > 0 ? stateScripts(rest) : '',
     '</body>',
     '</html>',
   ]

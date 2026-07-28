@@ -33,7 +33,6 @@ Everything the two core app archetypes (a content site and a full console) need 
 ## Roadmap
 
 - **Rendering:** views still re-render per island + DOM morph; compile-time binding maps (path-level DOM writes, per-intent code splitting) are the planned compiler evolution — the public contract does not change.
-- **Streaming SSR & component-property Suspense:** async data reaches the UI reactively through the client cache today; streaming SSR is a first-paint optimization tracked with the compiler.
 - **Routing:** parallel routes (`@slot`) and intercepting routes (`(.)`) — URL-addressable modals are covered today by query-string state.
 - **Interop:** Vue/other runtimes and reverse interop (Janux inside a foreign tree).
 - **Query hydration:** full streaming dehydrate/hydrate of in-flight queries into the SSR payload (today SSR uses a fresh per-request client and the client re-fetches on mount).

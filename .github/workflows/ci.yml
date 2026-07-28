@@ -59,6 +59,8 @@ jobs:
       # itself without one — so building is what keeps it from passing silently.
       - name: Build the docs site
         run: bun run --cwd apps/docs build
+      - name: Build the suspense example
+        run: bun run --cwd examples/with-suspense build
       - name: Install Chrome for Playwright
         run: bunx playwright install --with-deps chrome
 
