@@ -1,3 +1,5 @@
+import { nodeKey, setNodeKey } from './keys';
+
 function syncAttrs(from: Element, to: Element): void {
   const runtimeClasses = [...from.classList].filter((name) => name.startsWith('janux-'));
 
@@ -61,26 +63,46 @@ function liveIslandHosts(from: Element): Map<string, Element> {
   return new Map(hosts.map((host) => [host.getAttribute('data-jx')!, host]));
 }
 
+interface ChildMatch {
+  fromKids: ChildNode[];
+  islands: Map<string, Element>;
+  /** Non-island keyed survivors among `from`'s children, by render key. */
+  byKey: Map<string | number, ChildNode>;
+  /** Keys the incoming children claim — an unkeyed child must not consume them. */
+  toKeys: Set<string | number>;
+}
+
 /**
  * The node that should occupy position `index`: a live island host reused by id
- * (so it survives position shifts — never replaced by its empty placeholder),
- * an index+tag-matched existing node morphed in place, or the incoming node.
+ * (so it survives position shifts — never replaced by its empty placeholder), a
+ * key-matched survivor moved into place, an index+tag-matched existing node
+ * morphed in place, or the incoming node. A keyed incoming child with no keyed
+ * match still adopts the unkeyed node at its position — that is how a resumed
+ * SSR tree acquires keys on the first client render.
  */
-function targetNode(fromKids: ChildNode[], islands: Map<string, Element>, toKid: ChildNode, index: number): ChildNode {
+function targetNode(match: ChildMatch, toKid: ChildNode, index: number): ChildNode {
   if (isIsland(toKid)) {
-    const host = islands.get((toKid as Element).getAttribute('data-jx')!);
+    const host = match.islands.get((toKid as Element).getAttribute('data-jx')!);
 
-    if (host) {
-      morphNode(host, toKid);
+    if (!host) return toKid;
+    morphNode(host, toKid);
 
-      return host;
-    }
-
-    return toKid;
+    return host;
   }
-  const fromKid = fromKids[index];
+  const key = nodeKey(toKid);
+  const survivor = key === undefined ? undefined : match.byKey.get(key);
 
-  if (fromKid && !isIsland(fromKid) && sameKind(fromKid, toKid)) {
+  if (survivor && sameKind(survivor, toKid)) {
+    morphNode(survivor, toKid);
+
+    return survivor;
+  }
+  const fromKid = match.fromKids[index];
+  const fromKey = fromKid === undefined ? undefined : nodeKey(fromKid);
+  const claimedElsewhere = key === undefined ? fromKey !== undefined && match.toKeys.has(fromKey) : fromKey !== undefined;
+
+  if (fromKid && !isIsland(fromKid) && !claimedElsewhere && sameKind(fromKid, toKid)) {
+    if (key !== undefined) setNodeKey(fromKid, key);
     morphNode(fromKid, toKid);
 
     return fromKid;
@@ -91,15 +113,21 @@ function targetNode(fromKids: ChildNode[], islands: Map<string, Element>, toKid:
 
 /**
  * Two-pass reconcile: first resolve the target node for each incoming child
- * (reusing live islands and morphing matched nodes), then order `from`'s
+ * (reusing live islands and key/index-matched nodes), then order `from`'s
  * children to that list. Snapshotting the incoming children first means the
  * mutation of `from` never desyncs the walk.
  */
 function morphChildren(from: Element, to: Element): void {
-  const islands = liveIslandHosts(from);
   const fromKids = [...from.childNodes];
   const toKids = [...to.childNodes];
-  const targets = toKids.map((toKid, index) => targetNode(fromKids, islands, toKid, index));
+  const keyedFrom = fromKids.filter((kid) => !isIsland(kid) && nodeKey(kid) !== undefined);
+  const match: ChildMatch = {
+    fromKids,
+    islands: liveIslandHosts(from),
+    byKey: new Map(keyedFrom.map((kid) => [nodeKey(kid)!, kid])),
+    toKeys: new Set(toKids.map(nodeKey).filter((key) => key !== undefined) as (string | number)[]),
+  };
+  const targets = toKids.map((toKid, index) => targetNode(match, toKid, index));
 
   targets.forEach((node, index) => {
     if (from.childNodes[index] !== node) from.insertBefore(node, from.childNodes[index] ?? null);

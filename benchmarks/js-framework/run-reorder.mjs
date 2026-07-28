@@ -58,6 +58,7 @@ const ROW_COUNT = 1000;
 const TARGETS = process.env.TARGETS
 	? JSON.parse(process.env.TARGETS)
 	: [
+			{ name: 'janux', url: 'http://localhost:5176/', ready: '#run' },
 			{ name: 'react', url: 'http://localhost:5175/', ready: '#run' },
 			{ name: 'solid', url: 'http://localhost:5179/', ready: '#run' },
 			{ name: 'vue-vapor', url: 'http://localhost:5180/', ready: '#run' },

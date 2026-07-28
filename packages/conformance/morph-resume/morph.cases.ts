@@ -3,8 +3,12 @@ import type { Case } from '../support/case';
 /**
  * DOM patching: `morph(root, nextChildren)`.
  *
- * Janux matches children by index and tag, not by key, and treats island hosts as
- * opaque boundaries reused by id. The rows that matter are the ones every
+ * Janux matches children by client render key when both sides carry one (an
+ * off-DOM WeakMap — see client/keys.ts and the identity tests in
+ * client/morph.test.ts), by index and tag otherwise, and treats island hosts
+ * as opaque boundaries reused by id. These innerHTML rows exercise the
+ * index+tag path; keyed identity cannot be asserted through innerHTML, so it
+ * lives in the unit tests. The rows that matter are the ones every
  * in-place patcher has broken: attributes that must be *removed*, runtime classes
  * the view never renders, a boundary the patch must not step across, and controlled
  * inputs where the attribute and the property disagree.

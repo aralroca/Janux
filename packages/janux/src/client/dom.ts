@@ -3,6 +3,7 @@ import { attrEntries, dedupeKey, safeKey } from '../render/html';
 import { isForeignDef, type ForeignDef } from '../interop';
 import type { ComponentDef } from '../define/types';
 import { ensureListenerForAttr } from './events';
+import { setNodeKey } from './keys';
 
 /** A nested island found while expanding a parent view; mount.ts resolves it after the morph. */
 export interface PendingIsland {
@@ -62,6 +63,7 @@ function elementFor(node: JanuxNode, pass?: RenderPass, svg?: boolean): Element 
   const inSvg = svg || tag === 'svg';
   const el = createElement(tag, inSvg);
 
+  if (node.$k !== undefined) setNodeKey(el, node.$k);
   attrEntries(node.$p).forEach(([name, value]) => setAttr(el, name, value));
   if (typeof node.$p.dangerHTML === 'string') el.innerHTML = node.$p.dangerHTML;
   else appendChildren(el, node.$p.children, pass, inSvg && tag !== 'foreignObject');
