@@ -8,11 +8,29 @@ export type Ctx = { i18n?: I18n } & Record<string, unknown>;
 export type Origin = 'human' | 'agent';
 export type Cleanup = (() => void) | undefined;
 
+/** What the runtime stamps on a bound intent: enough to write its delegation marker. */
+export interface IntentMeta {
+  component: string;
+  key?: string;
+  name: string;
+}
+
+/**
+ * A bound, invocable intent as a view receives it — the only value an event
+ * prop (`onClick`, `onSubmit`, `on<Event>`) accepts. A plain closure has no
+ * name, schema or guard, so it can appear neither in the HTML marker nor on
+ * the agent surface.
+ */
+export interface IntentRef {
+  (input?: unknown): Promise<unknown>;
+  $intent: IntentMeta;
+}
+
 export interface RunBag {
   state: any;
   derived: Record<string, unknown>;
   sources: Record<string, SourceReader>;
-  intents: Record<string, (input?: unknown) => Promise<unknown>>;
+  intents: Record<string, IntentRef>;
   use: Record<string, StoreHandle>;
   emit: (event: string, payload: unknown) => void;
   ctx: Ctx;

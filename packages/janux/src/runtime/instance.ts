@@ -2,7 +2,7 @@ import { toJsonSchema, validate } from '../schema';
 import { computed, createRoot, getOwner, runWithOwner, untrack, type Owner, type ReadonlySig } from '../signals';
 import { createReactiveState } from '../state/reactive-state';
 import { createGate, withGate } from '../state/mutation-gate';
-import type { ComponentDef, Ctx, Origin, RunBag, StoreHandle } from '../define/types';
+import type { ComponentDef, Ctx, IntentMeta, Origin, RunBag, StoreHandle } from '../define/types';
 import { createBus, type EventBus } from './bus';
 import { createPendingTracker } from './settled';
 import { createSources } from './sources';
@@ -27,7 +27,7 @@ export interface JanuxInstance {
   state: any;
   derived: Record<string, unknown>;
   sources: Record<string, any>;
-  intents: Record<string, (input?: unknown, opts?: { origin?: Origin }) => Promise<unknown>>;
+  intents: Record<string, ((input?: unknown, opts?: { origin?: Origin }) => Promise<unknown>) & { $intent: IntentMeta }>;
   emit: (event: string, payload: unknown) => void;
   bag: RunBag;
   snapshot(): Record<string, unknown>;
@@ -114,8 +114,7 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     const invoke = (input?: unknown, opts?: { origin?: Origin }) =>
       invokeIntent(def.name, name, intentDef, bag, input, opts?.origin ?? 'human', hooks);
 
-    (invoke as any).$intent = { component: def.name, key: options.key, name };
-    intents[name] = invoke;
+    intents[name] = Object.assign(invoke, { $intent: { component: def.name, key: options.key, name } });
   });
 
   let stopEffects: (() => void) | undefined;

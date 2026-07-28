@@ -1,4 +1,5 @@
 import type { ComponentDef } from './define/types';
+import type { JanuxElementProps } from './jsx-events';
 
 export type JanuxType = string | ((props: any) => unknown) | ComponentDef | symbol;
 
@@ -27,7 +28,7 @@ export function jsxDEV(
 export declare namespace JSX {
   type Element = JanuxNode;
   interface IntrinsicElements {
-    [element: string]: Record<string, unknown>;
+    [element: string]: JanuxElementProps;
   }
   interface IntrinsicAttributes {
     key?: string | number;
