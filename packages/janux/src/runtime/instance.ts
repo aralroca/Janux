@@ -21,13 +21,41 @@ export interface InstanceOptions {
   onProposal?: (proposal: Proposal) => void;
 }
 
+/** An instance-level intent ref: the public `IntentRef` plus the internal origin channel. */
+export type IntentInvoke = ((input?: unknown, opts?: { origin?: Origin }) => Promise<unknown>) & {
+  $intent: IntentMeta;
+  $input?: Record<string, unknown>;
+  with(input: Record<string, unknown>): IntentInvoke;
+};
+
+/**
+ * Stamps `invoke` as a bound intent ref. `.with()` returns a NEW ref sharing
+ * the same runtime invoke — so sibling bindings in a list never clobber each
+ * other — and a bound ref called directly runs with its bound input underneath
+ * the caller's.
+ */
+function bindIntent(
+  invoke: (input?: unknown, opts?: { origin?: Origin }) => Promise<unknown>,
+  meta: IntentMeta,
+  bound?: Record<string, unknown>,
+): IntentInvoke {
+  const call = (input?: unknown, opts?: { origin?: Origin }) =>
+    invoke(bound ? { ...bound, ...(input as Record<string, unknown> | undefined) } : input, opts);
+
+  return Object.assign(call, {
+    $intent: meta,
+    ...(bound === undefined ? {} : { $input: bound }),
+    with: (extra: Record<string, unknown>) => bindIntent(invoke, meta, { ...bound, ...extra }),
+  });
+}
+
 export interface JanuxInstance {
   def: ComponentDef;
   uri: string;
   state: any;
   derived: Record<string, unknown>;
   sources: Record<string, any>;
-  intents: Record<string, ((input?: unknown, opts?: { origin?: Origin }) => Promise<unknown>) & { $intent: IntentMeta }>;
+  intents: Record<string, IntentInvoke>;
   emit: (event: string, payload: unknown) => void;
   bag: RunBag;
   snapshot(): Record<string, unknown>;
@@ -114,7 +142,7 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     const invoke = (input?: unknown, opts?: { origin?: Origin }) =>
       invokeIntent(def.name, name, intentDef, bag, input, opts?.origin ?? 'human', hooks);
 
-    intents[name] = Object.assign(invoke, { $intent: { component: def.name, key: options.key, name } });
+    intents[name] = bindIntent(invoke, { component: def.name, key: options.key, name });
   });
 
   let stopEffects: (() => void) | undefined;

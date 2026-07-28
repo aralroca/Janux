@@ -19,6 +19,9 @@ export const accepts = [
   <button onClick={intents.add} data-input='{"id":"p1"}'>
     ok
   </button>,
+  // .with() binds input for this control; the ref stays a valid event value.
+  <button onClick={intents.add.with({ productId: 'p1' })}>ok</button>,
+  <li onDoubleClick={intents.open.with({ row: 3 }).with({ from: 'list' })} />,
 ];
 
 export const refuses = [
@@ -30,4 +33,6 @@ export const refuses = [
   <button on={intents.add}>no</button>,
   // @ts-expect-error — removed v0 syntax: bind the submit by name.
   <form intent={intents.send} />,
+  // @ts-expect-error — .with() binds an input object, not a scalar.
+  <button onClick={intents.add.with('p1')}>no</button>,
 ];

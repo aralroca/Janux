@@ -217,10 +217,37 @@ function propToAttr(name: string, value: unknown): [string, unknown] | undefined
   return [name, value];
 }
 
+/**
+ * The `data-input` a `.with()`-bound event prop asks for — unless the element
+ * declares its own, which wins (and makes the binding pointless, so dev hears
+ * about it). Serialization failures drop only the input, never the marker.
+ */
+function boundInputAttr(props: Record<string, unknown>): [string, unknown] | undefined {
+  const bound = Object.entries(props).filter(([name, value]) => eventNameFor(name) && (value as any)?.$intent && (value as any).$input);
+
+  if (bound.length === 0) return undefined;
+  if (bound.length > 1) console.warn(`Janux: several .with() bindings on one element — "${bound[0]![0]}" wins, data-input is per element`);
+  if (props['data-input'] !== undefined) {
+    console.warn(`Janux: an explicit data-input wins over the .with() binding on "${bound[0]![0]}"`);
+
+    return undefined;
+  }
+  try {
+    return ['data-input', JSON.stringify((bound[0]![1] as any).$input)];
+  } catch {
+    console.warn(`Janux: the .with() input on "${bound[0]![0]}" is not JSON-serializable — dropped`);
+
+    return undefined;
+  }
+}
+
 export function attrEntries(props: Record<string, unknown>): [string, unknown][] {
-  return Object.entries(props)
+  const entries = Object.entries(props)
     .map(([name, value]) => propToAttr(name, value))
     .filter((entry): entry is [string, unknown] => entry !== undefined);
+  const boundInput = boundInputAttr(props);
+
+  return boundInput ? [...entries, boundInput] : entries;
 }
 
 export function renderAttrs(props: Record<string, unknown>): string {

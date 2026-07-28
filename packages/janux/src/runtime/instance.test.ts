@@ -48,6 +48,27 @@ describe('instance: state, derived, intents', () => {
     expect(cart.derived.count).toBe(3);
   });
 
+  it('.with() binds input without touching the original: same marker, own $input, still invocable', async () => {
+    const cart = createInstance(cartDef(), { key: 'main' });
+    const add = cart.intents.addItem!;
+    const addA = add.with({ id: 'a' });
+    const addB = add.with({ id: 'b', qty: 3 });
+
+    // Two bindings from one map must not clobber each other or the base.
+    expect(add.$input).toBeUndefined();
+    expect(addA.$input).toEqual({ id: 'a' });
+    expect(addB.$input).toEqual({ id: 'b', qty: 3 });
+    expect(addA.$intent).toEqual(add.$intent);
+
+    // A bound ref runs with its bound input; caller input merges on top.
+    await addA();
+    await addB({ qty: 1 });
+    expect(cart.snapshot().items).toEqual([
+      { id: 'a', qty: 1 },
+      { id: 'b', qty: 1 },
+    ]);
+  });
+
   it('async intents may mutate state after awaits (regression)', async () => {
     const def = component({
       name: 'async-cart',

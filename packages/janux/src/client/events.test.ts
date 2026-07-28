@@ -213,9 +213,43 @@ async function bootBoard(): Promise<JanuxClient> {
   return boot({ defs: [board] });
 }
 
+/** A product list, the canonical `.with()`: each row binds which product it adds. */
+const shop = component({
+  name: 'shop',
+  state: schema({ last: str().default('') }),
+  intents: {
+    add: intent({ input: schema({ id: str() }), run: ({ state, input }) => (state.last = input.id) }),
+  },
+  view: ({ intents }: any) =>
+    jsx('div', {
+      children: [
+        jsx('button', { class: 'p1', onClick: intents.add.with({ id: 'sneakers' }) }),
+        jsx('button', { class: 'p2', onClick: intents.add.with({ id: 'boots' }) }),
+      ],
+    }),
+});
+
 describe('arbitrary delegated events', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
+  });
+
+  it('.with() input reaches the intent through the rendered data-input', async () => {
+    const { html, snapshots } = await renderToString(jsx(shop as any, {}), {});
+    const scripts = snapshots
+      .map(
+        (snap) =>
+          `<script type="application/janux+state" data-uri="${snap.uri}">${JSON.stringify({ state: snap.state, sources: snap.sources ?? {} })}</script>`,
+      )
+      .join('');
+
+    expect(html).toContain('data-input="{&quot;id&quot;:&quot;sneakers&quot;}"');
+    document.body.innerHTML = html + scripts;
+    const client = boot({ defs: [shop] });
+
+    document.querySelector('.p2')!.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+    await client.settled();
+    expect(((await client.read('ui://shop#default')) as any).state.last).toBe('boots');
   });
 
   it('an event outside the v0 allowlist (dblclick) resolves through its marker', async () => {

@@ -24,6 +24,16 @@ export interface IntentMeta {
 export interface IntentRef {
   (input?: unknown): Promise<unknown>;
   $intent: IntentMeta;
+  /** Input bound by `.with()`; the renderer serializes it to the control's `data-input`. */
+  $input?: Record<string, unknown>;
+  /**
+   * Binds extra input to the control this ref is placed on:
+   * `onClick={intents.add.with({ productId })}` renders
+   * `data-input='{"productId":…}'` for you. Chainable; later keys win. The
+   * input must be JSON-serializable, and the intent's schema still validates
+   * it at invocation.
+   */
+  with(input: Record<string, unknown>): IntentRef;
 }
 
 export interface RunBag {
