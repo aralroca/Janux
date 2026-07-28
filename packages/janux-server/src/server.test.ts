@@ -118,6 +118,36 @@ describe('api endpoints', () => {
     expect((await post('/_janux/approve', { id: proposal.id })).status).toBe(404);
   });
 
+  it('run() and a dynamic guard see the caller origin', async () => {
+    const originServer = createJanuxServer({
+      routes: { '/': () => jsx('div', {}) },
+      apis: {
+        audit: {
+          whoami: api({ description: 'Echo the caller origin', run: ({ origin }) => ({ origin }) }),
+          save: api({
+            description: 'Auto for humans, approval for agents',
+            guard: ({ origin }) => (origin === 'agent' ? 'confirm' : 'auto'),
+            run: () => 'saved',
+          }),
+        },
+      },
+    });
+    const call = (path: string, headers: Record<string, string> = {}) =>
+      originServer.fetch(
+        new Request(`http://test${path}`, { method: 'POST', body: '{}', headers: { 'content-type': 'application/json', ...headers } }),
+      );
+
+    expect((((await (await call('/_janux/api/audit.whoami')).json()) as any).result)).toEqual({ origin: 'human' });
+    expect((((await (await call('/_janux/api/audit.whoami', { 'x-janux-origin': 'agent' })).json()) as any).result)).toEqual({ origin: 'agent' });
+
+    // Same tool, two callers: straight through for the human…
+    expect(((await (await call('/_janux/api/audit.save')).json()) as any).result).toBe('saved');
+    // …a proposal for the agent.
+    const proposed: any = ((await (await call('/_janux/api/audit.save', { 'x-janux-origin': 'agent' })).json()) as any).result;
+
+    expect(proposed.status).toBe('proposal');
+  });
+
   /**
    * Regression: the copilot loop invokes api tools through `invokeTool`, which
    * bypassed the confirm gate the HTTP path implements — a `guard: 'confirm'`

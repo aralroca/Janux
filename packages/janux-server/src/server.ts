@@ -340,7 +340,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const tool = apiTools.find((candidate) => `api.${candidate.name}` === name || candidate.name === name);
 
     if (!tool) throw Object.assign(new Error(`Unknown api tool "${name}"`), { code: 'invalid_input' });
-    if (resolveApiGuard(tool, ctx) === 'confirm') return proposeApi(tool, input, ctx);
+    if (resolveApiGuard(tool, ctx, 'agent') === 'confirm') return proposeApi(tool, input, ctx);
 
     return invokeApi(tool, input, ctx, 'agent', options.onAudit);
   };
@@ -358,7 +358,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     }
 
     try {
-      if (origin === 'agent' && resolveApiGuard(tool, ctx) === 'confirm') {
+      if (origin === 'agent' && resolveApiGuard(tool, ctx, 'agent') === 'confirm') {
         return json({ ok: true, result: proposeApi(tool, input, ctx) });
       }
 

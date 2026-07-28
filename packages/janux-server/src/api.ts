@@ -6,7 +6,7 @@ export interface ApiDef {
   input?: JxType;
   output?: JxType;
   guard?: Guard;
-  run: (bag: { input: any; ctx: Ctx }) => unknown;
+  run: (bag: { input: any; ctx: Ctx; origin: Origin }) => unknown;
 }
 
 export interface ApiTool extends ApiDef {
@@ -51,12 +51,12 @@ export function collectApis(modules: Record<string, Record<string, unknown>>): A
   );
 }
 
-export function resolveApiGuard(tool: ApiTool, ctx: Ctx): GuardValue {
+export function resolveApiGuard(tool: ApiTool, ctx: Ctx, origin: Origin): GuardValue {
   const guard = tool.guard ?? 'auto';
 
   if (typeof guard !== 'function') return guard;
   try {
-    return guard({ ctx });
+    return guard({ ctx, origin });
   } catch {
     // Denies when it cannot decide, like the component-side `resolveGuard`.
     // Propagating took the whole api manifest down with one bad guard.
@@ -114,7 +114,7 @@ export async function invokeApi(
   origin: Origin,
   onAudit?: ApiAudit,
 ): Promise<unknown> {
-  const guard = resolveApiGuard(tool, ctx);
+  const guard = resolveApiGuard(tool, ctx, origin);
   const audit = (extra: { input: unknown; ok: boolean; error?: string }) =>
     onAudit?.(apiAuditEntry(tool, origin, guard, ctx, extra));
 
@@ -123,7 +123,7 @@ export async function invokeApi(
       throw new JanuxIntentError('forbidden', `Tool "${tool.name}" is not available`);
     }
     const parsed = parseApiInput(tool, input);
-    const result = checkOutput(tool, await tool.run({ input: parsed, ctx }));
+    const result = checkOutput(tool, await tool.run({ input: parsed, ctx, origin }));
 
     audit({ input: parsed, ok: true });
 
@@ -138,7 +138,7 @@ export function apiManifestTools(tools: ApiTool[], ctx: Ctx) {
   // Resolved once, like `toolsFor`: two resolutions let a guard that answers
   // differently per call pass the filter and then be advertised as `forbidden`.
   return tools
-    .map((tool) => ({ tool, guard: resolveApiGuard(tool, ctx) }))
+    .map((tool) => ({ tool, guard: resolveApiGuard(tool, ctx, 'agent') }))
     .filter(({ guard }) => guard !== 'forbidden')
     .map(({ tool, guard }) => ({
       name: `api.${tool.name}`,

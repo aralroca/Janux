@@ -3,7 +3,13 @@ import type { JanuxNode } from '../jsx-runtime';
 import type { I18n } from '../i18n/types';
 
 export type GuardValue = 'auto' | 'confirm' | 'forbidden';
-export type Guard = GuardValue | ((bag: { ctx: Ctx }) => GuardValue);
+/**
+ * A dynamic guard sees who is asking: `origin` is `'human'` for a DOM
+ * interaction and `'agent'` for any call through the agent surface (bridge,
+ * WebMCP, hosted MCP, `/_janux/api`). The canonical origin-aware guard:
+ * `({ origin }) => (origin === 'agent' ? 'confirm' : 'auto')`.
+ */
+export type Guard = GuardValue | ((bag: { ctx: Ctx; origin: Origin }) => GuardValue);
 export type Ctx = { i18n?: I18n } & Record<string, unknown>;
 export type Origin = 'human' | 'agent';
 export type Cleanup = (() => void) | undefined;
@@ -47,6 +53,13 @@ export interface RunBag {
   input?: any;
   event?: any;
   signal?: AbortSignal;
+  /**
+   * Who invoked the running intent — set during intent runs only. `'human'`
+   * is a DOM interaction; `'agent'` is Janux's own agent surface. An external
+   * driver clicking real DOM (Playwright, computer-use) reads as `'human'`:
+   * this is a UX/governance signal, not an anti-automation mechanism.
+   */
+  origin?: Origin;
 }
 
 export interface SourceReader {

@@ -109,6 +109,48 @@ describe('instance: state, derived, intents', () => {
   });
 });
 
+describe('instance: origin', () => {
+  const doorDef = () =>
+    component({
+      name: 'door',
+      state: schema({ openedBy: str().default('') }),
+      intents: {
+        open: intent({ run: ({ state, origin }: any) => (state.openedBy = origin) }),
+        lock: intent({
+          guard: ({ origin }: any) => (origin === 'agent' ? 'confirm' : 'auto'),
+          run: ({ state, origin }: any) => (state.openedBy = `locked:${origin}`),
+        }),
+      },
+      view: noopView,
+    });
+
+  it('run() sees who invoked it: human via the view, agent via the bridge channel', async () => {
+    const door = createInstance(doorDef());
+
+    await door.intents.open!({});
+    expect(door.snapshot().openedBy).toBe('human');
+    await door.intents.open!({}, { origin: 'agent' });
+    expect(door.snapshot().openedBy).toBe('agent');
+  });
+
+  it('a dynamic guard can branch on origin: auto for humans, confirm for agents', async () => {
+    let proposal: Proposal | undefined;
+    const door = createInstance(doorDef(), { onProposal: (p) => (proposal = p) });
+
+    // The same intent runs straight through for a human…
+    await door.intents.lock!({});
+    expect(door.snapshot().openedBy).toBe('locked:human');
+
+    // …and only proposes for an agent, until a human approves.
+    const result: any = await door.intents.lock!({}, { origin: 'agent' });
+
+    expect(result.status).toBe('proposal');
+    expect(door.snapshot().openedBy).toBe('locked:human');
+    await proposal!.execute();
+    expect(door.snapshot().openedBy).toBe('locked:agent');
+  });
+});
+
 describe('instance: guards', () => {
   it('agent + confirm returns a proposal; executing it applies the change', async () => {
     let proposal: Proposal | undefined;
