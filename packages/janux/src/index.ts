@@ -24,7 +24,7 @@ export type {
   StoreHandle,
 } from './define/types';
 export type { JanuxEventAttributes, JanuxElementProps } from './jsx-events';
-export type { CSSProperties } from './jsx-attributes';
+export type { CSSProperties, AriaAttributes, JanuxHTMLAttributes } from './jsx-attributes';
 export { renderToStream, renderToString, type RenderResult, type RenderStream } from './render/server';
 export { buildManifest, type Manifest, type ManifestEntry } from './manifest';
 export {

@@ -46,6 +46,21 @@ export const refusesStyle = [
   <div style={{ color: true }} />,
 ];
 
+export const acceptsGlobals = [
+  <div id="a" class="b" title="t" hidden aria-label="x" data-track="y" tabIndex={0} />,
+  <span className="b" dir="rtl" translate="no" />,
+  <script dangerHTML={'window.init()'} />,
+];
+
+export const refusesGlobals = [
+  // @ts-expect-error — dangerHTML injects a string of HTML, not a node.
+  <div dangerHTML={{}} />,
+  // @ts-expect-error — dir has a closed set of values.
+  <div dir="middle" />,
+  // @ts-expect-error — aria-live has a closed set of politeness values.
+  <div aria-live="loudly" />,
+];
+
 export const refuses = [
   // @ts-expect-error — a closure has no name, schema or guard.
   <button onClick={() => {}}>no</button>,
