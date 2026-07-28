@@ -83,7 +83,7 @@ function createStore(stats) {
 async function createStoreBackend(name) {
 	const initial = () => Array.from({ length: STORE_SUBSCRIBER_COUNT }, () => 0);
 	if (name === 'zustand') {
-		const { createStore } = await import('../../packages/zustand/src/vanilla.ts');
+		const { createStore } = await import('zustand/vanilla');
 		const store = createStore(() => ({ values: initial() }));
 		return {
 			name,
@@ -98,7 +98,7 @@ async function createStoreBackend(name) {
 		};
 	}
 	if (name === 'jotai') {
-		const { atom, createStore } = await import('../../packages/jotai/src/vanilla.ts');
+		const { atom, createStore } = await import('jotai/vanilla');
 		const valuesAtom = atom(initial());
 		const store = createStore();
 		return {
@@ -117,7 +117,7 @@ async function createStoreBackend(name) {
 		};
 	}
 	if (name === 'tanstack-query') {
-		const { QueryClient } = await import('../../packages/tanstack-query/src/benchmark-core.ts');
+		const { QueryClient } = await import('@tanstack/query-core');
 		const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
 		const queryKey = ['runtime-stress', 'subscribers'];
 		let refetches = 0;
