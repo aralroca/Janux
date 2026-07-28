@@ -108,6 +108,27 @@ describe('SPA navigation (streamed diff)', () => {
     expect(document.querySelector('janux-island[data-jx="counter#default"]')).toBeNull();
   });
 
+  it('installs the listener for an event type the new page introduces', async () => {
+    const gallery = component({
+      name: 'gallery',
+      state: schema({ opened: bool() }),
+      intents: { open: intent({ run: ({ state }: any) => (state.opened = true) }) },
+      view: ({ intents }: any) => jsx('figure', { class: 'shot', onDoubleClick: intents.open }),
+    });
+    const pageA = await pageHtml('Page A', jsx(counter as any, {}));
+    const pageB = await pageHtml('Page B', jsx(gallery as any, {}));
+
+    document.write(pageA);
+    document.close();
+    const client = boot({ defs: [counter, gallery] });
+
+    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageB).body }));
+    await client.navigate('/b');
+    document.querySelector('.shot')!.dispatchEvent(new Event('dblclick', { bubbles: true }));
+    await client.settled();
+    expect(((await client.read('ui://gallery#default')) as any).state.opened).toBe(true);
+  });
+
   /**
    * A feedback layer's overlay (status chips, a glow ring host) is injected into
    * the body at runtime, so the incoming page never lists it and the diff drops

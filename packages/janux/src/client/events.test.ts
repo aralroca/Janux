@@ -173,3 +173,75 @@ describe('rich delegated events', () => {
     expect(input.value).toBe('from-agent');
   });
 });
+
+/**
+ * Any DOM event, not an allowlist: the listener for a type installs when its
+ * marker is first seen — in the SSR HTML at boot, or created by an island's
+ * own re-render later.
+ */
+const board = component({
+  name: 'board',
+  state: schema({ opened: bool().default(false), hovered: bool().default(false), armed: bool().default(false), spun: bool().default(false) }),
+  intents: {
+    open: intent({ run: ({ state }) => (state.opened = true) }),
+    hover: intent({ run: ({ state }) => (state.hovered = true) }),
+    arm: intent({ run: ({ state }) => (state.armed = true) }),
+    spin: intent({ run: ({ state }) => (state.spun = true) }),
+  },
+  view: ({ state, intents }: any) =>
+    jsx('div', {
+      children: [
+        jsx('li', { class: 'row', onDoubleClick: intents.open }),
+        jsx('div', { class: 'zone', onMouseEnter: intents.hover }),
+        jsx('button', { class: 'arm', onClick: intents.arm }),
+        state.armed ? jsx('div', { class: 'pad', onWheel: intents.spin }) : null,
+      ],
+    }),
+});
+
+async function bootBoard(): Promise<JanuxClient> {
+  const { html, snapshots } = await renderToString(jsx(board as any, {}), {});
+  const scripts = snapshots
+    .map(
+      (snap) =>
+        `<script type="application/janux+state" data-uri="${snap.uri}">${JSON.stringify({ state: snap.state, sources: snap.sources ?? {} })}</script>`,
+    )
+    .join('');
+
+  document.body.innerHTML = html + scripts;
+
+  return boot({ defs: [board] });
+}
+
+describe('arbitrary delegated events', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('an event outside the v0 allowlist (dblclick) resolves through its marker', async () => {
+    const client = await bootBoard();
+
+    document.querySelector('.row')!.dispatchEvent(new Event('dblclick', { bubbles: true }));
+    await client.settled();
+    expect(((await client.read('ui://board#default')) as any).state.opened).toBe(true);
+  });
+
+  it('a non-bubbling event (mouseenter) still delegates, via the capture phase', async () => {
+    const client = await bootBoard();
+
+    document.querySelector('.zone')!.dispatchEvent(new Event('mouseenter', { bubbles: false }));
+    await client.settled();
+    expect(((await client.read('ui://board#default')) as any).state.hovered).toBe(true);
+  });
+
+  it('a marker first created by a client re-render gets its listener installed', async () => {
+    const client = await bootBoard();
+
+    expect(document.querySelector('.pad')).toBeNull();
+    document.querySelector('.arm')!.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+    await client.settled();
+    document.querySelector('.pad')!.dispatchEvent(new Event('wheel', { bubbles: true }));
+    await client.settled();
+    expect(((await client.read('ui://board#default')) as any).state.spun).toBe(true);
+  });
+});

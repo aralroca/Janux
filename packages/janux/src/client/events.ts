@@ -1,7 +1,11 @@
 import { mountIsland, type MountContext } from './mount';
 
-/** Bubbling events delegated at the document level; focus/blur delegate via focusin/focusout. */
-const DELEGATED = ['input', 'change', 'keydown', 'keyup', 'pointerdown', 'pointerup', 'focusin', 'focusout'] as const;
+/**
+ * Events that do not bubble: their document-level listener runs in the capture
+ * phase, which visits every ancestor of the target even when `bubbles` is false.
+ */
+const NON_BUBBLING = new Set(['mouseenter', 'mouseleave', 'pointerenter', 'pointerleave', 'load', 'error', 'scroll', 'toggle', 'invalid']);
+const JXE_PREFIX = 'data-jxe-';
 
 interface MarkerHit {
   marker: string;
@@ -71,6 +75,14 @@ interface EventContext {
 /** Listeners install once per document and dispatch to the CURRENT boot context (re-boot/HMR safe). */
 const CURRENT = Symbol.for('janux.eventContext');
 const INSTALLED = Symbol.for('janux.eventsInstalled');
+const RICH = Symbol.for('janux.richListeners');
+
+/** Event types whose delegated listener is already installed on this document. */
+function richListeners(): Set<string> {
+  const doc = document as any;
+
+  return (doc[RICH] ??= new Set<string>());
+}
 
 function context(): EventContext {
   return (document as any)[CURRENT];
@@ -123,7 +135,8 @@ function inputCommitGate(): (el: Element) => boolean {
   };
 }
 
-function listenRichEvents(): void {
+/** `input` is special: composition keystrokes hold back, `compositionend` commits once. */
+function listenInput(): void {
   const shouldCommit = inputCommitGate();
   const commitInput = (event: Event) => {
     const found = markerTarget(event, 'data-jxe-input');
@@ -134,32 +147,60 @@ function listenRichEvents(): void {
     }
   };
 
-  DELEGATED.forEach((type) => {
-    document.addEventListener(type, (event) => {
-      if (type === 'input') {
-        if (!(event as InputEvent).isComposing) commitInput(event);
-
-        return;
-      }
-      const found = markerTarget(event, `data-jxe-${type}`);
-      const { mount, track } = context();
-
-      if (found) track(invokeMarker(found.marker, found.root, mount, eventInput(event, found.el)));
-    });
+  document.addEventListener('input', (event) => {
+    if (!(event as InputEvent).isComposing) commitInput(event);
   });
   document.addEventListener('compositionend', commitInput);
 }
 
-/** Installs every delegated listener: click/submit (v0) plus the rich-event marker family. */
+function listenRich(type: string): void {
+  document.addEventListener(
+    type,
+    (event) => {
+      const found = markerTarget(event, `${JXE_PREFIX}${type}`);
+      const { mount, track } = context();
+
+      if (found) track(invokeMarker(found.marker, found.root, mount, eventInput(event, found.el)));
+    },
+    NON_BUBBLING.has(type),
+  );
+}
+
+/**
+ * Installs the delegated listener for one event type, once per document. Events
+ * are open-ended (`onWheel`, `onDoubleClick`, …): a listener exists only for the
+ * types whose marker has actually been seen — in the SSR HTML at boot or after a
+ * navigation (`scanMarkers`), or the moment a client render creates one
+ * (`setAttr` in dom.ts).
+ */
+export function ensureListener(type: string): void {
+  const installed = richListeners();
+
+  if (installed.has(type)) return;
+  installed.add(type);
+  if (type === 'input') return listenInput();
+  listenRich(type);
+}
+
+/** Discovers the event types the document's islands bind, so their listeners exist before first interaction. */
+export function scanMarkers(root: ParentNode): void {
+  root.querySelectorAll('janux-island *').forEach((el) => {
+    [...el.attributes].forEach(({ name }) => {
+      if (name.startsWith(JXE_PREFIX)) ensureListener(name.slice(JXE_PREFIX.length));
+    });
+  });
+}
+
+/** Installs the delegated listeners: click/submit always, the open event family on sight. */
 export function listen(mount: MountContext, track: Track): void {
   const doc = document as any;
 
   doc[CURRENT] = { mount, track } satisfies EventContext;
+  scanMarkers(document);
   if (doc[INSTALLED]) return;
   doc[INSTALLED] = true;
   listenClicks();
   listenForms();
-  listenRichEvents();
 }
 
 export { invokeMarker, markerTarget };
