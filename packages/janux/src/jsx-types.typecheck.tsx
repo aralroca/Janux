@@ -94,6 +94,26 @@ export const acceptsBooleanish = [
   <svg tabIndex={0} class="icon" role="img" aria-label="logo" />,
 ];
 
+export const acceptsReviewFixes = [
+  <img data-track="y" loading="lazy" onClick={intents.zoom} />,
+  <feTurbulence type="fractalNoise" baseFrequency={0.4} />,
+  <dialog closedby="any" />,
+  <button command="show-modal" commandFor="dlg">
+    open
+  </button>,
+  <textarea rows={3}>{'content'}</textarea>,
+  <div aria-valuenow="50" aria-level={2} />,
+];
+
+export const refusesReviewFixes = [
+  // @ts-expect-error — a void element has no children.
+  <img dangerHTML="<b>x</b>" />,
+  // @ts-expect-error — <select> has no value attribute; select with <option selected>.
+  <select value="a" />,
+  // @ts-expect-error — <textarea> content is its child text, not a value attribute.
+  <textarea value="x" />,
+];
+
 export const refuses = [
   // @ts-expect-error — a closure has no name, schema or guard.
   <button onClick={() => {}}>no</button>,

@@ -74,6 +74,20 @@ describe('renderToString', () => {
     expect(result.html).toBe('<img draggable="false" contentEditable="false" spellcheck="true"/>');
   });
 
+  it('stringifies enumerated booleans in any spelling the DOM accepts', async () => {
+    const page = jsx('my-editor', { contenteditable: false, spellCheck: false, children: 'ok' });
+    const result = await renderToString(page);
+
+    expect(result.html).toBe('<my-editor contenteditable="false" spellCheck="false">ok</my-editor>');
+  });
+
+  it('still drops a malformed attribute name when its value is a boolean', async () => {
+    const page = jsx('div', { 'aria-x" onmouseover="alert(1)': true, children: 'ok' });
+    const result = await renderToString(page);
+
+    expect(result.html).toBe('<div>ok</div>');
+  });
+
   it('escapes text and attribute content', async () => {
     const page = jsx('p', { title: '"><script>', children: '<script>alert(1)</script>' });
     const result = await renderToString(page);

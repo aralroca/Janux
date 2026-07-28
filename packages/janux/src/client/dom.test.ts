@@ -42,6 +42,14 @@ describe('toDomNodes', () => {
     expect(button!.getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('stringifies enumerated booleans and drops malformed names, mirroring SSR', () => {
+    const node = jsx('img', { draggable: false, 'aria-x" onmouseover="alert(1)': true });
+    const [img] = toDomNodes(node) as Element[];
+
+    expect(img!.getAttribute('draggable')).toBe('false');
+    expect(img!.attributes.length).toBe(1);
+  });
+
   it('keeps html elements in the HTML namespace', () => {
     const [button] = toDomNodes(jsx('button', { children: 'Close' })) as Element[];
 

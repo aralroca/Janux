@@ -22,11 +22,18 @@ export interface JanuxElementProps extends HTMLAttributes {
   [attribute: string]: unknown;
 }
 
+/**
+ * A void element has no content model: the server drops children silently, so
+ * `children` and `dangerHTML` are compile errors instead.
+ */
+export type VoidHTMLAttributes<T extends HTMLAttributes> = Omit<T, 'children' | 'dangerHTML'>;
+
 /** How the element handles cross-origin requests. https://developer.mozilla.org/docs/Web/HTML/Attributes/crossorigin */
 export type CrossOrigin = '' | 'anonymous' | 'use-credentials';
 
-/** Which referrer to send with fetches the element triggers. https://developer.mozilla.org/docs/Web/HTML/Element/a#referrerpolicy */
+/** Which referrer to send with fetches the element triggers; `''` means the default policy. https://developer.mozilla.org/docs/Web/HTML/Element/a#referrerpolicy */
 export type ReferrerPolicy =
+  | ''
   | 'no-referrer'
   | 'no-referrer-when-downgrade'
   | 'origin'
@@ -166,6 +173,10 @@ export interface ButtonHTMLAttributes extends FormSubmitHTMLAttributes {
   name?: string;
   /** Value submitted with the form data. https://developer.mozilla.org/docs/Web/HTML/Element/button#value */
   value?: number | string;
+  /** Invoker command run on the `commandFor` target; `--*` values are custom. https://developer.mozilla.org/docs/Web/HTML/Element/button#command */
+  command?: 'show-modal' | 'close' | 'request-close' | 'show-popover' | 'hide-popover' | 'toggle-popover' | `--${string}`;
+  /** id of the element the `command` acts on. https://developer.mozilla.org/docs/Web/HTML/Element/button#commandfor */
+  commandFor?: string;
 }
 
 export interface CanvasHTMLAttributes extends HTMLAttributes {
@@ -196,6 +207,8 @@ export interface DetailsHTMLAttributes extends HTMLAttributes {
 export interface DialogHTMLAttributes extends HTMLAttributes {
   /** The dialog is active and interactable. https://developer.mozilla.org/docs/Web/HTML/Element/dialog#open */
   open?: boolean;
+  /** Which user actions dismiss the dialog. https://developer.mozilla.org/docs/Web/HTML/Element/dialog#closedby */
+  closedby?: 'any' | 'closerequest' | 'none';
 }
 
 export interface EmbedHTMLAttributes extends HTMLAttributes {
@@ -371,6 +384,8 @@ export interface InputHTMLAttributes extends FormSubmitHTMLAttributes {
   step?: number | string;
   /** Safari: renders a checkbox as a switch. https://developer.mozilla.org/docs/Web/HTML/Element/input/checkbox#switch */
   switch?: boolean;
+  /** Submits the text's directionality alongside the value. https://developer.mozilla.org/docs/Web/HTML/Element/input#dirname */
+  dirName?: string;
 }
 
 export interface LabelHTMLAttributes extends HTMLAttributes {
@@ -410,6 +425,10 @@ export interface LinkHTMLAttributes extends HTMLAttributes {
   imageSrcSet?: string;
   /** Layout widths for a preloaded responsive image. https://developer.mozilla.org/docs/Web/HTML/Element/link#imagesizes */
   imageSizes?: string;
+  /** Disables the stylesheet. https://developer.mozilla.org/docs/Web/HTML/Element/link#disabled */
+  disabled?: boolean;
+  /** Blocks rendering until the resource loads. https://developer.mozilla.org/docs/Web/HTML/Element/link#blocking */
+  blocking?: 'render';
 }
 
 export interface MapHTMLAttributes extends HTMLAttributes {
@@ -545,8 +564,6 @@ export interface SelectHTMLAttributes extends HTMLAttributes {
   required?: boolean;
   /** Number of rows shown for a scrolling list box. https://developer.mozilla.org/docs/Web/HTML/Element/select#size */
   size?: number;
-  /** Value of the selected option(s). https://developer.mozilla.org/docs/Web/HTML/Element/select#value */
-  value?: string | string[] | number;
 }
 
 export interface SlotHTMLAttributes extends HTMLAttributes {
@@ -599,6 +616,10 @@ export interface TemplateHTMLAttributes extends HTMLAttributes {
   shadowrootmode?: 'open' | 'closed';
   /** The declarative shadow root delegates focus. https://developer.mozilla.org/docs/Web/HTML/Element/template#shadowrootdelegatesfocus */
   shadowrootdelegatesfocus?: boolean;
+  /** The declarative shadow root is cloned with its host. https://developer.mozilla.org/docs/Web/HTML/Element/template#shadowrootclonable */
+  shadowrootclonable?: boolean;
+  /** The declarative shadow root serializes with `getHTML()`. https://developer.mozilla.org/docs/Web/HTML/Element/template#shadowrootserializable */
+  shadowrootserializable?: boolean;
 }
 
 export interface TextareaHTMLAttributes extends HTMLAttributes {
@@ -626,8 +647,8 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   required?: boolean;
   /** How line breaks are submitted. https://developer.mozilla.org/docs/Web/HTML/Element/textarea#wrap */
   wrap?: 'hard' | 'soft' | 'off';
-  /** Initial value of the control. https://developer.mozilla.org/docs/Web/HTML/Element/textarea */
-  value?: number | string;
+  /** Submits the text's directionality alongside the value. https://developer.mozilla.org/docs/Web/HTML/Element/textarea#dirname */
+  dirName?: string;
 }
 
 export interface TimeHTMLAttributes extends HTMLAttributes {
@@ -667,8 +688,8 @@ export interface SVGAttributes extends JanuxCoreAttributes, JanuxEventAttributes
   preserveAspectRatio?: string;
   /** XML namespace; needed when the SVG is a standalone document. */
   xmlns?: string;
-  /** xlink namespace declaration for legacy consumers. */
-  'xmlns:xlink'?: string;
+  /** Kind of the primitive: `feColorMatrix`/`feTurbulence`/`feFunc*` matrix, `animateTransform` transform. https://developer.mozilla.org/docs/Web/SVG/Attribute/type */
+  type?: string;
   /** Path data of a `<path>`. https://developer.mozilla.org/docs/Web/SVG/Attribute/d */
   d?: string;
   /** Point list of a `<polygon>`/`<polyline>`. https://developer.mozilla.org/docs/Web/SVG/Attribute/points */
@@ -767,7 +788,9 @@ export interface SVGAttributes extends JanuxCoreAttributes, JanuxEventAttributes
   display?: number | string;
   filter?: string;
   mask?: string;
+  'mask-type'?: 'luminance' | 'alpha';
   overflow?: number | string;
+  'transform-origin'?: string;
   visibility?: number | string;
 
   // ── gradients, patterns, markers, masks ───────────────────────────────────
@@ -811,6 +834,7 @@ export interface SVGAttributes extends JanuxCoreAttributes, JanuxEventAttributes
   stdDeviation?: number | string;
   edgeMode?: number | string;
   kernelMatrix?: number | string;
+  kernelUnitLength?: number | string;
   order?: number | string;
   divisor?: number | string;
   bias?: number | string;
@@ -864,7 +888,9 @@ export interface SVGAttributes extends JanuxCoreAttributes, JanuxEventAttributes
 
 /**
  * Every SVG tag Janux renders. `<a>`, `<script>`, `<style>` and `<title>`
- * keep their HTML typing, which SVG accepts too.
+ * keep their HTML typing; the known gap is SVG presentation attributes on an
+ * `<a>` inside an SVG (`<a transform fill>`), which the single JSX namespace
+ * cannot distinguish — React and Preact share the same tradeoff.
  */
 export interface JanuxSVGElements {
   /** Container defining a new SVG coordinate system and viewport. https://developer.mozilla.org/docs/Web/SVG/Element/svg */
@@ -999,7 +1025,7 @@ export interface JanuxHTMLElements {
   /** Contact information for its nearest article or document. https://developer.mozilla.org/docs/Web/HTML/Element/address */
   address: HTMLAttributes;
   /** Hot-spot region on an image map. https://developer.mozilla.org/docs/Web/HTML/Element/area */
-  area: AreaHTMLAttributes;
+  area: VoidHTMLAttributes<AreaHTMLAttributes>;
   /** Self-contained composition: a post, an article, a comment. https://developer.mozilla.org/docs/Web/HTML/Element/article */
   article: HTMLAttributes;
   /** Content indirectly related to the main content. https://developer.mozilla.org/docs/Web/HTML/Element/aside */
@@ -1009,7 +1035,7 @@ export interface JanuxHTMLElements {
   /** Draws attention to text without marking it important. https://developer.mozilla.org/docs/Web/HTML/Element/b */
   b: HTMLAttributes;
   /** Base URL for every relative URL in the document. https://developer.mozilla.org/docs/Web/HTML/Element/base */
-  base: BaseHTMLAttributes;
+  base: VoidHTMLAttributes<BaseHTMLAttributes>;
   /** Isolates bidirectional text from its surroundings. https://developer.mozilla.org/docs/Web/HTML/Element/bdi */
   bdi: HTMLAttributes;
   /** Overrides the current text direction. https://developer.mozilla.org/docs/Web/HTML/Element/bdo */
@@ -1019,7 +1045,7 @@ export interface JanuxHTMLElements {
   /** Content of the document; only one per document. https://developer.mozilla.org/docs/Web/HTML/Element/body */
   body: HTMLAttributes;
   /** Line break. https://developer.mozilla.org/docs/Web/HTML/Element/br */
-  br: HTMLAttributes;
+  br: VoidHTMLAttributes<HTMLAttributes>;
   /** Clickable button. https://developer.mozilla.org/docs/Web/HTML/Element/button */
   button: ButtonHTMLAttributes;
   /** Scriptable bitmap drawing surface. https://developer.mozilla.org/docs/Web/HTML/Element/canvas */
@@ -1031,7 +1057,7 @@ export interface JanuxHTMLElements {
   /** Fragment of computer code. https://developer.mozilla.org/docs/Web/HTML/Element/code */
   code: HTMLAttributes;
   /** Column within a table's column group. https://developer.mozilla.org/docs/Web/HTML/Element/col */
-  col: ColHTMLAttributes;
+  col: VoidHTMLAttributes<ColHTMLAttributes>;
   /** Group of columns within a table. https://developer.mozilla.org/docs/Web/HTML/Element/colgroup */
   colgroup: ColHTMLAttributes;
   /** Content with a machine-readable `value`. https://developer.mozilla.org/docs/Web/HTML/Element/data */
@@ -1057,7 +1083,7 @@ export interface JanuxHTMLElements {
   /** Stress emphasis. https://developer.mozilla.org/docs/Web/HTML/Element/em */
   em: HTMLAttributes;
   /** External content embedded at this point. https://developer.mozilla.org/docs/Web/HTML/Element/embed */
-  embed: EmbedHTMLAttributes;
+  embed: VoidHTMLAttributes<EmbedHTMLAttributes>;
   /** Groups related form controls under a `<legend>`. https://developer.mozilla.org/docs/Web/HTML/Element/fieldset */
   fieldset: FieldsetHTMLAttributes;
   /** Caption of its parent `<figure>`. https://developer.mozilla.org/docs/Web/HTML/Element/figcaption */
@@ -1087,7 +1113,7 @@ export interface JanuxHTMLElements {
   /** Heading grouped with subheadings. https://developer.mozilla.org/docs/Web/HTML/Element/hgroup */
   hgroup: HTMLAttributes;
   /** Thematic break between paragraph-level elements. https://developer.mozilla.org/docs/Web/HTML/Element/hr */
-  hr: HTMLAttributes;
+  hr: VoidHTMLAttributes<HTMLAttributes>;
   /** Root of the document. https://developer.mozilla.org/docs/Web/HTML/Element/html */
   html: HtmlHTMLAttributes;
   /** Text in an alternate voice or mood, like a technical term. https://developer.mozilla.org/docs/Web/HTML/Element/i */
@@ -1095,9 +1121,9 @@ export interface JanuxHTMLElements {
   /** Nested browsing context embedding another page. https://developer.mozilla.org/docs/Web/HTML/Element/iframe */
   iframe: IframeHTMLAttributes;
   /** Embedded image. https://developer.mozilla.org/docs/Web/HTML/Element/img */
-  img: ImgHTMLAttributes;
+  img: VoidHTMLAttributes<ImgHTMLAttributes>;
   /** Interactive form control. https://developer.mozilla.org/docs/Web/HTML/Element/input */
-  input: InputHTMLAttributes;
+  input: VoidHTMLAttributes<InputHTMLAttributes>;
   /** Text added to the document. https://developer.mozilla.org/docs/Web/HTML/Element/ins */
   ins: ModHTMLAttributes;
   /** User keyboard input. https://developer.mozilla.org/docs/Web/HTML/Element/kbd */
@@ -1109,7 +1135,7 @@ export interface JanuxHTMLElements {
   /** List item. https://developer.mozilla.org/docs/Web/HTML/Element/li */
   li: LiHTMLAttributes;
   /** Relationship to an external resource: stylesheet, icon, preload… https://developer.mozilla.org/docs/Web/HTML/Element/link */
-  link: LinkHTMLAttributes;
+  link: VoidHTMLAttributes<LinkHTMLAttributes>;
   /** Dominant content of the document; only one per page. https://developer.mozilla.org/docs/Web/HTML/Element/main */
   main: HTMLAttributes;
   /** Image map, referenced from `<img useMap>`. https://developer.mozilla.org/docs/Web/HTML/Element/map */
@@ -1119,7 +1145,7 @@ export interface JanuxHTMLElements {
   /** Unordered list of commands or links. https://developer.mozilla.org/docs/Web/HTML/Element/menu */
   menu: HTMLAttributes;
   /** Document metadata no other element expresses. https://developer.mozilla.org/docs/Web/HTML/Element/meta */
-  meta: MetaHTMLAttributes;
+  meta: VoidHTMLAttributes<MetaHTMLAttributes>;
   /** Scalar value within a known range, like a gauge. https://developer.mozilla.org/docs/Web/HTML/Element/meter */
   meter: MeterHTMLAttributes;
   /** Section of navigation links. https://developer.mozilla.org/docs/Web/HTML/Element/nav */
@@ -1169,7 +1195,7 @@ export interface JanuxHTMLElements {
   /** Side comments and small print. https://developer.mozilla.org/docs/Web/HTML/Element/small */
   small: HTMLAttributes;
   /** Media resource candidate for `<picture>`, `<audio>` or `<video>`. https://developer.mozilla.org/docs/Web/HTML/Element/source */
-  source: SourceHTMLAttributes;
+  source: VoidHTMLAttributes<SourceHTMLAttributes>;
   /** Generic inline container. https://developer.mozilla.org/docs/Web/HTML/Element/span */
   span: HTMLAttributes;
   /** Strong importance. https://developer.mozilla.org/docs/Web/HTML/Element/strong */
@@ -1205,7 +1231,7 @@ export interface JanuxHTMLElements {
   /** Row of table cells. https://developer.mozilla.org/docs/Web/HTML/Element/tr */
   tr: HTMLAttributes;
   /** Timed text track for media: subtitles, captions… https://developer.mozilla.org/docs/Web/HTML/Element/track */
-  track: TrackHTMLAttributes;
+  track: VoidHTMLAttributes<TrackHTMLAttributes>;
   /** Unarticulated annotation, like misspelled text. https://developer.mozilla.org/docs/Web/HTML/Element/u */
   u: HTMLAttributes;
   /** Unordered list. https://developer.mozilla.org/docs/Web/HTML/Element/ul */
@@ -1215,5 +1241,5 @@ export interface JanuxHTMLElements {
   /** Embedded video with playback. https://developer.mozilla.org/docs/Web/HTML/Element/video */
   video: VideoHTMLAttributes;
   /** Word-break opportunity. https://developer.mozilla.org/docs/Web/HTML/Element/wbr */
-  wbr: HTMLAttributes;
+  wbr: VoidHTMLAttributes<HTMLAttributes>;
 }

@@ -131,13 +131,13 @@ export interface AriaAttributes {
   /** Checked state of checkboxes, radios and other widgets. */
   'aria-checked'?: Booleanish | 'mixed';
   /** Total number of columns in a table-like structure. */
-  'aria-colcount'?: number;
+  'aria-colcount'?: number | string;
   /** Column index of the element within a table-like structure. */
-  'aria-colindex'?: number;
+  'aria-colindex'?: number | string;
   /** Human-readable text alternative of `aria-colindex`. */
   'aria-colindextext'?: string;
   /** Number of columns spanned by a cell. */
-  'aria-colspan'?: number;
+  'aria-colspan'?: number | string;
   /** id list of the elements whose contents or presence this element controls. */
   'aria-controls'?: string;
   /** Marks the element that represents the current item within a set. */
@@ -169,7 +169,7 @@ export interface AriaAttributes {
   /** id list of the elements that label this one. */
   'aria-labelledby'?: string;
   /** Hierarchical level of the element (headings, tree items…). */
-  'aria-level'?: number;
+  'aria-level'?: number | string;
   /** Politeness level for live-region updates. */
   'aria-live'?: 'off' | 'assertive' | 'polite';
   /** The element is modal when displayed. */
@@ -185,7 +185,7 @@ export interface AriaAttributes {
   /** Short hint intended to aid data entry. */
   'aria-placeholder'?: string;
   /** Position of the item within the current set. */
-  'aria-posinset'?: number;
+  'aria-posinset'?: number | string;
   /** Pressed state of a toggle button. */
   'aria-pressed'?: Booleanish | 'mixed';
   /** The element is not editable but is otherwise operable. */
@@ -197,25 +197,25 @@ export interface AriaAttributes {
   /** Human-readable description of the element's role. */
   'aria-roledescription'?: string;
   /** Total number of rows in a table-like structure. */
-  'aria-rowcount'?: number;
+  'aria-rowcount'?: number | string;
   /** Row index of the element within a table-like structure. */
-  'aria-rowindex'?: number;
+  'aria-rowindex'?: number | string;
   /** Human-readable text alternative of `aria-rowindex`. */
   'aria-rowindextext'?: string;
   /** Number of rows spanned by a cell. */
-  'aria-rowspan'?: number;
+  'aria-rowspan'?: number | string;
   /** Selected state of the element. */
   'aria-selected'?: Booleanish;
   /** Number of items in the current set. */
-  'aria-setsize'?: number;
+  'aria-setsize'?: number | string;
   /** Sort direction of a column or row. */
   'aria-sort'?: 'none' | 'ascending' | 'descending' | 'other';
   /** Maximum allowed value of a range widget. */
-  'aria-valuemax'?: number;
+  'aria-valuemax'?: number | string;
   /** Minimum allowed value of a range widget. */
-  'aria-valuemin'?: number;
+  'aria-valuemin'?: number | string;
   /** Current value of a range widget. */
-  'aria-valuenow'?: number;
+  'aria-valuenow'?: number | string;
   /** Human-readable text alternative of `aria-valuenow`. */
   'aria-valuetext'?: string;
 }
