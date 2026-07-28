@@ -58,6 +58,7 @@ const WARMUP = Math.min(5, ITER);
 
 // Target name (BENCH_JSON / baselines key) → fixture dir under this suite.
 const TARGETS = [
+	{ name: 'janux', dir: 'janux' },
 	{ name: 'react', dir: 'react' },
 	{ name: 'preact', dir: 'preact' },
 	{ name: 'solid', dir: 'solid' },

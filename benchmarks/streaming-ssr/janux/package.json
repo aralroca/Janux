@@ -1,0 +1,12 @@
+{
+	"name": "janux-streaming-ssr-bench",
+	"private": true,
+	"type": "module",
+	"version": "0.0.1",
+	"dependencies": {
+		"janux": "workspace:*"
+	},
+	"devDependencies": {
+		"vite": "^8.1.5"
+	}
+}

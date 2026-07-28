@@ -46,7 +46,7 @@ const SETS = [
 	{
 		root: JS_FRAMEWORK,
 		prefix: '',
-		targets: ['react', 'preact', 'solid', 'svelte', 'vue-vapor'],
+		targets: ['janux', 'react', 'preact', 'solid', 'svelte', 'vue-vapor'],
 	},
 	{
 		root: TODOMVC,
