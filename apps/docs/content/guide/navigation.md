@@ -76,6 +76,11 @@ click streams the next page and diffs it in place, and back/forward run through 
 Links that shouldn't be intercepted — external origins, downloads, anchors marked
 [`data-native`](#opting-a-link-out-data-native) — are left to the browser.
 
+A link to **the page you are already on** is a no-op: the navigation is cancelled, nothing
+re-renders and nothing reloads, so a persisted assistant or a half-filled form survives an idle
+click on the current menu item. Reloads are untouched, and a `data-native` link to the current
+page keeps the full reload it asked for.
+
 Pure static pages (no islands, no `boot()`) stay classic multi-page navigation, which is exactly right: with no runtime there's nothing to intercept.
 
 ## How it works
@@ -202,6 +207,8 @@ boot({ defs: [...], navigation: false });        // disable SPA navigation entir
 ```ts
 await window.janux.navigate('/orders/8821');
 ```
+
+Navigating to the URL you are already on resolves immediately without doing anything — the same no-op contract as clicking the current page's own link, so an agent asked to "open" the page it is on succeeds instead of reloading it.
 
 Navigations count toward `settled()`, so automation and tests can await them deterministically:
 

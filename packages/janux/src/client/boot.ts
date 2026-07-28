@@ -69,30 +69,45 @@ async function awaitTracked(mount: MountContext, work: Promise<unknown>): Promis
 
 let nativeClickAt = 0;
 
-export function shouldIntercept(event: any): boolean {
-  if (!event.canIntercept || event.hashChange || event.downloadRequest || event.formData) return false;
-  const destination = new URL(event.destination.url);
+export type NavigateAction = 'intercept' | 'cancel' | 'default';
 
-  if (destination.origin !== location.origin) return false;
-  /*
-   * The page we are already on. Diffing it against itself is not free: islands
-   * are torn down and re-mounted against DOM the diff has just replaced, which
-   * is how clicking "Playground" while on /playground emptied the editor. A
-   * router has nothing to do here; `client.navigate()` still re-navigates
-   * deliberately, because it does not come through this path.
-   */
-  if (destination.href === location.href) return false;
-  // Query-only changes on the same path are shallow: islands read the query
-  // reactively (urlState), so a filter/tab/dialog change never re-renders the
-  // page. Cross-path navigations still get the SPA diff.
-  if (destination.pathname === location.pathname && destination.search !== location.search) return false;
-  // Prefer the precise source element; fall back to a recent data-native click.
-  if (event.sourceElement) return !event.sourceElement.closest?.('[data-native]');
+// Prefer the precise source element; fall back to a recent data-native click.
+function fromNativeLink(event: any): boolean {
+  if (event.sourceElement) return !!event.sourceElement.closest?.('[data-native]');
   const wasNative = Date.now() - nativeClickAt < 100;
 
   nativeClickAt = 0;
 
-  return !wasNative;
+  return wasNative;
+}
+
+/** What the router does with a navigation: take it over, cancel it, or leave it to the browser. */
+export function navigateAction(event: any): NavigateAction {
+  if (!event.canIntercept || event.hashChange || event.downloadRequest || event.formData) return 'default';
+  const destination = new URL(event.destination.url);
+
+  if (destination.origin !== location.origin) return 'default';
+  // Before the same-URL check: a data-native link to the current page keeps the
+  // native behavior it asked for — a reload. Same for an explicit reload.
+  if (fromNativeLink(event)) return 'default';
+  if (event.navigationType === 'reload') return 'default';
+  /*
+   * The page we are already on. Diffing it against itself is not free: islands
+   * are torn down and re-mounted against DOM the diff has just replaced, which
+   * is how clicking "Playground" while on /playground emptied the editor. But
+   * declining to intercept is not a no-op either: the browser then performs the
+   * default action, a full cross-document reload — every island lost, the open
+   * assistant included. The navigation is cancelled instead: same URL, nothing
+   * to do, so nothing happens. (`client.navigate()` short-circuits the same
+   * case before it ever raises a navigate event.)
+   */
+  if (destination.href === location.href) return 'cancel';
+  // Query-only changes on the same path are shallow: islands read the query
+  // reactively (urlState), so a filter/tab/dialog change never re-renders the
+  // page. Cross-path navigations still get the SPA diff.
+  if (destination.pathname === location.pathname && destination.search !== location.search) return 'default';
+
+  return 'intercept';
 }
 
 /**
@@ -113,7 +128,16 @@ function installNavigation(mount: MountContext, config: NavigationConfig): void 
   );
   if (!nav) return; // No interception: the server's document-wide rules stand.
   nav.addEventListener('navigate', (event: any) => {
-    if (!shouldIntercept(event)) return;
+    const action = navigateAction(event);
+
+    // Only cancelable events can be cancelled; one that is not (a traversal)
+    // falls through to the browser's own handling, exactly as before.
+    if (action === 'cancel') {
+      if (event.cancelable) event.preventDefault();
+
+      return;
+    }
+    if (action !== 'intercept') return;
     event.intercept({
       scroll: 'after-transition',
       handler: () =>
@@ -173,10 +197,14 @@ export function boot(options: BootOptions = {}): JanuxClient {
     },
     async navigate(url: string) {
       const nav = (window as any).navigation;
+      const target = new URL(url, location.href).href;
 
+      // Already there: same contract as clicking the page you are on — a no-op.
+      // (Going through nav.navigate() would reject with the cancellation.)
+      if (target === location.href) return;
       // Through the interceptor when the platform has it; direct SPA otherwise.
-      if (nav?.navigate) await nav.navigate(url).finished;
-      else await awaitTracked(mount, performNavigation(new URL(url, location.href).href, mount));
+      if (nav?.navigate) await nav.navigate(target).finished;
+      else await awaitTracked(mount, performNavigation(target, mount));
     },
   };
 
