@@ -1,0 +1,487 @@
+{
+	"suite": "event-delegation",
+	"iterations": 8,
+	"targets": [
+		{
+			"name": "janux",
+			"ops": {
+				"delegated_input_burst": {
+					"score": 145.13999996185302,
+					"median": 145,
+					"min": 144.29999995231628,
+					"mean": 146.39999997615814,
+					"p95": 152.70000004768372,
+					"sd": 2.912043957583598,
+					"rme": 1.663194351301047,
+					"scoreRme": 0.8262056486503447,
+					"warmupRatio": 1.01295301102086,
+					"samples": 8,
+					"p99": 152.70000004768372
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 178.60000014305115
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 183.29999995231628
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 186.59999990463257
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 178.29999995231628
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 179.79999995231628
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 178
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 180.29999995231628
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 178.29999995231628
+					}
+				]
+			}
+		},
+		{
+			"name": "react",
+			"ops": {
+				"delegated_input_burst": {
+					"score": 17.940000009536742,
+					"median": 17.90000009536743,
+					"min": 17.299999952316284,
+					"mean": 17.887500047683716,
+					"p95": 18.300000190734863,
+					"sd": 0.31819808792743187,
+					"rme": 1.4874215498045686,
+					"scoreRme": 1.4349812272549587,
+					"warmupRatio": 0.997770347723982,
+					"samples": 8,
+					"p99": 18.300000190734863
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 59.5
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 58
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 60.10000014305115
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 58
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 59.5
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 58.40000009536743
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 58.10000014305115
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 58.799999952316284
+					}
+				]
+			}
+		},
+		{
+			"name": "preact",
+			"ops": {
+				"delegated_input_burst": {
+					"score": 3.359999895095825,
+					"median": 3.3999998569488525,
+					"min": 3.200000047683716,
+					"mean": 3.7499999403953552,
+					"p95": 6.700000047683716,
+					"sd": 1.1952286463798087,
+					"rme": 26.650532082055715,
+					"scoreRme": 3.3047588562748182,
+					"warmupRatio": 0.9940476245384099,
+					"samples": 8,
+					"p99": 6.700000047683716
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 36.89999985694885
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 36.89999985694885
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 36.299999952316284
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 35.799999952316284
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 36.299999952316284
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 35.700000047683716
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 39.200000047683716
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 36.700000047683716
+					}
+				]
+			}
+		},
+		{
+			"name": "solid",
+			"ops": {
+				"delegated_input_burst": {
+					"score": 3.5600000381469727,
+					"median": 4.099999904632568,
+					"min": 3.0999999046325684,
+					"mean": 4.162500023841858,
+					"p95": 6.099999904632568,
+					"sd": 1.198734434377083,
+					"rme": 24.079911334472225,
+					"scoreRme": 17.71308901595384,
+					"warmupRatio": 1.1910112258717052,
+					"samples": 8,
+					"p99": 6.099999904632568
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 36.90000009536743
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 39.700000047683716
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 36
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 36.5
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 35.700000047683716
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 35.59999990463257
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 36.40000009536743
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 38.799999952316284
+					}
+				]
+			}
+		},
+		{
+			"name": "svelte",
+			"ops": {
+				"delegated_input_burst": {
+					"score": 5.340000009536743,
+					"median": 5.200000047683716,
+					"min": 3.3000001907348633,
+					"mean": 5.325000047683716,
+					"p95": 7.900000095367432,
+					"sd": 2.022551452585803,
+					"rme": 31.75894844005284,
+					"scoreRme": 52.25981428609426,
+					"warmupRatio": 1.0262172391330397,
+					"samples": 8,
+					"p99": 7.900000095367432
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 30.700000047683716
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 33.30000019073486
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 36.10000014305115
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 35.09999990463257
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 33
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 32.10000014305115
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 35.5
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 32
+					}
+				]
+			}
+		},
+		{
+			"name": "vue-vapor",
+			"ops": {
+				"delegated_input_burst": {
+					"score": 5.7399999618530275,
+					"median": 6.700000047683716,
+					"min": 3.299999952316284,
+					"mean": 6.0625,
+					"p95": 7.700000047683716,
+					"sd": 1.7195826436303678,
+					"rme": 23.71687436130207,
+					"scoreRme": 47.49864401802398,
+					"warmupRatio": 0.9825783970967628,
+					"samples": 8,
+					"p99": 7.700000047683716
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 41.90000009536743
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 39.5
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 43.60000014305115
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 43.59999990463257
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 39.5
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 43.40000009536743
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 42.40000009536743
+					},
+					{
+						"bubbled": 128,
+						"captured": 128,
+						"count": 128,
+						"eventHosts": 512,
+						"completedAt": 41.80000019073486
+					}
+				]
+			}
+		}
+	],
+	"harnessExit": 0
+}

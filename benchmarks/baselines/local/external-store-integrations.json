@@ -1,0 +1,3337 @@
+{
+	"suite": "external-store-integrations",
+	"iterations": 8,
+	"targets": [
+		{
+			"name": "janux",
+			"ops": {
+				"zustand_mount": {
+					"score": 20.82000002861023,
+					"median": 20.90000009536743,
+					"min": 18.800000190734863,
+					"mean": 21.48750001192093,
+					"p95": 26.5,
+					"sd": 2.6765849166846367,
+					"rme": 10.415527931271267,
+					"scoreRme": 13.710660161808718,
+					"warmupRatio": 1.032660903849138,
+					"samples": 8,
+					"p99": 26.5
+				},
+				"zustand_narrow": {
+					"score": 18.780000019073487,
+					"median": 21.40000009536743,
+					"min": 14.299999952316284,
+					"mean": 18.887500017881393,
+					"p95": 22,
+					"sd": 3.5989830555019737,
+					"rme": 15.932776930178653,
+					"scoreRme": 24.828827626667024,
+					"warmupRatio": 1.0042598493774506,
+					"samples": 8,
+					"p99": 22
+				},
+				"zustand_broad": {
+					"score": 15.759999990463257,
+					"median": 16.299999952316284,
+					"min": 14.400000095367432,
+					"mean": 24.162500023841858,
+					"p95": 82.90000009536743,
+					"sd": 23.744228648535824,
+					"rme": 82.16793068191627,
+					"scoreRme": 6.880824400182349,
+					"warmupRatio": 0.9961928940038347,
+					"samples": 8,
+					"p99": 82.90000009536743
+				},
+				"zustand_rapid": {
+					"score": 16.77999997138977,
+					"median": 16.59999990463257,
+					"min": 16.299999952316284,
+					"mean": 16.687499970197678,
+					"p95": 17.799999952316284,
+					"sd": 0.4611708632681768,
+					"rme": 2.310770073704667,
+					"scoreRme": 4.326687724455853,
+					"warmupRatio": 0.9868891548687951,
+					"samples": 8,
+					"p99": 17.799999952316284
+				},
+				"zustand_unmount": {
+					"score": 15.059999990463258,
+					"median": 15.099999904632568,
+					"min": 14.299999952316284,
+					"mean": 14.974999994039536,
+					"p95": 15.200000047683716,
+					"sd": 0.3058945013267285,
+					"rme": 1.7080122886610845,
+					"scoreRme": 1.3793948136070622,
+					"warmupRatio": 0.992031873771414,
+					"samples": 8,
+					"p99": 15.200000047683716
+				},
+				"jotai_mount": {
+					"score": 19.2,
+					"median": 19.200000047683716,
+					"min": 18.90000009536743,
+					"mean": 19.275000005960464,
+					"p95": 19.799999952316284,
+					"sd": 0.29154756495212725,
+					"rme": 1.2647397931523936,
+					"scoreRme": 1.6485032726553799,
+					"warmupRatio": 1.0062500014901163,
+					"samples": 8,
+					"p99": 19.799999952316284
+				},
+				"jotai_narrow": {
+					"score": 16.540000009536744,
+					"median": 16.600000143051147,
+					"min": 15.900000095367432,
+					"mean": 16.437500029802322,
+					"p95": 16.799999952316284,
+					"sd": 0.3204349788741129,
+					"rme": 1.630010127696585,
+					"scoreRme": 2.162410002125521,
+					"warmupRatio": 0.9915356734115897,
+					"samples": 8,
+					"p99": 16.799999952316284
+				},
+				"jotai_broad": {
+					"score": 16.27999997138977,
+					"median": 16.5,
+					"min": 15.400000095367432,
+					"mean": 16.399999976158142,
+					"p95": 16.799999952316284,
+					"sd": 0.42088337932958303,
+					"rme": 2.145873319168197,
+					"scoreRme": 3.789906350718101,
+					"warmupRatio": 1.004914006094231,
+					"samples": 8,
+					"p99": 16.799999952316284
+				},
+				"jotai_rapid": {
+					"score": 16.700000047683716,
+					"median": 16.600000143051147,
+					"min": 16.200000047683716,
+					"mean": 16.625000029802322,
+					"p95": 17.5,
+					"sd": 0.40620190807363693,
+					"rme": 2.0429910117390073,
+					"scoreRme": 3.603727142085305,
+					"warmupRatio": 1.0023952072897493,
+					"samples": 8,
+					"p99": 17.5
+				},
+				"jotai_unmount": {
+					"score": 14.999999952316283,
+					"median": 14.899999856948853,
+					"min": 14.199999809265137,
+					"mean": 14.874999970197678,
+					"p95": 15.299999952316284,
+					"sd": 0.3327376114464767,
+					"rme": 1.8703852663817941,
+					"scoreRme": 1.9409958336035604,
+					"warmupRatio": 0.9826666672473484,
+					"samples": 8,
+					"p99": 15.299999952316284
+				},
+				"tanstack_query_invalidation": {
+					"score": 4.019999980926514,
+					"median": 5.400000095367432,
+					"min": 3.299999952316284,
+					"mean": 4.6624999940395355,
+					"p95": 6.099999904632568,
+					"sd": 1.1350739318416752,
+					"rme": 20.355953825975696,
+					"scoreRme": 27.913829324590832,
+					"warmupRatio": 1.2039801075872738,
+					"samples": 8,
+					"p99": 6.099999904632568
+				},
+				"tanstack_query_mount": {
+					"score": 19.32000002861023,
+					"median": 19.5,
+					"min": 18.899999856948853,
+					"mean": 19.44999998807907,
+					"p95": 20.09999990463257,
+					"sd": 0.33806169181640067,
+					"rme": 1.4533242049181474,
+					"scoreRme": 1.6000121977777757,
+					"warmupRatio": 1.007246372358281,
+					"samples": 8,
+					"p99": 20.09999990463257
+				},
+				"tanstack_query_narrow": {
+					"score": 17.019999980926514,
+					"median": 17,
+					"min": 16.299999952316284,
+					"mean": 16.88749998807907,
+					"p95": 17.200000047683716,
+					"sd": 0.2799872512980567,
+					"rme": 1.386305821115913,
+					"scoreRme": 0.9510413670577842,
+					"warmupRatio": 0.9847238548322781,
+					"samples": 8,
+					"p99": 17.200000047683716
+				},
+				"tanstack_query_broad": {
+					"score": 15.740000009536743,
+					"median": 15.799999952316284,
+					"min": 15.599999904632568,
+					"mean": 15.775000005960464,
+					"p95": 16.100000143051147,
+					"sd": 0.19086273966675,
+					"rme": 1.0116678226725404,
+					"scoreRme": 1.7280268057917638,
+					"warmupRatio": 1.0063532401486284,
+					"samples": 8,
+					"p99": 16.100000143051147
+				},
+				"tanstack_query_rapid": {
+					"score": 16.480000019073486,
+					"median": 16.700000047683716,
+					"min": 16.200000047683716,
+					"mean": 16.61250004172325,
+					"p95": 16.90000009536743,
+					"sd": 0.2531939165464892,
+					"rme": 1.2743960693091554,
+					"scoreRme": 1.6331504960909415,
+					"warmupRatio": 1.0121359252094806,
+					"samples": 8,
+					"p99": 16.90000009536743
+				},
+				"tanstack_query_unmount": {
+					"score": 17.8800000667572,
+					"median": 17.100000143051147,
+					"min": 16.09999990463257,
+					"mean": 17.41250005364418,
+					"p95": 19.40000009536743,
+					"sd": 1.2426210743877233,
+					"rme": 5.967105764711022,
+					"scoreRme": 9.372190745147867,
+					"warmupRatio": 0.9910514520386134,
+					"samples": 8,
+					"p99": 19.40000009536743
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 124.19999980926514,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 216.69999980926514,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 316.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 293.89999985694885,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 299.59999990463257,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 122.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 213.39999985694885,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 314.7999999523163,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 291.89999985694885,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 297.2999999523163,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 125.10000014305115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 216.80000019073486,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 317,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 294.40000009536743,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 300.5,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 125.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 216.79999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 316.90000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 293.90000009536743,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 297.2000000476837,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 114.60000014305115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 206.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 307,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283.60000014305115,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 287.30000019073486,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 124.60000014305115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 216.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 316.30000019073486,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 293.30000019073486,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 297.10000014305115,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 116.19999980926514,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 208.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 308.2999999523163,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 285.39999985694885,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 289.09999990463257,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 197.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 288.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 388.2000000476837,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 365.5,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 371.09999990463257,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					}
+				]
+			}
+		},
+		{
+			"name": "react",
+			"ops": {
+				"zustand_mount": {
+					"score": 25.17999997138977,
+					"median": 26.5,
+					"min": 19.700000047683716,
+					"mean": 25.125,
+					"p95": 33.700000047683716,
+					"sd": 4.634883245613398,
+					"rme": 15.424776491742124,
+					"scoreRme": 15.129863624824393,
+					"warmupRatio": 0.9634630685350228,
+					"samples": 8,
+					"p99": 33.700000047683716
+				},
+				"zustand_narrow": {
+					"score": 17.059999990463258,
+					"median": 17.199999809265137,
+					"min": 13.299999952316284,
+					"mean": 17.099999964237213,
+					"p95": 21.5,
+					"sd": 3.684717443044037,
+					"rme": 18.01748762125781,
+					"scoreRme": 29.41855365698909,
+					"warmupRatio": 1.0304806526104036,
+					"samples": 8,
+					"p99": 21.5
+				},
+				"zustand_broad": {
+					"score": 16.579999923706055,
+					"median": 17.40000009536743,
+					"min": 15.199999809265137,
+					"mean": 16.912499994039536,
+					"p95": 18.600000143051147,
+					"sd": 1.0615858432104828,
+					"rme": 5.248478959161616,
+					"scoreRme": 7.476486566850901,
+					"warmupRatio": 1.026538004036723,
+					"samples": 8,
+					"p99": 18.600000143051147
+				},
+				"zustand_rapid": {
+					"score": 15.640000104904175,
+					"median": 15.599999904632568,
+					"min": 15.200000047683716,
+					"mean": 15.550000041723251,
+					"p95": 16.40000009536743,
+					"sd": 0.377964468503564,
+					"rme": 2.032388514122418,
+					"scoreRme": 3.57639678097085,
+					"warmupRatio": 0.9961636774022863,
+					"samples": 8,
+					"p99": 16.40000009536743
+				},
+				"zustand_unmount": {
+					"score": 17.14000005722046,
+					"median": 17.09999990463257,
+					"min": 15.700000047683716,
+					"mean": 16.725000023841858,
+					"p95": 17.600000143051147,
+					"sd": 0.6902381114132365,
+					"rme": 3.4507934073091864,
+					"scoreRme": 3.01263659893205,
+					"warmupRatio": 0.9568261344953307,
+					"samples": 8,
+					"p99": 17.600000143051147
+				},
+				"jotai_mount": {
+					"score": 19.480000019073486,
+					"median": 19.600000143051147,
+					"min": 19,
+					"mean": 19.47500005364418,
+					"p95": 19.90000009536743,
+					"sd": 0.3240370543659138,
+					"rme": 1.3912441770340849,
+					"scoreRme": 1.9848666431332131,
+					"warmupRatio": 0.9958932277398499,
+					"samples": 8,
+					"p99": 19.90000009536743
+				},
+				"jotai_narrow": {
+					"score": 15.059999942779541,
+					"median": 15.200000047683716,
+					"min": 14.700000047683716,
+					"mean": 15.112499922513962,
+					"p95": 15.399999856948853,
+					"sd": 0.2587745600747279,
+					"rme": 1.4317639356382095,
+					"scoreRme": 2.2272597044513516,
+					"warmupRatio": 1.0053120831137936,
+					"samples": 8,
+					"p99": 15.399999856948853
+				},
+				"jotai_broad": {
+					"score": 17.360000133514404,
+					"median": 17.299999952316284,
+					"min": 17,
+					"mean": 17.287500083446503,
+					"p95": 17.700000047683716,
+					"sd": 0.24748737823208838,
+					"rme": 1.197035447743737,
+					"scoreRme": 1.9972479665412886,
+					"warmupRatio": 0.9942396258871925,
+					"samples": 8,
+					"p99": 17.700000047683716
+				},
+				"jotai_rapid": {
+					"score": 16.31999988555908,
+					"median": 16.399999856948853,
+					"min": 16.09999990463257,
+					"mean": 16.374999940395355,
+					"p95": 16.90000009536743,
+					"sd": 0.23754702654605067,
+					"rme": 1.2129822425988697,
+					"scoreRme": 0.9918333101980864,
+					"warmupRatio": 1.0061274568669523,
+					"samples": 8,
+					"p99": 16.90000009536743
+				},
+				"jotai_unmount": {
+					"score": 15.719999980926513,
+					"median": 15.700000047683716,
+					"min": 15.400000095367432,
+					"mean": 15.800000011920929,
+					"p95": 16.200000047683716,
+					"sd": 0.31622775524619834,
+					"rme": 1.6735128426198798,
+					"scoreRme": 1.7121064946291304,
+					"warmupRatio": 1.0114503829066086,
+					"samples": 8,
+					"p99": 16.200000047683716
+				},
+				"tanstack_query_invalidation": {
+					"score": 2.4799999237060546,
+					"median": 2.3999998569488525,
+					"min": 1.8999998569488525,
+					"mean": 2.3749999403953552,
+					"p95": 2.6999998092651367,
+					"sd": 0.24928466499195454,
+					"rme": 8.776434415012101,
+					"scoreRme": 9.629051109308259,
+					"warmupRatio": 0.9435483815146534,
+					"samples": 8,
+					"p99": 2.6999998092651367
+				},
+				"tanstack_query_mount": {
+					"score": 19.620000028610228,
+					"median": 19.700000047683716,
+					"min": 19.300000190734863,
+					"mean": 19.662500023841858,
+					"p95": 19.799999952316284,
+					"sd": 0.15979889774052544,
+					"rme": 0.6795496525178035,
+					"scoreRme": 1.2171274905869676,
+					"warmupRatio": 1.006116204539644,
+					"samples": 8,
+					"p99": 19.799999952316284
+				},
+				"tanstack_query_narrow": {
+					"score": 14.87999997138977,
+					"median": 15,
+					"min": 14.5,
+					"mean": 14.812499970197678,
+					"p95": 15.099999904632568,
+					"sd": 0.2642374257394281,
+					"rme": 1.4915991211623247,
+					"scoreRme": 2.2387092888245275,
+					"warmupRatio": 0.9852150550168337,
+					"samples": 8,
+					"p99": 15.099999904632568
+				},
+				"tanstack_query_broad": {
+					"score": 17.659999990463255,
+					"median": 17.700000047683716,
+					"min": 17.399999856948853,
+					"mean": 17.63749998807907,
+					"p95": 17.90000009536743,
+					"sd": 0.21339098524242622,
+					"rme": 1.0116381383358575,
+					"scoreRme": 1.457732468512853,
+					"warmupRatio": 1.0022650035036595,
+					"samples": 8,
+					"p99": 17.90000009536743
+				},
+				"tanstack_query_rapid": {
+					"score": 16.32000002861023,
+					"median": 16.40000009536743,
+					"min": 15.899999856948853,
+					"mean": 16.26249998807907,
+					"p95": 16.5,
+					"sd": 0.2133910570678957,
+					"rme": 1.0971728622064285,
+					"scoreRme": 1.4632388183429412,
+					"warmupRatio": 0.9963235270807728,
+					"samples": 8,
+					"p99": 16.5
+				},
+				"tanstack_query_unmount": {
+					"score": 16.26000008583069,
+					"median": 21,
+					"min": 12.5,
+					"mean": 17.200000017881393,
+					"p95": 22.199999809265137,
+					"sd": 4.49285138151695,
+					"rme": 21.841364018589513,
+					"scoreRme": 33.93793407451753,
+					"warmupRatio": 1,
+					"samples": 8,
+					"p99": 22.199999809265137
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 132.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 224.40000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 316.30000019073486,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 300.30000019073486,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 302.2000000476837,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 127.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 218.79999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 310.2999999523163,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 295.19999980926514,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 297.5,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 143.39999985694885,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 234.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 326,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 310.5,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 312.89999985694885,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 132,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 223.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 324.10000014305115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 300.30000019073486,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 302.7000000476837,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 132.59999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 222.69999980926514,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 323.7999999523163,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 299.5,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 302.19999980926514,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 131.40000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 222.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 324.2999999523163,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 299.2000000476837,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 301.7999999523163,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 131.10000014305115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 221.80000019073486,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 322.40000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 298.5,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 301,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 140.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 231.10000014305115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 322.7000000476837,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 307.2000000476837,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 309.40000009536743,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					}
+				]
+			}
+		},
+		{
+			"name": "preact",
+			"ops": {
+				"zustand_mount": {
+					"score": 28.100000047683714,
+					"median": 28.800000190734863,
+					"min": 26.59999990463257,
+					"mean": 29.325000017881393,
+					"p95": 36.5,
+					"sd": 3.149036125763037,
+					"rme": 8.978954553762449,
+					"scoreRme": 5.631898696763615,
+					"warmupRatio": 1.0633451929069582,
+					"samples": 8,
+					"p99": 36.5
+				},
+				"zustand_narrow": {
+					"score": 19.059999990463258,
+					"median": 19.09999990463257,
+					"min": 18.799999952316284,
+					"mean": 19.07499998807907,
+					"p95": 19.399999856948853,
+					"sd": 0.17525489499907843,
+					"rme": 0.7682308835517021,
+					"scoreRme": 1.427026746814813,
+					"warmupRatio": 1.0010493194449233,
+					"samples": 8,
+					"p99": 19.399999856948853
+				},
+				"zustand_broad": {
+					"score": 18.299999952316284,
+					"median": 18.5,
+					"min": 17.799999952316284,
+					"mean": 18.374999970197678,
+					"p95": 18.600000143051147,
+					"sd": 0.27645718260295865,
+					"rme": 1.258017499359152,
+					"scoreRme": 2.145276844468847,
+					"warmupRatio": 1.006557378629667,
+					"samples": 8,
+					"p99": 18.600000143051147
+				},
+				"zustand_rapid": {
+					"score": 14.62000002861023,
+					"median": 14.799999952316284,
+					"min": 14,
+					"mean": 14.762500017881393,
+					"p95": 15.299999952316284,
+					"sd": 0.37008685341771846,
+					"rme": 2.0961863971303725,
+					"scoreRme": 3.0261396688478936,
+					"warmupRatio": 1.0082079330158469,
+					"samples": 8,
+					"p99": 15.299999952316284
+				},
+				"zustand_unmount": {
+					"score": 16.819999980926514,
+					"median": 16.700000047683716,
+					"min": 15.600000143051147,
+					"mean": 16.650000005960464,
+					"p95": 17.5,
+					"sd": 0.5264435605094544,
+					"rme": 2.643770372361537,
+					"scoreRme": 2.9245449853060577,
+					"warmupRatio": 0.9881093964005302,
+					"samples": 8,
+					"p99": 17.5
+				},
+				"jotai_mount": {
+					"score": 31.759999990463257,
+					"median": 32.09999990463257,
+					"min": 30.899999856948853,
+					"mean": 31.924999952316284,
+					"p95": 32.299999952316284,
+					"sd": 0.4559135390824451,
+					"rme": 1.1940918543421586,
+					"scoreRme": 2.0235848180732745,
+					"warmupRatio": 1.0113350107962102,
+					"samples": 8,
+					"p99": 32.299999952316284
+				},
+				"jotai_narrow": {
+					"score": 19.880000019073485,
+					"median": 19.5,
+					"min": 19.200000047683716,
+					"mean": 19.73750004172325,
+					"p95": 21.700000047683716,
+					"sd": 0.8192984873719925,
+					"rme": 3.470852521857616,
+					"scoreRme": 6.374585430164944,
+					"warmupRatio": 0.9798792780718053,
+					"samples": 8,
+					"p99": 21.700000047683716
+				},
+				"jotai_broad": {
+					"score": 18.13999996185303,
+					"median": 18.200000047683716,
+					"min": 16.799999952316284,
+					"mean": 18.13749998807907,
+					"p95": 19,
+					"sd": 0.6300510256403323,
+					"rme": 2.90458740147302,
+					"scoreRme": 5.676640627877557,
+					"warmupRatio": 1.0011025374119231,
+					"samples": 8,
+					"p99": 19
+				},
+				"jotai_rapid": {
+					"score": 15.260000038146973,
+					"median": 15.299999952316284,
+					"min": 14.5,
+					"mean": 15.275000005960464,
+					"p95": 15.900000095367432,
+					"sd": 0.4464143194376069,
+					"rme": 2.443672769083127,
+					"scoreRme": 4.211602129507671,
+					"warmupRatio": 1.0104849241402079,
+					"samples": 8,
+					"p99": 15.900000095367432
+				},
+				"jotai_unmount": {
+					"score": 15.740000009536743,
+					"median": 15.700000047683716,
+					"min": 15.099999904632568,
+					"mean": 15.762500017881393,
+					"p95": 16.40000009536743,
+					"sd": 0.4501984342284318,
+					"rme": 2.388168863059836,
+					"scoreRme": 3.640152621897698,
+					"warmupRatio": 0.9949174066693129,
+					"samples": 8,
+					"p99": 16.40000009536743
+				},
+				"tanstack_query_invalidation": {
+					"score": 2.4200000762939453,
+					"median": 2.4000000953674316,
+					"min": 2.200000047683716,
+					"mean": 2.3625000715255737,
+					"p95": 2.5,
+					"sd": 0.13024697883771855,
+					"rme": 4.609798896367303,
+					"scoreRme": 5.619650270094669,
+					"warmupRatio": 0.9586776872531579,
+					"samples": 8,
+					"p99": 2.5
+				},
+				"tanstack_query_mount": {
+					"score": 31.099999952316285,
+					"median": 31.299999952316284,
+					"min": 30.299999952316284,
+					"mean": 31.224999964237213,
+					"p95": 31.600000143051147,
+					"sd": 0.399106168882927,
+					"rme": 1.068740200564544,
+					"scoreRme": 1.850944123556781,
+					"warmupRatio": 1.0096463037988324,
+					"samples": 8,
+					"p99": 31.600000143051147
+				},
+				"tanstack_query_narrow": {
+					"score": 19.759999990463257,
+					"median": 19.799999952316284,
+					"min": 19.5,
+					"mean": 19.725000023841858,
+					"p95": 20.200000047683716,
+					"sd": 0.23145503965867262,
+					"rme": 0.9811508414376224,
+					"scoreRme": 1.8100333973660832,
+					"warmupRatio": 0.9949392736657617,
+					"samples": 8,
+					"p99": 20.200000047683716
+				},
+				"tanstack_query_broad": {
+					"score": 18.919999980926512,
+					"median": 18.799999952316284,
+					"min": 18.199999809265137,
+					"mean": 18.76249995827675,
+					"p95": 19.299999952316284,
+					"sd": 0.3961872339843391,
+					"rme": 1.7656146545744984,
+					"scoreRme": 2.043615644145737,
+					"warmupRatio": 0.9894291729447495,
+					"samples": 8,
+					"p99": 19.299999952316284
+				},
+				"tanstack_query_rapid": {
+					"score": 14.940000057220459,
+					"median": 15.100000143051147,
+					"min": 14.700000047683716,
+					"mean": 15.03750005364418,
+					"p95": 15.399999856948853,
+					"sd": 0.2503568789358706,
+					"rme": 1.3920987338900082,
+					"scoreRme": 1.7231304445495026,
+					"warmupRatio": 1.0120481908099308,
+					"samples": 8,
+					"p99": 15.399999856948853
+				},
+				"tanstack_query_unmount": {
+					"score": 14.24000005722046,
+					"median": 13,
+					"min": 12.5,
+					"mean": 14.72500005364418,
+					"p95": 20.799999952316284,
+					"sd": 3.693527152024535,
+					"rme": 20.97355950360677,
+					"scoreRme": 31.0481316033962,
+					"warmupRatio": 1.1193820219921984,
+					"samples": 8,
+					"p99": 20.799999952316284
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 139.29999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 248.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 356,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 340.59999990463257,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 342.7999999523163,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 133.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 241.40000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 358.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 334.5,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 336.90000009536743,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 131.40000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 239.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 347.7000000476837,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 332.10000014305115,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 334.30000019073486,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 131.69999980926514,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 239.69999980926514,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 356.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 333.19999980926514,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 335.5,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 130.29999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 238.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 346.90000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 331.59999990463257,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 334.09999990463257,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 132.79999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 241.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 349.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 333.7000000476837,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 336.2000000476837,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 132.29999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 240.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 348.60000014305115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 333.40000009536743,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 335.90000009536743,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 132.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 240.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 348.7999999523163,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 333.69999980926514,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 336,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					}
+				]
+			}
+		},
+		{
+			"name": "solid",
+			"ops": {
+				"zustand_mount": {
+					"score": 20.7,
+					"median": 18.09999990463257,
+					"min": 17.09999990463257,
+					"mean": 19.5,
+					"p95": 26.299999952316284,
+					"sd": 3.130038783731102,
+					"rme": 13.421506283897983,
+					"scoreRme": 21.003800645929662,
+					"warmupRatio": 0.9362318826758345,
+					"samples": 8,
+					"p99": 26.299999952316284
+				},
+				"zustand_narrow": {
+					"score": 14.260000038146973,
+					"median": 14.200000047683716,
+					"min": 13.700000047683716,
+					"mean": 14.22500005364418,
+					"p95": 14.799999952316284,
+					"sd": 0.3058944456542664,
+					"rme": 1.798065325904362,
+					"scoreRme": 3.460536589980524,
+					"warmupRatio": 0.997194953594248,
+					"samples": 8,
+					"p99": 14.799999952316284
+				},
+				"zustand_broad": {
+					"score": 17.319999933242798,
+					"median": 17.399999856948853,
+					"min": 16.799999952316284,
+					"mean": 17.324999928474426,
+					"p95": 17.59999990463257,
+					"sd": 0.2492846991494611,
+					"rme": 1.2031188545272173,
+					"scoreRme": 2.232402123038283,
+					"warmupRatio": 1.0034642026959883,
+					"samples": 8,
+					"p99": 17.59999990463257
+				},
+				"zustand_rapid": {
+					"score": 15.420000028610229,
+					"median": 15.399999856948853,
+					"min": 15.199999809265137,
+					"mean": 15.400000005960464,
+					"p95": 15.700000047683716,
+					"sd": 0.20701973361251264,
+					"rme": 1.1240281194764052,
+					"scoreRme": 1.8359117472459285,
+					"warmupRatio": 0.9922178969917264,
+					"samples": 8,
+					"p99": 15.700000047683716
+				},
+				"zustand_unmount": {
+					"score": 16.1,
+					"median": 16.199999809265137,
+					"min": 15.800000190734863,
+					"mean": 16.150000005960464,
+					"p95": 16.700000047683716,
+					"sd": 0.2672612100524282,
+					"rme": 1.383724259717482,
+					"scoreRme": 0.9443960111560772,
+					"warmupRatio": 1.0074534179261012,
+					"samples": 8,
+					"p99": 16.700000047683716
+				},
+				"jotai_mount": {
+					"score": 20.2,
+					"median": 20.200000047683716,
+					"min": 19.90000009536743,
+					"mean": 20.150000005960464,
+					"p95": 20.5,
+					"sd": 0.21380895689092147,
+					"rme": 0.8872315883108106,
+					"scoreRme": 1.374257261918391,
+					"warmupRatio": 0.998019801508082,
+					"samples": 8,
+					"p99": 20.5
+				},
+				"jotai_narrow": {
+					"score": 14.380000019073487,
+					"median": 14.400000095367432,
+					"min": 13.799999952316284,
+					"mean": 14.400000005960464,
+					"p95": 15,
+					"sd": 0.34226140905625907,
+					"rme": 1.9873831039074832,
+					"scoreRme": 3.782911656583523,
+					"warmupRatio": 0.9916550745166159,
+					"samples": 8,
+					"p99": 15
+				},
+				"jotai_broad": {
+					"score": 17.380000019073485,
+					"median": 17.299999952316284,
+					"min": 17.100000143051147,
+					"mean": 17.337500005960464,
+					"p95": 18,
+					"sd": 0.2924648699432368,
+					"rme": 1.4105009554252232,
+					"scoreRme": 2.595204839698318,
+					"warmupRatio": 1.0011507468874894,
+					"samples": 8,
+					"p99": 18
+				},
+				"jotai_rapid": {
+					"score": 16.419999980926512,
+					"median": 16.300000190734863,
+					"min": 16.09999990463257,
+					"mean": 16.30000001192093,
+					"p95": 16.699999809265137,
+					"sd": 0.2203891794632317,
+					"rme": 1.1305475022442395,
+					"scoreRme": 1.4543265181411495,
+					"warmupRatio": 0.9866017092875549,
+					"samples": 8,
+					"p99": 16.699999809265137
+				},
+				"jotai_unmount": {
+					"score": 15.8,
+					"median": 15.899999856948853,
+					"min": 15.699999809265137,
+					"mean": 15.887499988079071,
+					"p95": 16.100000143051147,
+					"sd": 0.1642080758844253,
+					"rme": 0.8642215679841337,
+					"scoreRme": 0.962327963383189,
+					"warmupRatio": 1.0101265816748897,
+					"samples": 8,
+					"p99": 16.100000143051147
+				},
+				"tanstack_query_invalidation": {
+					"score": 2.2200000286102295,
+					"median": 2.299999952316284,
+					"min": 2.0999999046325684,
+					"mean": 2.225000023841858,
+					"p95": 2.3000001907348633,
+					"sd": 0.10350980099652064,
+					"rme": 3.889892551851716,
+					"scoreRme": 6.125931268952946,
+					"warmupRatio": 1.018018022081641,
+					"samples": 8,
+					"p99": 2.3000001907348633
+				},
+				"tanstack_query_mount": {
+					"score": 19.35999999046326,
+					"median": 19.40000009536743,
+					"min": 18.90000009536743,
+					"mean": 19.349999994039536,
+					"p95": 19.699999809265137,
+					"sd": 0.23904565774982936,
+					"rme": 1.0329660345899292,
+					"scoreRme": 1.902261932543485,
+					"warmupRatio": 1.0010330593295496,
+					"samples": 8,
+					"p99": 19.699999809265137
+				},
+				"tanstack_query_narrow": {
+					"score": 14.940000009536742,
+					"median": 15.200000047683716,
+					"min": 13.900000095367432,
+					"mean": 15.062500029802322,
+					"p95": 15.700000047683716,
+					"sd": 0.587822861787636,
+					"rme": 3.2631389229574697,
+					"scoreRme": 5.467991097238872,
+					"warmupRatio": 1.0133868808482152,
+					"samples": 8,
+					"p99": 15.700000047683716
+				},
+				"tanstack_query_broad": {
+					"score": 17.2,
+					"median": 17.200000047683716,
+					"min": 17,
+					"mean": 17.137500017881393,
+					"p95": 17.299999952316284,
+					"sd": 0.13024700171909886,
+					"rme": 0.6354866301536465,
+					"scoreRme": 0.8839985918377884,
+					"warmupRatio": 0.9918604673341265,
+					"samples": 8,
+					"p99": 17.299999952316284
+				},
+				"tanstack_query_rapid": {
+					"score": 16.46000008583069,
+					"median": 16.600000143051147,
+					"min": 16.100000143051147,
+					"mean": 16.562500029802322,
+					"p95": 17,
+					"sd": 0.2722262385879859,
+					"rme": 1.3743275166142879,
+					"scoreRme": 1.8931059233271628,
+					"warmupRatio": 1.0133657309900126,
+					"samples": 8,
+					"p99": 17
+				},
+				"tanstack_query_unmount": {
+					"score": 14.02000002861023,
+					"median": 12.5,
+					"min": 12,
+					"mean": 13.412500023841858,
+					"p95": 20.600000143051147,
+					"sd": 2.910786636499789,
+					"rme": 18.146245754475558,
+					"scoreRme": 32.63385019136046,
+					"warmupRatio": 1.0042795998816558,
+					"samples": 8,
+					"p99": 20.600000143051147
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 206.60000014305115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 297.90000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 285.10000014305115,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 114.80000019073486,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 207,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 298.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283.30000019073486,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 285.60000014305115,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 115.79999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 207.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 298.59999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283.7999999523163,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 286.09999990463257,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 115.40000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 207.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 306.90000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283.7000000476837,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 286,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 122.70000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 214.30000019073486,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 305.7000000476837,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 290.5,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 292.80000019073486,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 115.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 207.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 298.59999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283.7000000476837,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 285.7999999523163,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 116.59999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 208.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 299.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 284.5,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 286.7999999523163,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 117.29999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 209.59999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 300.40000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 285.59999990463257,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 287.7000000476837,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					}
+				]
+			}
+		},
+		{
+			"name": "svelte",
+			"ops": {
+				"zustand_mount": {
+					"score": 21.200000047683716,
+					"median": 21.59999990463257,
+					"min": 16.40000009536743,
+					"mean": 21.350000023841858,
+					"p95": 24,
+					"sd": 2.349468010977209,
+					"rme": 9.201482574939675,
+					"scoreRme": 17.650664437687517,
+					"warmupRatio": 0.9669811321497388,
+					"samples": 8,
+					"p99": 24
+				},
+				"zustand_narrow": {
+					"score": 14.739999961853027,
+					"median": 14.799999952316284,
+					"min": 14.200000047683716,
+					"mean": 14.924999982118607,
+					"p95": 16,
+					"sd": 0.6430951460889769,
+					"rme": 3.60285715720844,
+					"scoreRme": 5.178247546866248,
+					"warmupRatio": 1.0257801913200084,
+					"samples": 8,
+					"p99": 16
+				},
+				"zustand_broad": {
+					"score": 16.4,
+					"median": 16.5,
+					"min": 15.099999904632568,
+					"mean": 16.30000001192093,
+					"p95": 17,
+					"sd": 0.6480741087317899,
+					"rme": 3.324476123012756,
+					"scoreRme": 4.1462094670525005,
+					"warmupRatio": 0.986585367016676,
+					"samples": 8,
+					"p99": 17
+				},
+				"zustand_rapid": {
+					"score": 15.940000009536742,
+					"median": 16,
+					"min": 15.400000095367432,
+					"mean": 15.950000017881393,
+					"p95": 16.399999856948853,
+					"sd": 0.30705974617179027,
+					"rme": 1.6097126251164349,
+					"scoreRme": 1.414826291504897,
+					"warmupRatio": 1.0012547039469604,
+					"samples": 8,
+					"p99": 16.399999856948853
+				},
+				"zustand_unmount": {
+					"score": 16.679999923706056,
+					"median": 16.700000047683716,
+					"min": 16.399999856948853,
+					"mean": 16.687499970197678,
+					"p95": 16.799999952316284,
+					"sd": 0.12464238031653431,
+					"rme": 0.6245405017777019,
+					"scoreRme": 1.2229829457308967,
+					"warmupRatio": 0.9976019235999837,
+					"samples": 8,
+					"p99": 16.799999952316284
+				},
+				"jotai_mount": {
+					"score": 19.22000002861023,
+					"median": 19,
+					"min": 18.700000047683716,
+					"mean": 19.087500035762787,
+					"p95": 20.100000143051147,
+					"sd": 0.43568505254990686,
+					"rme": 1.908577330695132,
+					"scoreRme": 3.3062202487409422,
+					"warmupRatio": 0.9958376705894544,
+					"samples": 8,
+					"p99": 20.100000143051147
+				},
+				"jotai_narrow": {
+					"score": 15.059999990463258,
+					"median": 15.700000047683716,
+					"min": 13.699999809265137,
+					"mean": 15.287499994039536,
+					"p95": 16,
+					"sd": 0.8025629006153059,
+					"rme": 4.389638556157282,
+					"scoreRme": 8.005074176495592,
+					"warmupRatio": 1.0119521893428787,
+					"samples": 8,
+					"p99": 16
+				},
+				"jotai_broad": {
+					"score": 17.280000066757204,
+					"median": 17.100000143051147,
+					"min": 16.899999856948853,
+					"mean": 17.187500059604645,
+					"p95": 17.800000190734863,
+					"sd": 0.36030745238900336,
+					"rme": 1.7528577930478888,
+					"scoreRme": 3.148048373894674,
+					"warmupRatio": 0.9942129629853197,
+					"samples": 8,
+					"p99": 17.800000190734863
+				},
+				"jotai_rapid": {
+					"score": 16.439999961853026,
+					"median": 16.40000009536743,
+					"min": 15.899999856948853,
+					"mean": 16.374999940395355,
+					"p95": 16.600000143051147,
+					"sd": 0.23145509116297552,
+					"rme": 1.181875099099023,
+					"scoreRme": 1.263606576582386,
+					"warmupRatio": 0.9927007281697887,
+					"samples": 8,
+					"p99": 16.600000143051147
+				},
+				"jotai_unmount": {
+					"score": 15.759999990463257,
+					"median": 15.900000095367432,
+					"min": 15.099999904632568,
+					"mean": 15.787499994039536,
+					"p95": 16,
+					"sd": 0.29001235699518485,
+					"rme": 1.535993193210093,
+					"scoreRme": 2.9788341355218972,
+					"warmupRatio": 1.0088832493414632,
+					"samples": 8,
+					"p99": 16
+				},
+				"tanstack_query_invalidation": {
+					"score": 2.3000000953674316,
+					"median": 2.299999952316284,
+					"min": 1.7999999523162842,
+					"mean": 2.2250000536441803,
+					"p95": 2.4000000953674316,
+					"sd": 0.18322511994686536,
+					"rme": 6.885589702475989,
+					"scoreRme": 3.816732397216338,
+					"warmupRatio": 0.9391304124280511,
+					"samples": 8,
+					"p99": 2.4000000953674316
+				},
+				"tanstack_query_mount": {
+					"score": 18.85999999046326,
+					"median": 19,
+					"min": 17.90000009536743,
+					"mean": 18.775000005960464,
+					"p95": 19,
+					"sd": 0.37320998854912485,
+					"rme": 1.6621088594544864,
+					"scoreRme": 0.8831391878373949,
+					"warmupRatio": 0.9957582199665841,
+					"samples": 8,
+					"p99": 19
+				},
+				"tanstack_query_narrow": {
+					"score": 15.920000028610229,
+					"median": 15.900000095367432,
+					"min": 15.600000143051147,
+					"mean": 15.887500047683716,
+					"p95": 16.200000047683716,
+					"sd": 0.17268878849625768,
+					"rme": 0.9088552691686899,
+					"scoreRme": 1.690597613979002,
+					"warmupRatio": 0.9924623157646267,
+					"samples": 8,
+					"p99": 16.200000047683716
+				},
+				"tanstack_query_broad": {
+					"score": 16.699999952316283,
+					"median": 16.59999990463257,
+					"min": 16,
+					"mean": 16.53749993443489,
+					"p95": 17.09999990463257,
+					"sd": 0.35831946584307445,
+					"rme": 1.8117017261987958,
+					"scoreRme": 1.8952853789078332,
+					"warmupRatio": 0.9880239492063007,
+					"samples": 8,
+					"p99": 17.09999990463257
+				},
+				"tanstack_query_rapid": {
+					"score": 16.72000002861023,
+					"median": 16.799999952316284,
+					"min": 16.700000047683716,
+					"mean": 16.950000047683716,
+					"p95": 17.90000009536743,
+					"sd": 0.43424812024213333,
+					"rme": 2.1421722790143867,
+					"scoreRme": 0.33205709902511754,
+					"warmupRatio": 1.0215311027231437,
+					"samples": 8,
+					"p99": 17.90000009536743
+				},
+				"tanstack_query_unmount": {
+					"score": 12.5,
+					"median": 12.599999904632568,
+					"min": 12.200000047683716,
+					"mean": 13.462500005960464,
+					"p95": 20.299999952316284,
+					"sd": 2.7676382191169115,
+					"rme": 17.18975767082721,
+					"scoreRme": 1.2163825457158899,
+					"warmupRatio": 1.1215999984741212,
+					"samples": 8,
+					"p99": 20.299999952316284
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 114.79999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 206,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 306.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283.09999990463257,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 285.39999985694885,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 115.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 206.29999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 298.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 282.89999985694885,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 285.09999990463257,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 116.79999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 207.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 297.7000000476837,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283.40000009536743,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 285.2000000476837,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 108.79999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 200.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 291.7999999523163,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 276.89999985694885,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 279.2000000476837,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 206.40000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 298,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 282.7999999523163,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 285,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 114.90000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 206.20000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 297.90000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 282.7000000476837,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 285,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 115.29999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 206.70000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 298.40000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283.2000000476837,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 285.60000014305115,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 116.69999980926514,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 208.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 299.2999999523163,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 284.19999980926514,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 286.5,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					}
+				]
+			}
+		},
+		{
+			"name": "vue-vapor",
+			"ops": {
+				"zustand_mount": {
+					"score": 16.939999961853026,
+					"median": 16.899999856948853,
+					"min": 16.09999990463257,
+					"mean": 17.062499940395355,
+					"p95": 18.5,
+					"sd": 0.8895223569429073,
+					"rme": 4.359135377267063,
+					"scoreRme": 6.274412008040684,
+					"warmupRatio": 0.9999999971851409,
+					"samples": 8,
+					"p99": 18.5
+				},
+				"zustand_narrow": {
+					"score": 15.059999990463258,
+					"median": 14.400000095367432,
+					"min": 13,
+					"mean": 16.350000023841858,
+					"p95": 21.09999990463257,
+					"sd": 3.7928504125069966,
+					"rme": 19.396979584769703,
+					"scoreRme": 28.164414393168364,
+					"warmupRatio": 1.1899070411658743,
+					"samples": 8,
+					"p99": 21.09999990463257
+				},
+				"zustand_broad": {
+					"score": 16.63999996185303,
+					"median": 17,
+					"min": 15.699999809265137,
+					"mean": 16.687499970197678,
+					"p95": 17.299999952316284,
+					"sd": 0.5591767216178368,
+					"rme": 2.8018440390398065,
+					"scoreRme": 4.140535825350524,
+					"warmupRatio": 1.0144230775292633,
+					"samples": 8,
+					"p99": 17.299999952316284
+				},
+				"zustand_rapid": {
+					"score": 16.02000002861023,
+					"median": 15.900000095367432,
+					"min": 15.699999809265137,
+					"mean": 15.962500005960464,
+					"p95": 16.5,
+					"sd": 0.2503568755347655,
+					"rme": 1.311428942418016,
+					"scoreRme": 2.285764484863784,
+					"warmupRatio": 0.9975031205077836,
+					"samples": 8,
+					"p99": 16.5
+				},
+				"zustand_unmount": {
+					"score": 16.340000057220458,
+					"median": 16.40000009536743,
+					"min": 15.799999952316284,
+					"mean": 16.375,
+					"p95": 16.90000009536743,
+					"sd": 0.3494894605396753,
+					"rme": 1.784591936303723,
+					"scoreRme": 3.0200282610131963,
+					"warmupRatio": 1.0036719641912923,
+					"samples": 8,
+					"p99": 16.90000009536743
+				},
+				"jotai_mount": {
+					"score": 19.92000002861023,
+					"median": 19.799999952316284,
+					"min": 19.699999809265137,
+					"mean": 19.975000023841858,
+					"p95": 20.700000047683716,
+					"sd": 0.42003405763766155,
+					"rme": 1.7582631283062917,
+					"scoreRme": 2.7308368789630233,
+					"warmupRatio": 1.01004016062815,
+					"samples": 8,
+					"p99": 20.700000047683716
+				},
+				"jotai_narrow": {
+					"score": 14.959999942779541,
+					"median": 15.200000047683716,
+					"min": 13.799999952316284,
+					"mean": 15.074999988079071,
+					"p95": 15.600000143051147,
+					"sd": 0.5470701537407194,
+					"rme": 3.0343931753523323,
+					"scoreRme": 5.460681183558782,
+					"warmupRatio": 1.001336903500698,
+					"samples": 8,
+					"p99": 15.600000143051147
+				},
+				"jotai_broad": {
+					"score": 16.8,
+					"median": 16.799999952316284,
+					"min": 16.09999990463257,
+					"mean": 16.749999970197678,
+					"p95": 17.200000047683716,
+					"sd": 0.33806171700395254,
+					"rme": 1.687591517892166,
+					"scoreRme": 1.8100927143485892,
+					"warmupRatio": 0.9928571411541529,
+					"samples": 8,
+					"p99": 17.200000047683716
+				},
+				"jotai_rapid": {
+					"score": 16.660000038146972,
+					"median": 16.600000143051147,
+					"min": 15.900000095367432,
+					"mean": 16.562500029802322,
+					"p95": 17,
+					"sd": 0.3420003616913649,
+					"rme": 1.7265804729273626,
+					"scoreRme": 1.943183405674515,
+					"warmupRatio": 0.9855942371556299,
+					"samples": 8,
+					"p99": 17
+				},
+				"jotai_unmount": {
+					"score": 15.640000057220458,
+					"median": 15.799999952316284,
+					"min": 15.400000095367432,
+					"mean": 15.675000041723251,
+					"p95": 15.900000095367432,
+					"sd": 0.17525488042325169,
+					"rme": 0.934864614789273,
+					"scoreRme": 1.3282399320493552,
+					"warmupRatio": 1.0025575453574425,
+					"samples": 8,
+					"p99": 15.900000095367432
+				},
+				"tanstack_query_invalidation": {
+					"score": 2.359999942779541,
+					"median": 2.3999998569488525,
+					"min": 2.200000047683716,
+					"mean": 2.3874999582767487,
+					"p95": 2.5999999046325684,
+					"sd": 0.12464231883297622,
+					"rme": 4.365241736529358,
+					"scoreRme": 2.881263817816776,
+					"warmupRatio": 1.0169491569943143,
+					"samples": 8,
+					"p99": 2.5999999046325684
+				},
+				"tanstack_query_mount": {
+					"score": 21.159999990463255,
+					"median": 21,
+					"min": 20.5,
+					"mean": 21,
+					"p95": 21.899999856948853,
+					"sd": 0.4070801421314359,
+					"rme": 1.6208647382273556,
+					"scoreRme": 2.440291830527631,
+					"warmupRatio": 0.9848771275486421,
+					"samples": 8,
+					"p99": 21.899999856948853
+				},
+				"tanstack_query_narrow": {
+					"score": 13.439999914169311,
+					"median": 13.600000143051147,
+					"min": 13,
+					"mean": 13.549999982118607,
+					"p95": 13.900000095367432,
+					"sd": 0.282842749804703,
+					"rme": 1.7453876865371958,
+					"scoreRme": 2.7401636690616966,
+					"warmupRatio": 1.0178571507765526,
+					"samples": 8,
+					"p99": 13.900000095367432
+				},
+				"tanstack_query_broad": {
+					"score": 17.02000012397766,
+					"median": 17.100000143051147,
+					"min": 16.600000143051147,
+					"mean": 17.125000059604645,
+					"p95": 17.799999952316284,
+					"sd": 0.3284160636158701,
+					"rme": 1.6035406035368203,
+					"scoreRme": 1.7414551574719332,
+					"warmupRatio": 1.0129259626296447,
+					"samples": 8,
+					"p99": 17.799999952316284
+				},
+				"tanstack_query_rapid": {
+					"score": 16.69999990463257,
+					"median": 16.699999809265137,
+					"min": 16.299999952316284,
+					"mean": 16.66249993443489,
+					"p95": 17.299999952316284,
+					"sd": 0.3067688728089346,
+					"rme": 1.5394205560069107,
+					"scoreRme": 2.7815188112202076,
+					"warmupRatio": 0.9940119788690212,
+					"samples": 8,
+					"p99": 17.299999952316284
+				},
+				"tanstack_query_unmount": {
+					"score": 12.400000047683715,
+					"median": 12.400000095367432,
+					"min": 12.299999952316284,
+					"mean": 13.41250005364418,
+					"p95": 20.100000143051147,
+					"sd": 2.7100013565485916,
+					"rme": 16.89452256135075,
+					"scoreRme": 1.22619207766008,
+					"warmupRatio": 1.1338709703035088,
+					"samples": 8,
+					"p99": 20.100000143051147
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 123.79999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 215.29999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 306.2999999523163,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 290.89999985694885,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 293.09999990463257,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 117.10000014305115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 208.80000019073486,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 308.80000019073486,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 285.80000019073486,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 288.40000009536743,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 124.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 215.90000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 307.7000000476837,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 292.5,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 295,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 114.59999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 205.70000004768372,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 297.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 282.40000009536743,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 284.7999999523163,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 123.59999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 214.5,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 306.2999999523163,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 291.09999990463257,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 293.39999985694885,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 115,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 206.40000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 298.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 285.40000009536743,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 115.79999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 208.09999990463257,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 298.90000009536743,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 283.90000009536743,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 286.2999999523163,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					},
+					{
+						"integrations": [
+							{
+								"backend": "zustand",
+								"backendNotifications": 5,
+								"completedAt": 116.79999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 512,
+								"unsubscribeCalls": 512
+							},
+							{
+								"backend": "jotai",
+								"backendNotifications": 10,
+								"completedAt": 208.29999995231628,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1024,
+								"unsubscribeCalls": 1024
+							},
+							{
+								"backend": "tanstack-query",
+								"backendNotifications": 18,
+								"completedAt": 299.89999985694885,
+								"retainedSubscribers": 0,
+								"subscribeCalls": 1536,
+								"unsubscribeCalls": 1536,
+								"invalidation": {
+									"before": {
+										"backendNotifications": 15,
+										"startedAt": 284.89999985694885,
+										"value": 10
+									},
+									"refetches": 1,
+									"refetchedValue": 11,
+									"backendNotifications": 18,
+									"completedAt": 287.19999980926514,
+									"renderedValue": "11",
+									"value": 11
+								}
+							}
+						],
+						"subscriberCount": 512
+					}
+				]
+			}
+		}
+	],
+	"harnessExit": 0
+}

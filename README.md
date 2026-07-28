@@ -61,6 +61,7 @@ Named after **Janus**, the two-faced Roman god of doorways: one face toward the 
 - [Configure the copilot model](#configure-the-copilot-model)
 - [Packages](#packages)
 - [Documentation](#documentation)
+- [Benchmarks](#benchmarks)
 - [Examples](#examples)
 - [Develop](#develop)
 - [Contributing](#contributing)
@@ -170,11 +171,33 @@ Zero config — first match wins:
 | **Tutorial** | [A task board with two faces](apps/docs/content/tutorial/tasks-app-part-1.md) (3 parts) |
 | **Reference** | one page per export: [reactivity](apps/docs/content/reference/signal.md), [client](apps/docs/content/reference/client-state.md), [data cache](apps/docs/content/reference/data-cache-api.md), [agent harness](apps/docs/content/reference/agent-memory.md), [CLI](apps/docs/content/reference/cli.md) |
 | **Recipes** | [Testing components](apps/docs/content/recipes/testing-components.md) · [Forms](apps/docs/content/recipes/forms.md) · [Optimistic UI](apps/docs/content/recipes/optimistic-ui.md) · [Error handling](apps/docs/content/recipes/error-handling.md) · [Custom server](apps/docs/content/recipes/custom-server.md) · [Docker](apps/docs/content/recipes/docker.md) · [Monorepo](apps/docs/content/recipes/monorepo-setup.md) · [Tailwind](apps/docs/content/recipes/tailwind.md) · [Local model copilot](apps/docs/content/recipes/local-model-copilot.md) |
-| **More** | [Examples](apps/docs/content/more/examples.md) · [Comparison](apps/docs/content/more/comparison.md) · [FAQ](apps/docs/content/more/faq.md) · [Glossary](apps/docs/content/more/glossary.md) |
+| **More** | [Examples](apps/docs/content/more/examples.md) · [Comparison](apps/docs/content/more/comparison.md) · [Benchmarks](apps/docs/content/more/benchmarks.md) · [FAQ](apps/docs/content/more/faq.md) · [Glossary](apps/docs/content/more/glossary.md) |
 
 Agents read the same docs at `/llms.txt` and any page as Markdown by appending `.md`.
 
 **Every example is verified.** `packages/docs-tests` compiles every snippet, checks it imports only symbols the packages really export, runs the main example of a page and asserts what the prose claims. Three guards fail the build when an export has no reference page, when a page's executable claims aren't executed, or when any documented link stops resolving. **Both backlogs are empty**: every public export is documented, and every page that imports the framework has a test that runs it.
+
+## Benchmarks
+
+19 multi-framework suites — client runtime, hydration, SSR, streaming and
+shipped bytes — measuring Janux against react 19, preact, solid 2, svelte 5
+and vue-vapor, with correctness gates before any number counts. The harness
+is a port of [octane](https://github.com/octanejs/octane)'s benchmarks (MIT,
+Dominic Gannaway; `js-framework` fixtures derive from
+[krausest](https://github.com/krausest/js-framework-benchmark), Apache-2.0).
+
+| Category | Where Janux stands |
+|---|---|
+| Resume vs hydration | **0.13–0.24× react** — 0.33ms to make the news page interactive (react 2.58) |
+| Shipped JS | 24.2KB gzip total vs react 60.7 (preact 9.8 · solid 13.7 · svelte 17.9); islands-free pages ship 0KB |
+| Mass DOM work | 10k rows: 84.9ms vs react 131.8; clear 36.0 vs 48.4; 512-field reset 15.4 vs 39.0 |
+| Whole-app suites | parity: lifecycle 1.00×, store integrations 0.83–1.14×, suspense recovery ~1.0× |
+| Keyed micro-ops | behind: select-1-of-1000 7.7ms vs react 0.46 — needs the fine-grained list primitive (RFC) |
+| SSR throughput | behind: 4.5× react on buffered renders; streaming end-to-end at parity |
+
+Full tables, methodology and machine specs:
+[docs page](apps/docs/content/more/benchmarks.md) · reproduce with
+`bun run bench` from [`benchmarks/`](benchmarks/).
 
 ## Examples
 

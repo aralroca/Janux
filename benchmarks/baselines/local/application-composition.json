@@ -1,0 +1,1027 @@
+{
+	"suite": "application-composition",
+	"iterations": 8,
+	"targets": [
+		{
+			"name": "janux",
+			"ops": {
+				"mount_dashboard": {
+					"score": 42.059999990463254,
+					"median": 43.39999985694885,
+					"min": 40.30000019073486,
+					"mean": 42.987499952316284,
+					"p95": 45.59999990463257,
+					"sd": 1.9866967328537462,
+					"rme": 3.864341872376336,
+					"scoreRme": 5.468926220803746,
+					"warmupRatio": 1.048977648491748,
+					"samples": 8,
+					"p99": 45.59999990463257
+				},
+				"interact_and_recover": {
+					"score": 179.3000000476837,
+					"median": 178.29999995231628,
+					"min": 168,
+					"mean": 177.85000005364418,
+					"p95": 186.20000004768372,
+					"sd": 7.272845783453577,
+					"rme": 3.419295703998028,
+					"scoreRme": 4.378271823031842,
+					"warmupRatio": 0.9838259902312044,
+					"samples": 8,
+					"p99": 186.20000004768372
+				},
+				"teardown_dashboard": {
+					"score": 33.35999994277954,
+					"median": 33.299999952316284,
+					"min": 32.5,
+					"mean": 33.14999997615814,
+					"p95": 33.59999990463257,
+					"sd": 0.42426405747277796,
+					"rme": 1.0701357190270953,
+					"scoreRme": 0.6760291108742084,
+					"warmupRatio": 0.9904076744162054,
+					"samples": 8,
+					"p99": 33.59999990463257
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 279,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 297.7000000476837,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 282,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 279.90000009536743,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 297.09999990463257,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 287.5,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 295.90000009536743,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 287.2999999523163,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					}
+				]
+			}
+		},
+		{
+			"name": "react",
+			"ops": {
+				"mount_dashboard": {
+					"score": 42.23999996185303,
+					"median": 44.39999985694885,
+					"min": 36.10000014305115,
+					"mean": 43.32499998807907,
+					"p95": 47.30000019073486,
+					"sd": 3.790118736412278,
+					"rme": 7.314765300276567,
+					"scoreRme": 11.1889590995332,
+					"warmupRatio": 1.0222537892535364,
+					"samples": 8,
+					"p99": 47.30000019073486
+				},
+				"interact_and_recover": {
+					"score": 142.42000002861022,
+					"median": 142.40000009536743,
+					"min": 131.20000004768372,
+					"mean": 139.80000001192093,
+					"p95": 148.60000014305115,
+					"sd": 6.530368634698917,
+					"rme": 3.9058600463411093,
+					"scoreRme": 5.990121972299582,
+					"warmupRatio": 0.9862378876720037,
+					"samples": 8,
+					"p99": 148.60000014305115
+				},
+				"teardown_dashboard": {
+					"score": 33.12000002861023,
+					"median": 33.799999952316284,
+					"min": 30.899999856948853,
+					"mean": 33.412499994039536,
+					"p95": 34.299999952316284,
+					"sd": 1.053480682609902,
+					"rme": 2.6363541884922976,
+					"scoreRme": 4.729505117269106,
+					"warmupRatio": 1.0048309161425522,
+					"samples": 8,
+					"p99": 34.299999952316284
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 255.5,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 257.09999990463257,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 255.09999990463257,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 260.40000009536743,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 264.19999980926514,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 268.40000009536743,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 248.29999995231628,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 263.5,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					}
+				]
+			}
+		},
+		{
+			"name": "preact",
+			"ops": {
+				"mount_dashboard": {
+					"score": 44.060000038146974,
+					"median": 46.299999952316284,
+					"min": 34.90000009536743,
+					"mean": 44.86250001192093,
+					"p95": 51.299999952316284,
+					"sd": 5.074568934559326,
+					"rme": 9.458055031042981,
+					"scoreRme": 15.20053400930648,
+					"warmupRatio": 1.0544711745401356,
+					"samples": 8,
+					"p99": 51.299999952316284
+				},
+				"interact_and_recover": {
+					"score": 136.44000000953673,
+					"median": 137,
+					"min": 132.70000004768372,
+					"mean": 137.81250002980232,
+					"p95": 146.70000004768372,
+					"sd": 4.643409314041931,
+					"rme": 2.81730916786195,
+					"scoreRme": 3.466341494577669,
+					"warmupRatio": 1.011873351132344,
+					"samples": 8,
+					"p99": 146.70000004768372
+				},
+				"teardown_dashboard": {
+					"score": 33.519999980926514,
+					"median": 33.700000047683716,
+					"min": 32.5,
+					"mean": 33.54999998211861,
+					"p95": 33.89999985694885,
+					"sd": 0.45355735184117923,
+					"rme": 1.1303835746342852,
+					"scoreRme": 2.197362783191363,
+					"warmupRatio": 0.9952267305920556,
+					"samples": 8,
+					"p99": 33.89999985694885
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 255.29999995231628,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 248.39999985694885,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 254.29999995231628,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 248.70000004768372,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 246.60000014305115,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 238.89999985694885,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 255.5,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 246.19999980926514,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					}
+				]
+			}
+		},
+		{
+			"name": "solid",
+			"ops": {
+				"mount_dashboard": {
+					"score": 40.119999933242795,
+					"median": 40.59999990463257,
+					"min": 34.09999990463257,
+					"mean": 39.362499952316284,
+					"p95": 44.5,
+					"sd": 3.6079030401359073,
+					"rme": 7.664050118665945,
+					"scoreRme": 12.009221645325345,
+					"warmupRatio": 1.0014955144129314,
+					"samples": 8,
+					"p99": 44.5
+				},
+				"interact_and_recover": {
+					"score": 134.44000000953673,
+					"median": 137,
+					"min": 129.90000009536743,
+					"mean": 135.7625000178814,
+					"p95": 139.10000014305115,
+					"sd": 3.566085302588708,
+					"rme": 2.1963323193531537,
+					"scoreRme": 3.677889001528281,
+					"warmupRatio": 1.021422195915421,
+					"samples": 8,
+					"p99": 139.10000014305115
+				},
+				"teardown_dashboard": {
+					"score": 32.060000038146974,
+					"median": 33.40000009536743,
+					"min": 29.09999990463257,
+					"mean": 32.51250001788139,
+					"p95": 33.700000047683716,
+					"sd": 1.5905412665829153,
+					"rme": 4.090540787940564,
+					"scoreRme": 7.268206817796688,
+					"warmupRatio": 0.9999999985126725,
+					"samples": 8,
+					"p99": 33.700000047683716
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 241.20000004768372,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 245.70000004768372,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 241,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 243.09999990463257,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 243.5,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 236.5,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 230.29999995231628,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 245.20000004768372,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					}
+				]
+			}
+		},
+		{
+			"name": "svelte",
+			"ops": {
+				"mount_dashboard": {
+					"score": 40.62000002861023,
+					"median": 41.799999952316284,
+					"min": 38.80000019073486,
+					"mean": 40.98750001192093,
+					"p95": 43.299999952316284,
+					"sd": 1.8434730245079947,
+					"rme": 3.7607244076577215,
+					"scoreRme": 6.006212257503643,
+					"warmupRatio": 1.0349581482010426,
+					"samples": 8,
+					"p99": 43.299999952316284
+				},
+				"interact_and_recover": {
+					"score": 148.55999999046327,
+					"median": 146.40000009536743,
+					"min": 138.79999995231628,
+					"mean": 147.22499999403954,
+					"p95": 154.79999995231628,
+					"sd": 6.358515068364039,
+					"rme": 3.611272771812645,
+					"scoreRme": 4.52132977178859,
+					"warmupRatio": 0.983441033988818,
+					"samples": 8,
+					"p99": 154.79999995231628
+				},
+				"teardown_dashboard": {
+					"score": 33.68000001907349,
+					"median": 33.5,
+					"min": 33.200000047683716,
+					"mean": 33.63750001788139,
+					"p95": 35.200000047683716,
+					"sd": 0.6566962839596765,
+					"rme": 1.6324015532282077,
+					"scoreRme": 3.1644346190990706,
+					"warmupRatio": 1.0047505935383803,
+					"samples": 8,
+					"p99": 35.200000047683716
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 247.09999990463257,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 256.7999999523163,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 240.5,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 247.69999980926514,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 258.2000000476837,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 247.09999990463257,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 246.79999995231628,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 254.90000009536743,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					}
+				]
+			}
+		},
+		{
+			"name": "vue-vapor",
+			"ops": {
+				"mount_dashboard": {
+					"score": 38.35999999046326,
+					"median": 40.799999952316284,
+					"min": 32.200000047683716,
+					"mean": 39.28749996423721,
+					"p95": 45,
+					"sd": 3.9149666929663853,
+					"rme": 8.332202756211268,
+					"scoreRme": 12.080312730379566,
+					"warmupRatio": 1.0239833154628581,
+					"samples": 8,
+					"p99": 45
+				},
+				"interact_and_recover": {
+					"score": 138.8800000190735,
+					"median": 138.5,
+					"min": 130.20000004768372,
+					"mean": 138.37500002980232,
+					"p95": 147.40000009536743,
+					"sd": 5.341949884167504,
+					"rme": 3.227961356585219,
+					"scoreRme": 2.78435996620474,
+					"warmupRatio": 0.9994239633397264,
+					"samples": 8,
+					"p99": 147.40000009536743
+				},
+				"teardown_dashboard": {
+					"score": 32.840000009536745,
+					"median": 33.299999952316284,
+					"min": 30.59999990463257,
+					"mean": 32.67500001192093,
+					"p95": 33.40000009536743,
+					"sd": 1.2221175814672307,
+					"rme": 3.1274008300854605,
+					"scoreRme": 4.3152253519359585,
+					"warmupRatio": 0.9981729586440453,
+					"samples": 8,
+					"p99": 33.40000009536743
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 235.70000004768372,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 246.29999995231628,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 259.59999990463257,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 255.70000004768372,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 238.89999985694885,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 245.60000014305115,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 245.30000019073486,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					},
+					{
+						"completedAt": 246.80000019073486,
+						"async": {
+							"cancelled": 0,
+							"requests": 2,
+							"rejections": 1,
+							"resolutions": 1,
+							"staleCompletions": 0
+						},
+						"fieldValue": "composed dashboard",
+						"lastSubmission": "composed dashboard",
+						"lifecycleCleanups": 96,
+						"lifecycleMounts": 96,
+						"retainedStoreSubscribers": 0
+					}
+				]
+			}
+		}
+	],
+	"harnessExit": 0
+}

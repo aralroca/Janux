@@ -1,0 +1,787 @@
+{
+	"suite": "suspense-recovery",
+	"iterations": 8,
+	"targets": [
+		{
+			"name": "janux",
+			"ops": {
+				"error_reveal": {
+					"score": 43.21999998092652,
+					"median": 44.299999952316284,
+					"min": 36,
+					"mean": 42.63749995827675,
+					"p95": 47,
+					"sd": 4.097364111285149,
+					"rme": 8.035242326490312,
+					"scoreRme": 11.44908139618965,
+					"warmupRatio": 0.9939842656579889,
+					"samples": 8,
+					"p99": 47
+				},
+				"retry_recovery": {
+					"score": 35.1800000667572,
+					"median": 33.200000047683716,
+					"min": 32.90000009536743,
+					"mean": 34.42500004172325,
+					"p95": 43.30000019073486,
+					"sd": 3.5887722325285294,
+					"rme": 8.716820403161188,
+					"scoreRme": 16.027163391915742,
+					"warmupRatio": 1.0005685042890438,
+					"samples": 8,
+					"p99": 43.30000019073486
+				},
+				"cancel_recovery": {
+					"score": 31.759999990463257,
+					"median": 31.90000009536743,
+					"min": 31.200000047683716,
+					"mean": 31.787500023841858,
+					"p95": 32.09999990463257,
+					"sd": 0.29001227625340736,
+					"rme": 0.762862312519289,
+					"scoreRme": 1.3709021745261536,
+					"warmupRatio": 0.9993702791798236,
+					"samples": 8,
+					"p99": 32.09999990463257
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 153.80000019073486,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 161.70000004768372,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 162.90000009536743,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 172.79999995231628,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 163.79999995231628,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 160.89999985694885,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 154.09999990463257,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 164,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					}
+				]
+			}
+		},
+		{
+			"name": "react",
+			"ops": {
+				"error_reveal": {
+					"score": 39.299999952316284,
+					"median": 43.700000047683716,
+					"min": 30.399999856948853,
+					"mean": 41.01249995827675,
+					"p95": 47.799999952316284,
+					"sd": 5.992718829014685,
+					"rme": 12.217822466457596,
+					"scoreRme": 22.748783007655216,
+					"warmupRatio": 1.083460560383033,
+					"samples": 8,
+					"p99": 47.799999952316284
+				},
+				"retry_recovery": {
+					"score": 32.64000000953674,
+					"median": 33.19999980926514,
+					"min": 32,
+					"mean": 32.912499994039536,
+					"p95": 33.39999985694885,
+					"sd": 0.508323528502725,
+					"rme": 1.2914140043460622,
+					"scoreRme": 1.713690074828321,
+					"warmupRatio": 1.0165441164735065,
+					"samples": 8,
+					"p99": 33.39999985694885
+				},
+				"cancel_recovery": {
+					"score": 31.440000009536742,
+					"median": 31.90000009536743,
+					"min": 29.600000143051147,
+					"mean": 31.587500005960464,
+					"p95": 32.09999990463257,
+					"sd": 0.8201697891555172,
+					"rme": 2.1710741910262255,
+					"scoreRme": 4.1282118251350886,
+					"warmupRatio": 1.0120865130812502,
+					"samples": 8,
+					"p99": 32.09999990463257
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 168.79999995231628,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 170,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 171.20000004768372,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 161.90000009536743,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 171.29999995231628,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 175.30000019073486,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 172.70000004768372,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 161.79999995231628,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					}
+				]
+			}
+		},
+		{
+			"name": "preact",
+			"ops": {
+				"error_reveal": {
+					"score": 35.119999980926515,
+					"median": 36.39999985694885,
+					"min": 29.09999990463257,
+					"mean": 35.875,
+					"p95": 39.700000047683716,
+					"sd": 3.1648742261056158,
+					"rme": 7.376505956202753,
+					"scoreRme": 13.789371665969535,
+					"warmupRatio": 1.0364464698111802,
+					"samples": 8,
+					"p99": 39.700000047683716
+				},
+				"retry_recovery": {
+					"score": 32.94000005722046,
+					"median": 32.89999985694885,
+					"min": 32.60000014305115,
+					"mean": 32.92500001192093,
+					"p95": 33.30000019073486,
+					"sd": 0.27124052255938935,
+					"rme": 0.6888345788746427,
+					"scoreRme": 1.3217928076547358,
+					"warmupRatio": 0.9993928345909082,
+					"samples": 8,
+					"p99": 33.30000019073486
+				},
+				"cancel_recovery": {
+					"score": 32.079999923706055,
+					"median": 31.90000009536743,
+					"min": 31.699999809265137,
+					"mean": 31.987499922513962,
+					"p95": 32.5,
+					"sd": 0.2356602113902539,
+					"rme": 0.6160161762452138,
+					"scoreRme": 0.9635983166234865,
+					"warmupRatio": 0.9968827930100429,
+					"samples": 8,
+					"p99": 32.5
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 154.39999985694885,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 153.40000009536743,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 154.29999995231628,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 154.29999995231628,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 151.10000014305115,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 156.20000004768372,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 145.59999990463257,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 153.79999995231628,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					}
+				]
+			}
+		},
+		{
+			"name": "solid",
+			"ops": {
+				"error_reveal": {
+					"score": 38.600000047683714,
+					"median": 42.799999952316284,
+					"min": 30.600000143051147,
+					"mean": 39.65000003576279,
+					"p95": 44.5,
+					"sd": 5.0480547440293675,
+					"rme": 10.645523317238203,
+					"scoreRme": 18.466036578953656,
+					"warmupRatio": 0.9694300513571038,
+					"samples": 8,
+					"p99": 44.5
+				},
+				"retry_recovery": {
+					"score": 36.5199999332428,
+					"median": 33.09999990463257,
+					"min": 32.299999952316284,
+					"mean": 35.13749995827675,
+					"p95": 42,
+					"sd": 4.244302931454455,
+					"rme": 10.100006819151881,
+					"scoreRme": 17.01302557149617,
+					"warmupRatio": 0.948521358849224,
+					"samples": 8,
+					"p99": 42
+				},
+				"cancel_recovery": {
+					"score": 31.459999990463256,
+					"median": 32.09999990463257,
+					"min": 30.299999952316284,
+					"mean": 31.650000005960464,
+					"p95": 32.299999952316284,
+					"sd": 0.789213007233271,
+					"rme": 2.085002939092529,
+					"scoreRme": 3.8421995373402638,
+					"warmupRatio": 1.0076287367226069,
+					"samples": 8,
+					"p99": 32.299999952316284
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 160.5,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 153.5,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 146.39999985694885,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 148.59999990463257,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 165,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 170.59999990463257,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 160.29999995231628,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 160.39999985694885,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					}
+				]
+			}
+		},
+		{
+			"name": "svelte",
+			"ops": {
+				"error_reveal": {
+					"score": 40.5,
+					"median": 40.799999952316284,
+					"min": 35.200000047683716,
+					"mean": 40.775000005960464,
+					"p95": 46,
+					"sd": 3.387687775078369,
+					"rme": 6.946972164503949,
+					"scoreRme": 11.732707588239734,
+					"warmupRatio": 1.0118518523228022,
+					"samples": 8,
+					"p99": 46
+				},
+				"retry_recovery": {
+					"score": 33.04000005722046,
+					"median": 33.200000047683716,
+					"min": 32.200000047683716,
+					"mean": 33.000000059604645,
+					"p95": 33.40000009536743,
+					"sd": 0.4407785289245961,
+					"rme": 1.1168443256971332,
+					"scoreRme": 1.3443098449055102,
+					"warmupRatio": 0.9951573852849226,
+					"samples": 8,
+					"p99": 33.40000009536743
+				},
+				"cancel_recovery": {
+					"score": 32.19999995231628,
+					"median": 32.19999980926514,
+					"min": 30.300000190734863,
+					"mean": 31.862499982118607,
+					"p95": 32.200000047683716,
+					"sd": 0.6588680024061353,
+					"rme": 1.729038724619499,
+					"scoreRme": 5.034766238695075e-7,
+					"warmupRatio": 0.9832298148244506,
+					"samples": 8,
+					"p99": 32.200000047683716
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 148,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 154.40000009536743,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 154,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 156.79999995231628,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 146.69999980926514,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 153.90000009536743,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 154.39999985694885,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 153.59999990463257,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					}
+				]
+			}
+		},
+		{
+			"name": "vue-vapor",
+			"ops": {
+				"error_reveal": {
+					"score": 33.24000000953674,
+					"median": 27.799999952316284,
+					"min": 25.90000009536743,
+					"mean": 31.80000001192093,
+					"p95": 45.59999990463257,
+					"sd": 7.631139182753086,
+					"rme": 20.065426997315726,
+					"scoreRme": 35.15387035155369,
+					"warmupRatio": 0.9608904933926888,
+					"samples": 8,
+					"p99": 45.59999990463257
+				},
+				"retry_recovery": {
+					"score": 33.2,
+					"median": 33.200000047683716,
+					"min": 31.799999952316284,
+					"mean": 33.22500002384186,
+					"p95": 34.90000009536743,
+					"sd": 0.8413425002948557,
+					"rme": 2.1173565144586193,
+					"scoreRme": 0.5912435013778691,
+					"warmupRatio": 1.0006024119365644,
+					"samples": 8,
+					"p99": 34.90000009536743
+				},
+				"cancel_recovery": {
+					"score": 31.840000057220458,
+					"median": 32.200000047683716,
+					"min": 30.299999952316284,
+					"mean": 33.33750006556511,
+					"p95": 45.10000014305115,
+					"sd": 4.812168394263878,
+					"rme": 12.06962948878828,
+					"scoreRme": 2.5951548686259445,
+					"warmupRatio": 0.9874371859522252,
+					"samples": 8,
+					"p99": 45.10000014305115
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 146.09999990463257,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 146.40000009536743,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 154.59999990463257,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 163.40000009536743,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 145.60000014305115,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 163.09999990463257,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 145.5,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					},
+					{
+						"completedAt": 162.80000019073486,
+						"cancelled": 1,
+						"requests": 4,
+						"rejections": 1,
+						"resolutions": 2,
+						"staleCompletions": 0,
+						"status": "resolved",
+						"value": "recovered"
+					}
+				]
+			}
+		}
+	],
+	"harnessExit": 0
+}

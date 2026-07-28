@@ -1,0 +1,913 @@
+{
+	"suite": "todomvc",
+	"iterations": 8,
+	"targets": [
+		{
+			"name": "janux",
+			"ops": {
+				"add100": {
+					"score": 33.119999980926515,
+					"median": 33.80000019073486,
+					"min": 30,
+					"mean": 32.63749998807907,
+					"p95": 34.700000047683716,
+					"sd": 1.9382889950039042,
+					"rme": 4.965783680420149,
+					"scoreRme": 7.138679966789264,
+					"warmupRatio": 0.9673913051928824,
+					"samples": 8
+				},
+				"toggleAllOn": {
+					"score": 1.2399999618530273,
+					"median": 1.2000000476837158,
+					"min": 1.1000001430511475,
+					"mean": 1.2249999940395355,
+					"p95": 1.2999999523162842,
+					"sd": 0.07071062272570307,
+					"rme": 4.826526854747601,
+					"scoreRme": 5.4836956890054385,
+					"warmupRatio": 0.983871021082202,
+					"samples": 8
+				},
+				"toggleAllOff": {
+					"score": 1.0800000190734864,
+					"median": 1.1000001430511475,
+					"min": 1,
+					"mean": 1.0875000357627869,
+					"p95": 1.2000000476837158,
+					"sd": 0.06408701304740985,
+					"rme": 4.9275030552191215,
+					"scoreRme": 9.61744740617345,
+					"warmupRatio": 1,
+					"samples": 8
+				},
+				"complete25": {
+					"score": 11.760000038146973,
+					"median": 11.600000143051147,
+					"min": 11.399999856948853,
+					"mean": 11.675000011920929,
+					"p95": 12.200000047683716,
+					"sd": 0.2604940818886481,
+					"rme": 1.8656369000999447,
+					"scoreRme": 3.041348709699452,
+					"warmupRatio": 0.993197277311736,
+					"samples": 8
+				},
+				"filterCycle": {
+					"score": 2.1199999809265138,
+					"median": 2.1000001430511475,
+					"min": 2,
+					"mean": 2.125,
+					"p95": 2.200000047683716,
+					"sd": 0.07071070701940009,
+					"rme": 2.782354078374924,
+					"scoreRme": 2.618870133450758,
+					"warmupRatio": 1.0094339758444189,
+					"samples": 8
+				},
+				"edit10": {
+					"score": 9.359999990463256,
+					"median": 9.299999952316284,
+					"min": 8.5,
+					"mean": 9.224999994039536,
+					"p95": 9.599999904632568,
+					"sd": 0.34537762876591255,
+					"rme": 3.1305019633844626,
+					"scoreRme": 3.053490076370379,
+					"warmupRatio": 0.9764957285095441,
+					"samples": 8
+				},
+				"clearCompleted": {
+					"score": 0.7200000762939454,
+					"median": 0.7000000476837158,
+					"min": 0.6000001430511475,
+					"mean": 0.7250000536441803,
+					"p95": 0.8000001907348633,
+					"sd": 0.0707106468096083,
+					"rme": 8.155168199455128,
+					"scoreRme": 14.426162465100129,
+					"warmupRatio": 0.9722222516566116,
+					"samples": 8
+				},
+				"destroy25": {
+					"score": 13.640000009536744,
+					"median": 13.700000047683716,
+					"min": 12.600000143051147,
+					"mean": 13.450000047683716,
+					"p95": 14,
+					"sd": 0.5424809886120181,
+					"rme": 3.3724722787860393,
+					"scoreRme": 2.991106546297566,
+					"warmupRatio": 0.969208216059447,
+					"samples": 8
+				},
+				"nodes_100": {
+					"median": 626,
+					"min": 626,
+					"samples": 1
+				},
+				"elements_100": {
+					"median": 518,
+					"min": 518,
+					"samples": 1
+				},
+				"text_100": {
+					"median": 108,
+					"min": 108,
+					"samples": 1
+				},
+				"comments_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				},
+				"empty_text_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				},
+				"whitespace_text_100": {
+					"median": 2,
+					"min": 2,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"dom": {
+					"root": "#main",
+					"total": 626,
+					"elements": 518,
+					"text": 108,
+					"comments": 0,
+					"emptyText": 0,
+					"whitespaceText": 2,
+					"hydrationMarkersPhysical": 0,
+					"hydrationMarkersLogical": 0,
+					"hydrationMarkersCounted": 0,
+					"hydrationMarkerMaxMultiplicity": 0,
+					"leadingHydrationStartsPhysical": 0,
+					"leadingHydrationStartsLogical": 0,
+					"commentsByData": {},
+					"commentParents": {}
+				}
+			}
+		},
+		{
+			"name": "react",
+			"ops": {
+				"add100": {
+					"score": 11.240000009536743,
+					"median": 12.900000095367432,
+					"min": 9.899999856948853,
+					"mean": 12.362500011920929,
+					"p95": 15.5,
+					"sd": 1.9153049194471916,
+					"rme": 12.954413954805426,
+					"scoreRme": 13.852639570615926,
+					"warmupRatio": 1.1779359429095257,
+					"samples": 8
+				},
+				"toggleAllOn": {
+					"score": 0.4,
+					"median": 0.40000009536743164,
+					"min": 0.2999999523162842,
+					"mean": 0.40000003576278687,
+					"p95": 0.5,
+					"sd": 0.05345226112656995,
+					"rme": 11.173576398343393,
+					"scoreRme": 21.946212193973857,
+					"warmupRatio": 1.0000001192092896,
+					"samples": 8
+				},
+				"toggleAllOff": {
+					"score": 0.39999995231628416,
+					"median": 0.39999985694885254,
+					"min": 0.2999999523162842,
+					"mean": 0.3999999463558197,
+					"p95": 0.5,
+					"sd": 0.05345226112659843,
+					"rme": 11.173578895838626,
+					"scoreRme": 21.946214810166534,
+					"warmupRatio": 0.9499999225139526,
+					"samples": 8
+				},
+				"complete25": {
+					"score": 6.159999990463257,
+					"median": 6.299999952316284,
+					"min": 5.900000095367432,
+					"mean": 6.262499988079071,
+					"p95": 6.599999904632568,
+					"sd": 0.21339097726182546,
+					"rme": 2.8491444342519014,
+					"scoreRme": 3.6610925844671285,
+					"warmupRatio": 1.016233766258899,
+					"samples": 8
+				},
+				"filterCycle": {
+					"score": 1.2200000286102295,
+					"median": 1.2000000476837158,
+					"min": 1.2000000476837158,
+					"mean": 1.2750000357627869,
+					"p95": 1.6000001430511475,
+					"sd": 0.1388730419443362,
+					"rme": 9.107389344541705,
+					"scoreRme": 4.550815225410104,
+					"warmupRatio": 1.0819672111925405,
+					"samples": 8
+				},
+				"edit10": {
+					"score": 4.779999923706055,
+					"median": 5.099999904632568,
+					"min": 4.3999998569488525,
+					"mean": 5.012499928474426,
+					"p95": 5.699999809265137,
+					"sd": 0.4642582768937212,
+					"rme": 7.744465106010471,
+					"scoreRme": 10.125779297608656,
+					"warmupRatio": 1.0543933043123717,
+					"samples": 8
+				},
+				"clearCompleted": {
+					"score": 0.4400000095367432,
+					"median": 0.40000009536743164,
+					"min": 0.39999985694885254,
+					"mean": 0.42500004172325134,
+					"p95": 0.5,
+					"sd": 0.04629097923655085,
+					"rme": 9.107381870121722,
+					"scoreRme": 15.454050676816003,
+					"warmupRatio": 0.9545456072515659,
+					"samples": 8
+				},
+				"destroy25": {
+					"score": 5.419999980926514,
+					"median": 5.599999904632568,
+					"min": 5.200000047683716,
+					"mean": 5.4749999940395355,
+					"p95": 5.799999952316284,
+					"sd": 0.24928468207069415,
+					"rme": 3.8071292535662096,
+					"scoreRme": 4.965741375185045,
+					"warmupRatio": 1.0332103357392846,
+					"samples": 8
+				},
+				"nodes_100": {
+					"median": 623,
+					"min": 623,
+					"samples": 1
+				},
+				"elements_100": {
+					"median": 517,
+					"min": 517,
+					"samples": 1
+				},
+				"text_100": {
+					"median": 106,
+					"min": 106,
+					"samples": 1
+				},
+				"comments_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				},
+				"empty_text_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				},
+				"whitespace_text_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"dom": {
+					"root": "#main",
+					"total": 623,
+					"elements": 517,
+					"text": 106,
+					"comments": 0,
+					"emptyText": 0,
+					"whitespaceText": 0,
+					"hydrationMarkersPhysical": 0,
+					"hydrationMarkersLogical": 0,
+					"hydrationMarkersCounted": 0,
+					"hydrationMarkerMaxMultiplicity": 0,
+					"leadingHydrationStartsPhysical": 0,
+					"leadingHydrationStartsLogical": 0,
+					"commentsByData": {},
+					"commentParents": {}
+				}
+			}
+		},
+		{
+			"name": "solid",
+			"ops": {
+				"add100": {
+					"score": 1.8800000190734862,
+					"median": 1.9000000953674316,
+					"min": 1.4000000953674316,
+					"mean": 1.8000000417232513,
+					"p95": 2,
+					"sd": 0.19999997956412796,
+					"rme": 9.290596265930457,
+					"scoreRme": 8.609958305761712,
+					"warmupRatio": 0.9361702235590121,
+					"samples": 8
+				},
+				"toggleAllOn": {
+					"score": 0.659999942779541,
+					"median": 0.7000000476837158,
+					"min": 0.5999999046325684,
+					"mean": 0.699999988079071,
+					"p95": 0.9000000953674316,
+					"sd": 0.10690452225304495,
+					"rme": 12.769802957273072,
+					"scoreRme": 10.30270975558872,
+					"warmupRatio": 1.1212122328682148,
+					"samples": 8
+				},
+				"toggleAllOff": {
+					"score": 0.6600000381469726,
+					"median": 0.7000000476837158,
+					"min": 0.5,
+					"mean": 0.6500000059604645,
+					"p95": 0.8000001907348633,
+					"sd": 0.11952290367817425,
+					"rme": 15.375311607135119,
+					"scoreRme": 28.52689611186191,
+					"warmupRatio": 0.9393939284472652,
+					"samples": 8
+				},
+				"complete25": {
+					"score": 0.7600000381469727,
+					"median": 0.7999999523162842,
+					"min": 0.5999999046325684,
+					"mean": 0.7875000238418579,
+					"p95": 1,
+					"sd": 0.14577380438060525,
+					"rme": 15.478007901977714,
+					"scoreRme": 18.624832955360834,
+					"warmupRatio": 0.9473684111460429,
+					"samples": 8
+				},
+				"filterCycle": {
+					"score": 0.8400000095367431,
+					"median": 0.9000000953674316,
+					"min": 0.5999999046325684,
+					"mean": 0.8499999940395355,
+					"p95": 1.0999999046325684,
+					"sd": 0.16035675151947817,
+					"rme": 15.774459184499518,
+					"scoreRme": 16.85104617598608,
+					"warmupRatio": 0.9999999432336724,
+					"samples": 8
+				},
+				"edit10": {
+					"score": 1.3,
+					"median": 1.2999999523162842,
+					"min": 0.8999998569488525,
+					"mean": 1.2874999940395355,
+					"p95": 1.5,
+					"sd": 0.19594099448881597,
+					"rme": 12.72518848571128,
+					"scoreRme": 24.347136420772213,
+					"warmupRatio": 1.0307692381051872,
+					"samples": 8
+				},
+				"clearCompleted": {
+					"score": 0.2200000286102295,
+					"median": 0.20000004768371582,
+					"min": 0.20000004768371582,
+					"mean": 0.23750001192092896,
+					"p95": 0.2999999523162842,
+					"sd": 0.051754867593341525,
+					"rme": 18.221063333629388,
+					"scoreRme": 25.23633628719465,
+					"warmupRatio": 1,
+					"samples": 8
+				},
+				"destroy25": {
+					"score": 0.5199999809265137,
+					"median": 0.6999998092651367,
+					"min": 0.3000001907348633,
+					"mean": 0.5999999642372131,
+					"p95": 0.9000000953674316,
+					"sd": 0.1927247975900713,
+					"rme": 26.857929240376503,
+					"scoreRme": 42.707677009766364,
+					"warmupRatio": 0.9615384051080266,
+					"samples": 8
+				},
+				"nodes_100": {
+					"median": 724,
+					"min": 724,
+					"samples": 1
+				},
+				"elements_100": {
+					"median": 517,
+					"min": 517,
+					"samples": 1
+				},
+				"text_100": {
+					"median": 207,
+					"min": 207,
+					"samples": 1
+				},
+				"comments_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				},
+				"empty_text_100": {
+					"median": 101,
+					"min": 101,
+					"samples": 1
+				},
+				"whitespace_text_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"dom": {
+					"root": "#main",
+					"total": 724,
+					"elements": 517,
+					"text": 207,
+					"comments": 0,
+					"emptyText": 101,
+					"whitespaceText": 0,
+					"hydrationMarkersPhysical": 0,
+					"hydrationMarkersLogical": 0,
+					"hydrationMarkersCounted": 0,
+					"hydrationMarkerMaxMultiplicity": 0,
+					"leadingHydrationStartsPhysical": 0,
+					"leadingHydrationStartsLogical": 0,
+					"commentsByData": {},
+					"commentParents": {}
+				}
+			}
+		},
+		{
+			"name": "vue-vapor",
+			"ops": {
+				"add100": {
+					"score": 1.559999942779541,
+					"median": 1.5999999046325684,
+					"min": 1.2000000476837158,
+					"mean": 1.5624999403953552,
+					"p95": 1.7999999523162842,
+					"sd": 0.1846811270127385,
+					"rme": 9.882996880639682,
+					"scoreRme": 7.117942190828404,
+					"warmupRatio": 0.9871794989358278,
+					"samples": 8
+				},
+				"toggleAllOn": {
+					"score": 0.15999999046325683,
+					"median": 0.20000004768371582,
+					"min": 0.09999990463256836,
+					"mean": 0.17499998211860657,
+					"p95": 0.20000004768371582,
+					"sd": 0.04629097923663856,
+					"rme": 22.1179318302748,
+					"scoreRme": 42.49862592809798,
+					"warmupRatio": 1.1249998882412844,
+					"samples": 8
+				},
+				"toggleAllOff": {
+					"score": 0.1799999237060547,
+					"median": 0.20000004768371582,
+					"min": 0.09999990463256836,
+					"mean": 0.22499993443489075,
+					"p95": 0.39999985694885254,
+					"sd": 0.10350982567516462,
+					"rme": 38.46673602756534,
+					"scoreRme": 57.70470991458646,
+					"warmupRatio": 1,
+					"samples": 8
+				},
+				"complete25": {
+					"score": 0.5599999904632569,
+					"median": 0.5999999046325684,
+					"min": 0.39999985694885254,
+					"mean": 0.5499999821186066,
+					"p95": 0.7000000476837158,
+					"sd": 0.14142140199676964,
+					"rme": 21.500007655717457,
+					"scoreRme": 33.620985476490844,
+					"warmupRatio": 0.9285714103251084,
+					"samples": 8
+				},
+				"filterCycle": {
+					"score": 0.719999885559082,
+					"median": 0.7999999523162842,
+					"min": 0.5999999046325684,
+					"mean": 0.8249999284744263,
+					"p95": 1.4000000953674316,
+					"sd": 0.26049408842618715,
+					"rme": 26.401591837496696,
+					"scoreRme": 22.481561599811787,
+					"warmupRatio": 1.1666667991214539,
+					"samples": 8
+				},
+				"edit10": {
+					"score": 1.340000057220459,
+					"median": 1.3000001907348633,
+					"min": 0.8999998569488525,
+					"mean": 1.4000000357627869,
+					"p95": 2.5,
+					"sd": 0.5928141557009917,
+					"rme": 35.405984128385725,
+					"scoreRme": 43.750412979790745,
+					"warmupRatio": 0.9552238184562876,
+					"samples": 8
+				},
+				"clearCompleted": {
+					"score": 0.24000000953674316,
+					"median": 0.2999999523162842,
+					"min": 0.19999980926513672,
+					"mean": 0.2749999761581421,
+					"p95": 0.39999985694885254,
+					"sd": 0.07071065885162243,
+					"rme": 21.499996005744297,
+					"scoreRme": 28.33245950401104,
+					"warmupRatio": 1.0833332505491078,
+					"samples": 8
+				},
+				"destroy25": {
+					"score": 0.7399999618530273,
+					"median": 0.7999999523162842,
+					"min": 0.6000001430511475,
+					"mean": 0.7874999940395355,
+					"p95": 1,
+					"sd": 0.1356202424441574,
+					"rme": 14.39992097742127,
+					"scoreRme": 19.128199994956578,
+					"warmupRatio": 1.1081082038935175,
+					"samples": 8
+				},
+				"nodes_100": {
+					"median": 726,
+					"min": 726,
+					"samples": 1
+				},
+				"elements_100": {
+					"median": 517,
+					"min": 517,
+					"samples": 1
+				},
+				"text_100": {
+					"median": 209,
+					"min": 209,
+					"samples": 1
+				},
+				"comments_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				},
+				"empty_text_100": {
+					"median": 103,
+					"min": 103,
+					"samples": 1
+				},
+				"whitespace_text_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"dom": {
+					"root": "#app",
+					"total": 726,
+					"elements": 517,
+					"text": 209,
+					"comments": 0,
+					"emptyText": 103,
+					"whitespaceText": 0,
+					"hydrationMarkersPhysical": 0,
+					"hydrationMarkersLogical": 0,
+					"hydrationMarkersCounted": 0,
+					"hydrationMarkerMaxMultiplicity": 0,
+					"leadingHydrationStartsPhysical": 0,
+					"leadingHydrationStartsLogical": 0,
+					"commentsByData": {},
+					"commentParents": {}
+				}
+			}
+		},
+		{
+			"name": "preact",
+			"ops": {
+				"add100": {
+					"score": 17.040000009536744,
+					"median": 17,
+					"min": 14,
+					"mean": 16.75,
+					"p95": 18.09999990463257,
+					"sd": 1.299450428569672,
+					"rme": 6.486808197948374,
+					"scoreRme": 5.167123925160564,
+					"warmupRatio": 0.9577464772178833,
+					"samples": 8
+				},
+				"toggleAllOn": {
+					"score": 0.5199999809265137,
+					"median": 0.5,
+					"min": 0.40000009536743164,
+					"mean": 0.5249999761581421,
+					"p95": 0.5999999046325684,
+					"sd": 0.07071061068369713,
+					"rme": 11.261894533152558,
+					"scoreRme": 10.676913286242605,
+					"warmupRatio": 1,
+					"samples": 8
+				},
+				"toggleAllOff": {
+					"score": 0.48000006675720214,
+					"median": 0.5,
+					"min": 0.3000001907348633,
+					"mean": 0.4750000536441803,
+					"p95": 0.6000001430511475,
+					"sd": 0.08864048953941735,
+					"rme": 15.60359389938586,
+					"scoreRme": 28.332417285331545,
+					"warmupRatio": 1.0416666211353471,
+					"samples": 8
+				},
+				"complete25": {
+					"score": 6.919999980926514,
+					"median": 6.900000095367432,
+					"min": 6.799999952316284,
+					"mean": 6.9124999940395355,
+					"p95": 7.099999904632568,
+					"sd": 0.11259912710376781,
+					"rme": 1.3620279865071554,
+					"scoreRme": 2.3391206666609587,
+					"warmupRatio": 1,
+					"samples": 8
+				},
+				"filterCycle": {
+					"score": 1.300000047683716,
+					"median": 1.4000000953674316,
+					"min": 1.2000000476837158,
+					"mean": 1.3375000357627869,
+					"p95": 1.5,
+					"sd": 0.10606602841715874,
+					"rme": 6.630841646826625,
+					"scoreRme": 9.549732242766884,
+					"warmupRatio": 1.061538437273376,
+					"samples": 8
+				},
+				"edit10": {
+					"score": 7.819999933242798,
+					"median": 7.800000190734863,
+					"min": 7.3999998569488525,
+					"mean": 7.824999958276749,
+					"p95": 8.200000047683716,
+					"sd": 0.23145508012634236,
+					"rme": 2.473252889157977,
+					"scoreRme": 4.546055436302934,
+					"warmupRatio": 1.0025575484374634,
+					"samples": 8
+				},
+				"clearCompleted": {
+					"score": 0.38000006675720216,
+					"median": 0.40000009536743164,
+					"min": 0.3000001907348633,
+					"mean": 0.38750001788139343,
+					"p95": 0.40000009536743164,
+					"sd": 0.03535526921617529,
+					"rme": 7.629016835151134,
+					"scoreRme": 14.610501106865614,
+					"warmupRatio": 0.9999998745165594,
+					"samples": 8
+				},
+				"destroy25": {
+					"score": 6.0800000667572025,
+					"median": 6.1000001430511475,
+					"min": 5.900000095367432,
+					"mean": 6.10000005364418,
+					"p95": 6.400000095367432,
+					"sd": 0.16903085094571954,
+					"rme": 2.3169800296865684,
+					"scoreRme": 2.662289737060349,
+					"warmupRatio": 1.0065789410220125,
+					"samples": 8
+				},
+				"nodes_100": {
+					"median": 623,
+					"min": 623,
+					"samples": 1
+				},
+				"elements_100": {
+					"median": 517,
+					"min": 517,
+					"samples": 1
+				},
+				"text_100": {
+					"median": 106,
+					"min": 106,
+					"samples": 1
+				},
+				"comments_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				},
+				"empty_text_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				},
+				"whitespace_text_100": {
+					"median": 0,
+					"min": 0,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"dom": {
+					"root": "#main",
+					"total": 623,
+					"elements": 517,
+					"text": 106,
+					"comments": 0,
+					"emptyText": 0,
+					"whitespaceText": 0,
+					"hydrationMarkersPhysical": 0,
+					"hydrationMarkersLogical": 0,
+					"hydrationMarkersCounted": 0,
+					"hydrationMarkerMaxMultiplicity": 0,
+					"leadingHydrationStartsPhysical": 0,
+					"leadingHydrationStartsLogical": 0,
+					"commentsByData": {},
+					"commentParents": {}
+				}
+			}
+		},
+		{
+			"name": "svelte",
+			"ops": {
+				"add100": {
+					"score": 3.4,
+					"median": 3.1000001430511475,
+					"min": 2.5,
+					"mean": 3.1875000298023224,
+					"p95": 4,
+					"sd": 0.5303300610032031,
+					"rme": 13.911763922975906,
+					"scoreRme": 19.832000799001825,
+					"warmupRatio": 0.9411764846128576,
+					"samples": 8
+				},
+				"toggleAllOn": {
+					"score": 0.340000057220459,
+					"median": 0.3000001907348633,
+					"min": 0.2999999523162842,
+					"mean": 0.33750006556510925,
+					"p95": 0.40000009536743164,
+					"sd": 0.05175487581971047,
+					"rme": 12.822229944026706,
+					"scoreRme": 19.99937266114556,
+					"warmupRatio": 0.9411766768326462,
+					"samples": 8
+				},
+				"toggleAllOff": {
+					"score": 0.3600000381469727,
+					"median": 0.40000009536743164,
+					"min": 0.2999999523162842,
+					"mean": 0.3750000298023224,
+					"p95": 0.40000009536743164,
+					"sd": 0.04629097923663856,
+					"rme": 10.321699645834743,
+					"scoreRme": 18.888275062963007,
+					"warmupRatio": 1.1111111258283057,
+					"samples": 8
+				},
+				"complete25": {
+					"score": 1.1000000476837157,
+					"median": 1.1000001430511475,
+					"min": 1,
+					"mean": 1.100000023841858,
+					"p95": 1.2000000476837158,
+					"sd": 0.053452261126607926,
+					"rme": 4.063118965514962,
+					"scoreRme": 7.980440451865898,
+					"warmupRatio": 0.9818181565970441,
+					"samples": 8
+				},
+				"filterCycle": {
+					"score": 0.840000057220459,
+					"median": 1,
+					"min": 0.6000001430511475,
+					"mean": 0.9125000536441803,
+					"p95": 1.1000001430511475,
+					"sd": 0.1552647371416759,
+					"rme": 14.227417806387823,
+					"scoreRme": 22.41397911536139,
+					"warmupRatio": 1.1666666666666667,
+					"samples": 8
+				},
+				"edit10": {
+					"score": 2.640000057220459,
+					"median": 2.700000047683716,
+					"min": 2.3999998569488525,
+					"mean": 2.600000023841858,
+					"p95": 2.799999952316284,
+					"sd": 0.17728103671575537,
+					"rme": 5.7013156007321015,
+					"scoreRme": 7.131720219572471,
+					"warmupRatio": 0.9772727133157171,
+					"samples": 8
+				},
+				"clearCompleted": {
+					"score": 0.21999993324279785,
+					"median": 0.2999999523162842,
+					"min": 0.19999980926513672,
+					"mean": 0.24999994039535522,
+					"p95": 0.2999999523162842,
+					"sd": 0.05345226112656995,
+					"rme": 17.87772809812488,
+					"scoreRme": 25.23637731104371,
+					"warmupRatio": 1.272727528879543,
+					"samples": 8
+				},
+				"destroy25": {
+					"score": 0.8600000381469727,
+					"median": 0.9000000953674316,
+					"min": 0.5999999046325684,
+					"mean": 0.9000000357627869,
+					"p95": 1.2000000476837158,
+					"sd": 0.20000003065384706,
+					"rme": 18.581196970754927,
+					"scoreRme": 29.9343861400102,
+					"warmupRatio": 1,
+					"samples": 8
+				},
+				"nodes_100": {
+					"median": 1035,
+					"min": 1035,
+					"samples": 1
+				},
+				"elements_100": {
+					"median": 517,
+					"min": 517,
+					"samples": 1
+				},
+				"text_100": {
+					"median": 416,
+					"min": 416,
+					"samples": 1
+				},
+				"comments_100": {
+					"median": 102,
+					"min": 102,
+					"samples": 1
+				},
+				"empty_text_100": {
+					"median": 2,
+					"min": 2,
+					"samples": 1
+				},
+				"whitespace_text_100": {
+					"median": 308,
+					"min": 308,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"dom": {
+					"root": "#main",
+					"total": 1035,
+					"elements": 517,
+					"text": 416,
+					"comments": 102,
+					"emptyText": 2,
+					"whitespaceText": 308,
+					"hydrationMarkersPhysical": 0,
+					"hydrationMarkersLogical": 0,
+					"hydrationMarkersCounted": 0,
+					"hydrationMarkerMaxMultiplicity": 0,
+					"leadingHydrationStartsPhysical": 0,
+					"leadingHydrationStartsLogical": 0,
+					"commentsByData": {
+						"": 102
+					},
+					"commentParents": {
+						"li": 100,
+						"footer.footer": 1,
+						"section.todoapp": 1
+					}
+				}
+			}
+		}
+	],
+	"harnessExit": 0
+}
