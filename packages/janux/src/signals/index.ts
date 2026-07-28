@@ -151,15 +151,43 @@ export function effect(fn: () => Cleanup | void): () => void {
 
 export function computed<T>(fn: () => T): ReadonlySig<T> {
   const out = signal<T>(undefined as T);
-  const dispose = effect(() => {
-    out.value = fn();
-  });
+  let disposed = false;
+  const scope = owner;
+  const runner: Runner = { deps: new Set(), run: () => {} };
+
+  runner.run = function runComputed() {
+    if (disposed) return;
+    out.value = runWithOwner(scope, () => runTracked(runner, fn as () => Cleanup)) as T;
+  };
+  runner.run();
+  const dispose = function dispose() {
+    if (disposed) return;
+    disposed = true;
+    detach(runner);
+  };
+
+  owner?.cleanups.push(dispose);
+  // A batch queues this runner like any other; a read mid-batch must not see
+  // the pre-batch value, so the pending recompute runs on demand (pull) and
+  // leaves the queue with nothing to redo.
+  const fresh = () => {
+    if (batching?.has(runner)) {
+      batching.delete(runner);
+      runner.run();
+    }
+  };
 
   return {
     get value(): T {
+      fresh();
+
       return out.value;
     },
-    peek: () => out.peek(),
+    peek: () => {
+      fresh();
+
+      return out.peek();
+    },
     dispose,
   };
 }

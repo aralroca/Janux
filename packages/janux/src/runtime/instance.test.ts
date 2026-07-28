@@ -38,6 +38,63 @@ describe('instance: state, derived, intents', () => {
     expect(cart.snapshot()).toEqual({ items: [], coupon: null });
   });
 
+  it('batches an intent run: many state writes, one reactive flush', async () => {
+    const { effect: sigEffect } = await import('../signals');
+    const def = component({
+      name: 'batchy',
+      state: schema({ a: int().default(0), b: int().default(0), c: int().default(0) }),
+      intents: {
+        touchAll: intent({
+          run: ({ state }) => {
+            state.a += 1;
+            state.b += 1;
+            state.c += 1;
+          },
+        }),
+      },
+      view: noopView,
+    });
+    const instance = createInstance(def);
+    let runs = 0;
+
+    instance.runInScope(() =>
+      sigEffect(() => {
+        void instance.state.a;
+        void instance.state.b;
+        void instance.state.c;
+        runs += 1;
+      }),
+    );
+    expect(runs).toBe(1);
+    await instance.intents.touchAll!();
+    // The render loop is this same effect shape: three writes must cost ONE re-run.
+    expect(runs).toBe(2);
+  });
+
+  it('derived reads inside a run body still see the mutation (no stale batch reads)', async () => {
+    const seen: number[] = [];
+    const def = component({
+      name: 'fresh',
+      state: schema({ items: list({ id: str() }) }),
+      derived: { count: (s: any) => s.items.length },
+      intents: {
+        addTwo: intent({
+          run: ({ state, derived }) => {
+            state.items.push({ id: 'a' });
+            seen.push(derived.count as number);
+            state.items.push({ id: 'b' });
+            seen.push(derived.count as number);
+          },
+        }),
+      },
+      view: noopView,
+    });
+    const instance = createInstance(def);
+
+    await instance.intents.addTwo!();
+    expect(seen).toEqual([1, 2]);
+  });
+
   it('runs intents, mutates state and updates derived', async () => {
     const cart = createInstance(cartDef(), { key: 'main' });
 
