@@ -1,11 +1,5 @@
+import { JXE_PREFIX, markerAttrFor } from '../render/html';
 import { mountIsland, type MountContext } from './mount';
-
-/**
- * Events that do not bubble: their document-level listener runs in the capture
- * phase, which visits every ancestor of the target even when `bubbles` is false.
- */
-const NON_BUBBLING = new Set(['mouseenter', 'mouseleave', 'pointerenter', 'pointerleave', 'load', 'error', 'scroll', 'toggle', 'invalid']);
-const JXE_PREFIX = 'data-jxe-';
 
 interface MarkerHit {
   marker: string;
@@ -90,7 +84,7 @@ function context(): EventContext {
 
 function listenClicks(): void {
   document.addEventListener('click', (event) => {
-    const found = markerTarget(event, 'data-jxa');
+    const found = markerTarget(event, markerAttrFor('click'));
 
     if (!found) return;
     event.preventDefault();
@@ -103,7 +97,7 @@ function listenClicks(): void {
 
 function listenForms(): void {
   document.addEventListener('submit', (event) => {
-    const found = markerTarget(event, 'data-jxform');
+    const found = markerTarget(event, markerAttrFor('submit'));
 
     if (!found) return;
     event.preventDefault();
@@ -139,7 +133,7 @@ function inputCommitGate(): (el: Element) => boolean {
 function listenInput(): void {
   const shouldCommit = inputCommitGate();
   const commitInput = (event: Event) => {
-    const found = markerTarget(event, 'data-jxe-input');
+    const found = markerTarget(event, `${JXE_PREFIX}input`);
     const { mount, track } = context();
 
     if (found && shouldCommit(found.el)) {
@@ -149,8 +143,8 @@ function listenInput(): void {
 
   document.addEventListener('input', (event) => {
     if (!(event as InputEvent).isComposing) commitInput(event);
-  });
-  document.addEventListener('compositionend', commitInput);
+  }, true);
+  document.addEventListener('compositionend', commitInput, true);
 }
 
 function listenRich(type: string): void {
@@ -162,7 +156,10 @@ function listenRich(type: string): void {
 
       if (found) track(invokeMarker(found.marker, found.root, mount, eventInput(event, found.el)));
     },
-    NON_BUBBLING.has(type),
+    // Capture phase: it visits every ancestor of the target even for events
+    // that do not bubble (mouseenter, scroll, media events, …), so ANY DOM
+    // event delegates with no curated bubbling list to keep in sync.
+    true,
   );
 }
 
@@ -182,12 +179,17 @@ export function ensureListener(type: string): void {
   listenRich(type);
 }
 
+/** `ensureListener`, keyed by the marker attribute a renderer just wrote (no-op for other attributes). */
+export function ensureListenerForAttr(name: string): void {
+  if (name.startsWith(JXE_PREFIX)) ensureListener(name.slice(JXE_PREFIX.length));
+}
+
 /** Discovers the event types the document's islands bind, so their listeners exist before first interaction. */
 export function scanMarkers(root: ParentNode): void {
   root.querySelectorAll('janux-island *').forEach((el) => {
-    [...el.attributes].forEach(({ name }) => {
-      if (name.startsWith(JXE_PREFIX)) ensureListener(name.slice(JXE_PREFIX.length));
-    });
+    for (let index = 0; index < el.attributes.length; index += 1) {
+      ensureListenerForAttr(el.attributes[index]!.name);
+    }
   });
 }
 

@@ -358,7 +358,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     }
 
     try {
-      if (origin === 'agent' && resolveApiGuard(tool, ctx, 'agent') === 'confirm') {
+      if (origin === 'agent' && resolveApiGuard(tool, ctx, origin) === 'confirm') {
         return json({ ok: true, result: proposeApi(tool, input, ctx) });
       }
 

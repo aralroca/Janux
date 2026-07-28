@@ -28,6 +28,10 @@ declare module 'janux' {
   export interface IntentRef {
     (input?: unknown): Promise<unknown>;
     $intent: { component: string; key?: string; name: string };
+    /** Input bound by .with(); the renderer serializes it to the control's data-input. */
+    $input?: Record<string, unknown>;
+    /** Binds extra input to this control: onClick={intents.add.with({ productId })}. */
+    with(input: Record<string, unknown>): IntentRef;
   }
 
   export interface RunBag {

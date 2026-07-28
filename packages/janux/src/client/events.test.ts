@@ -46,8 +46,9 @@ const search = component({
     }),
 });
 
-async function serveAndBoot(): Promise<JanuxClient> {
-  const { html, snapshots } = await renderToString(jsx(search as any, {}), {});
+/** SSR one component, inject its HTML + state snapshots, and resume — the shared scaffold for every suite here. */
+async function serveAndBoot(def: any = search): Promise<{ client: JanuxClient; html: string }> {
+  const { html, snapshots } = await renderToString(jsx(def, {}), {});
   const scripts = snapshots
     .map(
       (snap) =>
@@ -57,7 +58,7 @@ async function serveAndBoot(): Promise<JanuxClient> {
 
   document.body.innerHTML = html + scripts;
 
-  return boot({ defs: [search] });
+  return { client: boot({ defs: [def] }), html };
 }
 
 function fireInput(el: HTMLInputElement, value: string, isComposing = false): void {
@@ -117,7 +118,7 @@ describe('rich delegated events', () => {
   });
 
   it('onInput resolves to the intent with { value } from the control', async () => {
-    const client = await serveAndBoot();
+    const { client } = await serveAndBoot();
     const input = document.querySelector('.q') as HTMLInputElement;
 
     fireInput(input, 'didit');
@@ -126,7 +127,7 @@ describe('rich delegated events', () => {
   });
 
   it('suppresses input events mid-IME-composition and flushes on compositionend', async () => {
-    const client = await serveAndBoot();
+    const { client } = await serveAndBoot();
     const input = document.querySelector('.q') as HTMLInputElement;
 
     fireInput(input, 'にほ', true);
@@ -142,7 +143,7 @@ describe('rich delegated events', () => {
   });
 
   it('WebKit-order IME (compositionend then input) commits exactly once', async () => {
-    const client = await serveAndBoot();
+    const { client } = await serveAndBoot();
     const input = document.querySelector('.q') as HTMLInputElement;
 
     input.value = 'にほん';
@@ -154,7 +155,7 @@ describe('rich delegated events', () => {
   });
 
   it('onKeyDown delivers keyboard facts to the intent', async () => {
-    const client = await serveAndBoot();
+    const { client } = await serveAndBoot();
     const input = document.querySelector('.q') as HTMLInputElement;
 
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -163,7 +164,7 @@ describe('rich delegated events', () => {
   });
 
   it('controlled input: agent-driven state change writes the DOM value when unfocused', async () => {
-    const client = await serveAndBoot();
+    const { client } = await serveAndBoot();
     const input = document.querySelector('.q') as HTMLInputElement;
 
     fireInput(input, 'x');
@@ -199,20 +200,6 @@ const board = component({
     }),
 });
 
-async function bootBoard(): Promise<JanuxClient> {
-  const { html, snapshots } = await renderToString(jsx(board as any, {}), {});
-  const scripts = snapshots
-    .map(
-      (snap) =>
-        `<script type="application/janux+state" data-uri="${snap.uri}">${JSON.stringify({ state: snap.state, sources: snap.sources ?? {} })}</script>`,
-    )
-    .join('');
-
-  document.body.innerHTML = html + scripts;
-
-  return boot({ defs: [board] });
-}
-
 /** A product list, the canonical `.with()`: each row binds which product it adds. */
 const shop = component({
   name: 'shop',
@@ -235,25 +222,16 @@ describe('arbitrary delegated events', () => {
   });
 
   it('.with() input reaches the intent through the rendered data-input', async () => {
-    const { html, snapshots } = await renderToString(jsx(shop as any, {}), {});
-    const scripts = snapshots
-      .map(
-        (snap) =>
-          `<script type="application/janux+state" data-uri="${snap.uri}">${JSON.stringify({ state: snap.state, sources: snap.sources ?? {} })}</script>`,
-      )
-      .join('');
+    const { client, html } = await serveAndBoot(shop);
 
     expect(html).toContain('data-input="{&quot;id&quot;:&quot;sneakers&quot;}"');
-    document.body.innerHTML = html + scripts;
-    const client = boot({ defs: [shop] });
-
     document.querySelector('.p2')!.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
     await client.settled();
     expect(((await client.read('ui://shop#default')) as any).state.last).toBe('boots');
   });
 
   it('an event outside the v0 allowlist (dblclick) resolves through its marker', async () => {
-    const client = await bootBoard();
+    const { client } = await serveAndBoot(board);
 
     document.querySelector('.row')!.dispatchEvent(new Event('dblclick', { bubbles: true }));
     await client.settled();
@@ -261,7 +239,7 @@ describe('arbitrary delegated events', () => {
   });
 
   it('a non-bubbling event (mouseenter) still delegates, via the capture phase', async () => {
-    const client = await bootBoard();
+    const { client } = await serveAndBoot(board);
 
     document.querySelector('.zone')!.dispatchEvent(new Event('mouseenter', { bubbles: false }));
     await client.settled();
@@ -269,7 +247,7 @@ describe('arbitrary delegated events', () => {
   });
 
   it('a marker first created by a client re-render gets its listener installed', async () => {
-    const client = await bootBoard();
+    const { client } = await serveAndBoot(board);
 
     expect(document.querySelector('.pad')).toBeNull();
     document.querySelector('.arm')!.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));

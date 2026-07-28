@@ -1,3 +1,5 @@
+import { isMarkerAttr } from '../render/html';
+
 export const GLOW_CLASS = 'janux-agent-glow';
 
 /** ms a DOM-fallback target stays lit. Matches what `ui_click`/`ui_fill` used to paint themselves. */
@@ -78,10 +80,7 @@ export function glowElement(el: Element, duration = 700): void {
  * name's shape instead of enumerating a closed list.
  */
 function carriesMarker(el: Element, marker: string): boolean {
-  return [...el.attributes].some(
-    ({ name, value }) =>
-      value === marker && (name === 'data-jxa' || name === 'data-jxform' || name.startsWith('data-jxe-')),
-  );
+  return [...el.attributes].some(({ name, value }) => value === marker && isMarkerAttr(name));
 }
 
 /**

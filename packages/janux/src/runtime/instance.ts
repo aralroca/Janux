@@ -2,7 +2,7 @@ import { toJsonSchema, validate } from '../schema';
 import { computed, createRoot, getOwner, runWithOwner, untrack, type Owner, type ReadonlySig } from '../signals';
 import { createReactiveState } from '../state/reactive-state';
 import { createGate, withGate } from '../state/mutation-gate';
-import type { ComponentDef, Ctx, IntentMeta, Origin, RunBag, StoreHandle } from '../define/types';
+import type { ComponentDef, Ctx, IntentMeta, IntentRef, Origin, RunBag, StoreHandle } from '../define/types';
 import { createBus, type EventBus } from './bus';
 import { createPendingTracker } from './settled';
 import { createSources } from './sources';
@@ -22,11 +22,10 @@ export interface InstanceOptions {
 }
 
 /** An instance-level intent ref: the public `IntentRef` plus the internal origin channel. */
-export type IntentInvoke = ((input?: unknown, opts?: { origin?: Origin }) => Promise<unknown>) & {
-  $intent: IntentMeta;
-  $input?: Record<string, unknown>;
+export interface IntentInvoke extends IntentRef {
+  (input?: unknown, opts?: { origin?: Origin }): Promise<unknown>;
   with(input: Record<string, unknown>): IntentInvoke;
-};
+}
 
 /**
  * Stamps `invoke` as a bound intent ref. `.with()` returns a NEW ref sharing

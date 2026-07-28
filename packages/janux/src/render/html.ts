@@ -113,12 +113,20 @@ export function eventNameFor(prop: string): string | undefined {
   return EVENT_NAME.test(name) ? name : undefined;
 }
 
+/** The one place the marker wire format lives: v0 names for click/submit, `data-jxe-*` for the rest. */
+export const JXE_PREFIX = 'data-jxe-';
+
 /** click and submit keep their v0 markers; every other event gets a `data-jxe-*` one. */
 export function markerAttrFor(event: string): string {
   if (event === 'click') return 'data-jxa';
   if (event === 'submit') return 'data-jxform';
 
-  return `data-jxe-${event}`;
+  return `${JXE_PREFIX}${event}`;
+}
+
+/** Whether an attribute name is one of the delegation markers `markerAttrFor` can emit. */
+export function isMarkerAttr(name: string): boolean {
+  return name === 'data-jxa' || name === 'data-jxform' || name.startsWith(JXE_PREFIX);
 }
 
 /** Attributes whose value the browser resolves as a URL, so its scheme executes. */
@@ -217,37 +225,51 @@ function propToAttr(name: string, value: unknown): [string, unknown] | undefined
   return [name, value];
 }
 
+/** The input a `.with()`-bound event prop carries, when `name` is an event prop at all. */
+function boundInputOf(name: string, value: unknown): Record<string, unknown> | undefined {
+  const ref = value as { $intent?: unknown; $input?: Record<string, unknown> } | null;
+
+  // Cheapest test first: almost no prop on a plain element carries $intent.
+  return ref?.$intent && ref.$input && eventNameFor(name) ? ref.$input : undefined;
+}
+
 /**
- * The `data-input` a `.with()`-bound event prop asks for — unless the element
+ * The `data-input` the element's `.with()` bindings ask for — unless it
  * declares its own, which wins (and makes the binding pointless, so dev hears
  * about it). Serialization failures drop only the input, never the marker.
  */
-function boundInputAttr(props: Record<string, unknown>): [string, unknown] | undefined {
-  const bound = Object.entries(props).filter(([name, value]) => eventNameFor(name) && (value as any)?.$intent && (value as any).$input);
-
+function boundInputAttr(bound: [string, Record<string, unknown>][], explicit: unknown): [string, unknown] | undefined {
   if (bound.length === 0) return undefined;
-  if (bound.length > 1) console.warn(`Janux: several .with() bindings on one element — "${bound[0]![0]}" wins, data-input is per element`);
-  if (props['data-input'] !== undefined) {
-    console.warn(`Janux: an explicit data-input wins over the .with() binding on "${bound[0]![0]}"`);
+  const [[name, input]] = bound as [[string, Record<string, unknown>]];
+
+  if (bound.length > 1) console.warn(`Janux: several .with() bindings on one element — "${name}" wins, data-input is per element`);
+  if (explicit !== undefined) {
+    console.warn(`Janux: an explicit data-input wins over the .with() binding on "${name}"`);
 
     return undefined;
   }
   try {
-    return ['data-input', JSON.stringify((bound[0]![1] as any).$input)];
+    return ['data-input', JSON.stringify(input)];
   } catch {
-    console.warn(`Janux: the .with() input on "${bound[0]![0]}" is not JSON-serializable — dropped`);
+    console.warn(`Janux: the .with() input on "${name}" is not JSON-serializable — dropped`);
 
     return undefined;
   }
 }
 
 export function attrEntries(props: Record<string, unknown>): [string, unknown][] {
-  const entries = Object.entries(props)
+  const pairs = Object.entries(props);
+  const entries = pairs
     .map(([name, value]) => propToAttr(name, value))
     .filter((entry): entry is [string, unknown] => entry !== undefined);
-  const boundInput = boundInputAttr(props);
+  const bound = pairs.flatMap(([name, value]) => {
+    const input = boundInputOf(name, value);
 
-  return boundInput ? [...entries, boundInput] : entries;
+    return input ? [[name, input] as [string, Record<string, unknown>]] : [];
+  });
+  const extra = boundInputAttr(bound, props['data-input']);
+
+  return extra ? [...entries, extra] : entries;
 }
 
 export function renderAttrs(props: Record<string, unknown>): string {
