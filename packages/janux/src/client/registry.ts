@@ -9,10 +9,19 @@ export interface ClientRegistry {
   defs: Map<string, ComponentDef>;
   loaders: Map<string, IslandLoader>;
   mounted: Map<string, JanuxInstance>;
+  /** The navigation epoch each mounted island was born in (see MountContext.epoch). */
+  mountedEpoch: Map<string, number>;
   /** In-flight mounts, so concurrent triggers (double event, unbatched writes) share one instance. */
   mounting: Map<string, Promise<JanuxInstance>>;
   stores: Map<string, JanuxInstance>;
   snapshots: Map<string, Record<string, unknown>>;
+  /**
+   * Snapshot uris a mount already resumed from. A snapshot resumes an island
+   * exactly once — but its `<script>` stays in the DOM, and the late-snapshot
+   * fallback (runtime booted mid-stream) must not hand a freshly re-created
+   * island the state its disposed predecessor already consumed.
+   */
+  consumedSnapshots: Set<string>;
   foreignDefs: Map<string, ForeignDef>;
   foreigns: Map<string, ForeignHandle>;
 }
@@ -22,9 +31,11 @@ export function createClientRegistry(): ClientRegistry {
     defs: new Map(),
     loaders: new Map(),
     mounted: new Map(),
+    mountedEpoch: new Map(),
     mounting: new Map(),
     stores: new Map(),
     snapshots: new Map(),
+    consumedSnapshots: new Set(),
     foreignDefs: new Map(),
     foreigns: new Map(),
   };

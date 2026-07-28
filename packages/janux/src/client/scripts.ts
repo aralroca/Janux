@@ -19,7 +19,10 @@ const RAN_MARKER = 'jxRan';
 const DATA_TYPES = /^application\/(janux\+state|janux\+i18n|ld\+json)$/;
 
 function identity(script: HTMLScriptElement): string {
-  return script.getAttribute('src') ?? script.id ?? script.textContent ?? '';
+  // `getAttribute`, not the `.id` IDL reflection: the reflection returns `''`
+  // (never null) for a script without the attribute, which used to collapse
+  // every no-src/no-id script on the page to one shared identity.
+  return script.getAttribute('src') ?? script.getAttribute('id') ?? script.textContent ?? '';
 }
 
 function isExecutable(script: HTMLScriptElement): boolean {
