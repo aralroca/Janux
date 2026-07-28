@@ -64,8 +64,9 @@ const url = (port) => `http://localhost:${port}/`;
 const HARNESS_FAILURE_ALLOWLIST = {};
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
-// The six frameworks measured by the build-based (per-target) suites.
-const FRAMEWORKS = ['janux', 'react', 'preact', 'solid', 'svelte', 'vue-vapor'];
+// The frameworks measured by the build-based (per-target) suites.
+// TODO(janux fixture): prepend 'janux' once benchmarks/news/janux exists.
+const FRAMEWORKS = ['react', 'preact', 'solid', 'svelte', 'vue-vapor'];
 
 const perTarget = (targets) =>
 	targets.map((target) => ({
@@ -76,7 +77,6 @@ const perTarget = (targets) =>
 
 const JS_FRAMEWORK_SERVERS = [
 	{ filter: 'react-jsbench', port: 5175 },
-	{ filter: 'janux-jsbench', port: 5176 },
 	{ filter: 'solid-jsbench', port: 5179 },
 	{ filter: 'vue-vapor-jsbench', port: 5180 },
 	{ filter: 'preact-jsbench', port: 5260 },
@@ -102,7 +102,6 @@ const SUITES = [
 		name: 'todomvc',
 		cwd: 'todomvc',
 		servers: [
-			{ filter: 'janux-todomvc', port: 5240 },
 			{ filter: 'react-todomvc', port: 5241 },
 			{ filter: 'solid-todomvc', port: 5242 },
 			{ filter: 'vue-vapor-todomvc', port: 5244 },

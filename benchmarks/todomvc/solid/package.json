@@ -1,0 +1,20 @@
+{
+	"name": "solid-todomvc",
+	"private": true,
+	"type": "module",
+	"version": "0.0.1",
+	"description": "TodoMVC fixture for Solid 2.0 - the Solid column for the app-shaped scripted ops + app-code bundle size.",
+	"scripts": {
+		"dev": "vite --host --port 5242 --strictPort",
+		"build": "vite build",
+		"preview": "vite preview --port 5242 --strictPort"
+	},
+	"dependencies": {
+		"solid-js": "2.0.0-beta.20",
+		"@solidjs/web": "2.0.0-beta.20"
+	},
+	"devDependencies": {
+		"vite-plugin-solid": "3.0.0-next.5",
+		"vite": "^8.1.5"
+	}
+}

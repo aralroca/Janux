@@ -1,0 +1,13 @@
+{
+	"name": "octane-bundle-size-bench",
+	"private": true,
+	"type": "module",
+	"version": "0.0.0",
+	"description": "Normalized production bundle-size comparison across the js-framework, TodoMVC, chat-stream, and weather-app framework fixtures.",
+	"scripts": {
+		"bench": "node run.mjs"
+	},
+	"dependencies": {
+		"vite": "^8.1.5"
+	}
+}

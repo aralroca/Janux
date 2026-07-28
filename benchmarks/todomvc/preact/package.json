@@ -1,0 +1,20 @@
+{
+	"name": "preact-todomvc",
+	"private": true,
+	"type": "module",
+	"version": "0.0.1",
+	"description": "TodoMVC fixture for Preact - the Preact column for the app-shaped scripted ops and app-code bundle size.",
+	"scripts": {
+		"dev": "vite --host --port 5261 --strictPort",
+		"build": "vite build",
+		"preview": "vite preview --port 5261 --strictPort"
+	},
+	"dependencies": {
+		"preact": "^10.29.7"
+	},
+	"devDependencies": {
+		"@preact/preset-vite": "^2.10.6",
+		"vite": "^8.1.5",
+		"terser": "^5.49.0"
+	}
+}
