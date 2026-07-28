@@ -61,6 +61,29 @@ export const refusesGlobals = [
   <div aria-live="loudly" />,
 ];
 
+export const acceptsPerTag = [
+  <input type="checkbox" checked maxLength={3} />,
+  <a href="/x" target="_blank" rel="noreferrer">
+    x
+  </a>,
+  <label for="email" />,
+  <svg viewBox="0 0 16 16">
+    <path d="M4 4l8 8" stroke-width={2} />
+  </svg>,
+  <my-widget anything="goes" onClick={intents.go} />,
+];
+
+export const refusesPerTag = [
+  // @ts-expect-error — hreff is a typo of href.
+  <a hreff="/x" />,
+  // @ts-expect-error — checked belongs to <input>, not <a>.
+  <a checked />,
+  // @ts-expect-error — htmlFor is React's spelling; the attribute is `for`.
+  <label htmlFor="email" />,
+  // @ts-expect-error — an unknown attribute on a typed tag is refused.
+  <div foo="bar" />,
+];
+
 export const refuses = [
   // @ts-expect-error — a closure has no name, schema or guard.
   <button onClick={() => {}}>no</button>,

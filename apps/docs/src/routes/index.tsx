@@ -198,7 +198,7 @@ export default async function Home() {
             autoplay
             muted
             loop
-            playsinline
+            playsInline
             controls
             preload="metadata"
             poster="/demo-poster.jpg"
@@ -357,7 +357,7 @@ export default async function Home() {
               autoplay
               muted
               loop
-              playsinline
+              playsInline
               preload="none"
               width="1008"
               height="286"

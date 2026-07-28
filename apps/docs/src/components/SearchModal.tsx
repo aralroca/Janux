@@ -34,7 +34,7 @@ export const SearchModal = component({
           id="search-input"
           type="search"
           placeholder="Search docs…"
-          autocomplete="off"
+          autoComplete="off"
           spellcheck="false"
         />
         <ul id="search-results" role="listbox"></ul>

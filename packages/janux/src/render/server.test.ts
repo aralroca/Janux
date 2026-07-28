@@ -60,6 +60,13 @@ describe('renderToString', () => {
     expect(result.html).toBe('<div>ok</div>');
   });
 
+  it('stringifies aria-* booleans — absent and empty both read as invalid ARIA', async () => {
+    const page = jsx('button', { 'aria-selected': true, 'aria-expanded': false, children: 'ok' });
+    const result = await renderToString(page);
+
+    expect(result.html).toBe('<button aria-selected="true" aria-expanded="false">ok</button>');
+  });
+
   it('escapes text and attribute content', async () => {
     const page = jsx('p', { title: '"><script>', children: '<script>alert(1)</script>' });
     const result = await renderToString(page);

@@ -34,6 +34,14 @@ describe('toDomNodes', () => {
     expect(div!.getAttribute('style')).toBe('background-color:red;--x:1px');
   });
 
+  it('stringifies aria-* booleans, mirroring SSR', () => {
+    const node = jsx('button', { 'aria-selected': true, 'aria-expanded': false });
+    const [button] = toDomNodes(node) as Element[];
+
+    expect(button!.getAttribute('aria-selected')).toBe('true');
+    expect(button!.getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('keeps html elements in the HTML namespace', () => {
     const [button] = toDomNodes(jsx('button', { children: 'Close' })) as Element[];
 

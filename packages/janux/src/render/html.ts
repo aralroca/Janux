@@ -89,6 +89,8 @@ function styleText(value: Record<string, unknown>): string {
 
 /** A JSX event prop: `on` + an uppercase letter (so `once`/`online` are not events). */
 const EVENT_PROP = /^on[A-Z]/;
+/** ARIA state/property attribute — booleans stringify instead of toggling. */
+const ARIA_PREFIX = /^aria-/;
 /** Anything the browser could read back as an inline handler attribute (`onclick="…"`). */
 const ON_PREFIX = /^on/i;
 /**
@@ -211,6 +213,10 @@ function propToAttr(name: string, value: unknown): [string, unknown] | undefined
 
     return undefined;
   }
+  // ARIA reads an absent attribute and an empty value both as invalid, so a
+  // boolean must land as the literal "true"/"false" token instead of the
+  // bare-attribute/omitted treatment booleans get elsewhere.
+  if (typeof value === 'boolean' && ARIA_PREFIX.test(name)) return [name, String(value)];
   if (name === 'class' || name === 'className') return ['class', value];
   // An empty style object must leave no attribute behind, so `undefined` here.
   if (name === 'style' && isStyleObject(value)) return ['style', styleText(value) || undefined];
