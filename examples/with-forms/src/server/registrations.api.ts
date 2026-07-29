@@ -1,5 +1,5 @@
 import { api } from '@janux/server';
-import { schema, str, int, money, enums, list } from 'janux';
+import { schema, str, int, num, bool, enums, list } from 'janux';
 import { registrationInput, TRACKS, type RegistrationInput } from '../schema';
 
 type StoredRegistration = RegistrationInput & { id: string };
@@ -10,7 +10,7 @@ const REGISTRATIONS: StoredRegistration[] = [];
 export const register = api({
   description:
     'Register a group for JanuxConf. The typed contract: attendees is a real integer ' +
-    'and donation is an amount in cents — strings are rejected, never coerced.',
+    'and donation a real number — the same schema the form intent coerces its strings into.',
   input: registrationInput,
   output: schema({ id: str(), spot: int() }),
   run: ({ input }) => {
@@ -25,7 +25,14 @@ export const register = api({
 export const listRegistrations = api({
   description: 'List every stored registration with its typed fields.',
   output: schema({
-    registrations: list({ id: str(), name: str(), attendees: int(), donation: money(), track: enums(TRACKS) }),
+    registrations: list({
+      id: str(),
+      name: str(),
+      attendees: int(),
+      donation: num(),
+      newsletter: bool(),
+      track: enums(TRACKS),
+    }),
   }),
   run: () => ({ registrations: REGISTRATIONS }),
 });

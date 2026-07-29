@@ -57,6 +57,7 @@ Same as `component` minus `view`. Projects as `store://<name>`. `scope: 'app' | 
 |---|---|---|
 | `description` | `string` | The agent reads this — make it actionable |
 | `input` | `schema({...})` | Validated before `run`; errors carry paths |
+| `coerce` | `'form'` | Form strings become what `input` means before validating: numbers via `Number` (blank stays invalid), checkboxes `'on'`/absent → `true`/`false`, `money()` never scaled. Typed input passes through — one schema, both faces ([forms](/docs/recipes/forms)) |
 | `guard` | `'auto' \| 'confirm' \| 'forbidden'` or `({ ctx }) => guard` | Default `'auto'` |
 | `ready` | `(bag) => boolean` | Announced in the manifest; not-ready calls throw `not_ready` |
 | `glowTarget` | `(bag) => string \| undefined` | CSS selector for the DOM this intent's effect lands on |

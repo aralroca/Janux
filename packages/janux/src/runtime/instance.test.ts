@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test';
 import { component, intent, effect, source, store, onEvent } from '../define/factories';
-import { int, list, schema, str } from '../schema';
+import { bool, int, list, schema, str } from '../schema';
 import { createBus } from './bus';
 import { createInstance } from './instance';
 import type { Proposal } from './intents';
@@ -384,5 +384,61 @@ describe('instance: events and stores', () => {
     expect(resource.state.items).toEqual([{ id: 'a', qty: 2 }]);
     expect(resource.derived.count).toBe(2);
     expect(resource.sync).toBe('idle');
+  });
+});
+
+describe('instance: coerce form intents', () => {
+  const signupDef = () =>
+    component({
+      name: 'signup',
+      state: schema({ attendees: int().default(0), optIn: bool().default(false) }),
+      intents: {
+        submit: intent({
+          input: schema({ attendees: int().min(1), optIn: bool().default(false) }),
+          coerce: 'form',
+          run: ({ state, input }) => {
+            state.attendees = input.attendees;
+            state.optIn = input.optIn;
+          },
+        }),
+        strict: intent({
+          input: schema({ attendees: int().min(1) }),
+          run: ({ state, input }) => (state.attendees = input.attendees),
+        }),
+      },
+      view: noopView,
+    });
+
+  it('coerces FormData strings before validating against the typed schema', async () => {
+    const signup = createInstance(signupDef());
+
+    await signup.intents.submit!({ attendees: '3', optIn: 'on' });
+    expect(signup.snapshot()).toEqual({ attendees: 3, optIn: true });
+  });
+
+  it('treats an absent checkbox as false', async () => {
+    const signup = createInstance(signupDef());
+
+    await signup.intents.submit!({ attendees: '2' });
+    expect(signup.snapshot()).toEqual({ attendees: 2, optIn: false });
+  });
+
+  it('accepts already-typed input on the same intent (agent JSON)', async () => {
+    const signup = createInstance(signupDef());
+
+    await signup.intents.submit!({ attendees: 4, optIn: true }, { origin: 'agent' });
+    expect(signup.snapshot()).toEqual({ attendees: 4, optIn: true });
+  });
+
+  it('a blank numeric field stays invalid_input, not zero', async () => {
+    const signup = createInstance(signupDef());
+
+    await expect(signup.intents.submit!({ attendees: '' })).rejects.toThrow(/attendees: expected int/);
+  });
+
+  it('without coerce, form strings are rejected as ever (regression)', async () => {
+    const signup = createInstance(signupDef());
+
+    await expect(signup.intents.strict!({ attendees: '3' })).rejects.toThrow(/attendees: expected int/);
   });
 });

@@ -40,6 +40,7 @@ export {
   obj,
   JxType,
   validate,
+  coerceForm,
   buildDefault,
   toJsonSchema,
 } from './schema';

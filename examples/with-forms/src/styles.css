@@ -65,10 +65,16 @@ button {
   cursor: pointer;
 }
 
-.error {
-  margin: -0.4rem 0 0;
-  font-size: 0.8rem;
-  color: light-dark(#c62828, #ff8a80);
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+}
+
+.check input {
+  width: auto;
+  margin: 0;
 }
 
 .ok {

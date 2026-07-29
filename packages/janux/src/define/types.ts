@@ -85,6 +85,16 @@ export interface StoreHandle {
 export interface IntentDef {
   description?: string;
   input?: JxType;
+  /**
+   * `'form'` converts string input values to what the typed `input` schema
+   * means BEFORE validating — FormData only ever submits strings. Numbers
+   * parse via `Number` (a blank field stays invalid), booleans follow
+   * checkbox semantics (`'on'`/`'true'` → true, absent → false), `money()`
+   * parses numerically but is never scaled. Already-typed input (an agent's
+   * JSON) passes through untouched, so one typed schema serves both faces —
+   * and the manifest keeps announcing it.
+   */
+  coerce?: 'form';
   guard?: Guard;
   server?: boolean;
   prefetch?: 'eager' | 'visible' | 'idle';
