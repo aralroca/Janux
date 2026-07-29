@@ -1,7 +1,14 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 // The page's own rule: agent pieces come from @janux/agent/local, never from gui-agent directly.
-import { DEFAULT_LOCAL_MODEL, createCopilot, registry, serverLlm, supportsLocalLlm } from '@janux/agent/local';
+import {
+  DEFAULT_LOCAL_MODEL,
+  createCopilot,
+  probeLocalLlm,
+  registry,
+  serverLlm,
+  supportsLocalLlm,
+} from '@janux/agent/local';
 import { component, createInstance, intent, jsx, schema, str } from 'janux';
 import { buildManifest } from 'janux/manifest';
 
@@ -53,11 +60,15 @@ function scriptedLlm(tool: string) {
 }
 
 describe('recipes/local-model-copilot.md', () => {
-  it('supportsLocalLlm() feature-detects WebGPU, which is what the policy line gates on', () => {
+  it('the policy line gates on probeLocalLlm(): a real adapter, not just navigator.gpu', async () => {
     expect(supportsLocalLlm()).toBe(false);
     (navigator as any).gpu = {};
-
     expect(supportsLocalLlm()).toBe(true);
+    // The headless trap the recipe warns about: gpu present, no usable adapter.
+    expect(await probeLocalLlm()).toBe(false);
+    (navigator as any).gpu = { requestAdapter: async () => ({}) };
+
+    expect(await probeLocalLlm()).toBe(true);
   });
 
   it('names the model the code actually defaults to', () => {

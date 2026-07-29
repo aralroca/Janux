@@ -6,9 +6,11 @@ import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './
  * What examples/with-local-llm exists to demonstrate: a copilot whose model
  * runs in the visitor's browser (localLlm over WebGPU) with serverLlm as the
  * fallback, swappable at runtime. Headless CI has no usable WebGPU, so these
- * tests exercise the MECHANICS — detection, fallback, toggle, consent gate and
- * clean degradation — by forcing `navigator.gpu` on/off. The real WebGPU run
- * is the README's manual check.
+ * tests fake `navigator.gpu` to exercise the mechanics — probe-based
+ * detection (`probeLocalLlm` asks for a real adapter), fallback, toggle,
+ * consent gate and clean degradation — plus one REAL local turn driven by a
+ * scripted provider injected through `localLlm({ provider })`. Only the
+ * actual GPU inference remains the README's manual check.
  */
 
 const BUILT = isBuilt('examples/with-local-llm');
@@ -22,14 +24,54 @@ let BASE = '';
 let stop: (() => void) | undefined;
 let browser: Browser | undefined;
 
-const withoutWebGpu = (page: Page) =>
+/** Headless CI's trap: `navigator.gpu` exists but no adapter is usable — the probe must land on cloud. */
+const withUnusableWebGpu = (page: Page) =>
   page.addInitScript(() => {
-    delete (Navigator.prototype as any).gpu;
+    const gpu = { requestAdapter: async () => null };
+
+    Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => gpu });
   });
 
+/** A stable fake gpu whose probe succeeds — `probeLocalLlm` caches per `navigator.gpu` object. */
 const withWebGpu = (page: Page) =>
   page.addInitScript(() => {
-    Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => ({}) });
+    const gpu = { requestAdapter: async () => ({}) };
+
+    Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => gpu });
+  });
+
+/** The `localLlm({ provider })` seam: a transformers-js-shaped provider answering a two-turn script. */
+const withScriptedProvider = (page: Page) =>
+  page.addInitScript(() => {
+    const usage = {
+      inputTokens: { total: 0, noCache: 0, cacheRead: undefined, cacheWrite: undefined },
+      outputTokens: { total: 0, text: 0, reasoning: undefined },
+      raw: undefined,
+    };
+    const reply = (content: unknown[]) => ({
+      content,
+      finishReason: { unified: 'stop', raw: undefined },
+      usage,
+      warnings: [],
+    });
+    const call = {
+      type: 'tool-call',
+      toolCallId: 'call-1',
+      toolName: 'tasks_add',
+      input: JSON.stringify({ title: 'buy oat milk' }),
+    };
+    let turn = 0;
+    const model = {
+      specificationVersion: 'v3',
+      provider: 'stub',
+      modelId: 'stub',
+      supportedUrls: {},
+      createSessionWithProgress: async (onProgress: (fraction: number) => void) => onProgress(1),
+      doGenerate: async () =>
+        turn++ === 0 ? reply([call]) : reply([{ type: 'text', text: 'Added "buy oat milk" to the list.' }]),
+    };
+
+    (window as any).__localLlmProvider = { transformersJS: () => model };
   });
 
 const assistantMessages = (page: Page) =>
@@ -100,15 +142,15 @@ describe('examples/with-local-llm server side', () => {
 });
 
 describe.skipIf(!BUILT)('examples/with-local-llm in the browser', () => {
-  it('without WebGPU, supportsLocalLlm() sends the panel to the cloud brain', async () => {
+  it('headless-style WebGPU (gpu present, no usable adapter) probes to the cloud brain', async () => {
     const { page, errors } = await openPage(browser!);
 
-    await withoutWebGpu(page);
+    await withUnusableWebGpu(page);
     await page.goto(`${BASE}/`);
     await page.waitForSelector('#model-status[data-model-state="cloud"]');
     expect(await page.getAttribute('#assistant-panel', 'data-brain')).toBe('cloud');
     expect(await page.isDisabled('#brain-local')).toBe(true);
-    expect(await page.textContent('#model-status')).toContain('No WebGPU');
+    expect(await page.textContent('#model-status')).toContain('No usable WebGPU');
     expect(errors).toEqual([]);
     await page.close();
   }, TIMEOUT);
@@ -149,10 +191,32 @@ describe.skipIf(!BUILT)('examples/with-local-llm in the browser', () => {
     await page.close();
   }, TIMEOUT);
 
+  it('a real local turn end to end — a scripted provider stands in for the GPU model', async () => {
+    const { page, errors } = await openPage(browser!);
+    const downloads: string[] = [];
+
+    page.on('request', (request) => request.url().includes('huggingface') && downloads.push(request.url()));
+    await withWebGpu(page);
+    await withScriptedProvider(page);
+    await page.goto(`${BASE}/`);
+    await page.waitForSelector('#model-status[data-model-state="idle"]');
+    await page.click('#load-model');
+    await page.waitForSelector('#model-status[data-model-state="ready"]');
+    await page.fill('form.ask input[name="text"]', 'add a task called buy oat milk');
+    await page.click('form.ask button[type="submit"]');
+    await page.waitForFunction(() => document.querySelectorAll('#log .msg.assistant').length >= 2);
+    // The model's tool call really ran: the task is on the list and the answer reports it.
+    expect((await assistantMessages(page)).at(-1)).toContain('buy oat milk');
+    expect(await page.textContent('#task-list')).toContain('buy oat milk');
+    expect(downloads).toEqual([]);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
+
   it('the cloud path without a key degrades to the setup card in the chat, no crash', async () => {
     const { page, errors } = await openPage(browser!);
 
-    await withoutWebGpu(page);
+    await withUnusableWebGpu(page);
     await page.goto(`${BASE}/`);
     await page.waitForSelector('#model-status[data-model-state="cloud"]');
     await page.fill('form.ask input[name="text"]', 'what is still open?');

@@ -8,10 +8,11 @@
 import {
   createCopilot,
   localLlm,
+  probeLocalLlm,
   serverLlm,
-  supportsLocalLlm,
   type Copilot,
   type LocalLlm,
+  type LocalLlmProvider,
 } from '@janux/agent/local';
 
 export type Brain = 'local' | 'cloud';
@@ -23,14 +24,17 @@ const INSTRUCTIONS =
 let localModel: LocalLlm | undefined;
 let active: { brain: Brain; copilot: Copilot } | undefined;
 
-/** Whether this browser can run the model itself (WebGPU available). */
-export function detect(): boolean {
-  return supportsLocalLlm();
+/** Test seam: the e2e injects a scripted provider to run a real local turn without a GPU. */
+const injectedProvider = (): LocalLlmProvider | undefined => (window as any).__localLlmProvider;
+
+/** Whether this browser can run the model itself: a real `requestAdapter()` probe, not just `'gpu' in navigator`. */
+export function detect(): Promise<boolean> {
+  return probeLocalLlm();
 }
 
 /** One session per page: swapping brains must not re-download the weights. */
 function localBrain(): LocalLlm {
-  return (localModel ??= localLlm());
+  return (localModel ??= localLlm({ provider: injectedProvider() }));
 }
 
 /** Download the model (or reuse the browser cache), reporting progress 0..1. */
@@ -43,7 +47,7 @@ function copilotFor(brain: Brain): Copilot {
   if (active?.brain === brain) return active.copilot;
   active?.copilot.dispose();
   const copilot = createCopilot({
-    llm: brain === 'local' ? localBrain() : serverLlm({ stream: true }),
+    llm: brain === 'local' ? localBrain() : serverLlm(),
     instructions: INSTRUCTIONS,
     visualize: { backdrop: { exclude: ['assistant-panel'] } },
   });

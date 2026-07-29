@@ -14,7 +14,7 @@ function ModelStatus({ state, intents }: any) {
   if (state.brain === 'cloud') {
     const note = state.supported
       ? 'Cloud brain: the server answers via /_janux/llm.'
-      : 'No WebGPU in this browser — falling back to the cloud brain (/_janux/llm).';
+      : 'No usable WebGPU in this browser — falling back to the cloud brain (/_janux/llm).';
 
     return (
       <p id="model-status" data-model-state="cloud">
@@ -67,11 +67,11 @@ export const Copilot = component({
   intents: {
     detect: intent({
       guard: 'forbidden',
-      description: 'Feature-detect WebGPU and pick the default brain.',
+      description: 'Probe for a usable WebGPU adapter and pick the default brain.',
       run: async ({ state }: any) => {
         const { detect } = await runtime();
 
-        state.supported = detect();
+        state.supported = await detect();
         state.brain = state.supported ? 'local' : 'cloud';
       },
     }),

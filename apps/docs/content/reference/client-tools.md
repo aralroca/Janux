@@ -4,7 +4,7 @@ Two things that come with every Janux app: a set of browser tools the copilot al
 
 ```ts
 import { CLIENT_TOOL_SPECS, CLIENT_TOOL_NAMES } from 'janux';
-import { DEFAULT_LOCAL_MODEL, supportsLocalLlm } from '@janux/agent/local';
+import { DEFAULT_LOCAL_MODEL, probeLocalLlm, supportsLocalLlm } from '@janux/agent/local';
 ```
 
 ## CLIENT_TOOL_SPECS
@@ -40,14 +40,16 @@ Prefer this over string matching on the `ui_` prefix: the set is generated from 
 
 ## Local model: DEFAULT_LOCAL_MODEL
 
-`DEFAULT_LOCAL_MODEL` is `'onnx-community/Qwen3-0.6B-ONNX'` — the Hugging Face ONNX model `localLlm()` loads when you don't name one. Small on purpose: it downloads in seconds and runs on WebGPU in the page, so a copilot works with **no server and no API key** — including on a fully static export. Override it with `localLlm({ modelId, device: 'webgpu' | 'wasm', dtype, worker })`; pass a `worker` to keep inference off the main thread.
+`DEFAULT_LOCAL_MODEL` is `'onnx-community/Qwen3-0.6B-ONNX'` — the Hugging Face ONNX model `localLlm()` loads when you don't name one. Small on purpose: it downloads in seconds and runs on WebGPU in the page, so a copilot works with **no server and no API key** — including on a fully static export. Override it with `localLlm({ modelId, device: 'webgpu' | 'wasm', dtype, worker, provider })`; pass a `worker` to keep inference off the main thread, or a `provider` (the interface of `@browser-ai/transformers-js`) to swap the model factory — a scripted stub makes a whole local turn testable without a GPU.
 
-## supportsLocalLlm()
+## supportsLocalLlm() and probeLocalLlm()
 
-`supportsLocalLlm(): boolean` — feature detection for the browser. Gate the UI on it and fall back to the server model instead of offering an option that will fail:
+`supportsLocalLlm(): boolean` — the sync fast-path: whether the browser exposes WebGPU at all. Headless browsers expose `navigator.gpu` without a usable adapter, so before defaulting to the local brain ask for one:
+
+`probeLocalLlm({ timeoutMs }?): Promise<boolean>` — requests a real adapter (`navigator.gpu.requestAdapter()`) and resolves `false` on a null adapter, a thrown probe or one that hangs past `timeoutMs` (1s by default). The verdict is cached per page, so gating every mount on it costs one probe:
 
 ```ts
-const copilot = supportsLocalLlm() ? localLlm() : serverLlm();
+const copilot = (await probeLocalLlm()) ? localLlm() : serverLlm();
 ```
 
 Related: [A copilot with a local, in-browser model](/docs/recipes/local-model-copilot) · [The agent and your copilot](/docs/guide/agent-and-copilot) · [Client runtime internals](/docs/reference/client-runtime)
