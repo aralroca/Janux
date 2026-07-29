@@ -65,6 +65,8 @@ jobs:
       - name: Build the examples the browser e2e drives
         run: |
           apps=$(grep -l -e isBuilt -e serveBuilt e2e/*.e2e.test.ts | xargs grep -hoE "'examples/[a-z0-9-]+'" | tr -d "'" | sort -u)
+          # An empty list would let every browser suite skip itself green.
+          [ -n "$apps" ] || { echo "::error::no e2e example apps discovered"; exit 1; }
           for app in $apps; do bun run --cwd "$app" build; done
       - name: Install Chrome for Playwright
         run: bunx playwright install --with-deps chrome

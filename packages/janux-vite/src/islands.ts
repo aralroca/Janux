@@ -13,8 +13,11 @@ const MODULE_PATH = /\.[jt]sx?$/;
 
 /** The `name` of a `component({ ... })` / `foreign({ ... })` initializer, when statically written. */
 function declaredName(init: any): string | undefined {
-  if (init?.type !== 'CallExpression' || !DEF_FACTORIES.has(init.callee?.value)) return undefined;
-  const config = init.arguments?.[0]?.expression;
+  // `component({...}) as const` / `satisfies X` wrap the call — look through.
+  const unwrapped = init?.type === 'TsAsExpression' || init?.type === 'TsSatisfiesExpression' ? init.expression : init;
+
+  if (unwrapped?.type !== 'CallExpression' || !DEF_FACTORIES.has(unwrapped.callee?.value)) return undefined;
+  const config = unwrapped.arguments?.[0]?.expression;
 
   if (config?.type !== 'ObjectExpression') return undefined;
   const name = config.properties?.find((prop: any) => prop.type === 'KeyValueProperty' && prop.key?.value === 'name');
@@ -22,21 +25,34 @@ function declaredName(init: any): string | undefined {
   return name?.value?.type === 'StringLiteral' ? name.value.value : undefined;
 }
 
-/** Defs are declared at module top level: `export const X = component({...})`. */
+/** Defs are declared at module top level: `export const X = component({...})` (or a default export). */
 function topLevelDeclarations(node: any): any[] {
+  if (node.type === 'ExportDefaultExpression') return [{ init: node.expression }];
   const declaration = node.type === 'ExportDeclaration' ? node.declaration : node;
 
   return declaration?.type === 'VariableDeclaration' ? declaration.declarations : [];
 }
 
-/** Island names a module declares. Fail-open: a module SWC cannot parse declares none. */
+/**
+ * Island names a module declares. A missed island silently reintroduces the
+ * suspense-only-page bug, so a parse failure retries with the other JSX mode
+ * (JSX does appear in `.ts` files) before giving up on the module.
+ */
 export function islandNamesIn(code: string, tsx = false): string[] {
-  try {
-    const module = parseSync(code, { syntax: 'typescript', tsx });
+  const names = (parseTsx: boolean) => {
+    const module = parseSync(code, { syntax: 'typescript', tsx: parseTsx });
 
     return module.body.flatMap(topLevelDeclarations).flatMap((decl: any) => declaredName(decl.init) ?? []);
+  };
+
+  try {
+    return names(tsx);
   } catch {
-    return [];
+    try {
+      return names(!tsx);
+    } catch {
+      return [];
+    }
   }
 }
 

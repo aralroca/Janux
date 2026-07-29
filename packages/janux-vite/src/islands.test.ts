@@ -17,6 +17,21 @@ describe('islandNamesIn', () => {
     expect(islandNamesIn(code)).toEqual(['alpha', 'beta']);
   });
 
+  it('looks through as/satisfies wrappers and default exports', () => {
+    const code = `
+      export const A = component({ name: 'alpha' }) as any;
+      export default component({ name: 'omega' });
+    `;
+
+    expect(islandNamesIn(code)).toEqual(['alpha', 'omega']);
+  });
+
+  it('retries the other JSX mode before declaring a module island-free', () => {
+    const jsxInTs = `export const A = component({ name: 'alpha', view: () => <p>hi</p> });`;
+
+    expect(islandNamesIn(jsxInTs, false)).toEqual(['alpha']);
+  });
+
   it('ignores dynamic names and unparseable modules', () => {
     expect(islandNamesIn(`export const A = component({ name: dynamic });`)).toEqual([]);
     expect(islandNamesIn('const = broken (')).toEqual([]);

@@ -9,11 +9,17 @@ function coerceNumeric(value: string): unknown {
   return value.trim() === '' || Number.isNaN(parsed) ? value : parsed;
 }
 
-/** Checkbox semantics: a checked box submits `'on'`, an unchecked one is simply absent. */
-function coerceBoolean(value: unknown): unknown {
-  if (value === undefined) return false;
+/**
+ * Checkbox semantics: a checked box submits `'on'`, an unchecked one is simply
+ * absent — unless the field is optional/nullable, where absent means absent
+ * (an agent omitting the field must not receive `false`). `'false'`/`'off'`
+ * cover the hidden-input-paired-with-checkbox and true/false `<select>` idioms.
+ */
+function coerceBoolean(value: unknown, type: JxType): unknown {
+  if (value === undefined) return type.flags?.optional || type.flags?.nullable ? value : false;
+  if (value === 'on' || value === 'true') return true;
 
-  return value === 'on' || value === 'true' ? true : value;
+  return value === 'off' || value === 'false' ? false : value;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -35,7 +41,7 @@ function coerceObject(value: Record<string, unknown>, type: JxType): Record<stri
  * existing validation still has the final word.
  */
 export function coerceForm(value: unknown, type: JxType): unknown {
-  if (type.kind === 'boolean') return coerceBoolean(value);
+  if (type.kind === 'boolean') return coerceBoolean(value, type);
   if (typeof value === 'string' && NUMERIC_KINDS.has(type.kind)) return coerceNumeric(value);
   if (type.kind === 'object' && isRecord(value)) return coerceObject(value, type);
   if (type.kind === 'list' && Array.isArray(value)) return value.map((item) => coerceForm(item, type.item!));

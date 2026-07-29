@@ -34,6 +34,21 @@ describe('schema coerceForm', () => {
     expect(coerceForm(undefined, bool())).toBe(false);
   });
 
+  it("coerces 'false'/'off' to false — the hidden-input and select idioms", () => {
+    const type = schema({ optIn: bool() });
+
+    expect(coerceForm({ optIn: 'false' }, type)).toEqual({ optIn: false });
+    expect(coerceForm({ optIn: 'off' }, type)).toEqual({ optIn: false });
+  });
+
+  it('leaves an absent optional/nullable boolean absent — an agent omitting it must not get false', () => {
+    const optional = schema({ flag: bool().optional(), other: str() });
+    const nullable = schema({ flag: bool().nullable(), other: str() });
+
+    expect(coerceForm({ other: 'x' }, optional)).toEqual({ other: 'x', flag: undefined });
+    expect(coerceForm({ other: 'x' }, nullable)).toEqual({ other: 'x', flag: undefined });
+  });
+
   it('keeps a blank numeric field invalid instead of turning it into 0', () => {
     const input = { name: 'Ada', attendees: '', rating: '1', donation: '0', track: 'frontend' };
     const result = validate(registration, coerceForm(input, registration));
