@@ -1,0 +1,204 @@
+/* Always light: the demo looks the same whatever the OS dark-mode setting is. */
+:root {
+  color-scheme: light;
+  --bd: #d8dadf;
+  --mut: #6b7280;
+  --accent: #2563eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font: 14px/1.5 system-ui, sans-serif;
+  background: #fff;
+  color: #18181b;
+}
+
+/* An island is a real element wrapping the view, so it has to carry the layout. */
+janux-island {
+  display: block;
+  min-height: 0;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app > janux-island {
+  height: 100%;
+}
+
+main {
+  padding: 24px 32px;
+  overflow: auto;
+  min-height: 0;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0 0 4px;
+}
+
+.sub {
+  color: var(--mut);
+  margin: 0 0 20px;
+}
+
+.tasks form#add-task {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tasks input[name='title'] {
+  flex: 1;
+}
+
+input[type='text'],
+input:not([type]) {
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  font: inherit;
+}
+
+button {
+  padding: 8px 12px;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#task-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+#task-list li {
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+#task-list li[data-done='true'] span {
+  color: var(--mut);
+  text-decoration: line-through;
+}
+
+#task-list label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tasks footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--mut);
+}
+
+#assistant-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-left: 1px solid var(--bd);
+  background: #fafafa;
+  padding: 16px;
+  gap: 12px;
+}
+
+#assistant-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+#brain-toggle {
+  display: inline-flex;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#brain-toggle button {
+  border: 0;
+  border-radius: 0;
+  padding: 6px 12px;
+}
+
+#brain-toggle button.on {
+  background: var(--accent);
+  color: #fff;
+}
+
+#model-status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--mut);
+}
+
+#log {
+  flex: 1;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.msg {
+  border-radius: 10px;
+  padding: 8px 12px;
+  max-width: 90%;
+}
+
+.msg.user {
+  background: var(--accent);
+  color: #fff;
+  justify-self: end;
+}
+
+.msg.assistant {
+  background: #fff;
+  border: 1px solid var(--bd);
+}
+
+form.ask {
+  display: flex;
+  gap: 8px;
+}
+
+form.ask input {
+  flex: 1;
+}
+
+/* The visualizer's chip list, appended to <body> by the framework. */
+[data-janux-agent-steps] {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 10;
+}

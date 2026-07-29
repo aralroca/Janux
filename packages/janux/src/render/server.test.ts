@@ -655,6 +655,34 @@ describe('suspense boundaries', () => {
   });
 });
 
+describe('store wiring', () => {
+  const session = store({
+    name: 'session',
+    state: schema({ locale: str().default('en') }),
+    intents: {},
+  });
+  const greeter = component({
+    name: 'greeter',
+    use: { session },
+    view: ({ use }: any) => jsx('p', { children: use.session.state.locale }),
+  });
+
+  it('resolves a use alias against the storeDefs keys', async () => {
+    const { html } = await renderToString(jsx(greeter as any, {}), { storeDefs: { session } } as any);
+
+    expect(html).toContain('<p>en</p>');
+  });
+
+  it('a use alias with no matching storeDefs key fails with a named error, not a TypeError', async () => {
+    // The app exported `Session`, the island asked for `session` — this used to
+    // surface mid-stream as "undefined is not an object (evaluating
+    // 'instance.handle')", pointing nowhere near the actual mistake.
+    const render = renderToString(jsx(greeter as any, {}), { storeDefs: { Session: session } } as any);
+
+    await expect(render).rejects.toThrow(/store "session".*greeter.*Session/s);
+  });
+});
+
 describe('buildManifest', () => {
   const session = store({
     name: 'session',

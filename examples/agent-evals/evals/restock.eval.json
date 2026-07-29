@@ -1,0 +1,18 @@
+{
+  "name": "agent restocks a low SKU using only the agent surface",
+  "steps": [
+    {
+      "tool": "api.stock.levels",
+      "expect": { "result": { "items": [{ "sku": "TSHIRT" }, { "sku": "MUG" }, { "sku": "CABLE" }] } }
+    },
+    {
+      "tool": "api.stock.restock",
+      "input": { "sku": "MUG", "qty": 46 },
+      "expect": { "result": { "sku": "MUG", "stock": 50 } }
+    },
+    {
+      "tool": "api.stock.levels",
+      "expect": { "result": { "items": [{}, { "sku": "MUG", "stock": 50 }] } }
+    }
+  ]
+}

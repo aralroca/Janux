@@ -217,6 +217,12 @@ Full tables, methodology and machine specs:
 - [`examples/realtime-chat`](examples/realtime-chat) — a custom server composing `createJanuxServer` with Bun's native WebSockets: optimistic delivery, cursor-based replay on reconnect, live presence.
 - [`examples/blog-static`](examples/blog-static) — a markdown blog exported with `output: 'static'` + `staticParams`: zero-JS pages, speculation rules, and the agent face (`llms.txt`, sitemap, `.md` projections) from the same build.
 - [`examples/hacker-news`](examples/hacker-news) — the canonical clone: streaming suspense front page over a local deterministic fixture, `[page=integer]` pagination, a server-rendered nested comment tree, `useQuery` refresh and hover prefetch.
+- [`examples/with-mcp-url`](examples/with-mcp-url) — the app as a bearer-protected MCP server by URL, with a committed tool contract (`agent-contract.json`) that turns CI red if the agent surface drifts.
+- [`examples/human-in-the-loop`](examples/human-in-the-loop) — who invokes changes what happens: the same `confirm` intent executes on a human click but parks as a Proposal for an agent, with an approvals inbox and an origin-labeled audit trail.
+- [`examples/durable-agent`](examples/durable-agent) — the agent harness in production shape: Postgres conversation memory that survives restarts, Redis rate limiting, injection guardrails, and a durable two-step workflow.
+- [`examples/with-mcp-client`](examples/with-mcp-client) — the outbound direction: the app's agent connects to an external MCP server by URL, filters the remote tools and re-exposes them on its own surface.
+- [`examples/with-local-llm`](examples/with-local-llm) — the copilot's model runs in the browser over WebGPU (`localLlm()`), with `supportsLocalLlm()` detection, a `serverLlm()` fallback and a live local↔cloud swap.
+- [`examples/agent-evals`](examples/agent-evals) — `janux eval` as a CI gate: scripted, model-free agent tasks replayed over the real webMCP surface, including a human approval step — plus a broken eval that proves the gate can fail.
 - [`examples/with-web-agent`](examples/with-web-agent) — the demo above: a console operated in natural language, `createCopilot({ visualize })` for the chips/ring/veil, `glowTarget` for React Flow nodes that mount late, and a `forbidden` intent that forces the DOM fallback.
 
 ```bash

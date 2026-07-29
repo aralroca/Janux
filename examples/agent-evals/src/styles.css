@@ -1,0 +1,46 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.masthead .hint {
+  color: color-mix(in srgb, currentColor 70%, transparent);
+  line-height: 1.5;
+}
+
+.stockroom table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stockroom th,
+.stockroom td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.stockroom tr.low td {
+  color: #b45309;
+}
+
+.stockroom button {
+  margin-right: 6px;
+}
+
+.stockroom button.danger {
+  color: #b91c1c;
+}
+
+.log {
+  list-style: none;
+  padding: 12px 0 0;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+}

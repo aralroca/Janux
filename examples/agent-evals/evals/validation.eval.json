@@ -1,0 +1,20 @@
+{
+  "name": "the surface defends itself: invalid input is rejected before anything runs",
+  "steps": [
+    {
+      "tool": "api.stock.restock",
+      "input": { "sku": "MUG", "qty": 0 },
+      "expect": { "ok": false, "status": 400, "error": "qty" }
+    },
+    {
+      "tool": "api.stock.restock",
+      "input": { "sku": "GHOST", "qty": 5 },
+      "expect": { "ok": false, "error": "Unknown SKU" }
+    },
+    {
+      "tool": "api.stock.discard",
+      "input": { "sku": "MUG", "qty": 1 },
+      "expect": { "ok": false, "status": 400, "error": "reason" }
+    }
+  ]
+}

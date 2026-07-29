@@ -1,0 +1,55 @@
+{
+  "tools": [
+    {
+      "name": "incidents.list",
+      "guard": "auto",
+      "requiresApproval": false,
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "incidents.report",
+      "guard": "auto",
+      "requiresApproval": false,
+      "inputSchema": {
+        "kind": "object",
+        "flags": {},
+        "shape": {
+          "title": {
+            "kind": "string",
+            "flags": {
+              "min": 3,
+              "max": 120
+            }
+          },
+          "severity": {
+            "kind": "enum",
+            "flags": {},
+            "values": [
+              "low",
+              "high",
+              "critical"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "incidents.resolve",
+      "guard": "confirm",
+      "requiresApproval": true,
+      "inputSchema": {
+        "kind": "object",
+        "flags": {},
+        "shape": {
+          "id": {
+            "kind": "int",
+            "flags": {}
+          }
+        }
+      }
+    }
+  ]
+}

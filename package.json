@@ -44,6 +44,12 @@
     "dev:realtime-chat": "bun run --cwd examples/realtime-chat dev",
     "dev:blog-static": "bun run --cwd examples/blog-static dev",
     "dev:hacker-news": "bun run --cwd examples/hacker-news dev",
+    "dev:mcp-url": "bun run --cwd examples/with-mcp-url dev",
+    "dev:human-in-the-loop": "bun run --cwd examples/human-in-the-loop dev",
+    "dev:durable-agent": "bun run --cwd examples/durable-agent dev",
+    "dev:mcp-client": "bun run --cwd examples/with-mcp-client dev",
+    "dev:local-llm": "bun run --cwd examples/with-local-llm dev",
+    "dev:agent-evals": "bun run --cwd examples/agent-evals dev",
     "release": "bun scripts/release.ts",
     "bench": "node benchmarks/bench.mjs"
   },

@@ -253,6 +253,19 @@ function emitBoundaryInline(result: BoundaryResult, emit: Emit, id: string, open
 async function renderIsland(def: ComponentDef, props: any, scope: RenderScope, emit: Emit): Promise<void> {
   const key = nextKey(scope, def, props.key ?? props.id);
   const stores = storeInstances(scope);
+  const missing = Object.keys(def.use ?? {}).filter((alias) => !stores[alias]);
+
+  // Failing here beats the mid-stream TypeError this used to become: SSR keys
+  // stores by the storeDefs (export) names, so an alias mismatch is an app bug
+  // the message must be able to point at.
+  if (missing.length) {
+    const known = Object.keys(stores).join(', ') || 'none';
+
+    throw new Error(
+      `Janux: store "${missing[0]}" used by island "${def.name}" is not registered — available stores: ${known}. ` +
+        'The `use` alias must match the export name in your stores module.',
+    );
+  }
   const useStores = Object.fromEntries(
     Object.keys(def.use ?? {}).map((alias) => [alias, stores[alias]!]),
   );

@@ -1,0 +1,82 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: light-dark(#f7f7f8, #101014);
+  color: light-dark(#1c1c21, #e8e8ee);
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+}
+
+.bar {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 1rem 0;
+}
+
+.brand {
+  font-weight: 700;
+}
+
+.bar-hint {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.panel {
+  border: 1px solid light-dark(#ddd, #2a2a33);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+
+.status.ok {
+  color: light-dark(#0a7a3d, #4ade80);
+}
+
+.status.down {
+  color: light-dark(#b3261e, #f87171);
+}
+
+.tools {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tool {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid light-dark(#eee, #23232b);
+}
+
+.tool .desc {
+  flex: 1;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.invoke {
+  cursor: pointer;
+}
+
+.result {
+  background: light-dark(#eef1f4, #17171d);
+  border-radius: 8px;
+  padding: 0.75rem;
+  overflow-x: auto;
+  font-size: 0.8rem;
+}
+
+.error {
+  color: light-dark(#b3261e, #f87171);
+}
