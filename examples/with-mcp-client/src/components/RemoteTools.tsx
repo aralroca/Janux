@@ -1,16 +1,21 @@
 import { component, intent, schema, str } from 'janux';
 import { useQuery } from 'janux/client';
 import { callTool, listTools } from '../server/remote.api';
-
-type RemoteToolRef = { name: string; description: string };
-type Discovery = { available: boolean; url: string; tools: RemoteToolRef[]; error?: string };
+import { connected, head, offline, type Discovery } from './remote-view';
 
 const KEY = ['remote-tools'];
+
+/** MCP results arrive as content blocks; the text one is what a human reads. */
+function readable(outcome: any): string {
+  const text = outcome?.content?.[0]?.text;
+
+  return typeof text === 'string' ? text : JSON.stringify(outcome, null, 2);
+}
 
 /**
  * The visible face of the outbound MCP client: the tools another server
  * exposes, discovered through `api.remote.listTools` (already filtered), and a
- * one-click invocation whose JSON result comes back over the same connection.
+ * one-click invocation whose result comes back over the same connection.
  */
 export const RemoteTools = component({
   name: 'remote-tools',
@@ -26,9 +31,7 @@ export const RemoteTools = component({
         state.result = '';
         state.error = '';
         try {
-          const outcome = await callTool({ name: input.name, args: input.args });
-
-          state.result = JSON.stringify(outcome, null, 2);
+          state.result = readable(await callTool({ name: input.name, args: input.args }));
         } catch (error) {
           state.error = String(error);
         }
@@ -40,37 +43,26 @@ export const RemoteTools = component({
     const { state, intents } = bag;
     const q = useQuery(bag, 'remoteTools', () => ({ queryKey: KEY, queryFn: () => listTools() as Promise<Discovery> }));
     const discovery = q.data.value;
-    const tools = discovery?.tools ?? [];
+    const down = Boolean(discovery && !discovery.available);
 
     return (
-      <section class="panel">
-        <h2>Remote MCP tools</h2>
-        {discovery ? (
-          <p class={discovery.available ? 'status ok' : 'status down'}>
-            {discovery.available
-              ? `Connected to ${discovery.url} — ${tools.length} tools after the filter`
-              : `Remote MCP server unreachable at ${discovery.url}: ${discovery.error}`}
-          </p>
-        ) : (
-          <p class="status loading">Discovering remote tools…</p>
-        )}
-        <ul class="tools">
-          {tools.map((tool) => (
-            <li key={tool.name} class="tool">
-              <code>{tool.name}</code>
-              <span class="desc">{tool.description}</span>
-              <button class="invoke" onClick={intents.invoke.with({ name: tool.name })}>
-                Invoke
-              </button>
-            </li>
-          ))}
-        </ul>
-        {state.invoked ? <p class="invoked">last invoked: {state.invoked}</p> : null}
-        {state.result ? <pre class="result">{state.result}</pre> : null}
-        {state.error ? (
-          <p class="error" role="alert">
-            {state.error}
-          </p>
+      <section class={down ? 'card is-down' : 'card'}>
+        {head(discovery)}
+        {discovery ? null : <p class="loading">Discovering the remote server's tools…</p>}
+        {discovery?.available ? connected(discovery, intents.invoke) : null}
+        {down ? offline(discovery!) : null}
+        {state.result || state.error ? (
+          <div class="outcome">
+            <p class="outcome-head">
+              <code>tools/call</code> → <code>{state.invoked}</code>
+            </p>
+            {state.result ? <pre class="result">{state.result}</pre> : null}
+            {state.error ? (
+              <p class="error" role="alert">
+                {state.error}
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </section>
     );

@@ -7,7 +7,9 @@ import { NAMESPACE, remoteSettings } from './server/mcp-connection';
  *   them straight into the model's tool list as `remote.*`;
  * - `api.remote.listTools`/`callTool`: the app's own re-exposure of that
  *   connection, for surfaces beyond the copilot (manifest, hosted MCP).
- * Settings are read once at mount; the api pair re-reads env per request.
+ * Settings are read once at mount (the url must exist before the first turn),
+ * so the built-in demo server starts here; the api pair re-reads env per
+ * request. Discovery stays lazy: no request leaves until a modeled turn.
  */
 const remote = remoteSettings();
 

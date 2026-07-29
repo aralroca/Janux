@@ -14,6 +14,11 @@ export default function Home() {
       </header>
       <main>
         <RemoteTools eager />
+        <p class="swap">
+          No setup: this process also starts a small demo MCP server on a loopback port and points the client at it, so
+          the round trip above is a real one. Set <code>MCP_SERVER_URL</code> (and <code>MCP_SERVER_TOKEN</code> for a
+          protected one) to talk to any other streamable-HTTP MCP server instead.
+        </p>
       </main>
     </div>
   );
