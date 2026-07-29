@@ -162,7 +162,7 @@ const manifest = buildManifest([{ def: Cart, key: 'default', instance }], ctx);
 // { janux: '0.1', resources: [...], tools: [...], events: [...] }
 ```
 
-`resources` are the `ui://`/`store://` snapshots (with JSON Schema for typed state), `tools` are the non-`forbidden` intents (guard, input schema, `ready`), `events` are the union of every `emits` key. `resolveGuard(def, ctx)` is the same helper it uses to collapse function guards to a concrete `'auto' | 'confirm' | 'forbidden'`.
+`resources` are the `ui://`/`store://` snapshots (with JSON Schema for typed state), `tools` are the non-`forbidden` intents (guard, input schema, `ready`), `events` are the union of every `emits` key. Passing `instance` is what makes a tool's projection *live*: `ready` is evaluated against it, and so is any input field declaring [`options()`](/docs/reference/schema-api#optionsresolve), whose currently-valid values are published as that property's `enum`. `resolveGuard(def, ctx)` is the same helper it uses to collapse function guards to a concrete `'auto' | 'confirm' | 'forbidden'`.
 
 ### createBus()
 

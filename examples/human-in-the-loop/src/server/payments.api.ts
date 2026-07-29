@@ -8,7 +8,10 @@ export const transfer = api({
   description:
     'Wire money to a payee (amount in cents). Irreversible monetary action: ' +
     'agent-origin calls come back as a proposal a human settles via /_janux/approve.',
-  input: schema({ to: str().min(1), amountCents: money() }),
+  // Defaults are the example payload an agent (or the panel) starts from: a
+  // real payee and a real invoice amount, so "call it" moves plausible money
+  // instead of one cent to "example".
+  input: schema({ to: str().min(1).default('Orbit Freight'), amountCents: money().default(24500) }),
   output: schema({ transferId: str(), to: str(), amountCents: money() }),
   guard: 'confirm',
   run: ({ input }) => {

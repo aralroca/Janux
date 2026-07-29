@@ -1,17 +1,29 @@
-import { component, intent, list, money, schema, str } from 'janux';
+import { component, int, intent, list, money, schema, str } from 'janux';
 import { transfer } from '../server/payments.api';
 
-let draftSeq = 0;
-let auditSeq = 0;
 let stopAudit: (() => void) | undefined;
 
 /** The intents the visible trail mirrors — never `payments.record` itself. */
 const AUDITED_TOOLS = ['payments.draft', 'payments.send'];
 
-const euros = (cents: number) => `${(cents / 100).toFixed(2)}€`;
+/** Vendors the desk suggests, in order: every new draft names a different payee and amount. */
+const PAYEES = [
+  { to: 'Nimbus Cloud', amountCents: 990 },
+  { to: 'Orbit Freight', amountCents: 24500 },
+  { to: 'Vela Design', amountCents: 7800 },
+  { to: 'Harbor Legal', amountCents: 156000 },
+];
 
-/** What the trail shows for a framework AuditEntry: payee + amount, resolved from the entry's input. */
+const ERROR_PREFIX = /^Error:\s*/;
+
+const euros = (cents: number) => `${(cents / 100).toFixed(2)}€`;
+const suggestion = (state: any) => PAYEES[state.nextPayee % PAYEES.length]!;
+const draftIds = (state: any) => state.queue.filter((row: any) => row.status === 'draft').map((row: any) => row.id);
+const reason = (error?: string) => (error ?? 'failed').replace(ERROR_PREFIX, '');
+
+/** What the trail shows for a framework AuditEntry: payee + amount, or why the call failed. */
 function detailFor(entry: any, state: any): string | undefined {
+  if (!entry.ok) return reason(entry.error);
   if (entry.tool === 'payments.draft') return `${entry.input.to} ${euros(entry.input.amountCents)}`;
   const payment = state.queue.find((row: any) => row.id === entry.input?.id);
 
@@ -27,24 +39,30 @@ export const PaymentsDesk = component({
       { id: 'pay_acme', to: 'Acme Corp', amountCents: 12000, status: 'draft', ref: '' },
       { id: 'pay_lumen', to: 'Lumen Labs', amountCents: 4550, status: 'draft', ref: '' },
     ]),
-    audit: list({ id: str(), tool: str(), detail: str(), origin: str() }),
+    nextPayee: int().default(0),
+    audit: list({ id: str(), tool: str(), detail: str(), origin: str(), outcome: str() }),
   }),
 
   intents: {
     draft: intent({
       description: 'Queue a new outgoing payment draft. Does not move money.',
-      input: schema({ to: str().min(1), amountCents: money() }),
+      input: schema({ to: str().min(1).default('Nimbus Cloud'), amountCents: money().default(990) }),
       run: ({ state, input }: any) => {
-        draftSeq += 1;
-        state.queue.push({ id: `pay_new_${draftSeq}`, to: input.to, amountCents: input.amountCents, status: 'draft', ref: '' });
+        const id = `pay_${state.queue.length + 1}`;
+
+        state.queue.push({ id, to: input.to, amountCents: input.amountCents, status: 'draft', ref: '' });
+        // Whoever drafted, the desk moves on to the next vendor it suggests.
+        state.nextPayee += 1;
       },
     }),
 
     send: intent({
       description: 'Send a drafted payment by id. Moves real money — agent calls park as a proposal.',
       guard: 'confirm',
-      input: schema({ id: str().default('pay_acme') }),
-      ready: ({ state }: any) => state.queue.some((payment: any) => payment.status === 'draft'),
+      // `options()` publishes the ids that are actually pending right now, so a
+      // caller reading the manifest never aims at a payment that already went out.
+      input: schema({ id: str().default('pay_acme').options(({ state }: any) => draftIds(state)) }),
+      ready: ({ state }: any) => draftIds(state).length > 0,
       run: async ({ state, input }: any) => {
         const payment = state.queue.find((row: any) => row.id === input.id);
 
@@ -60,28 +78,28 @@ export const PaymentsDesk = component({
     record: intent({
       description: 'Append a framework janux:audit entry to the visible trail. Not an agent tool.',
       guard: 'forbidden',
-      input: schema({ tool: str(), detail: str(), origin: str() }),
+      input: schema({ tool: str(), detail: str(), origin: str(), outcome: str() }),
       run: ({ state, input }: any) => {
-        auditSeq += 1;
-        state.audit.unshift({ id: `audit_${auditSeq}`, tool: input.tool, detail: input.detail, origin: input.origin });
+        state.audit.unshift({ id: `audit_${state.audit.length + 1}`, ...input });
       },
     }),
   },
 
   /**
    * The trail is fed by the framework's own audit stream: every executed
-   * intent arrives as a `janux:audit` DOM event (origin included), so `run()`
-   * bodies no longer re-record themselves by hand.
+   * intent arrives as a `janux:audit` DOM event (origin and outcome included),
+   * so `run()` bodies no longer re-record themselves by hand — and a refused
+   * call is as visible as a successful one.
    */
   lifecycle: {
     attach: ({ state, intents }: any) => {
       const onAudit = (event: Event) => {
         const entry = (event as CustomEvent<any>).detail;
 
-        if (!entry.ok || entry.proposed || !AUDITED_TOOLS.includes(entry.tool)) return;
+        if (entry.proposed || !AUDITED_TOOLS.includes(entry.tool)) return;
         const detail = detailFor(entry, state);
 
-        if (detail) intents.record({ tool: entry.tool, detail, origin: entry.origin });
+        if (detail) intents.record({ tool: entry.tool, detail, origin: entry.origin, outcome: entry.ok ? 'ok' : 'failed' });
       };
 
       document.addEventListener('janux:audit', onAudit);
@@ -108,15 +126,15 @@ export const PaymentsDesk = component({
           </li>
         ))}
       </ul>
-      <button class="new-draft" onClick={intents.draft.with({ to: 'Nimbus Cloud', amountCents: 990 })}>
-        + Draft 9.90€ to Nimbus Cloud
+      <button class="new-draft" onClick={intents.draft.with(suggestion(state))}>
+        + Draft {euros(suggestion(state).amountCents)} to {suggestion(state).to}
       </button>
 
       <h2>Audit trail</h2>
       {state.audit.length === 0 ? <p class="audit-empty">No sensitive actions yet.</p> : null}
       <ol class="audit">
         {state.audit.map((entry: any) => (
-          <li key={entry.id} class={`entry ${entry.origin}`}>
+          <li key={entry.id} class={`entry ${entry.origin} ${entry.outcome}`}>
             <span class={`origin ${entry.origin}`}>{entry.origin}</span>
             <code>{entry.tool}</code>
             <span class="detail">{entry.detail}</span>

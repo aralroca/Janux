@@ -3,6 +3,7 @@ import { component, intent, source, store } from '../define/factories';
 import { jsx, Fragment } from '../jsx-runtime';
 import { int, list, schema, str } from '../schema';
 import { buildManifest } from '../manifest';
+import { createInstance } from '../runtime/instance';
 import { renderToStream, renderToString } from './server';
 
 function PriceTag({ amount }: { amount: number }) {
@@ -726,5 +727,62 @@ describe('buildManifest', () => {
       required: ['id'],
       additionalProperties: false,
     });
+  });
+});
+
+/**
+ * `ready` says whether a tool can be called at all; `options()` says which values
+ * it currently accepts. Both are resolved against the live instance, so an agent
+ * reading the manifest never has to guess an id that stopped existing.
+ */
+describe('buildManifest live options', () => {
+  const desk = component({
+    name: 'desk',
+    state: schema({ rows: list({ id: str(), done: str() }).default([{ id: 'a', done: 'no' }, { id: 'b', done: 'yes' }]) }),
+    intents: {
+      pick: intent({
+        input: schema({
+          id: str().default('a').options(({ state }: any) => state.rows.filter((r: any) => r.done === 'no').map((r: any) => r.id)),
+        }),
+        run: () => {},
+      }),
+      churn: intent({
+        run: ({ state }: any) => {
+          state.rows[0].done = 'yes';
+          state.rows.push({ id: 'c', done: 'no' });
+        },
+      }),
+    },
+    view: () => null,
+  });
+  const inputOf = (instance?: any) =>
+    buildManifest([{ def: desk, instance }]).tools.find((t) => t.name === 'desk.pick')!.input as any;
+
+  it('advertises the values a field currently accepts, resolved against the instance', () => {
+    const instance = createInstance(desk);
+
+    expect(inputOf(instance).properties.id).toEqual({ type: 'string', default: 'a', enum: ['a'] });
+  });
+
+  it('follows the state: a value that stops being valid leaves the advertised list', async () => {
+    const instance = createInstance(desk);
+
+    await instance.intents.churn!(undefined);
+
+    expect(inputOf(instance).properties.id.enum).toEqual(['c']);
+  });
+
+  it('stays a plain schema with no instance, no options left, or a resolver that throws', () => {
+    const empty = createInstance(desk, { initial: { rows: [] } });
+    const broken = component({
+      name: 'broken',
+      intents: { pick: intent({ input: schema({ id: str().options(() => { throw new Error('boom'); }) }), run: () => {} }) },
+      view: () => null,
+    });
+    const brokenInput = buildManifest([{ def: broken, instance: createInstance(broken) }]).tools[0]!.input as any;
+
+    expect(inputOf().properties.id).toEqual({ type: 'string', default: 'a' });
+    expect(inputOf(empty).properties.id).toEqual({ type: 'string', default: 'a' });
+    expect(brokenInput.properties.id).toEqual({ type: 'string' });
   });
 });

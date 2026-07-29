@@ -159,6 +159,19 @@ button.reject {
   background: #6d28d9;
 }
 
+.approval-failed {
+  margin: 0 0 0.7rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  color: var(--danger);
+  background: #fff5f5;
+}
+
+.audit .entry.failed .detail {
+  color: var(--danger);
+}
+
 .proposal-card {
   border: 1px solid var(--warn);
   border-radius: 8px;
