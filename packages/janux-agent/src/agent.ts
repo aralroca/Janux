@@ -5,6 +5,7 @@ import { CLIENT_TOOL_SPECS } from 'janux';
 import { runProcessors } from './harness/processors';
 import { createRateLimiter, type RateLimitConfig, type RateLimiter } from './harness/rate-limit';
 import { createLlmHandler } from './llm-endpoint';
+import { createRemoteToolbox, type McpAgentConnection, type RemoteToolbox } from './mcp-tools';
 import { resolveModel, setupCard, type ModelEnv } from './model';
 import { allowsTool, type ToolFilter } from './tool-filter';
 import { callProvider, type AgentTool, type ChatMessage, type FetchLike, type ToolCall } from './providers';
@@ -17,6 +18,8 @@ export interface HarnessConfig {
   rateLimit?: RateLimitConfig;
   /** Resolves the caller identity (rate-limit key + thread ownership). Default: 'anonymous'. */
   identityFor?: (req: Request) => string | undefined | Promise<string | undefined>;
+  /** Human-readable reply on a guardrail refusal — a string or a per-reason factory. */
+  refusalMessage?: string | ((reason: string) => string);
 }
 
 export interface AgentConfig {
@@ -31,6 +34,8 @@ export interface AgentConfig {
   maxTurns?: number;
   /** Which mounted tools reach the model. Same semantics as `createCopilot({ tools })`. */
   tools?: ToolFilter;
+  /** Remote MCP server(s) whose tools join the agent's tool list. */
+  mcp?: McpAgentConnection | McpAgentConnection[];
   harness?: HarnessConfig;
 }
 
@@ -106,12 +111,11 @@ function createGate(config: AgentConfig, limiter: RateLimiter | undefined) {
   };
 }
 
-async function runServerCalls(calls: ToolCall[], deps: AgentDeps): Promise<ChatMessage[]> {
+async function toolResults(calls: ToolCall[], run: (call: ToolCall) => Promise<unknown>): Promise<ChatMessage[]> {
   const results: ChatMessage[] = [];
 
   for (const call of calls) {
-    const content = await deps
-      .invoke(call.name, call.input)
+    const content = await run(call)
       .then((result) => JSON.stringify(result ?? null))
       .catch((error) => JSON.stringify({ error: String(error) }));
 
@@ -119,6 +123,16 @@ async function runServerCalls(calls: ToolCall[], deps: AgentDeps): Promise<ChatM
   }
 
   return results;
+}
+
+const DEFAULT_REFUSAL = "I can't help with that request.";
+
+function refusalText(harness: HarnessConfig | undefined, reason: string): string {
+  const custom = harness?.refusalMessage;
+
+  if (typeof custom === 'function') return custom(reason);
+
+  return custom ?? DEFAULT_REFUSAL;
 }
 
 /**
@@ -159,6 +173,7 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
     ? createRateLimiter(config.harness.rateLimit)
     : undefined;
   const gate = createGate(config, limiter);
+  const toolbox: RemoteToolbox | undefined = createRemoteToolbox(config.mcp, fetchImpl);
 
   return {
     handleLlm: createLlmHandler(config, env, fetchImpl, gate),
@@ -174,9 +189,11 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
         toolResults?: { name: string; output: unknown }[];
       };
       const manifest: any = await deps.manifestFor(body.path ?? '/');
+      const remoteTools = toolbox ? await toolbox.tools() : [];
       const tools = [
         ...manifestTools(manifest, config.tools),
         ...CLIENT_TOOL_SPECS.map((spec) => ({ name: spec.name, description: spec.description, input: spec.parameters })),
+        ...remoteTools.map(({ name, description, input }) => ({ name, description, input })),
       ];
       const system = systemPrompt(config, manifest);
       const turn = await turnMessages(body, config.harness, identity).catch((error) => {
@@ -203,7 +220,9 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       });
 
       if (guarded.aborted) {
-        return json({ type: 'refusal', reason: guarded.aborted.reason, threadId: turn.threadId }, 200);
+        const { reason } = guarded.aborted;
+
+        return json({ type: 'refusal', reason, message: refusalText(config.harness, reason), threadId: turn.threadId }, 200);
       }
       const messages = guarded.messages.filter((message) => message.role !== 'system') as ChatMessage[];
 
@@ -231,9 +250,11 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
           });
         }
         const serverCalls = reply.toolCalls.filter((call) => call.name.startsWith('api.'));
-        const uiCalls = reply.toolCalls.filter((call) => !call.name.startsWith('api.'));
+        const remoteCalls = reply.toolCalls.filter((call) => toolbox?.owns(call.name));
+        const uiCalls = reply.toolCalls.filter((call) => !serverCalls.includes(call) && !remoteCalls.includes(call));
 
-        messages.push(...(await runServerCalls(serverCalls, deps)));
+        messages.push(...(await toolResults(serverCalls, (call) => deps.invoke(call.name, call.input))));
+        messages.push(...(await toolResults(remoteCalls, (call) => toolbox!.call(call.name, call.input))));
         if (uiCalls.length > 0) return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId });
       }
 

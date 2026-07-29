@@ -34,7 +34,7 @@ export {
   type RemoteTool,
 } from './mcp-client';
 export { createPgStorage, type PgStorageOptions } from './pg-storage';
-export { createRedisCounterStore, type RedisCounterOptions } from './redis-counter';
+export { createRedisCounterStore, type RedisCounterOptions, type RedisCounterStore } from './redis-counter';
 export {
   acceptAttachments,
   AttachmentError,

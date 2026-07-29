@@ -6,6 +6,32 @@ Your copilot calling **other** people's MCP servers — the mirror image of the 
 import { connectMcp, createMcpPool } from '@janux/agent';
 ```
 
+## defineAgent({ mcp })
+
+The zero-plumbing path: hand the agent one connection (or an array of them) and the remote tools join its tool list, next to your app's own intents and `api()` tools.
+
+```ts
+export default defineAgent({
+  mcp: {
+    url: 'https://mcp.example.com/mcp',
+    headers: { authorization: `Bearer ${process.env.EXAMPLE_TOKEN}` },
+    tools: { include: ['example.search*'] },
+    prefix: 'example',
+  },
+});
+```
+
+| `McpAgentConnection` | Notes |
+|---|---|
+| `url` | The server's JSON-RPC endpoint |
+| `headers` | Extra headers on every request — e.g. `{ authorization: 'Bearer …' }` |
+| `tools` | Which remote tools reach the model, matched on the **prefixed** name — same `include`/`exclude` semantics as `defineAgent({ tools })`, and `exclude` always wins |
+| `prefix` | Namespace for the remote tool names (default: `'mcp'`) |
+
+Discovery is **lazy and cached**: the first modeled turn lists the remote tools, later turns reuse the list. A failed discovery never downs the agent — that turn simply runs without the remote tools and the next turn re-probes, so a remote restart is self-healing. When the model calls a remote tool, the loop dispatches it over the connection and feeds the result back into the same turn, exactly like an `api.*` tool.
+
+Everything below is the client underneath that hook — reach for it when you need the connection outside the agent loop (re-exposing remote tools on your own surface, per-user tokens via a pool, custom retargeting).
+
 ## connectMcp(options)
 
 ```ts

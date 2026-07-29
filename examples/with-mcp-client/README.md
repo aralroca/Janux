@@ -1,10 +1,11 @@
 # Outbound MCP client
 
-An app whose embedded agent consumes another server's MCP tools by URL: it discovers them with `connectMcp`, filters them with an allowlist, and re-exposes them on its own surface — manifest, hosted MCP and copilot alike.
+An app whose embedded agent consumes another server's MCP tools by URL: `defineAgent({ mcp })` puts them straight into the copilot's tool list, and the app also re-exposes them on its own surface — manifest, hosted MCP and copilot alike.
 
+- **`defineAgent({ mcp })`** — `src/agent.ts` hands the agent the remote connection (`url`, bearer `headers`, a `tools` filter, the `remote` prefix); discovery is lazy and cached, and the loop dispatches `remote.*` calls over the wire like any `api.*` tool.
 - **Outbound `connectMcp`** — `src/server/remote.api.ts` keeps one pooled connection per `MCP_SERVER_URL` (`createMcpPool`: failures evict, so a remote restart self-heals) and namespaces every remote tool as `remote.*`, so a remote `search` can never collide with a local one.
 - **Modern-first wire, legacy fallback** — requests go out speaking MCP `2026-07-28` (per-request `_meta`, no handshake); a legacy server that answers `400` gets the `initialize` handshake instead, sent lazily and once, and the connection remembers the era.
-- **Tool filter (allowlist/prefix)** — `MCP_TOOL_INCLUDE` / `MCP_TOOL_EXCLUDE` use the same semantics as `defineAgent({ tools })`: `remote.docs.*` matches by prefix, anything else exactly, and exclude always wins. Excluded tools are invisible in the listing and refused on invocation.
+- **Tool filter (allowlist/prefix)** — `MCP_TOOL_INCLUDE` / `MCP_TOOL_EXCLUDE` feed the exported `allowsTool`, the same `ToolFilter` semantics as `defineAgent({ tools })`: `remote.docs.*` matches by prefix, anything else exactly, and exclude always wins. Excluded tools are invisible in the listing and refused on invocation.
 - **Re-exposed surface** — `api.remote.listTools` and `api.remote.callTool` publish the filtered remote tools on this app's own manifest and hosted MCP (`/_janux/mcp`): the app is an MCP client and an MCP server at once, and its copilot reaches the remote tools through them.
 - **Clean degradation** — with the remote server down the app still boots and serves; `api.remote.listTools` answers `{ available: false, error }` instead of crashing, and the island reports it.
 
@@ -45,5 +46,5 @@ const result = await remote.call('remote.docs.searchDocs', { query: 'islands' })
 |---|---|
 | `src/server/remote.api.ts` | The outbound client: pooled `connectMcp` per URL, the env-driven allowlist filter, and the `api()` pair that re-exposes remote tools |
 | `src/components/RemoteTools.tsx` | The island: discovered remote tools, connection status, one-click invocation with the JSON result inline |
-| `src/agent.ts` | `defineAgent` instructed to reach the remote tools through `api.remote.*`, with a `tools` allowlist of its own |
+| `src/agent.ts` | `defineAgent({ mcp })` wiring the remote server into the copilot's tool list, plus a `tools` allowlist over the app's own surface |
 | `src/routes/index.tsx` | The page mounting the island |

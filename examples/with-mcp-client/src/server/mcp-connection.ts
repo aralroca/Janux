@@ -1,4 +1,4 @@
-import { createMcpPool, type McpConnection, type RemoteTool } from '@janux/agent';
+import { allowsTool, createMcpPool, type McpConnection, type RemoteTool } from '@janux/agent';
 
 /**
  * The outbound MCP client of this app: one pooled `connectMcp` connection per
@@ -38,19 +38,9 @@ export function remoteSettings(): RemoteSettings {
   };
 }
 
-/*
- * Mirror of the `defineAgent({ tools })` ToolFilter semantics: `'remote.docs.*'`
- * matches by prefix, anything else exactly, and `exclude` always wins.
- * Duplicated here because `@janux/agent` does not export `allowsTool`.
- */
-function matches(name: string, pattern: string): boolean {
-  return pattern.endsWith('*') ? name.startsWith(pattern.slice(0, -1)) : name === pattern;
-}
-
+/** The framework's own `ToolFilter` semantics — `defineAgent({ tools })` and this allowlist agree. */
 export function allowed(name: string, { include, exclude }: RemoteSettings): boolean {
-  const included = !include.length || include.some((pattern) => matches(name, pattern));
-
-  return included && !exclude.some((pattern) => matches(name, pattern));
+  return allowsTool(name, { include, exclude });
 }
 
 export function connection({ url, token }: RemoteSettings): McpConnection {

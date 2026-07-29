@@ -9,9 +9,12 @@ import {
   type HarnessStorage,
 } from '@janux/agent';
 import { RATE_LIMIT } from './config';
-import { guardrails } from './guardrails';
+import { SAFE_REFUSAL, guardrails } from './guardrails';
 
 export type DurableStorage = HarnessStorage & { close?: () => Promise<void> };
+
+/** Redis stores expose `close()` (they own a connection); the in-memory one has nothing to close. */
+export type DurableCounterStore = CounterStore & { close?: () => Promise<void> };
 
 interface RedisClient {
   incr(key: string): Promise<number>;
@@ -26,7 +29,7 @@ export function durableStorage(connectionString = process.env.DATABASE_URL): Pro
 }
 
 /** Redis when REDIS_URL (or a client) is given — one shared budget across instances. */
-export function counterStore(redis: string | RedisClient | undefined = process.env.REDIS_URL): Promise<CounterStore> {
+export function counterStore(redis: string | RedisClient | undefined = process.env.REDIS_URL): Promise<DurableCounterStore> {
   if (!redis) return Promise.resolve(createMemoryCounterStore());
 
   return createRedisCounterStore({ redis, keyPrefix: 'durable-agent:' });
@@ -55,6 +58,7 @@ export async function buildHarness() {
   return {
     memory: conversationMemory(storage),
     processors: guardrails(),
+    refusalMessage: SAFE_REFUSAL,
     rateLimit: { ...RATE_LIMIT, store },
     identityFor,
   };

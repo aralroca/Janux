@@ -137,6 +137,27 @@ describe('examples/with-mcp-client outbound MCP client', () => {
     }
   }, 30_000);
 
+  it('mounts defineAgent({ mcp }) and leaves the remote untouched until a modeled turn (lazy discovery)', async () => {
+    // Force the no-model path: the repo .env may carry a provider key.
+    const MODEL_KEYS = ['JANUX_MODEL', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY', 'OPENROUTER_API_KEY'];
+    const saved = MODEL_KEYS.map((key) => [key, process.env[key]] as const);
+
+    MODEL_KEYS.forEach((key) => delete process.env[key]);
+    try {
+      const contacts = seenAuth.length;
+      const reply: any = await (await post(client, '/_janux/agent', { messages: [{ role: 'user', content: 'hi' }] })).json();
+
+      // Without a model the mount answers with the setup card…
+      expect(reply.type).toBe('setup');
+      // …and the lazy MCP discovery never fired a request at the remote.
+      expect(seenAuth.length).toBe(contacts);
+    } finally {
+      saved.forEach(([key, value]) => {
+        if (value !== undefined) process.env[key] = value;
+      });
+    }
+  }, 30_000);
+
   it('sends the bearer token from env and falls back to initialize on a legacy server', async () => {
     // Every request the earlier tests sent carried the env token.
     expect(seenAuth).toContain('Bearer e2e-token');

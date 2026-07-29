@@ -1,4 +1,4 @@
-import { injectionGuard, runProcessors, unicodeNormalizer, type InputProcessor } from '@janux/agent';
+import { injectionGuard, unicodeNormalizer, type InputProcessor } from '@janux/agent';
 
 /** Classic injection framings; swap for a model-based classifier in production. */
 const HOSTILE_PATTERNS = [
@@ -9,8 +9,9 @@ const HOSTILE_PATTERNS = [
 ];
 
 /**
- * What the UI answers when a turn is refused. The framework returns a typed
- * `{ type: 'refusal', reason }` — the human-readable reply is the app's call.
+ * What the UI answers when a turn is refused. Wired as `harness.refusalMessage`,
+ * so the framework's `{ type: 'refusal', reason, message }` carries it — no
+ * hand-mapping in the app.
  */
 export const SAFE_REFUSAL = 'I can’t help with that request. Ask me about your workspace instead.';
 
@@ -21,13 +22,4 @@ export function classifyPrompt(text: string): 'ok' | 'suspicious' {
 /** Order matters: normalize first so the classifier sees what the model would see. */
 export function guardrails(): InputProcessor[] {
   return [unicodeNormalizer(), injectionGuard(classifyPrompt)];
-}
-
-/** Screens a would-be user turn: allowed, or blocked with the safe reply. */
-export async function screenInput(text: string): Promise<{ allowed: boolean; reply?: string }> {
-  const turn = await runProcessors(guardrails(), { messages: [{ role: 'user', content: text }] });
-
-  if (turn.aborted) return { allowed: false, reply: SAFE_REFUSAL };
-
-  return { allowed: true };
 }

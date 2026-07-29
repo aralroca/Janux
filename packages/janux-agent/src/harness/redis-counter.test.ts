@@ -15,7 +15,32 @@ const probe = await import('ioredis')
 
 const suite = probe ? describe : describe.skip;
 
+describe('redis counter store close()', () => {
+  it('never disconnects a caller-supplied client — it does not own it', async () => {
+    let quits = 0;
+    const client = {
+      incr: async () => 1,
+      pexpire: async () => 'OK',
+      quit: async () => {
+        quits += 1;
+      },
+    };
+    const store = await createRedisCounterStore({ redis: client });
+
+    await store.close();
+
+    expect(quits).toBe(0);
+  });
+});
+
 suite('redis counter store (real Redis)', () => {
+  it('close() disconnects a store created from a connection string', async () => {
+    const store = await createRedisCounterStore({ redis: URL, keyPrefix: 'janux-test:' });
+
+    expect(await store.incr(`close_probe_${Date.now()}`, 60_000)).toBe(1);
+    await store.close();
+  });
+
   it('enforces the per-identity window across "instances" (stateless parity)', async () => {
     const key = `test_${Date.now()}`;
     const limiterA = createRateLimiter({

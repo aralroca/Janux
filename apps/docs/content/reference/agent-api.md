@@ -11,8 +11,11 @@ export default defineAgent({
   modelOptions: { temperature: 0.2 },            // optional — extra provider fields
   maxTurns: 6,                                   // loop cap per request
   tools: { include: ['api.shop.*', 'cart.*'] },  // default: everything mounted
+  mcp: { url: 'https://mcp.example.com/mcp' },   // optional — remote MCP tools join the list
 });
 ```
+
+`mcp` connects the agent to remote MCP servers and is documented in [Outbound MCP client](/docs/reference/agent-mcp-client).
 
 Place it in `src/agent.ts` as the default export. With no file at all, every app still gets a working default agent.
 
@@ -101,5 +104,6 @@ The built-in loop is composed from these; import them to build a custom mount or
 | `resolveModel(explicit, env, options?)` | `→ ResolvedModel \| undefined` | Runs the [resolution order](#model-resolution-order) against an env bag. `ResolvedModel` is `{ provider, model, apiKey, source, options? }`; `undefined` means nothing was configured. |
 | `setupCard()` | `→ { type: 'setup', message }` | The exact `setup` response the endpoint returns when no model resolves — names the variables to set. |
 | `callProvider(model, system, messages, tools, fetch)` | `→ Promise<ProviderReply>` | One provider round-trip, normalized across Anthropic / OpenAI / Google into a `ProviderReply` (`text` and/or `toolCalls`). The `fetch` seam makes it testable and edge-portable. |
+| `allowsTool(name, filter)` | `→ boolean` | The one `ToolFilter` semantics of the whole package — `defineAgent({ tools })`, `createCopilot({ tools })` and `defineAgent({ mcp })` all use it: `include` empty/absent means everything, `'api.shop.*'` matches by prefix, anything else exactly, and `exclude` always wins. Import it when your own allowlist must agree with the agent's. |
 
 For the **browser-side** copilot runtime (`@janux/agent/local`: `createCopilot`, `localLlm`, `serverLlm`, `defineTool`, …), see [Local-model copilot](/docs/recipes/local-model-copilot).
