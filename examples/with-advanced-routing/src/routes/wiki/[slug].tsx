@@ -10,9 +10,10 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
 
   if (!article) {
     return (
-      <article class="article">
+      <article class="card article empty">
+        <p class="eyebrow">Matched, but empty</p>
         <h1>Not written yet</h1>
-        <p>
+        <p class="lead">
           Nothing filed under <code>{params.slug}</code> — but the route matched: any single segment does.
         </p>
       </article>
@@ -20,9 +21,10 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
   }
 
   return (
-    <article class="article">
+    <article class="card article">
+      <p class="eyebrow">Article</p>
       <h1>{article.title}</h1>
-      <p>{article.body}</p>
+      <p class="lead">{article.body}</p>
       <p class="param">
         slug: <code>{params.slug}</code>
       </p>

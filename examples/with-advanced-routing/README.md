@@ -9,6 +9,7 @@ A mini knowledge base whose whole point is its URL space: every pattern the file
 - **Nested layouts `_layout.tsx`** — a root shell on every page, plus a wiki sub-shell (article sidebar) that wraps only `/wiki/**`.
 - **Route groups `(marketing)`** — `/about` and `/pricing` share the group's banner layout without the directory ever appearing in the URL.
 - **SPA navigation** — plain anchors, intercepted and diffed; the `NavCounter` island is rendered `persist` from the shell, so its live instance is grafted onto every incoming page and the count survives navigations.
+- **Request context `src/ctx.ts`** — whatever it returns reaches every page and layout as `ctx`. Here it is the current pathname, which is how the header can mark the active section (`aria-current="page"`) and how the `(marketing)` sub-shell highlights its own link — including after a SPA navigation, since the incoming HTML is what the diff applies.
 
 ```bash
 bun install
@@ -44,3 +45,9 @@ src/routes
 | `src/data/kb.ts` | The articles and tickets the pages render — data, no routing |
 | `src/components/NavCounter.tsx` | The `persist` island whose state survives every SPA navigation |
 | `src/client.ts` | `boot()` — which is also what turns every plain anchor into a SPA navigation |
+| `src/ctx.ts` | The per-request context: the pathname the shell needs to mark its active tab |
+| `src/styles.css` | The one sheet the app ships — the shell, the cards and the section skins |
+
+## What the UI shows
+
+The header is the root shell: brand, one pill per section with the current one highlighted, and the `NavCounter` island on the right — click it, navigate anywhere, the count stays. The home page lists every pattern as a card (URL, file pattern, one line of why). Each section then makes its own point visible: the wiki draws its sub-shell as a dashed sidebar with the open article marked, `/docs/**` turns each catch-all segment into a breadcrumb chip, `/search` shows the rest segments as chips (and none at all on `/search`), tickets badge the matcher that let the URL through, and the `(marketing)` group wraps `/about` and `/pricing` in a tinted panel of its own. A URL that matches a route but has nothing behind it — `/wiki/definitely-not-written` — renders as an amber "matched, but empty" card; a URL no pattern matches never reaches a page at all (404 from the router).

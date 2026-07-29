@@ -13,8 +13,11 @@ export const NavCounter = component({
     add: intent({ description: 'Count a click', run: ({ state }) => (state.clicks += 1) }),
   },
   view: ({ state, intents }: any) => (
-    <button class="nav-counter" onClick={intents.add}>
-      Clicked {state.clicks}×
+    <button class="nav-counter" onClick={intents.add} title="Island state — it survives every SPA navigation">
+      <span class="nav-counter-dot" aria-hidden="true"></span>
+      <span class="nav-counter-label">
+        Clicked <span class="nav-counter-count">{state.clicks}×</span>
+      </span>
     </button>
   ),
 });

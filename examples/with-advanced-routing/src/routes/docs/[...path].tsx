@@ -11,18 +11,22 @@ export default function DocsPage({ params }: { params: { path: string } }) {
   }));
 
   return (
-    <article class="doc">
-      <nav aria-label="Breadcrumbs">
+    <article class="card doc">
+      <nav class="crumbs" aria-label="Breadcrumbs">
         {crumbs.map(({ segment, href }) => (
           <a key={href} class="crumb" href={href}>
             {segment}
           </a>
         ))}
       </nav>
+      <p class="eyebrow">Catch-all segment</p>
       <h1>Docs / {segments.join(' / ')}</h1>
-      <p>
+      <p class="lead">
         <code>docs/[...path].tsx</code> matched <span class="segment-count">{segments.length}</span> segment(s) — every
         breadcrumb above is itself a valid catch-all URL.
+      </p>
+      <p class="note">
+        Bare <code>/docs</code> matches nothing: a catch-all needs at least one segment.
       </p>
     </article>
   );
