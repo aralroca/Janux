@@ -370,6 +370,16 @@
         "vite": "^8.1.5",
       },
     },
+    "examples/cross-island-state": {
+      "name": "janux-example-cross-island-state",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/data-cache": {
       "name": "janux-example-data-cache",
       "version": "0.2.1",
@@ -426,6 +436,36 @@
         "janux": "workspace:*",
       },
     },
+    "examples/with-advanced-routing": {
+      "name": "janux-example-with-advanced-routing",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
+    "examples/with-forms": {
+      "name": "janux-example-with-forms",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
+    "examples/with-optimistic-ui": {
+      "name": "janux-example-with-optimistic-ui",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/with-suspense": {
       "name": "janux-example-with-suspense",
       "version": "0.1.0",
@@ -433,6 +473,17 @@
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
+    "examples/with-tailwind": {
+      "name": "janux-example-with-tailwind",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "@janux/tailwind": "workspace:*",
         "janux": "workspace:*",
       },
     },
@@ -1414,6 +1465,8 @@
 
     "janux-docs": ["janux-docs@workspace:apps/docs"],
 
+    "janux-example-cross-island-state": ["janux-example-cross-island-state@workspace:examples/cross-island-state"],
+
     "janux-example-data-cache": ["janux-example-data-cache@workspace:examples/data-cache"],
 
     "janux-example-i18n": ["janux-example-i18n@workspace:examples/i18n"],
@@ -1424,7 +1477,15 @@
 
     "janux-example-shop": ["janux-example-shop@workspace:examples/shop"],
 
+    "janux-example-with-advanced-routing": ["janux-example-with-advanced-routing@workspace:examples/with-advanced-routing"],
+
+    "janux-example-with-forms": ["janux-example-with-forms@workspace:examples/with-forms"],
+
+    "janux-example-with-optimistic-ui": ["janux-example-with-optimistic-ui@workspace:examples/with-optimistic-ui"],
+
     "janux-example-with-suspense": ["janux-example-with-suspense@workspace:examples/with-suspense"],
+
+    "janux-example-with-tailwind": ["janux-example-with-tailwind@workspace:examples/with-tailwind"],
 
     "janux-example-with-web-agent": ["janux-example-with-web-agent@workspace:examples/with-web-agent"],
 

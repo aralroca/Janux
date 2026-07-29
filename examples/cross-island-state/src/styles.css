@@ -1,0 +1,180 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --ink: #16181d;
+  --muted: #5a6270;
+  --line: #e3e6ea;
+  --accent: #0062ff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101216;
+    --panel: #181b21;
+    --ink: #e8eaee;
+    --muted: #9aa3b0;
+    --line: #262b33;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1.2rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.brand {
+  font-weight: 700;
+}
+
+.cart-badge {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.cart-badge output {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.2rem;
+  padding: 1.2rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.products {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+}
+
+.product,
+.cart-panel,
+.inventory {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.product {
+  text-align: center;
+}
+
+.product .art {
+  font-size: 1.8rem;
+}
+
+.product h3 {
+  margin: 0.4rem 0 0.2rem;
+  font-size: 0.95rem;
+}
+
+.price {
+  color: var(--muted);
+  margin: 0 0 0.6rem;
+}
+
+button {
+  font: inherit;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
+.product button,
+.bundle {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.bundle {
+  margin-top: 0.9rem;
+}
+
+.lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lines li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.lines .name {
+  flex: 1;
+}
+
+.lines .qty,
+.lines .price {
+  color: var(--muted);
+}
+
+.lines .x {
+  border: none;
+  background: none;
+  color: var(--muted);
+}
+
+.total {
+  font-weight: 700;
+}
+
+.empty,
+.inventory p {
+  color: var(--muted);
+}
+
+.toasts {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.15);
+}

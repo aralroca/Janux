@@ -179,6 +179,8 @@ describe.skipIf(!BUILT)('navigation in a real browser (apps/docs)', () => {
     await sidebarLink(page, THIRD).click();
     await page.waitForFunction((path) => location.pathname === path, THIRD);
     await page.waitForFunction(() => document.querySelector('h1')?.textContent?.includes('Mental model'));
+    // The h1 lands mid-diff; `after:` only fires when the whole diff completes.
+    await page.waitForFunction((path) => (window as any).__phases.includes(`after:${path}`), THIRD);
     await superseded;
 
     const phases: string[] = await page.evaluate(() => (window as any).__phases);

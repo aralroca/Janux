@@ -72,16 +72,17 @@ describe.skipIf(!BUILT)('examples/interop-react in the browser', () => {
     const { page, errors } = await openPage();
 
     await page.goto(`${BASE}/`);
-    await page.waitForSelector('.mixer input[type="range"]');
-    expect(await page.locator('.band').count()).toBe(3);
+    // `.band` markers only exist once the client React root mounted — waiting
+    // on them (not on the SSR markup) is what proves hooks are live.
+    await page.waitForFunction(() => document.querySelectorAll('.band').length === 3);
     expect(await page.locator('.band-active').count()).toBe(0);
 
     const slider = page.locator('.mixer input[type="range"]').first();
 
     await slider.dispatchEvent('pointerdown');
-    expect(await page.locator('.band-active').count()).toBe(1);
+    await page.waitForFunction(() => document.querySelectorAll('.band-active').length === 1);
     await slider.dispatchEvent('pointerup');
-    expect(await page.locator('.band-active').count()).toBe(0);
+    await page.waitForFunction(() => document.querySelectorAll('.band-active').length === 0);
     expect(errors).toEqual([]);
     await page.close();
   }, TIMEOUT);

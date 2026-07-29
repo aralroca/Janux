@@ -34,6 +34,11 @@
     "dev:data-cache": "bun run --cwd examples/data-cache dev",
     "dev:interop-react": "bun run --cwd examples/interop-react dev",
     "dev:nested-islands": "bun run --cwd examples/nested-islands dev",
+    "dev:tailwind": "bun run --cwd examples/with-tailwind dev",
+    "dev:forms": "bun run --cwd examples/with-forms dev",
+    "dev:optimistic-ui": "bun run --cwd examples/with-optimistic-ui dev",
+    "dev:cross-island-state": "bun run --cwd examples/cross-island-state dev",
+    "dev:advanced-routing": "bun run --cwd examples/with-advanced-routing dev",
     "release": "bun scripts/release.ts",
     "bench": "node benchmarks/bench.mjs"
   },

@@ -207,6 +207,11 @@ Full tables, methodology and machine specs:
 - [`examples/nested-islands`](examples/nested-islands) — stateful islands inside stateful islands, with dispose semantics.
 - [`examples/data-cache`](examples/data-cache) — `useQuery` with a reactive query key, typed URL state (`urlState`) that deep-links and honors Back, and agent parity for the same filter.
 - [`examples/with-suspense`](examples/with-suspense) — streaming SSR: independent `suspense` boundaries that reveal mid-stream, and `error` boundaries that bubble.
+- [`examples/with-tailwind`](examples/with-tailwind) — `@janux/tailwind` zero-config: a pricing page with dark mode and a stateful billing toggle, styled only with v4 utilities.
+- [`examples/with-forms`](examples/with-forms) — one `schema()` as the contract for three surfaces: the form UI (per-field errors, no reload), the `api()` endpoint, and the typed agent tool.
+- [`examples/with-optimistic-ui`](examples/with-optimistic-ui) — `mutation()` with optimistic writes and real rollback: the server rejects every third save and `onError` restores the snapshot with a visible notice.
+- [`examples/cross-island-state`](examples/cross-island-state) — a `store()` cart shared by five islands with no prop drilling, `persist: 'local'` across reloads, a bus event that crosses islands, and `batch()`ed bundle adds.
+- [`examples/with-advanced-routing`](examples/with-advanced-routing) — the full router grammar: `[slug]`, `[...path]`, `[[...rest]]`, `[id=integer]`/`[uid=uuid]` matchers, nested `_layout.tsx` chains and `(marketing)` groups, plus SPA navigation with a `persist` island.
 - [`examples/with-web-agent`](examples/with-web-agent) — the demo above: a console operated in natural language, `createCopilot({ visualize })` for the chips/ring/veil, `glowTarget` for React Flow nodes that mount late, and a `forbidden` intent that forces the DOM fallback.
 
 ```bash
