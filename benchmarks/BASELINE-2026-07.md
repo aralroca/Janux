@@ -1,45 +1,45 @@
-# Baseline — julio 2026 (pre-optimización)
+# Baseline — July 2026 (pre-optimization)
 
-Primera medición completa de Janux 0.4.0 contra react 19.2 / preact 10.29 /
-solid 2.0-beta / svelte 5.56 / vue-vapor 3.6-rc en las 19 suites portadas de
-octane. Máquina: ver `README.md` (Apple M4 Pro, 24 GB, macOS 26.5.2, Node 26,
-Bun 1.3.14, Chromium 151 headless). Iteraciones normales, `--record`.
+First complete measurement of Janux 0.4.0 against react 19.2 / preact 10.29 /
+solid 2.0-beta / svelte 5.56 / vue-vapor 3.6-rc across the 19 suites ported
+from octane. Machine: see `README.md` (Apple M4 Pro, 24 GB, macOS 26.5.2,
+Node 26, Bun 1.3.14, headless Chromium 151). Normal iterations, `--record`.
 
-Estado del runtime al medir: ya incluye los dos primeros cambios del bucle
-(morph keyed + batching de intents — sin ellos el corpus de reorder ni entraba
-y `update` costaba 1816ms).
+Runtime state at measurement time: it already includes the loop's first two
+changes (keyed morph + intent batching — without them the reorder corpus could
+not even enter and `update` cost 1816ms).
 
-## Lecturas clave (tras el bucle de optimización)
+## Key readings (after the optimization loop)
 
-- **Paridad o victoria en suites de app completa**: lifecycle 1.00×react, stores 0.83-1.27× (outlier: tanstack invalidation 1.62×), submit 0.92×, reset 0.40×, scheduler 1.48×, composition 1.26×, suspense-recovery 1.01-1.10×.
-- **Resume aplasta a la hidratación**: news hydrate 0.13×react; hydration 6× throttle 0.19-0.20×; hydration_work 0.22-0.24×.
-- **Bundle**: 24.7KB js_gzip total = 0.40×react; 4º de 6 (preact 10.0, solid 14.1, svelte 18.4, janux 24.7≈vue-vapor 24.1, react 62.1).
-- **Creación masiva**: runlots 0.64×, clear 0.75×.
-- **Gaps honestos con causa conocida**: micro-ops krausest sub-ms (select 16.8×, remove 20×— exige primitiva de lista de grano fino, RFC abajo) y SSR throughput (4.5× — pipeline de emisión de strings, siguiente palanca de servidor).
-- **scaling-curves ya es ~lineal**: 19.5/41/101/258/508ms para 8/32/96/256/512 (era 127/454/1281/3470/7609).
+- **Parity or wins across the full-app suites**: lifecycle 1.00×react, stores 0.83-1.27× (outlier: tanstack invalidation 1.62×), submit 0.92×, reset 0.40×, scheduler 1.48×, composition 1.26×, suspense-recovery 1.01-1.10×.
+- **Resume crushes hydration**: news hydrate 0.13×react; hydration at 6× throttle 0.19-0.20×; hydration_work 0.22-0.24×.
+- **Bundle**: 24.7KB total js_gzip = 0.40×react; 4th of 6 (preact 10.0, solid 14.1, svelte 18.4, janux 24.7≈vue-vapor 24.1, react 62.1).
+- **Bulk creation**: runlots 0.64×, clear 0.75×.
+- **Honest gaps with a known cause**: sub-ms krausest micro-ops (select 16.8×, remove 20× — needs a fine-grained list primitive, RFC below) and SSR throughput (4.5× — the string-emission pipeline, the next server-side lever).
+- **scaling-curves is now ~linear**: 19.5/41/101/258/508ms for 8/32/96/256/512 (was 127/454/1281/3470/7609).
 
-## Intentos y descartes del bucle de optimización
+## Optimization-loop attempts and reversals
 
-Registro obligatorio: cada optimización intentada, su hipótesis, y el delta
-medido — también las que se revierten.
+Mandatory log: every optimization attempted, its hypothesis, and the measured
+delta — including the ones that get reverted.
 
-| # | Cambio | Hipótesis | Delta medido | Estado |
+| # | Change | Hypothesis | Measured delta | Status |
 |---|---|---|---|---|
-| 1 | Morph keyed (client/keys.ts) | la gate de identidad del reorder exige mover nodos, no reescribirlos | reorder: de gate imposible a verde | ✅ commiteado |
-| 2 | Batching de intents + computeds pull-on-read | N writes síncronos = 1 flush sin dejar derived stale | update 1816→25.9ms | ✅ commiteado |
-| 3 | External react en fixtures (= foreignExternals del plugin) | los chunks lazy de react-dom no son bytes enviados | fw_gzip 82.2→22.1KB | ✅ commiteado (fixture, no core) |
-| 4 | Coalescer como push pump (fix, no opt) | ~600 timers de 0ms por render nunca disparan bajo bucle de microtasks y fijan su maquinaria | 810MB→0.6MB por 1000 renders SSR; el OOM de ssr-throughput desaparece | ✅ commiteado — encontrado POR el harness |
-| 5 | Reconciliador JSX-contra-DOM (reconcile.ts) | construir el árbol descartable con toDomNodes era el coste fijo dominante | select 26.2→16.2, update 24.4→17.1, swap 28.8→22.4 | ✅ commiteado |
-| 6 | sameProps/sameValue + LIS + fast-paths sin key (guiado por perfil CPU: matchState 22%) | props value-equal no reserializan; listas sin key no pagan Map/Set/LIS; intents bound equivalentes son "sin cambio" | select→7.4, update→8.4, swap→9.9; runlots 0.63×react, clear 0.89× | ✅ commiteado |
+| 1 | Keyed morph (client/keys.ts) | the reorder identity gate demands moving nodes, not rewriting them | reorder: from an impossible gate to green | ✅ committed |
+| 2 | Intent batching + pull-on-read computeds | N synchronous writes = 1 flush without leaving derived stale | update 1816→25.9ms | ✅ committed |
+| 3 | External react in fixtures (= the plugin's foreignExternals) | react-dom's lazy chunks are not shipped bytes | fw_gzip 82.2→22.1KB | ✅ committed (fixture, not core) |
+| 4 | Coalescer as a push pump (fix, not opt) | ~600 0ms timers per render never fire under a microtask loop and pin their machinery | 810MB→0.6MB per 1000 SSR renders; the ssr-throughput OOM disappears | ✅ committed — found BY the harness |
+| 5 | JSX-against-DOM reconciler (reconcile.ts) | building the throwaway tree with toDomNodes was the dominant fixed cost | select 26.2→16.2, update 24.4→17.1, swap 28.8→22.4 | ✅ committed |
+| 6 | sameProps/sameValue + LIS + unkeyed fast-paths (CPU-profile-guided: matchState 22%) | value-equal props do not reserialize; unkeyed lists skip Map/Set/LIS; equivalent bound intents count as "unchanged" | select→7.4, update→8.4, swap→9.9; runlots 0.63×react, clear 0.89× | ✅ committed |
 
-**Siguiente palanca identificada (nivel RFC, para decidir con Aral)**: el suelo
-restante (~7ms/1000 filas) es re-ejecutar la vista entera (rebuild del JSX +
-lecturas del proxy reactivo) por cada cambio. Bajar a sub-ms exige una
-primitiva de lista de grano fino (estilo `<For>` de Solid / `forBlock` de
-octane): scope reactivo por fila, de forma que el fan-out de un cambio no
-re-ejecute el `.map` completo. Afecta a la superficie de autoría (RFC).
+**Next identified lever (RFC-level, to decide with Aral)**: the remaining floor
+(~7ms/1000 rows) is re-running the whole view (JSX rebuild + reactive-proxy
+reads) on every change. Getting to sub-ms requires a fine-grained list
+primitive (in the spirit of Solid's `<For>` / octane's `forBlock`): a per-row
+reactive scope, so one change's fan-out does not re-run the entire `.map`.
+It touches the authoring surface (RFC).
 
-## Informe de posición (post-optimización, run completa 2026-07-29)
+## Position report (post-optimization, full run 2026-07-29)
 
 ## Benchmark position report
 
