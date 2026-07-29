@@ -1,0 +1,17 @@
+{
+	"name": "solid-streaming-ssr-bench",
+	"private": true,
+	"type": "module",
+	"version": "0.0.0",
+	"description": "streaming-ssr bench fixture for Solid 2.0 renderToStream, authored in .tsrx via @tsrx/solid (sync shell + 10 async createMemo(promise) Loading boundaries). SSR-only: no client build, no dev server.",
+	"dependencies": {
+		"@solidjs/web": "2.0.0-beta.20",
+		"solid-js": "2.0.0-beta.20"
+	},
+	"devDependencies": {
+		"@tsrx/solid": "^0.1.54",
+		"@tsrx/vite-plugin-solid": "^0.0.84",
+		"vite": "^8.1.5",
+		"vite-plugin-solid": "3.0.0-next.5"
+	}
+}

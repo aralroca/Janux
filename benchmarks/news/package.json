@@ -1,0 +1,22 @@
+{
+	"name": "@benchmarks/news",
+	"private": true,
+	"type": "module",
+	"version": "0.0.0",
+	"description": "News-site SSR + hydration benchmark - measures pure server render time and full client hydration time for a large lorem-ipsum document across Octane and reference frameworks.",
+	"scripts": {
+		"gen": "node gen.mjs",
+		"bench": "node run.mjs",
+		"bench:octane-tsrx": "node run.mjs octane-tsrx",
+		"bench:octane-jsx": "node run.mjs octane-jsx",
+		"bench:ripple": "node run.mjs ripple",
+		"bench:solid": "node run.mjs solid",
+		"bench:react": "node run.mjs react",
+		"bench:preact": "node run.mjs preact",
+		"bench:svelte": "node run.mjs svelte"
+	},
+	"dependencies": {
+		"playwright": "^1.62.0",
+		"vite": "^8.1.5"
+	}
+}

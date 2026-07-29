@@ -1,0 +1,39 @@
+name: Bench
+
+# Ratio guards only, weekly + on demand — never on push. Absolute times are a
+# property of the recording machine; the committed gate (baselines/ratios.json)
+# compares targets measured on the SAME runner in the SAME run, so shared
+# variance cancels. --quick keeps every code path and correctness gate at
+# reduced iterations.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+
+      # Playwright lives in the browser suites' packages; the harnesses run
+      # under node with cwd at each suite.
+      - name: Install Chromium for the browser suites
+        run: bunx playwright install --with-deps chromium
+
+      - name: Benchmarks (ratio guards)
+        run: node benchmarks/bench.mjs --quick --ratios
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: benchmarks/results/
+          if-no-files-found: ignore

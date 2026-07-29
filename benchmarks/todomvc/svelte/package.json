@@ -1,0 +1,22 @@
+{
+	"name": "svelte-todomvc",
+	"private": true,
+	"type": "module",
+	"version": "0.0.1",
+	"description": "TodoMVC fixture for Svelte 5 - the Svelte column for the app-shaped scripted ops and app-code bundle size.",
+	"scripts": {
+		"dev": "vite --host --port 5272 --strictPort",
+		"build": "vite build",
+		"check": "svelte-check --workspace .",
+		"preview": "vite preview --port 5272 --strictPort"
+	},
+	"dependencies": {
+		"svelte": "^5.56.7"
+	},
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "^7.2.0",
+		"svelte-check": "^4.7.3",
+		"vite": "^8.1.5",
+		"terser": "^5.49.0"
+	}
+}

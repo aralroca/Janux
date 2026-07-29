@@ -33,5 +33,13 @@ We are grateful to, and credit:
 | [Brisa](https://github.com/brisa-build/brisa) | MIT | Server rendering, attribute serialization, i18n, action/RPC round-trips |
 | [Mastra](https://github.com/mastra-ai/mastra) | Apache-2.0 | Agent tool loops, memory, durable workflows, guardrail processors. Nothing under `ee/` was read — that directory is under a separate commercial license |
 
+Janux's benchmark harness (`benchmarks/`) is a different kind of debt: unlike the
+conformance corpus, it is a **direct code derivation**, not a behavioural port.
+
+| Project | License | What we took |
+|---|---|---|
+| [Octane](https://github.com/octanejs/octane) | MIT — Copyright (c) 2026 Dominic Gannaway | The benchmark harness itself: runner (`bench.mjs`), stats/census libraries, suite harnesses and the rival-framework fixtures, plus the measurement methodology (ratio guards, noise-aware regression rule, correctness gates). Full license text in `benchmarks/LICENSE-OCTANE` |
+| [js-framework-benchmark](https://github.com/krausest/js-framework-benchmark) | Apache-2.0 | The krausest operations and DOM contract that the `js-framework` suite fixtures derive from, upstream of Octane |
+
 Licenses are reproduced by the projects themselves at the links above; this file
 is the attribution for the ideas we borrowed.

@@ -1,0 +1,745 @@
+{
+	"suite": "bundle-size",
+	"iterations": 1,
+	"targets": [
+		{
+			"name": "janux",
+			"ops": {
+				"js_raw": {
+					"median": 70530,
+					"min": 70530,
+					"samples": 1
+				},
+				"js_gzip": {
+					"median": 24732,
+					"min": 24732,
+					"samples": 1
+				},
+				"js_brotli": {
+					"median": 22323,
+					"min": 22323,
+					"samples": 1
+				},
+				"app_raw": {
+					"median": 4875,
+					"min": 4875,
+					"samples": 1
+				},
+				"app_gzip": {
+					"median": 1961,
+					"min": 1961,
+					"samples": 1
+				},
+				"app_brotli": {
+					"median": 1773,
+					"min": 1773,
+					"samples": 1
+				},
+				"fw_raw": {
+					"median": 65655,
+					"min": 65655,
+					"samples": 1
+				},
+				"fw_gzip": {
+					"median": 22771,
+					"min": 22771,
+					"samples": 1
+				},
+				"fw_brotli": {
+					"median": 20550,
+					"min": 20550,
+					"samples": 1
+				},
+				"todo_js_raw": {
+					"median": 69344,
+					"min": 69344,
+					"samples": 1
+				},
+				"todo_js_gzip": {
+					"median": 24121,
+					"min": 24121,
+					"samples": 1
+				},
+				"todo_js_brotli": {
+					"median": 21746,
+					"min": 21746,
+					"samples": 1
+				},
+				"todo_app_raw": {
+					"median": 3643,
+					"min": 3643,
+					"samples": 1
+				},
+				"todo_app_gzip": {
+					"median": 1340,
+					"min": 1340,
+					"samples": 1
+				},
+				"todo_app_brotli": {
+					"median": 1179,
+					"min": 1179,
+					"samples": 1
+				},
+				"todo_fw_raw": {
+					"median": 65701,
+					"min": 65701,
+					"samples": 1
+				},
+				"todo_fw_gzip": {
+					"median": 22781,
+					"min": 22781,
+					"samples": 1
+				},
+				"todo_fw_brotli": {
+					"median": 20567,
+					"min": 20567,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"files": [
+					{
+						"file": "assets/framework-CY1cswJl.js",
+						"bucket": "fw",
+						"bytes": 65655,
+						"set": "js"
+					},
+					{
+						"file": "assets/index-C3Y8S_aI.js",
+						"bucket": "app",
+						"bytes": 4875,
+						"set": "js"
+					},
+					{
+						"file": "assets/framework-CY4MoF6x.js",
+						"bucket": "fw",
+						"bytes": 65701,
+						"set": "todo_"
+					},
+					{
+						"file": "assets/index-iGQJEUdi.js",
+						"bucket": "app",
+						"bytes": 3643,
+						"set": "todo_"
+					}
+				]
+			}
+		},
+		{
+			"name": "react",
+			"ops": {
+				"js_raw": {
+					"median": 197380,
+					"min": 197380,
+					"samples": 1
+				},
+				"js_gzip": {
+					"median": 62120,
+					"min": 62120,
+					"samples": 1
+				},
+				"js_brotli": {
+					"median": 53639,
+					"min": 53639,
+					"samples": 1
+				},
+				"app_raw": {
+					"median": 5742,
+					"min": 5742,
+					"samples": 1
+				},
+				"app_gzip": {
+					"median": 2073,
+					"min": 2073,
+					"samples": 1
+				},
+				"app_brotli": {
+					"median": 1852,
+					"min": 1852,
+					"samples": 1
+				},
+				"fw_raw": {
+					"median": 191638,
+					"min": 191638,
+					"samples": 1
+				},
+				"fw_gzip": {
+					"median": 60047,
+					"min": 60047,
+					"samples": 1
+				},
+				"fw_brotli": {
+					"median": 51787,
+					"min": 51787,
+					"samples": 1
+				},
+				"todo_js_raw": {
+					"median": 194649,
+					"min": 194649,
+					"samples": 1
+				},
+				"todo_js_gzip": {
+					"median": 61155,
+					"min": 61155,
+					"samples": 1
+				},
+				"todo_js_brotli": {
+					"median": 52775,
+					"min": 52775,
+					"samples": 1
+				},
+				"todo_app_raw": {
+					"median": 2957,
+					"min": 2957,
+					"samples": 1
+				},
+				"todo_app_gzip": {
+					"median": 1094,
+					"min": 1094,
+					"samples": 1
+				},
+				"todo_app_brotli": {
+					"median": 964,
+					"min": 964,
+					"samples": 1
+				},
+				"todo_fw_raw": {
+					"median": 191692,
+					"min": 191692,
+					"samples": 1
+				},
+				"todo_fw_gzip": {
+					"median": 60061,
+					"min": 60061,
+					"samples": 1
+				},
+				"todo_fw_brotli": {
+					"median": 51811,
+					"min": 51811,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"files": [
+					{
+						"file": "assets/framework-B3YQJ2gQ.js",
+						"bucket": "fw",
+						"bytes": 191638,
+						"set": "js"
+					},
+					{
+						"file": "assets/index-09deH2ck.js",
+						"bucket": "app",
+						"bytes": 5742,
+						"set": "js"
+					},
+					{
+						"file": "assets/framework-CU6BGaVy.js",
+						"bucket": "fw",
+						"bytes": 191692,
+						"set": "todo_"
+					},
+					{
+						"file": "assets/index-BtcFkae6.js",
+						"bucket": "app",
+						"bytes": 2957,
+						"set": "todo_"
+					}
+				]
+			}
+		},
+		{
+			"name": "preact",
+			"ops": {
+				"js_raw": {
+					"median": 25395,
+					"min": 25395,
+					"samples": 1
+				},
+				"js_gzip": {
+					"median": 10037,
+					"min": 10037,
+					"samples": 1
+				},
+				"js_brotli": {
+					"median": 9096,
+					"min": 9096,
+					"samples": 1
+				},
+				"app_raw": {
+					"median": 5279,
+					"min": 5279,
+					"samples": 1
+				},
+				"app_gzip": {
+					"median": 1982,
+					"min": 1982,
+					"samples": 1
+				},
+				"app_brotli": {
+					"median": 1764,
+					"min": 1764,
+					"samples": 1
+				},
+				"fw_raw": {
+					"median": 20116,
+					"min": 20116,
+					"samples": 1
+				},
+				"fw_gzip": {
+					"median": 8055,
+					"min": 8055,
+					"samples": 1
+				},
+				"fw_brotli": {
+					"median": 7332,
+					"min": 7332,
+					"samples": 1
+				},
+				"todo_js_raw": {
+					"median": 22004,
+					"min": 22004,
+					"samples": 1
+				},
+				"todo_js_gzip": {
+					"median": 8942,
+					"min": 8942,
+					"samples": 1
+				},
+				"todo_js_brotli": {
+					"median": 8107,
+					"min": 8107,
+					"samples": 1
+				},
+				"todo_app_raw": {
+					"median": 2181,
+					"min": 2181,
+					"samples": 1
+				},
+				"todo_app_gzip": {
+					"median": 983,
+					"min": 983,
+					"samples": 1
+				},
+				"todo_app_brotli": {
+					"median": 867,
+					"min": 867,
+					"samples": 1
+				},
+				"todo_fw_raw": {
+					"median": 19823,
+					"min": 19823,
+					"samples": 1
+				},
+				"todo_fw_gzip": {
+					"median": 7959,
+					"min": 7959,
+					"samples": 1
+				},
+				"todo_fw_brotli": {
+					"median": 7240,
+					"min": 7240,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"files": [
+					{
+						"file": "assets/framework-hv0FIK2s.js",
+						"bucket": "fw",
+						"bytes": 20116,
+						"set": "js"
+					},
+					{
+						"file": "assets/index-BaVnZ-CZ.js",
+						"bucket": "app",
+						"bytes": 5279,
+						"set": "js"
+					},
+					{
+						"file": "assets/framework-D5140_Sy.js",
+						"bucket": "fw",
+						"bytes": 19823,
+						"set": "todo_"
+					},
+					{
+						"file": "assets/index-Hn1EKIjC.js",
+						"bucket": "app",
+						"bytes": 2181,
+						"set": "todo_"
+					}
+				]
+			}
+		},
+		{
+			"name": "solid",
+			"ops": {
+				"js_raw": {
+					"median": 37454,
+					"min": 37454,
+					"samples": 1
+				},
+				"js_gzip": {
+					"median": 14063,
+					"min": 14063,
+					"samples": 1
+				},
+				"js_brotli": {
+					"median": 12721,
+					"min": 12721,
+					"samples": 1
+				},
+				"app_raw": {
+					"median": 6375,
+					"min": 6375,
+					"samples": 1
+				},
+				"app_gzip": {
+					"median": 1991,
+					"min": 1991,
+					"samples": 1
+				},
+				"app_brotli": {
+					"median": 1762,
+					"min": 1762,
+					"samples": 1
+				},
+				"fw_raw": {
+					"median": 31079,
+					"min": 31079,
+					"samples": 1
+				},
+				"fw_gzip": {
+					"median": 12072,
+					"min": 12072,
+					"samples": 1
+				},
+				"fw_brotli": {
+					"median": 10959,
+					"min": 10959,
+					"samples": 1
+				},
+				"todo_js_raw": {
+					"median": 34424,
+					"min": 34424,
+					"samples": 1
+				},
+				"todo_js_gzip": {
+					"median": 13525,
+					"min": 13525,
+					"samples": 1
+				},
+				"todo_js_brotli": {
+					"median": 12206,
+					"min": 12206,
+					"samples": 1
+				},
+				"todo_app_raw": {
+					"median": 2969,
+					"min": 2969,
+					"samples": 1
+				},
+				"todo_app_gzip": {
+					"median": 1289,
+					"min": 1289,
+					"samples": 1
+				},
+				"todo_app_brotli": {
+					"median": 1112,
+					"min": 1112,
+					"samples": 1
+				},
+				"todo_fw_raw": {
+					"median": 31455,
+					"min": 31455,
+					"samples": 1
+				},
+				"todo_fw_gzip": {
+					"median": 12236,
+					"min": 12236,
+					"samples": 1
+				},
+				"todo_fw_brotli": {
+					"median": 11094,
+					"min": 11094,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"files": [
+					{
+						"file": "assets/framework-DG-22E2v.js",
+						"bucket": "fw",
+						"bytes": 31079,
+						"set": "js"
+					},
+					{
+						"file": "assets/index-yrRNnPy0.js",
+						"bucket": "app",
+						"bytes": 6375,
+						"set": "js"
+					},
+					{
+						"file": "assets/framework-BbLc1vCk.js",
+						"bucket": "fw",
+						"bytes": 31455,
+						"set": "todo_"
+					},
+					{
+						"file": "assets/index-BcTkY2gN.js",
+						"bucket": "app",
+						"bytes": 2969,
+						"set": "todo_"
+					}
+				]
+			}
+		},
+		{
+			"name": "svelte",
+			"ops": {
+				"js_raw": {
+					"median": 46586,
+					"min": 46586,
+					"samples": 1
+				},
+				"js_gzip": {
+					"median": 18375,
+					"min": 18375,
+					"samples": 1
+				},
+				"js_brotli": {
+					"median": 16660,
+					"min": 16660,
+					"samples": 1
+				},
+				"app_raw": {
+					"median": 5149,
+					"min": 5149,
+					"samples": 1
+				},
+				"app_gzip": {
+					"median": 2302,
+					"min": 2302,
+					"samples": 1
+				},
+				"app_brotli": {
+					"median": 1990,
+					"min": 1990,
+					"samples": 1
+				},
+				"fw_raw": {
+					"median": 41437,
+					"min": 41437,
+					"samples": 1
+				},
+				"fw_gzip": {
+					"median": 16073,
+					"min": 16073,
+					"samples": 1
+				},
+				"fw_brotli": {
+					"median": 14670,
+					"min": 14670,
+					"samples": 1
+				},
+				"todo_js_raw": {
+					"median": 47707,
+					"min": 47707,
+					"samples": 1
+				},
+				"todo_js_gzip": {
+					"median": 18579,
+					"min": 18579,
+					"samples": 1
+				},
+				"todo_js_brotli": {
+					"median": 16837,
+					"min": 16837,
+					"samples": 1
+				},
+				"todo_app_raw": {
+					"median": 3330,
+					"min": 3330,
+					"samples": 1
+				},
+				"todo_app_gzip": {
+					"median": 1509,
+					"min": 1509,
+					"samples": 1
+				},
+				"todo_app_brotli": {
+					"median": 1289,
+					"min": 1289,
+					"samples": 1
+				},
+				"todo_fw_raw": {
+					"median": 44377,
+					"min": 44377,
+					"samples": 1
+				},
+				"todo_fw_gzip": {
+					"median": 17070,
+					"min": 17070,
+					"samples": 1
+				},
+				"todo_fw_brotli": {
+					"median": 15548,
+					"min": 15548,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"files": [
+					{
+						"file": "assets/framework-DjVy4u7S.js",
+						"bucket": "fw",
+						"bytes": 41437,
+						"set": "js"
+					},
+					{
+						"file": "assets/index-DLvdgFfE.js",
+						"bucket": "app",
+						"bytes": 5149,
+						"set": "js"
+					},
+					{
+						"file": "assets/framework-DdlmFkl9.js",
+						"bucket": "fw",
+						"bytes": 44377,
+						"set": "todo_"
+					},
+					{
+						"file": "assets/index-fCT6zH73.js",
+						"bucket": "app",
+						"bytes": 3330,
+						"set": "todo_"
+					}
+				]
+			}
+		},
+		{
+			"name": "vue-vapor",
+			"ops": {
+				"js_raw": {
+					"median": 64225,
+					"min": 64225,
+					"samples": 1
+				},
+				"js_gzip": {
+					"median": 24059,
+					"min": 24059,
+					"samples": 1
+				},
+				"js_brotli": {
+					"median": 21825,
+					"min": 21825,
+					"samples": 1
+				},
+				"app_raw": {
+					"median": 6573,
+					"min": 6573,
+					"samples": 1
+				},
+				"app_gzip": {
+					"median": 2088,
+					"min": 2088,
+					"samples": 1
+				},
+				"app_brotli": {
+					"median": 1876,
+					"min": 1876,
+					"samples": 1
+				},
+				"fw_raw": {
+					"median": 57652,
+					"min": 57652,
+					"samples": 1
+				},
+				"fw_gzip": {
+					"median": 21971,
+					"min": 21971,
+					"samples": 1
+				},
+				"fw_brotli": {
+					"median": 19949,
+					"min": 19949,
+					"samples": 1
+				},
+				"todo_js_raw": {
+					"median": 63831,
+					"min": 63831,
+					"samples": 1
+				},
+				"todo_js_gzip": {
+					"median": 24408,
+					"min": 24408,
+					"samples": 1
+				},
+				"todo_js_brotli": {
+					"median": 22089,
+					"min": 22089,
+					"samples": 1
+				},
+				"todo_app_raw": {
+					"median": 3088,
+					"min": 3088,
+					"samples": 1
+				},
+				"todo_app_gzip": {
+					"median": 1355,
+					"min": 1355,
+					"samples": 1
+				},
+				"todo_app_brotli": {
+					"median": 1197,
+					"min": 1197,
+					"samples": 1
+				},
+				"todo_fw_raw": {
+					"median": 60743,
+					"min": 60743,
+					"samples": 1
+				},
+				"todo_fw_gzip": {
+					"median": 23053,
+					"min": 23053,
+					"samples": 1
+				},
+				"todo_fw_brotli": {
+					"median": 20892,
+					"min": 20892,
+					"samples": 1
+				}
+			},
+			"meta": {
+				"files": [
+					{
+						"file": "assets/framework-CovaQ3ks.js",
+						"bucket": "fw",
+						"bytes": 57652,
+						"set": "js"
+					},
+					{
+						"file": "assets/index-BsMD8Vsa.js",
+						"bucket": "app",
+						"bytes": 6573,
+						"set": "js"
+					},
+					{
+						"file": "assets/framework-CZXQ5NyK.js",
+						"bucket": "fw",
+						"bytes": 60743,
+						"set": "todo_"
+					},
+					{
+						"file": "assets/index-Cdhex-1s.js",
+						"bucket": "app",
+						"bytes": 3088,
+						"set": "todo_"
+					}
+				]
+			}
+		}
+	],
+	"harnessExit": 0
+}

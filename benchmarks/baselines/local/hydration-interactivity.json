@@ -1,0 +1,3181 @@
+{
+	"suite": "hydration-interactivity",
+	"iterations": 5,
+	"targets": [
+		{
+			"name": "janux",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.580000066757202,
+					"median": 1.5,
+					"min": 1.5,
+					"mean": 1.580000066757202,
+					"p95": 1.8000001907348633,
+					"sd": 0.13038413404764812,
+					"rme": 10.244767370743403,
+					"scoreRme": 10.244767370743403,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 1.8000001907348633
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 17.680000066757202,
+					"median": 18.100000143051147,
+					"min": 15.400000095367432,
+					"mean": 17.680000066757202,
+					"p95": 20.5,
+					"sd": 2.104043733373453,
+					"rme": 14.774301581888993,
+					"scoreRme": 14.774301581888993,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 20.5
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 5.680000066757202,
+					"median": 5.5,
+					"min": 3.8000001907348633,
+					"mean": 5.680000066757202,
+					"p95": 7.400000095367432,
+					"sd": 1.5990622060960762,
+					"rme": 34.95034584836327,
+					"scoreRme": 34.95034584836327,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 7.400000095367432
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 0.7000000476837158,
+					"median": 0.7000000476837158,
+					"min": 0.6000001430511475,
+					"mean": 0.7000000476837158,
+					"p95": 0.8000001907348633,
+					"sd": 0.07071069497754488,
+					"rme": 12.540691828018197,
+					"scoreRme": 12.540691828018197,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 0.8000001907348633
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 18.619999980926515,
+					"median": 18.399999856948853,
+					"min": 18,
+					"mean": 18.619999980926515,
+					"p95": 20,
+					"sd": 0.7949842801729171,
+					"rme": 5.300457108364904,
+					"scoreRme": 5.300457108364904,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 20
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 7.8,
+					"median": 8.200000047683716,
+					"min": 6.599999904632568,
+					"mean": 7.8,
+					"p95": 8.700000047683716,
+					"sd": 0.9407444329970163,
+					"rme": 14.97309271933602,
+					"scoreRme": 14.97309271933602,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 8.700000047683716
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 70.65999999046326,
+					"median": 65.70000004768372,
+					"min": 65.39999985694885,
+					"mean": 70.65999999046326,
+					"p95": 84.20000004768372,
+					"sd": 8.127607329653479,
+					"rme": 14.279846527339496,
+					"scoreRme": 14.279846527339496,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 84.20000004768372
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 10.740000009536743,
+					"median": 11,
+					"min": 8.600000143051147,
+					"mean": 10.740000009536743,
+					"p95": 12.600000143051147,
+					"sd": 1.545315501457985,
+					"rme": 17.862709649042042,
+					"scoreRme": 17.862709649042042,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 12.600000143051147
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 4.119999980926513,
+					"median": 4.299999952316284,
+					"min": 3.5,
+					"mean": 4.119999980926513,
+					"p95": 4.5,
+					"sd": 0.449444104798206,
+					"rme": 13.54293936110924,
+					"scoreRme": 13.54293936110924,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 4.5
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 161.94000005722046,
+					"median": 162.29999995231628,
+					"min": 144.10000014305115,
+					"mean": 161.94000005722046,
+					"p95": 184.20000004768372,
+					"sd": 15.158924738862288,
+					"rme": 11.621139682314952,
+					"scoreRme": 11.621139682314952,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 184.20000004768372
+				},
+				"controlled_6x_first_input": {
+					"score": 8.159999990463257,
+					"median": 8.200000047683716,
+					"min": 7.799999952316284,
+					"mean": 8.159999990463257,
+					"p95": 8.400000095367432,
+					"sd": 0.2607681035224701,
+					"rme": 3.967334052214365,
+					"scoreRme": 3.967334052214365,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 8.400000095367432
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 71.43999996185303,
+					"median": 66.79999995231628,
+					"min": 63.700000047683716,
+					"mean": 71.43999996185303,
+					"p95": 90.89999985694885,
+					"sd": 11.320026429030902,
+					"rme": 19.67163487060563,
+					"scoreRme": 19.67163487060563,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 90.89999985694885
+				},
+				"controlled_6x_hydration": {
+					"score": 10.440000009536742,
+					"median": 10.100000143051147,
+					"min": 8.699999809265137,
+					"mean": 10.440000009536742,
+					"p95": 13.599999904632568,
+					"sd": 1.8568790884111024,
+					"rme": 22.080941437097188,
+					"scoreRme": 22.080941437097188,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 13.599999904632568
+				},
+				"controlled_6x_hydration_work": {
+					"score": 4.3,
+					"median": 4.200000047683716,
+					"min": 4.099999904632568,
+					"mean": 4.3,
+					"p95": 4.699999809265137,
+					"sd": 0.23452071682779013,
+					"rme": 6.770912741981188,
+					"scoreRme": 6.770912741981188,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 4.699999809265137
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 149.6199999332428,
+					"median": 147.69999980926514,
+					"min": 140.40000009536743,
+					"mean": 149.6199999332428,
+					"p95": 163.09999990463257,
+					"sd": 8.366420933020134,
+					"rme": 6.941998580089483,
+					"scoreRme": 6.941998580089483,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 163.09999990463257
+				},
+				"interaction_6x_hydration": {
+					"score": 10.459999990463256,
+					"median": 10.799999952316284,
+					"min": 9.200000047683716,
+					"mean": 10.459999990463256,
+					"p95": 11.400000095367432,
+					"sd": 1.0039920456141878,
+					"rme": 11.91607004701344,
+					"scoreRme": 11.91607004701344,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.400000095367432
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 64.15999999046326,
+					"median": 64.09999990463257,
+					"min": 55.39999985694885,
+					"mean": 64.15999999046326,
+					"p95": 73.5,
+					"sd": 6.430241097072687,
+					"rme": 12.442205246373774,
+					"scoreRme": 12.442205246373774,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 73.5
+				},
+				"search_send_6x_first_input": {
+					"score": 8.540000009536744,
+					"median": 8.200000047683716,
+					"min": 7.700000047683716,
+					"mean": 8.540000009536744,
+					"p95": 9.599999904632568,
+					"sd": 0.7536576896812247,
+					"rme": 10.95596719310026,
+					"scoreRme": 10.95596719310026,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.599999904632568
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 67.48000001907349,
+					"median": 69,
+					"min": 62.19999980926514,
+					"mean": 67.48000001907349,
+					"p95": 72.10000014305115,
+					"sd": 4.431365558855354,
+					"rme": 8.152615561643268,
+					"scoreRme": 8.152615561643268,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 72.10000014305115
+				},
+				"search_send_6x_hydration": {
+					"score": 11.000000047683717,
+					"median": 11.100000143051147,
+					"min": 9.400000095367432,
+					"mean": 11.000000047683717,
+					"p95": 12,
+					"sd": 0.9772409789087932,
+					"rme": 11.029185537000814,
+					"scoreRme": 11.029185537000814,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 12
+				},
+				"search_send_6x_hydration_work": {
+					"score": 4.900000047683716,
+					"median": 4.900000095367432,
+					"min": 4.1000001430511475,
+					"mean": 4.900000047683716,
+					"p95": 5.5,
+					"sd": 0.5099018858984609,
+					"rme": 12.918883848725049,
+					"scoreRme": 12.918883848725049,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 5.5
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 39.00000009536743,
+					"median": 39.200000047683716,
+					"min": 35.200000047683716,
+					"mean": 39.00000009536743,
+					"p95": 42.80000019073486,
+					"sd": 3.038914323739452,
+					"rme": 9.673604058275982,
+					"scoreRme": 9.673604058275982,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 42.80000019073486
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 11.299999952316284,
+						"interactionToHydration": 64.70000004768372,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 9.200000047683716,
+						"interactionToHydration": 63.10000014305115,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 9.599999904632568,
+						"interactionToHydration": 55.39999985694885,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 11.400000095367432,
+						"interactionToHydration": 73.5,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 10.799999952316284,
+						"interactionToHydration": 64.09999990463257,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardSendResults": [],
+				"keyboardExperience": {
+					"status": "not-run",
+					"samples": 0,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 0,
+					"preservedSearches": 0,
+					"exactDeliveries": 0,
+					"issues": []
+				},
+				"userExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 0,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"hydrationEventReplay": false,
+				"preRootInteractionReplay": false,
+				"browser": "chromium"
+			}
+		},
+		{
+			"name": "react",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.6800000190734863,
+					"median": 1.5,
+					"min": 1.5,
+					"mean": 1.6800000190734863,
+					"p95": 2,
+					"sd": 0.24899801302504262,
+					"rme": 18.400136908724214,
+					"scoreRme": 18.400136908724214,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 2
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 18.659999942779542,
+					"median": 18.899999856948853,
+					"min": 14.799999952316284,
+					"mean": 18.659999942779542,
+					"p95": 23.40000009536743,
+					"sd": 3.8253105111713364,
+					"rme": 25.45010130242955,
+					"scoreRme": 25.45010130242955,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 23.40000009536743
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 10.779999923706054,
+					"median": 10.399999856948853,
+					"min": 8.799999952316284,
+					"mean": 10.779999923706054,
+					"p95": 15,
+					"sd": 2.5203174816633402,
+					"rme": 29.024914806035245,
+					"scoreRme": 29.024914806035245,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 15
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 3.019999885559082,
+					"median": 2.8999998569488525,
+					"min": 2.799999952316284,
+					"mean": 3.019999885559082,
+					"p95": 3.3999998569488525,
+					"sd": 0.2387467097510099,
+					"rme": 9.814426529551595,
+					"scoreRme": 9.814426529551595,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 3.3999998569488525
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 11.780000066757202,
+					"median": 11.900000095367432,
+					"min": 10.299999952316284,
+					"mean": 11.780000066757202,
+					"p95": 13.400000095367432,
+					"sd": 1.413152541609664,
+					"rme": 14.892863556059744,
+					"scoreRme": 14.892863556059744,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 13.400000095367432
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 7.799999952316284,
+					"median": 7.099999904632568,
+					"min": 6,
+					"mean": 7.799999952316284,
+					"p95": 11.899999856948853,
+					"sd": 2.3622023071963487,
+					"rme": 37.59732520661824,
+					"scoreRme": 37.59732520661824,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.899999856948853
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 72.48000001907349,
+					"median": 59.299999952316284,
+					"min": 57.90000009536743,
+					"mean": 72.48000001907349,
+					"p95": 122.09999990463257,
+					"sd": 27.835983839195066,
+					"rme": 47.67852928878633,
+					"scoreRme": 47.67852928878633,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 122.09999990463257
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 52.63999996185303,
+					"median": 48.89999985694885,
+					"min": 48,
+					"mean": 52.63999996185303,
+					"p95": 62.799999952316284,
+					"sd": 6.2795700621889186,
+					"rme": 14.809775993707586,
+					"scoreRme": 14.809775993707586,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 62.799999952316284
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 17.499999952316283,
+					"median": 16.699999809265137,
+					"min": 16,
+					"mean": 17.499999952316283,
+					"p95": 21.59999990463257,
+					"sd": 2.309761862555799,
+					"rme": 16.385647899910605,
+					"scoreRme": 16.385647899910605,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21.59999990463257
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 90.56000003814697,
+					"median": 73.90000009536743,
+					"min": 69.30000019073486,
+					"mean": 90.56000003814697,
+					"p95": 158.90000009536743,
+					"sd": 38.463333213429664,
+					"rme": 52.72844487909567,
+					"scoreRme": 52.72844487909567,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 158.90000009536743
+				},
+				"controlled_6x_first_input": {
+					"score": 7.860000038146973,
+					"median": 7.6000001430511475,
+					"min": 7,
+					"mean": 7.860000038146973,
+					"p95": 9.200000047683716,
+					"sd": 0.8173126865873083,
+					"rme": 12.909224445246311,
+					"scoreRme": 12.909224445246311,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.200000047683716
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 64.07999997138977,
+					"median": 59.700000047683716,
+					"min": 58.700000047683716,
+					"mean": 64.07999997138977,
+					"p95": 79.09999990463257,
+					"sd": 8.568663783262245,
+					"rme": 16.600648695084892,
+					"scoreRme": 16.600648695084892,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 79.09999990463257
+				},
+				"controlled_6x_hydration": {
+					"score": 53.03999996185303,
+					"median": 52.40000009536743,
+					"min": 47.39999985694885,
+					"mean": 53.03999996185303,
+					"p95": 62.700000047683716,
+					"sd": 5.8602901604246505,
+					"rme": 13.716713393889906,
+					"scoreRme": 13.716713393889906,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 62.700000047683716
+				},
+				"controlled_6x_hydration_work": {
+					"score": 18.099999952316285,
+					"median": 17.90000009536743,
+					"min": 16.299999952316284,
+					"mean": 18.099999952316285,
+					"p95": 21.299999952316284,
+					"sd": 1.9912307769700037,
+					"rme": 13.65769726947938,
+					"scoreRme": 13.65769726947938,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21.299999952316284
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 86.01999998092651,
+					"median": 74.29999995231628,
+					"min": 68.09999990463257,
+					"mean": 86.01999998092651,
+					"p95": 136.10000014305115,
+					"sd": 28.197996472279005,
+					"rme": 40.69614512622684,
+					"scoreRme": 40.69614512622684,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 136.10000014305115
+				},
+				"interaction_6x_hydration": {
+					"score": 3.759999942779541,
+					"median": 3.5999999046325684,
+					"min": 2.799999952316284,
+					"mean": 3.759999942779541,
+					"p95": 5.3999998569488525,
+					"sd": 1.0334408126330412,
+					"rme": 34.12182332762301,
+					"scoreRme": 34.12182332762301,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 5.3999998569488525
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 80.08000006675721,
+					"median": 73.40000009536743,
+					"min": 70.40000009536743,
+					"mean": 80.08000006675721,
+					"p95": 99,
+					"sd": 12.431291106622625,
+					"rme": 19.271993092798155,
+					"scoreRme": 19.271993092798155,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 99
+				},
+				"search_send_6x_first_input": {
+					"score": 9.32000002861023,
+					"median": 9,
+					"min": 8,
+					"mean": 9.32000002861023,
+					"p95": 10.799999952316284,
+					"sd": 1.2716130965978916,
+					"rme": 16.938444991778823,
+					"scoreRme": 16.938444991778823,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.799999952316284
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 102.57999997138977,
+					"median": 86.69999980926514,
+					"min": 83.80000019073486,
+					"mean": 102.57999997138977,
+					"p95": 163.79999995231628,
+					"sd": 34.47277185496368,
+					"rme": 41.72035259571482,
+					"scoreRme": 41.72035259571482,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 163.79999995231628
+				},
+				"search_send_6x_hydration": {
+					"score": 3.5399999618530273,
+					"median": 3.5999999046325684,
+					"min": 2.6999998092651367,
+					"mean": 3.5399999618530273,
+					"p95": 4.200000047683716,
+					"sd": 0.5770616222479558,
+					"rme": 20.23733843501723,
+					"scoreRme": 20.23733843501723,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 4.200000047683716
+				},
+				"search_send_6x_hydration_work": {
+					"score": 0.13999996185302735,
+					"median": 0.09999990463256836,
+					"min": 0,
+					"mean": 0.13999996185302735,
+					"p95": 0.2999999523162842,
+					"sd": 0.15165749001600842,
+					"rme": 134.48393443774498,
+					"scoreRme": 134.48393443774498,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 0.2999999523162842
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 29.439999961853026,
+					"median": 30.200000047683716,
+					"min": 26.5,
+					"mean": 29.439999961853026,
+					"p95": 31.899999856948853,
+					"sd": 2.26008851103767,
+					"rme": 9.530640808049034,
+					"scoreRme": 9.530640808049034,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 31.899999856948853
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 5.3999998569488525,
+						"interactionToHydration": 99,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": true,
+						"replayRootInitialized": true
+					},
+					{
+						"hydration": 3.5999999046325684,
+						"interactionToHydration": 86.5,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": true,
+						"replayRootInitialized": true
+					},
+					{
+						"hydration": 2.799999952316284,
+						"interactionToHydration": 70.40000009536743,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": true,
+						"replayRootInitialized": true
+					},
+					{
+						"hydration": 3,
+						"interactionToHydration": 73.40000009536743,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": true,
+						"replayRootInitialized": true
+					},
+					{
+						"hydration": 4,
+						"interactionToHydration": 71.10000014305115,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": true,
+						"replayRootInitialized": true
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					}
+				],
+				"keyboardSendResults": [],
+				"keyboardExperience": {
+					"status": "not-run",
+					"samples": 0,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 0,
+					"preservedSearches": 0,
+					"exactDeliveries": 0,
+					"issues": []
+				},
+				"userExperience": {
+					"status": "pass",
+					"samples": 5,
+					"deliveredSendClicks": 5,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 5,
+					"droppedSendClicks": 0,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 5,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": []
+				},
+				"hydrationEventReplay": true,
+				"preRootInteractionReplay": false,
+				"browser": "chromium"
+			}
+		},
+		{
+			"name": "preact",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.5600000381469727,
+					"median": 1.5,
+					"min": 1.5,
+					"mean": 1.5600000381469727,
+					"p95": 1.7000000476837158,
+					"sd": 0.08944275375281623,
+					"rme": 7.1179513016015346,
+					"scoreRme": 7.1179513016015346,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 1.7000000476837158
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 15.24000005722046,
+					"median": 15.400000095367432,
+					"min": 14,
+					"mean": 15.24000005722046,
+					"p95": 15.900000095367432,
+					"sd": 0.7231874215789736,
+					"rme": 5.891153716335676,
+					"scoreRme": 5.891153716335676,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 15.900000095367432
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 8.539999961853027,
+					"median": 9.699999809265137,
+					"min": 3.9000000953674316,
+					"mean": 8.539999961853027,
+					"p95": 10,
+					"sd": 2.6024987289652834,
+					"rme": 37.832680863234756,
+					"scoreRme": 37.832680863234756,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 2.1799999237060548,
+					"median": 2.1999998092651367,
+					"min": 2,
+					"mean": 2.1799999237060548,
+					"p95": 2.3999998569488525,
+					"sd": 0.14832392473424288,
+					"rme": 8.44674123529537,
+					"scoreRme": 8.44674123529537,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 2.3999998569488525
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 14.460000038146973,
+					"median": 14.400000095367432,
+					"min": 13.600000143051147,
+					"mean": 14.460000038146973,
+					"p95": 15.899999856948853,
+					"sd": 0.8848727625637991,
+					"rme": 7.597085125630558,
+					"scoreRme": 7.597085125630558,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 15.899999856948853
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 8.540000009536744,
+					"median": 8.5,
+					"min": 6.900000095367432,
+					"mean": 8.540000009536744,
+					"p95": 10.099999904632568,
+					"sd": 1.4587665823653468,
+					"rme": 21.20617760238834,
+					"scoreRme": 21.20617760238834,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.099999904632568
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 70.3,
+					"median": 65.89999985694885,
+					"min": 62.10000014305115,
+					"mean": 70.3,
+					"p95": 83.40000009536743,
+					"sd": 8.974686599349388,
+					"rme": 15.848874495765287,
+					"scoreRme": 15.848874495765287,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 83.40000009536743
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 18.419999980926512,
+					"median": 18.09999990463257,
+					"min": 16.700000047683716,
+					"mean": 18.419999980926512,
+					"p95": 20.5,
+					"sd": 1.3881642428728995,
+					"rme": 9.355902507116017,
+					"scoreRme": 9.355902507116017,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 20.5
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 13.119999980926513,
+					"median": 13.5,
+					"min": 11.599999904632568,
+					"mean": 13.119999980926513,
+					"p95": 14.400000095367432,
+					"sd": 1.084896359393941,
+					"rme": 10.265707293301707,
+					"scoreRme": 10.265707293301707,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 14.400000095367432
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 105.36000003814698,
+					"median": 102.70000004768372,
+					"min": 94.59999990463257,
+					"mean": 105.36000003814698,
+					"p95": 125.90000009536743,
+					"sd": 11.963611545042573,
+					"rme": 14.096815012173842,
+					"scoreRme": 14.096815012173842,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 125.90000009536743
+				},
+				"controlled_6x_first_input": {
+					"score": 9.219999980926513,
+					"median": 9.5,
+					"min": 8,
+					"mean": 9.219999980926513,
+					"p95": 10.699999809265137,
+					"sd": 1.0616024772745989,
+					"rme": 14.294384594968875,
+					"scoreRme": 14.294384594968875,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.699999809265137
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 68.48000001907349,
+					"median": 65.5,
+					"min": 59.799999952316284,
+					"mean": 68.48000001907349,
+					"p95": 83.30000019073486,
+					"sd": 9.039469082879533,
+					"rme": 16.38753497298174,
+					"scoreRme": 16.38753497298174,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 83.30000019073486
+				},
+				"controlled_6x_hydration": {
+					"score": 17.17999997138977,
+					"median": 16.399999856948853,
+					"min": 15.799999952316284,
+					"mean": 17.17999997138977,
+					"p95": 21,
+					"sd": 2.163792983916813,
+					"rme": 15.636048508855914,
+					"scoreRme": 15.636048508855914,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21
+				},
+				"controlled_6x_hydration_work": {
+					"score": 13.239999961853027,
+					"median": 12.900000095367432,
+					"min": 12.899999856948853,
+					"mean": 13.239999961853027,
+					"p95": 14,
+					"sd": 0.4979960164749689,
+					"rme": 4.669521125727632,
+					"scoreRme": 4.669521125727632,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 14
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 107.61999998092651,
+					"median": 98.5,
+					"min": 93.40000009536743,
+					"mean": 107.61999998092651,
+					"p95": 150.79999995231628,
+					"sd": 24.280794858174627,
+					"rme": 28.00943650250765,
+					"scoreRme": 28.00943650250765,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 150.79999995231628
+				},
+				"interaction_6x_hydration": {
+					"score": 16.7,
+					"median": 16.700000047683716,
+					"min": 14.799999952316284,
+					"mean": 16.7,
+					"p95": 19,
+					"sd": 1.5049917125473733,
+					"rme": 11.187990705302258,
+					"scoreRme": 11.187990705302258,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 19
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 64.84000000953674,
+					"median": 59.799999952316284,
+					"min": 58.200000047683716,
+					"mean": 64.84000000953674,
+					"p95": 79.70000004768372,
+					"sd": 8.992941694247941,
+					"rme": 17.218417380003196,
+					"scoreRme": 17.218417380003196,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 79.70000004768372
+				},
+				"search_send_6x_first_input": {
+					"score": 8.859999990463256,
+					"median": 8.699999809265137,
+					"min": 6.799999952316284,
+					"mean": 8.859999990463256,
+					"p95": 11.400000095367432,
+					"sd": 1.7140595705047346,
+					"rme": 24.017436411315405,
+					"scoreRme": 24.017436411315405,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.400000095367432
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 86.41999998092652,
+					"median": 66.79999995231628,
+					"min": 62.90000009536743,
+					"mean": 86.41999998092652,
+					"p95": 119.89999985694885,
+					"sd": 30.421324707375582,
+					"rme": 43.70169879032776,
+					"scoreRme": 43.70169879032776,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 119.89999985694885
+				},
+				"search_send_6x_hydration": {
+					"score": 18.32000002861023,
+					"median": 17.399999856948853,
+					"min": 16.100000143051147,
+					"mean": 18.32000002861023,
+					"p95": 21,
+					"sd": 2.316678672171667,
+					"rme": 15.699101238111016,
+					"scoreRme": 15.699101238111016,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21
+				},
+				"search_send_6x_hydration_work": {
+					"score": 14.420000028610229,
+					"median": 13.299999952316284,
+					"min": 12.699999809265137,
+					"mean": 14.420000028610229,
+					"p95": 17.300000190734863,
+					"sd": 1.992987807663888,
+					"rme": 17.15828353925904,
+					"scoreRme": 17.15828353925904,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 17.300000190734863
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 44.54000005722046,
+					"median": 47.60000014305115,
+					"min": 38.80000019073486,
+					"mean": 44.54000005722046,
+					"p95": 49.200000047683716,
+					"sd": 5.010788383632259,
+					"rme": 13.966587556350115,
+					"scoreRme": 13.966587556350115,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 49.200000047683716
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 19,
+						"interactionToHydration": 79.70000004768372,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 16.299999952316284,
+						"interactionToHydration": 67,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 14.799999952316284,
+						"interactionToHydration": 59.5,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 16.700000047683716,
+						"interactionToHydration": 59.799999952316284,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 16.700000047683716,
+						"interactionToHydration": 58.200000047683716,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardSendResults": [],
+				"keyboardExperience": {
+					"status": "not-run",
+					"samples": 0,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 0,
+					"preservedSearches": 0,
+					"exactDeliveries": 0,
+					"issues": []
+				},
+				"userExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 0,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"hydrationEventReplay": false,
+				"preRootInteractionReplay": false,
+				"browser": "chromium"
+			}
+		},
+		{
+			"name": "solid",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.5,
+					"median": 1.4000000953674316,
+					"min": 1.3999998569488525,
+					"mean": 1.5,
+					"p95": 1.7000000476837158,
+					"sd": 0.14142134780798377,
+					"rme": 11.704643015189069,
+					"scoreRme": 11.704643015189069,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 1.7000000476837158
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 15.840000009536743,
+					"median": 15.599999904632568,
+					"min": 14.299999952316284,
+					"mean": 15.840000009536743,
+					"p95": 19.100000143051147,
+					"sd": 1.928211678731376,
+					"rme": 15.112419171329217,
+					"scoreRme": 15.112419171329217,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 19.100000143051147
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 7.520000028610229,
+					"median": 7.299999952316284,
+					"min": 5.599999904632568,
+					"mean": 7.520000028610229,
+					"p95": 9.5,
+					"sd": 1.8806913681971744,
+					"rme": 31.048037098112957,
+					"scoreRme": 31.048037098112957,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.5
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 3.0599999904632567,
+					"median": 3.0999999046325684,
+					"min": 3,
+					"mean": 3.0599999904632567,
+					"p95": 3.1000001430511475,
+					"sd": 0.0547722470447875,
+					"rme": 2.222151132801451,
+					"scoreRme": 2.222151132801451,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 3.1000001430511475
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 7.6999999523162845,
+					"median": 7.3999998569488525,
+					"min": 7.200000047683716,
+					"mean": 7.6999999523162845,
+					"p95": 8.899999856948853,
+					"sd": 0.6964193659303329,
+					"rme": 11.22831470733984,
+					"scoreRme": 11.22831470733984,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 8.899999856948853
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 8.439999961853028,
+					"median": 8.099999904632568,
+					"min": 8,
+					"mean": 8.439999961853028,
+					"p95": 10,
+					"sd": 0.8734987306372743,
+					"rme": 12.848555155091814,
+					"scoreRme": 12.848555155091814,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 70.9,
+					"median": 61,
+					"min": 58.200000047683716,
+					"mean": 70.9,
+					"p95": 110.09999990463257,
+					"sd": 22.047108603955945,
+					"rme": 38.60467191059135,
+					"scoreRme": 38.60467191059135,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 110.09999990463257
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 24.63999996185303,
+					"median": 23,
+					"min": 21.09999990463257,
+					"mean": 24.63999996185303,
+					"p95": 33.09999990463257,
+					"sd": 4.813314841706921,
+					"rme": 24.251467677534833,
+					"scoreRme": 24.251467677534833,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 33.09999990463257
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 19.25999994277954,
+					"median": 17.799999952316284,
+					"min": 16.899999856948853,
+					"mean": 19.25999994277954,
+					"p95": 26.299999952316284,
+					"sd": 3.9702644891099195,
+					"rme": 25.591610512976132,
+					"scoreRme": 25.591610512976132,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 26.299999952316284
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 72.34000000953674,
+					"median": 57.89999985694885,
+					"min": 52.5,
+					"mean": 72.34000000953674,
+					"p95": 126.20000004768372,
+					"sd": 30.609524685854414,
+					"rme": 52.530621725815365,
+					"scoreRme": 52.530621725815365,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 126.20000004768372
+				},
+				"controlled_6x_first_input": {
+					"score": 7.979999971389771,
+					"median": 7.400000095367432,
+					"min": 6.5,
+					"mean": 7.979999971389771,
+					"p95": 11.200000047683716,
+					"sd": 1.847160020577711,
+					"rme": 28.73664679680407,
+					"scoreRme": 28.73664679680407,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.200000047683716
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 75.79999995231628,
+					"median": 62.19999980926514,
+					"min": 58.299999952316284,
+					"mean": 75.79999995231628,
+					"p95": 133.59999990463257,
+					"sd": 32.360237920759396,
+					"rme": 53.0001331000067,
+					"scoreRme": 53.0001331000067,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 133.59999990463257
+				},
+				"controlled_6x_hydration": {
+					"score": 26.179999923706056,
+					"median": 24.199999809265137,
+					"min": 22.299999952316284,
+					"mean": 26.179999923706056,
+					"p95": 33,
+					"sd": 4.215091974537824,
+					"rme": 19.98811659734008,
+					"scoreRme": 19.98811659734008,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 33
+				},
+				"controlled_6x_hydration_work": {
+					"score": 20.319999980926514,
+					"median": 18.59999990463257,
+					"min": 18.200000047683716,
+					"mean": 20.319999980926514,
+					"p95": 26.600000143051147,
+					"sd": 3.5758915753771343,
+					"rme": 21.847165493114005,
+					"scoreRme": 21.847165493114005,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 26.600000143051147
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 70.26000003814697,
+					"median": 53.10000014305115,
+					"min": 51.60000014305115,
+					"mean": 70.26000003814697,
+					"p95": 138.59999990463257,
+					"sd": 38.25039861321155,
+					"rme": 67.58686142317308,
+					"scoreRme": 67.58686142317308,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 138.59999990463257
+				},
+				"interaction_6x_hydration": {
+					"score": 21.25999994277954,
+					"median": 20.699999809265137,
+					"min": 19.59999990463257,
+					"mean": 21.25999994277954,
+					"p95": 24.5,
+					"sd": 1.8928814276605233,
+					"rme": 11.053367527937747,
+					"scoreRme": 11.053367527937747,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 24.5
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 72.66000003814698,
+					"median": 69.5,
+					"min": 63.40000009536743,
+					"mean": 72.66000003814698,
+					"p95": 93.29999995231628,
+					"sd": 12.079445282186922,
+					"rme": 20.638876710697737,
+					"scoreRme": 20.638876710697737,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 93.29999995231628
+				},
+				"search_send_6x_first_input": {
+					"score": 8.2,
+					"median": 8.099999904632568,
+					"min": 7,
+					"mean": 8.2,
+					"p95": 10.200000047683716,
+					"sd": 1.2186057822167475,
+					"rme": 18.449467751871225,
+					"scoreRme": 18.449467751871225,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.200000047683716
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 65.21999998092652,
+					"median": 62.89999985694885,
+					"min": 59.80000019073486,
+					"mean": 65.21999998092652,
+					"p95": 74.29999995231628,
+					"sd": 5.747782156383067,
+					"rme": 10.940923088564645,
+					"scoreRme": 10.940923088564645,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 74.29999995231628
+				},
+				"search_send_6x_hydration": {
+					"score": 23.459999990463256,
+					"median": 22.600000143051147,
+					"min": 22.299999952316284,
+					"mean": 23.459999990463256,
+					"p95": 27.40000009536743,
+					"sd": 2.2097511747149774,
+					"rme": 11.693642852070749,
+					"scoreRme": 11.693642852070749,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 27.40000009536743
+				},
+				"search_send_6x_hydration_work": {
+					"score": 18.92000002861023,
+					"median": 18.200000047683716,
+					"min": 18,
+					"mean": 18.92000002861023,
+					"p95": 21.700000047683716,
+					"sd": 1.5706686492452995,
+					"rme": 10.306184245172787,
+					"scoreRme": 10.306184245172787,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21.700000047683716
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 49.7,
+					"median": 48.10000014305115,
+					"min": 45.89999985694885,
+					"mean": 49.7,
+					"p95": 56.200000047683716,
+					"sd": 4.361765742608223,
+					"rme": 10.895330484453721,
+					"scoreRme": 10.895330484453721,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 56.200000047683716
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					1,
+					1,
+					1,
+					1,
+					1
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 24.5,
+						"interactionToHydration": 93.29999995231628,
+						"replayedClicks": 1,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 21.09999990463257,
+						"interactionToHydration": 72.29999995231628,
+						"replayedClicks": 1,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 19.59999990463257,
+						"interactionToHydration": 63.40000009536743,
+						"replayedClicks": 1,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 20.40000009536743,
+						"interactionToHydration": 64.80000019073486,
+						"replayedClicks": 1,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 20.699999809265137,
+						"interactionToHydration": 69.5,
+						"replayedClicks": 1,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					}
+				],
+				"keyboardSendResults": [],
+				"keyboardExperience": {
+					"status": "not-run",
+					"samples": 0,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 0,
+					"preservedSearches": 0,
+					"exactDeliveries": 0,
+					"issues": []
+				},
+				"userExperience": {
+					"status": "pass",
+					"samples": 5,
+					"deliveredSendClicks": 5,
+					"replayedSendClicks": 5,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 0,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 5,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": []
+				},
+				"hydrationEventReplay": true,
+				"preRootInteractionReplay": true,
+				"browser": "chromium"
+			}
+		},
+		{
+			"name": "svelte",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.6799999713897704,
+					"median": 1.5,
+					"min": 1.3999998569488525,
+					"mean": 1.6799999713897704,
+					"p95": 2.200000047683716,
+					"sd": 0.3271085898656729,
+					"rme": 24.172253164833776,
+					"scoreRme": 24.172253164833776,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 2.200000047683716
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 18.499999952316283,
+					"median": 18.899999856948853,
+					"min": 15,
+					"mean": 18.499999952316283,
+					"p95": 20,
+					"sd": 2.0408331328215805,
+					"rme": 13.695258332863611,
+					"scoreRme": 13.695258332863611,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 20
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 6.8599999904632565,
+					"median": 6,
+					"min": 5.400000095367432,
+					"mean": 6.8599999904632565,
+					"p95": 11,
+					"sd": 2.334095119156968,
+					"rme": 42.240484893189056,
+					"scoreRme": 42.240484893189056,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 2.240000057220459,
+					"median": 2.200000047683716,
+					"min": 2.1000001430511475,
+					"mean": 2.240000057220459,
+					"p95": 2.5,
+					"sd": 0.15165746643472408,
+					"rme": 8.405242090465954,
+					"scoreRme": 8.405242090465954,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 2.5
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 9.459999942779541,
+					"median": 9.5,
+					"min": 8.5,
+					"mean": 9.459999942779541,
+					"p95": 10.299999952316284,
+					"sd": 0.7668115736669513,
+					"rme": 10.063104554983504,
+					"scoreRme": 10.063104554983504,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.299999952316284
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 8.540000057220459,
+					"median": 7.700000047683716,
+					"min": 6.900000095367432,
+					"mean": 8.540000057220459,
+					"p95": 10.700000047683716,
+					"sd": 1.8635986805000886,
+					"rme": 27.09124602615967,
+					"scoreRme": 27.09124602615967,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.700000047683716
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 84.34000000953674,
+					"median": 71.90000009536743,
+					"min": 62.799999952316284,
+					"mean": 84.34000000953674,
+					"p95": 113.90000009536743,
+					"sd": 24.52249989753324,
+					"rme": 36.09654243261411,
+					"scoreRme": 36.09654243261411,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 113.90000009536743
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 26.8800000667572,
+					"median": 25.09999990463257,
+					"min": 23.600000143051147,
+					"mean": 26.8800000667572,
+					"p95": 32.299999952316284,
+					"sd": 3.6120630865306658,
+					"rme": 16.68247647269716,
+					"scoreRme": 16.68247647269716,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 32.299999952316284
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 15.660000133514405,
+					"median": 14.800000190734863,
+					"min": 12.800000190734863,
+					"mean": 15.660000133514405,
+					"p95": 19.40000009536743,
+					"sd": 2.7618834000731867,
+					"rme": 21.895155704888325,
+					"scoreRme": 21.895155704888325,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 19.40000009536743
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 87.47999997138977,
+					"median": 68.29999995231628,
+					"min": 60,
+					"mean": 87.47999997138977,
+					"p95": 138.19999980926514,
+					"sd": 34.92816908346976,
+					"rme": 49.56801256103965,
+					"scoreRme": 49.56801256103965,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 138.19999980926514
+				},
+				"controlled_6x_first_input": {
+					"score": 8.52000002861023,
+					"median": 8.100000143051147,
+					"min": 7.700000047683716,
+					"mean": 8.52000002861023,
+					"p95": 9.600000143051147,
+					"sd": 0.7949842891700282,
+					"rme": 11.583862915751073,
+					"scoreRme": 11.583862915751073,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.600000143051147
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 81.17999997138978,
+					"median": 71,
+					"min": 65.20000004768372,
+					"mean": 81.17999997138978,
+					"p95": 120.39999985694885,
+					"sd": 22.9787292413058,
+					"rme": 35.140781909762936,
+					"scoreRme": 35.140781909762936,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 120.39999985694885
+				},
+				"controlled_6x_hydration": {
+					"score": 26.399999952316286,
+					"median": 24.5,
+					"min": 22.199999809265137,
+					"mean": 26.399999952316286,
+					"p95": 33.69999980926514,
+					"sd": 4.482744661431499,
+					"rme": 21.080190708930118,
+					"scoreRme": 21.080190708930118,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 33.69999980926514
+				},
+				"controlled_6x_hydration_work": {
+					"score": 15.719999933242798,
+					"median": 14.599999904632568,
+					"min": 13.299999952316284,
+					"mean": 15.719999933242798,
+					"p95": 21.59999990463257,
+					"sd": 3.430306108233682,
+					"rme": 27.090361251431972,
+					"scoreRme": 27.090361251431972,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21.59999990463257
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 79.73999996185303,
+					"median": 66.79999995231628,
+					"min": 60.799999952316284,
+					"mean": 79.73999996185303,
+					"p95": 130.09999990463257,
+					"sd": 28.685240087433655,
+					"rme": 44.65979422228201,
+					"scoreRme": 44.65979422228201,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 130.09999990463257
+				},
+				"interaction_6x_hydration": {
+					"score": 23.239999961853027,
+					"median": 23.59999990463257,
+					"min": 21.799999952316284,
+					"mean": 23.239999961853027,
+					"p95": 24.5,
+					"sd": 1.145862138120239,
+					"rme": 6.121117358667025,
+					"scoreRme": 6.121117358667025,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 24.5
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 76.39999995231628,
+					"median": 75.39999985694885,
+					"min": 69.59999990463257,
+					"mean": 76.39999995231628,
+					"p95": 86.20000004768372,
+					"sd": 6.657326875714011,
+					"rme": 10.81785068436201,
+					"scoreRme": 10.81785068436201,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 86.20000004768372
+				},
+				"search_send_6x_first_input": {
+					"score": 9.3,
+					"median": 8.899999856948853,
+					"min": 8,
+					"mean": 9.3,
+					"p95": 11.900000095367432,
+					"sd": 1.5016657901927923,
+					"rme": 20.045864857907716,
+					"scoreRme": 20.045864857907716,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.900000095367432
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 78.73999996185303,
+					"median": 68.09999990463257,
+					"min": 63.299999952316284,
+					"mean": 78.73999996185303,
+					"p95": 124.60000014305115,
+					"sd": 25.756028519529554,
+					"rme": 40.608593401907115,
+					"scoreRme": 40.608593401907115,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 124.60000014305115
+				},
+				"search_send_6x_hydration": {
+					"score": 24.27999997138977,
+					"median": 22.799999952316284,
+					"min": 22.09999990463257,
+					"mean": 24.27999997138977,
+					"p95": 30.40000009536743,
+					"sd": 3.447752962396199,
+					"rme": 17.628766200409217,
+					"scoreRme": 17.628766200409217,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 30.40000009536743
+				},
+				"search_send_6x_hydration_work": {
+					"score": 14.840000009536743,
+					"median": 14.299999952316284,
+					"min": 13.5,
+					"mean": 14.840000009536743,
+					"p95": 18,
+					"sd": 1.8622566997424468,
+					"rme": 15.579018885362443,
+					"scoreRme": 15.579018885362443,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 18
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 48.980000019073486,
+					"median": 47.200000047683716,
+					"min": 45.200000047683716,
+					"mean": 48.980000019073486,
+					"p95": 57,
+					"sd": 4.7330750885158706,
+					"rme": 11.996624711587115,
+					"scoreRme": 11.996624711587115,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 57
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 24.5,
+						"interactionToHydration": 79.40000009536743,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 21.799999952316284,
+						"interactionToHydration": 69.59999990463257,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 22.299999952316284,
+						"interactionToHydration": 75.39999985694885,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 24,
+						"interactionToHydration": 86.20000004768372,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 23.59999990463257,
+						"interactionToHydration": 71.39999985694885,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardSendResults": [],
+				"keyboardExperience": {
+					"status": "not-run",
+					"samples": 0,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 0,
+					"preservedSearches": 0,
+					"exactDeliveries": 0,
+					"issues": []
+				},
+				"userExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 0,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"hydrationEventReplay": false,
+				"preRootInteractionReplay": false,
+				"browser": "chromium"
+			}
+		},
+		{
+			"name": "vue-vapor",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.5600000381469727,
+					"median": 1.5999999046325684,
+					"min": 1.4000000953674316,
+					"mean": 1.5600000381469727,
+					"p95": 1.7000000476837158,
+					"sd": 0.11401752787246487,
+					"rme": 9.073638465649847,
+					"scoreRme": 9.073638465649847,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 1.7000000476837158
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 16.620000028610228,
+					"median": 16,
+					"min": 14.700000047683716,
+					"mean": 16.620000028610228,
+					"p95": 18.799999952316284,
+					"sd": 1.7512852446435554,
+					"rme": 13.081583810841426,
+					"scoreRme": 13.081583810841426,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 18.799999952316284
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 7.62000002861023,
+					"median": 7.6000001430511475,
+					"min": 5.200000047683716,
+					"mean": 7.62000002861023,
+					"p95": 9.799999952316284,
+					"sd": 1.7383900045256342,
+					"rme": 28.32218158120614,
+					"scoreRme": 28.32218158120614,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.799999952316284
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 2.3600000858306887,
+					"median": 2.4000000953674316,
+					"min": 2.299999952316284,
+					"mean": 2.3600000858306887,
+					"p95": 2.4000000953674316,
+					"sd": 0.054772268809304865,
+					"rme": 2.881264788079635,
+					"scoreRme": 2.881264788079635,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 2.4000000953674316
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 8.6,
+					"median": 8.799999952316284,
+					"min": 7.3999998569488525,
+					"mean": 8.6,
+					"p95": 9.400000095367432,
+					"sd": 0.7449833108965694,
+					"rme": 10.754310025448435,
+					"scoreRme": 10.754310025448435,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.400000095367432
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 8.019999980926514,
+					"median": 7.799999952316284,
+					"min": 7,
+					"mean": 8.019999980926514,
+					"p95": 9,
+					"sd": 0.8197560865799264,
+					"rme": 12.689506785150979,
+					"scoreRme": 12.689506785150979,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 67.85999994277954,
+					"median": 64.09999990463257,
+					"min": 62.09999990463257,
+					"mean": 67.85999994277954,
+					"p95": 84.5,
+					"sd": 9.380458438626485,
+					"rme": 17.16108207028297,
+					"scoreRme": 17.16108207028297,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 84.5
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 21.57999997138977,
+					"median": 21.5,
+					"min": 20.699999809265137,
+					"mean": 21.57999997138977,
+					"p95": 22.5,
+					"sd": 0.6723095312858952,
+					"rme": 3.867695615248697,
+					"scoreRme": 3.867695615248697,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 22.5
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 15.059999990463258,
+					"median": 14.700000047683716,
+					"min": 13.900000095367432,
+					"mean": 15.059999990463258,
+					"p95": 16.799999952316284,
+					"sd": 1.110405272997342,
+					"rme": 9.153580462951401,
+					"scoreRme": 9.153580462951401,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 16.799999952316284
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 64.19999995231629,
+					"median": 62,
+					"min": 58.299999952316284,
+					"mean": 64.19999995231629,
+					"p95": 75.59999990463257,
+					"sd": 6.936497662107131,
+					"rme": 13.413424716477905,
+					"scoreRme": 13.413424716477905,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 75.59999990463257
+				},
+				"controlled_6x_first_input": {
+					"score": 7.7799999713897705,
+					"median": 7.700000047683716,
+					"min": 6.699999809265137,
+					"mean": 7.7799999713897705,
+					"p95": 9.200000047683716,
+					"sd": 0.903880597461904,
+					"rme": 14.42334288975774,
+					"scoreRme": 14.42334288975774,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.200000047683716
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 64.45999999046326,
+					"median": 64.70000004768372,
+					"min": 62.700000047683716,
+					"mean": 64.45999999046326,
+					"p95": 66.60000014305115,
+					"sd": 1.5598077466375486,
+					"rme": 3.00410585263031,
+					"scoreRme": 3.00410585263031,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 66.60000014305115
+				},
+				"controlled_6x_hydration": {
+					"score": 21.379999971389772,
+					"median": 20.700000047683716,
+					"min": 19.799999952316284,
+					"mean": 21.379999971389772,
+					"p95": 24.59999990463257,
+					"sd": 1.868689334611913,
+					"rme": 10.850852655974563,
+					"scoreRme": 10.850852655974563,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 24.59999990463257
+				},
+				"controlled_6x_hydration_work": {
+					"score": 14.87999997138977,
+					"median": 14.5,
+					"min": 13.799999952316284,
+					"mean": 14.87999997138977,
+					"p95": 16.40000009536743,
+					"sd": 1.0568822843998849,
+					"rme": 8.817757429322908,
+					"scoreRme": 8.817757429322908,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 16.40000009536743
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 61.420000076293945,
+					"median": 60.40000009536743,
+					"min": 54,
+					"mean": 61.420000076293945,
+					"p95": 66.40000009536743,
+					"sd": 5.049950529838205,
+					"rme": 10.207320953005116,
+					"scoreRme": 10.207320953005116,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 66.40000009536743
+				},
+				"interaction_6x_hydration": {
+					"score": 19.979999923706053,
+					"median": 20.09999990463257,
+					"min": 18.5,
+					"mean": 19.979999923706053,
+					"p95": 20.799999952316284,
+					"sd": 0.9257428964645742,
+					"rme": 5.752138913057895,
+					"scoreRme": 5.752138913057895,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 20.799999952316284
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 70.8,
+					"median": 71.40000009536743,
+					"min": 65.70000004768372,
+					"mean": 70.8,
+					"p95": 74.59999990463257,
+					"sd": 3.9843443371957967,
+					"rme": 6.986474304986309,
+					"scoreRme": 6.986474304986309,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 74.59999990463257
+				},
+				"search_send_6x_first_input": {
+					"score": 8.37999997138977,
+					"median": 8.200000047683716,
+					"min": 7.699999809265137,
+					"mean": 8.37999997138977,
+					"p95": 9.699999809265137,
+					"sd": 0.8288545917086396,
+					"rme": 12.27916372787186,
+					"scoreRme": 12.27916372787186,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.699999809265137
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 63.700000047683716,
+					"median": 63.799999952316284,
+					"min": 59.60000014305115,
+					"mean": 63.700000047683716,
+					"p95": 67.10000014305115,
+					"sd": 3.4117444141594078,
+					"rme": 6.649232456874345,
+					"scoreRme": 6.649232456874345,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 67.10000014305115
+				},
+				"search_send_6x_hydration": {
+					"score": 22.059999990463258,
+					"median": 21.299999952316284,
+					"min": 20.700000047683716,
+					"mean": 22.059999990463258,
+					"p95": 25.90000009536743,
+					"sd": 2.160555537980114,
+					"rme": 12.15890278729989,
+					"scoreRme": 12.15890278729989,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 25.90000009536743
+				},
+				"search_send_6x_hydration_work": {
+					"score": 15.899999952316284,
+					"median": 15.399999856948853,
+					"min": 14.799999952316284,
+					"mean": 15.899999952316284,
+					"p95": 18.5,
+					"sd": 1.483239717511856,
+					"rme": 11.581069899823985,
+					"scoreRme": 11.581069899823985,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 18.5
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 46.119999980926515,
+					"median": 45.700000047683716,
+					"min": 41.40000009536743,
+					"mean": 46.119999980926515,
+					"p95": 50.5,
+					"sd": 4.2073744772027295,
+					"rme": 11.32547248421392,
+					"scoreRme": 11.32547248421392,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 50.5
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 20.799999952316284,
+						"interactionToHydration": 74.5,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 19.799999952316284,
+						"interactionToHydration": 65.70000004768372,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 20.09999990463257,
+						"interactionToHydration": 71.40000009536743,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 18.5,
+						"interactionToHydration": 67.79999995231628,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 20.699999809265137,
+						"interactionToHydration": 74.59999990463257,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardSendResults": [],
+				"keyboardExperience": {
+					"status": "not-run",
+					"samples": 0,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 0,
+					"preservedSearches": 0,
+					"exactDeliveries": 0,
+					"issues": []
+				},
+				"userExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 0,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"hydrationEventReplay": false,
+				"preRootInteractionReplay": false,
+				"browser": "chromium"
+			}
+		}
+	],
+	"harnessExit": 0
+}

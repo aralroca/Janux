@@ -1,27 +1,40 @@
-function syncAttrs(from: Element, to: Element): void {
-  const runtimeClasses = [...from.classList].filter((name) => name.startsWith('janux-'));
+import { claimedElsewhere, nodeKey, setNodeKey } from './keys';
 
-  [...from.getAttributeNames()]
-    .filter((name) => !to.hasAttribute(name))
-    .forEach((name) => from.removeAttribute(name));
-  to.getAttributeNames().forEach((name) => {
-    if (from.getAttribute(name) !== to.getAttribute(name)) {
-      from.setAttribute(name, to.getAttribute(name)!);
-    }
-  });
-  // `janux-*` classes belong to the runtime (e.g. the agent glow) — views
-  // never render them, so re-renders must not wipe them.
-  runtimeClasses.forEach((name) => from.classList.add(name));
+/**
+ * Runs an attribute sync preserving runtime-owned `janux-*` classes (e.g. the
+ * agent glow): views never render them, so re-renders must not wipe them. The
+ * capture is lazy — the common no-runtime-class element allocates nothing.
+ */
+export function keepRuntimeClasses(el: Element, sync: () => void): void {
+  let runtime: string[] | null = null;
+
+  for (const name of el.classList) {
+    if (name.startsWith('janux-')) (runtime ??= []).push(name);
+  }
+  sync();
+  runtime?.forEach((name) => el.classList.add(name));
 }
 
-type ValueControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+function syncAttrs(from: Element, to: Element): void {
+  keepRuntimeClasses(from, () => {
+    from
+      .getAttributeNames()
+      .filter((name) => !to.hasAttribute(name))
+      .forEach((name) => from.removeAttribute(name));
+    to.getAttributeNames().forEach((name) => {
+      if (from.getAttribute(name) !== to.getAttribute(name)) {
+        from.setAttribute(name, to.getAttribute(name)!);
+      }
+    });
+  });
+}
 
-function isValueControl(el: Element): el is ValueControl {
-  return (
-    el instanceof HTMLInputElement ||
-    el instanceof HTMLTextAreaElement ||
-    el instanceof HTMLSelectElement
-  );
+export type ValueControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
+export const VALUE_CONTROL_TAGS = new Set(['input', 'textarea', 'select']);
+
+export function isValueControl(el: Element): el is ValueControl {
+  return VALUE_CONTROL_TAGS.has(el.localName);
 }
 
 /** Controlled inputs: state → DOM property writes, never touching the focused control. */
@@ -40,7 +53,7 @@ function syncValue(from: Element, to: Element): void {
 const BOUNDARY_TAGS = new Set(['JANUX-ISLAND', 'JANUX-FOREIGN']);
 
 /** Islands and foreign roots are opaque: their own runtime owns everything inside. */
-function isIsland(node: Node): boolean {
+export function isIsland(node: Node): node is Element {
   return node.nodeType === Node.ELEMENT_NODE && BOUNDARY_TAGS.has((node as Element).tagName);
 }
 
@@ -61,26 +74,45 @@ function liveIslandHosts(from: Element): Map<string, Element> {
   return new Map(hosts.map((host) => [host.getAttribute('data-jx')!, host]));
 }
 
+interface ChildMatch {
+  fromKids: ChildNode[];
+  islands: Map<string, Element>;
+  /** Non-island keyed survivors among `from`'s children, by render key. */
+  byKey: Map<string | number, ChildNode>;
+  /** Keys the incoming children claim — an unkeyed child must not consume them. */
+  toKeys: Set<string | number>;
+}
+
 /**
  * The node that should occupy position `index`: a live island host reused by id
- * (so it survives position shifts — never replaced by its empty placeholder),
- * an index+tag-matched existing node morphed in place, or the incoming node.
+ * (so it survives position shifts — never replaced by its empty placeholder), a
+ * key-matched survivor moved into place, an index+tag-matched existing node
+ * morphed in place, or the incoming node. A keyed incoming child with no keyed
+ * match still adopts the unkeyed node at its position — that is how a resumed
+ * SSR tree acquires keys on the first client render.
  */
-function targetNode(fromKids: ChildNode[], islands: Map<string, Element>, toKid: ChildNode, index: number): ChildNode {
+function targetNode(match: ChildMatch, toKid: ChildNode, index: number): ChildNode {
   if (isIsland(toKid)) {
-    const host = islands.get((toKid as Element).getAttribute('data-jx')!);
+    const host = match.islands.get((toKid as Element).getAttribute('data-jx')!);
 
-    if (host) {
-      morphNode(host, toKid);
+    if (!host) return toKid;
+    morphNode(host, toKid);
 
-      return host;
-    }
-
-    return toKid;
+    return host;
   }
-  const fromKid = fromKids[index];
+  const key = nodeKey(toKid);
+  const survivor = key === undefined ? undefined : match.byKey.get(key);
 
-  if (fromKid && !isIsland(fromKid) && sameKind(fromKid, toKid)) {
+  if (survivor && sameKind(survivor, toKid)) {
+    morphNode(survivor, toKid);
+
+    return survivor;
+  }
+  const fromKid = match.fromKids[index];
+  const fromKey = fromKid === undefined ? undefined : nodeKey(fromKid);
+
+  if (fromKid && !isIsland(fromKid) && !claimedElsewhere(key, fromKey, match.toKeys) && sameKind(fromKid, toKid)) {
+    if (key !== undefined) setNodeKey(fromKid, key);
     morphNode(fromKid, toKid);
 
     return fromKid;
@@ -91,15 +123,21 @@ function targetNode(fromKids: ChildNode[], islands: Map<string, Element>, toKid:
 
 /**
  * Two-pass reconcile: first resolve the target node for each incoming child
- * (reusing live islands and morphing matched nodes), then order `from`'s
+ * (reusing live islands and key/index-matched nodes), then order `from`'s
  * children to that list. Snapshotting the incoming children first means the
  * mutation of `from` never desyncs the walk.
  */
 function morphChildren(from: Element, to: Element): void {
-  const islands = liveIslandHosts(from);
   const fromKids = [...from.childNodes];
   const toKids = [...to.childNodes];
-  const targets = toKids.map((toKid, index) => targetNode(fromKids, islands, toKid, index));
+  const keyedFrom = fromKids.filter((kid) => !isIsland(kid) && nodeKey(kid) !== undefined);
+  const match: ChildMatch = {
+    fromKids,
+    islands: liveIslandHosts(from),
+    byKey: new Map(keyedFrom.map((kid) => [nodeKey(kid)!, kid])),
+    toKeys: new Set(toKids.map(nodeKey).filter((key) => key !== undefined) as (string | number)[]),
+  };
+  const targets = toKids.map((toKid, index) => targetNode(match, toKid, index));
 
   targets.forEach((node, index) => {
     if (from.childNodes[index] !== node) from.insertBefore(node, from.childNodes[index] ?? null);

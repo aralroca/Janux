@@ -3,6 +3,8 @@ type Cleanup = (() => void) | undefined;
 interface Runner {
   run: () => void;
   deps: Set<Set<Runner>>;
+  /** Computed runners are pure and safe to flush early on a mid-batch read. */
+  computed?: boolean;
 }
 
 export interface Sig<T> {
@@ -151,15 +153,56 @@ export function effect(fn: () => Cleanup | void): () => void {
 
 export function computed<T>(fn: () => T): ReadonlySig<T> {
   const out = signal<T>(undefined as T);
-  const dispose = effect(() => {
-    out.value = fn();
-  });
+  let disposed = false;
+  const scope = owner;
+  const runner: Runner = { deps: new Set(), run: () => {} };
+
+  runner.run = function runComputed() {
+    if (disposed) return;
+    out.value = runWithOwner(scope, () => runTracked(runner, fn as () => Cleanup)) as T;
+  };
+  runner.computed = true;
+  runner.run();
+  const dispose = function dispose() {
+    if (disposed) return;
+    disposed = true;
+    detach(runner);
+  };
+
+  owner?.cleanups.push(dispose);
+  // A batch queues this runner like any other; a read mid-batch must not see
+  // the pre-batch value, so pending recomputes run on demand (pull) and leave
+  // the queue with nothing to redo. ALL queued computed runners flush, to a
+  // fixed point: a chain (c2 reads c1 reads a) only queues c2 once c1 has
+  // re-run, so draining just this runner would serve c2 its pre-batch value.
+  // Computeds are pure by contract, so early evaluation is unobservable;
+  // effects stay queued for the batch's own flush.
+  const fresh = () => {
+    if (batching === null) return;
+    let ran = true;
+
+    while (ran) {
+      ran = false;
+      for (const queued of [...batching]) {
+        if (!queued.computed) continue;
+        batching.delete(queued);
+        queued.run();
+        ran = true;
+      }
+    }
+  };
 
   return {
     get value(): T {
+      fresh();
+
       return out.value;
     },
-    peek: () => out.peek(),
+    peek: () => {
+      fresh();
+
+      return out.peek();
+    },
     dispose,
   };
 }

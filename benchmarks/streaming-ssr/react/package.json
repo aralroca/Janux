@@ -1,0 +1,16 @@
+{
+	"name": "react-streaming-ssr-bench",
+	"private": true,
+	"type": "module",
+	"version": "0.0.0",
+	"description": "streaming-ssr bench fixture for React 19 renderToPipeableStream (Fizz), authored in .tsrx via @tsrx/react (sync shell + 10 use(promise) Suspense boundaries). SSR-only: no client build, no dev server.",
+	"dependencies": {
+		"react": "^19.2.7",
+		"react-dom": "^19.2.7"
+	},
+	"devDependencies": {
+		"@tsrx/react": "^0.2.54",
+		"@tsrx/vite-plugin-react": "^0.0.86",
+		"vite": "^8.1.5"
+	}
+}

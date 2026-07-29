@@ -1,0 +1,3925 @@
+{
+	"suite": "hydration-stress",
+	"iterations": 5,
+	"targets": [
+		{
+			"name": "janux",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.6,
+					"median": 1.5999999046325684,
+					"min": 1.4000000953674316,
+					"mean": 1.6,
+					"p95": 1.7999999523162842,
+					"sd": 0.15811384531114514,
+					"rme": 12.268299728596357,
+					"scoreRme": 12.268299728596357,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 1.7999999523162842
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 17.059999990463258,
+					"median": 15.700000047683716,
+					"min": 14.900000095367432,
+					"mean": 17.059999990463258,
+					"p95": 20.59999990463257,
+					"sd": 2.411016334535319,
+					"rme": 17.54508941053496,
+					"scoreRme": 17.54508941053496,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 20.59999990463257
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 5.619999933242798,
+					"median": 4.299999952316284,
+					"min": 3.3999998569488525,
+					"mean": 5.619999933242798,
+					"p95": 8.799999952316284,
+					"sd": 2.492388433984128,
+					"rme": 55.057168988766904,
+					"scoreRme": 55.057168988766904,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 8.799999952316284
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 0.7400000095367432,
+					"median": 0.7000000476837158,
+					"min": 0.7000000476837158,
+					"mean": 0.7400000095367432,
+					"p95": 0.7999999523162842,
+					"sd": 0.05477220351562305,
+					"rme": 9.188887775074503,
+					"scoreRme": 9.188887775074503,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 0.7999999523162842
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 19.47999997138977,
+					"median": 19,
+					"min": 17.700000047683716,
+					"mean": 19.47999997138977,
+					"p95": 21.899999856948853,
+					"sd": 1.6498484066481036,
+					"rme": 10.514522371686612,
+					"scoreRme": 10.514522371686612,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21.899999856948853
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 8.760000038146973,
+					"median": 8,
+					"min": 6.700000047683716,
+					"mean": 8.760000038146973,
+					"p95": 12.200000047683716,
+					"sd": 2.234502185749616,
+					"rme": 31.6673072186868,
+					"scoreRme": 31.6673072186868,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 12.200000047683716
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 79.22000002861023,
+					"median": 78,
+					"min": 62.700000047683716,
+					"mean": 79.22000002861023,
+					"p95": 102.5,
+					"sd": 17.273592565398623,
+					"rme": 27.069628337767586,
+					"scoreRme": 27.069628337767586,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 102.5
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 11.5,
+					"median": 10.900000095367432,
+					"min": 9,
+					"mean": 11.5,
+					"p95": 16.09999990463257,
+					"sd": 2.6897954878298465,
+					"rme": 29.037276494703733,
+					"scoreRme": 29.037276494703733,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 16.09999990463257
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 4.599999952316284,
+					"median": 4.700000047683716,
+					"min": 3.5999999046325684,
+					"mean": 4.599999952316284,
+					"p95": 5.599999904632568,
+					"sd": 0.7778174761639444,
+					"rme": 20.9920247227898,
+					"scoreRme": 20.9920247227898,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 5.599999904632568
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 187.85999999046325,
+					"median": 200.29999995231628,
+					"min": 144.60000014305115,
+					"mean": 187.85999999046325,
+					"p95": 217.20000004768372,
+					"sd": 28.286975752776385,
+					"rme": 18.69332944151144,
+					"scoreRme": 18.69332944151144,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 217.20000004768372
+				},
+				"controlled_6x_first_input": {
+					"score": 9.84000005722046,
+					"median": 9.299999952316284,
+					"min": 7.800000190734863,
+					"mean": 9.84000005722046,
+					"p95": 11.900000095367432,
+					"sd": 1.8256505967918204,
+					"rme": 23.03334550254007,
+					"scoreRme": 23.03334550254007,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.900000095367432
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 91.23999996185303,
+					"median": 84.89999985694885,
+					"min": 59.10000014305115,
+					"mean": 91.23999996185303,
+					"p95": 132.5,
+					"sd": 27.51396008121237,
+					"rme": 37.437107459609905,
+					"scoreRme": 37.437107459609905,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 132.5
+				},
+				"controlled_6x_hydration": {
+					"score": 11.639999961853027,
+					"median": 11.299999952316284,
+					"min": 9.900000095367432,
+					"mean": 11.639999961853027,
+					"p95": 13.199999809265137,
+					"sd": 1.38852427092767,
+					"rme": 14.80931450071642,
+					"scoreRme": 14.80931450071642,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 13.199999809265137
+				},
+				"controlled_6x_hydration_work": {
+					"score": 4.8599999904632565,
+					"median": 4.700000047683716,
+					"min": 3.9000000953674316,
+					"mean": 4.8599999904632565,
+					"p95": 6.200000047683716,
+					"sd": 0.8324662149579036,
+					"rme": 21.26497165751033,
+					"scoreRme": 21.26497165751033,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 6.200000047683716
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 194.07999997138978,
+					"median": 195.19999980926514,
+					"min": 153.70000004768372,
+					"mean": 194.07999997138978,
+					"p95": 215.29999995231628,
+					"sd": 25.187437323556164,
+					"rme": 16.111562447525092,
+					"scoreRme": 16.111562447525092,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 215.29999995231628
+				},
+				"interaction_6x_hydration": {
+					"score": 11.180000019073486,
+					"median": 11.299999952316284,
+					"min": 9.900000095367432,
+					"mean": 11.180000019073486,
+					"p95": 11.899999856948853,
+					"sd": 0.76615919698389,
+					"rme": 8.507690346513014,
+					"scoreRme": 8.507690346513014,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.899999856948853
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 72.91999993324279,
+					"median": 72.70000004768372,
+					"min": 62.89999985694885,
+					"mean": 72.91999993324279,
+					"p95": 84.69999980926514,
+					"sd": 7.766080065958226,
+					"rme": 13.221771997463549,
+					"scoreRme": 13.221771997463549,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 84.69999980926514
+				},
+				"search_send_6x_first_input": {
+					"score": 10.1,
+					"median": 9.5,
+					"min": 7.700000047683716,
+					"mean": 10.1,
+					"p95": 13.599999904632568,
+					"sd": 2.1988632868891296,
+					"rme": 27.027838425367325,
+					"scoreRme": 27.027838425367325,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 13.599999904632568
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 100.50000004768371,
+					"median": 102.30000019073486,
+					"min": 65.79999995231628,
+					"mean": 100.50000004768371,
+					"p95": 125,
+					"sd": 22.387831543033496,
+					"rme": 27.65543080091358,
+					"scoreRme": 27.65543080091358,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 125
+				},
+				"search_send_6x_hydration": {
+					"score": 11.32000002861023,
+					"median": 11.299999952316284,
+					"min": 8.800000190734863,
+					"mean": 11.32000002861023,
+					"p95": 12.799999952316284,
+					"sd": 1.6513629732895978,
+					"rme": 18.110505575982792,
+					"scoreRme": 18.110505575982792,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 12.799999952316284
+				},
+				"search_send_6x_hydration_work": {
+					"score": 5.099999952316284,
+					"median": 5.200000047683716,
+					"min": 3.5,
+					"mean": 5.099999952316284,
+					"p95": 6.699999809265137,
+					"sd": 1.1768601759079802,
+					"rme": 28.64766005168789,
+					"scoreRme": 28.64766005168789,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 6.699999809265137
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 36.059999990463254,
+					"median": 36.700000047683716,
+					"min": 33,
+					"mean": 36.059999990463254,
+					"p95": 38.09999990463257,
+					"sd": 2.1337759117157726,
+					"rme": 7.346112000211373,
+					"scoreRme": 7.346112000211373,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 38.09999990463257
+				},
+				"keyboard_send_6x_first_input": {
+					"score": 8.199999904632568,
+					"median": 8.299999952316284,
+					"min": 7.199999809265137,
+					"mean": 8.199999904632568,
+					"p95": 9.5,
+					"sd": 0.8803409040186455,
+					"rme": 13.328199771623538,
+					"scoreRme": 13.328199771623538,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.5
+				},
+				"keyboard_send_6x_pre_hydration_typing": {
+					"score": 75.79999995231628,
+					"median": 76.5,
+					"min": 59.59999990463257,
+					"mean": 75.79999995231628,
+					"p95": 86.79999995231628,
+					"sd": 10.752906576597228,
+					"rme": 17.611288309039004,
+					"scoreRme": 17.611288309039004,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 86.79999995231628
+				},
+				"keyboard_send_6x_hydration": {
+					"score": 10.640000009536744,
+					"median": 11.099999904632568,
+					"min": 9.5,
+					"mean": 10.640000009536744,
+					"p95": 11.300000190734863,
+					"sd": 0.7668115861038375,
+					"rme": 8.947083644078784,
+					"scoreRme": 8.947083644078784,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.300000190734863
+				},
+				"keyboard_send_6x_hydration_work": {
+					"score": 4.939999961853028,
+					"median": 4.8999998569488525,
+					"min": 4.299999952316284,
+					"mean": 4.939999961853028,
+					"p95": 5.799999952316284,
+					"sd": 0.5504543504177011,
+					"rme": 13.833396417022495,
+					"scoreRme": 13.833396417022495,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 5.799999952316284
+				},
+				"keyboard_send_6x_interaction_to_hydration": {
+					"score": 22.440000009536742,
+					"median": 21.59999990463257,
+					"min": 20.700000047683716,
+					"mean": 22.440000009536742,
+					"p95": 26.300000190734863,
+					"sd": 2.2600885891008717,
+					"rme": 12.503657513254327,
+					"scoreRme": 12.503657513254327,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 26.300000190734863
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 11.600000143051147,
+						"interactionToHydration": 72.70000004768372,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 11.899999856948853,
+						"interactionToHydration": 84.69999980926514,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 11.200000047683716,
+						"interactionToHydration": 62.89999985694885,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 9.900000095367432,
+						"interactionToHydration": 71.5,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 11.299999952316284,
+						"interactionToHydration": 72.79999995231628,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"exactDeliveries": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"userExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 0,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"hydrationEventReplay": false,
+				"preRootInteractionReplay": false,
+				"browser": "chromium"
+			}
+		},
+		{
+			"name": "react",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.8,
+					"median": 1.7000000476837158,
+					"min": 1.5,
+					"mean": 1.8,
+					"p95": 2.299999952316284,
+					"sd": 0.31622776601684693,
+					"rme": 21.81031582859902,
+					"scoreRme": 21.81031582859902,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 2.299999952316284
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 17.480000019073486,
+					"median": 15.799999952316284,
+					"min": 15.400000095367432,
+					"mean": 17.480000019073486,
+					"p95": 22.59999990463257,
+					"sd": 3.0906309412020683,
+					"rme": 21.950285785005388,
+					"scoreRme": 21.950285785005388,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 22.59999990463257
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 14.040000057220459,
+					"median": 14.599999904632568,
+					"min": 11.5,
+					"mean": 14.040000057220459,
+					"p95": 15.5,
+					"sd": 1.5436968688470545,
+					"rme": 13.649896969808392,
+					"scoreRme": 13.649896969808392,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 15.5
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 3.0400001049041747,
+					"median": 2.9000000953674316,
+					"min": 2.9000000953674316,
+					"mean": 3.0400001049041747,
+					"p95": 3.4000000953674316,
+					"sd": 0.21908902626674834,
+					"rme": 8.947083411373951,
+					"scoreRme": 8.947083411373951,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 3.4000000953674316
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 11.67999997138977,
+					"median": 11.5,
+					"min": 10.600000143051147,
+					"mean": 11.67999997138977,
+					"p95": 13.299999952316284,
+					"sd": 1.0733125918814936,
+					"rme": 11.408218809370082,
+					"scoreRme": 11.408218809370082,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 13.299999952316284
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 10.680000019073486,
+					"median": 11,
+					"min": 8.099999904632568,
+					"mean": 10.680000019073486,
+					"p95": 12.299999952316284,
+					"sd": 1.573848821523343,
+					"rme": 18.2947390546418,
+					"scoreRme": 18.2947390546418,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 12.299999952316284
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 101.39999995231628,
+					"median": 99,
+					"min": 84.29999995231628,
+					"mean": 101.39999995231628,
+					"p95": 120,
+					"sd": 13.770802445927702,
+					"rme": 16.859929443374128,
+					"scoreRme": 16.859929443374128,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 120
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 59.68000001907349,
+					"median": 59.700000047683716,
+					"min": 51.5,
+					"mean": 59.68000001907349,
+					"p95": 67.20000004768372,
+					"sd": 6.303729085235122,
+					"rme": 13.1130339394443,
+					"scoreRme": 13.1130339394443,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 67.20000004768372
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 21.119999980926515,
+					"median": 21,
+					"min": 18.09999990463257,
+					"mean": 21.119999980926515,
+					"p95": 24.299999952316284,
+					"sd": 2.773445512443037,
+					"rme": 16.30272430341153,
+					"scoreRme": 16.30272430341153,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 24.299999952316284
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 134.79999995231628,
+					"median": 151.5,
+					"min": 85.69999980926514,
+					"mean": 134.79999995231628,
+					"p95": 167,
+					"sd": 32.8566584340209,
+					"rme": 30.259932894823923,
+					"scoreRme": 30.259932894823923,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 167
+				},
+				"controlled_6x_first_input": {
+					"score": 9.519999980926514,
+					"median": 10.299999952316284,
+					"min": 7.5,
+					"mean": 9.519999980926514,
+					"p95": 10.799999952316284,
+					"sd": 1.4429137018151064,
+					"rme": 18.816457746182806,
+					"scoreRme": 18.816457746182806,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.799999952316284
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 96.64000000953675,
+					"median": 97,
+					"min": 76,
+					"mean": 96.64000000953675,
+					"p95": 112.5,
+					"sd": 14.466271110637269,
+					"rme": 18.583783537505873,
+					"scoreRme": 18.583783537505873,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 112.5
+				},
+				"controlled_6x_hydration": {
+					"score": 62.64000000953674,
+					"median": 61.799999952316284,
+					"min": 58.5,
+					"mean": 62.64000000953674,
+					"p95": 67.5,
+					"sd": 3.4370045248661665,
+					"rme": 6.81181452650204,
+					"scoreRme": 6.81181452650204,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 67.5
+				},
+				"controlled_6x_hydration_work": {
+					"score": 22.25999994277954,
+					"median": 22.399999856948853,
+					"min": 19.90000009536743,
+					"mean": 22.25999994277954,
+					"p95": 23.700000047683716,
+					"sd": 1.4638988454702566,
+					"rme": 8.164326588729988,
+					"scoreRme": 8.164326588729988,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 23.700000047683716
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 149.49999995231627,
+					"median": 156.39999985694885,
+					"min": 130.09999990463257,
+					"mean": 149.49999995231627,
+					"p95": 166.29999995231628,
+					"sd": 16.12901108127265,
+					"rme": 13.393713577610145,
+					"scoreRme": 13.393713577610145,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 166.29999995231628
+				},
+				"interaction_6x_hydration": {
+					"score": 3.9799999237060546,
+					"median": 3.799999952316284,
+					"min": 3,
+					"mean": 3.9799999237060546,
+					"p95": 5.099999904632568,
+					"sd": 0.9833615444199136,
+					"rme": 30.673590583746673,
+					"scoreRme": 30.673590583746673,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 5.099999904632568
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 81.55999994277954,
+					"median": 86.09999990463257,
+					"min": 69.59999990463257,
+					"mean": 81.55999994277954,
+					"p95": 90.09999990463257,
+					"sd": 8.724849549993897,
+					"rme": 13.280523345215167,
+					"scoreRme": 13.280523345215167,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 90.09999990463257
+				},
+				"search_send_6x_first_input": {
+					"score": 9.880000019073487,
+					"median": 9.400000095367432,
+					"min": 8.5,
+					"mean": 9.880000019073487,
+					"p95": 11.5,
+					"sd": 1.4289856245333572,
+					"rme": 17.955825412758237,
+					"scoreRme": 17.955825412758237,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.5
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 143.77999997138977,
+					"median": 147.40000009536743,
+					"min": 92.5,
+					"mean": 143.77999997138977,
+					"p95": 180.29999995231628,
+					"sd": 38.502038891086194,
+					"rme": 33.244492595609316,
+					"scoreRme": 33.244492595609316,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 180.29999995231628
+				},
+				"search_send_6x_hydration": {
+					"score": 3.759999942779541,
+					"median": 3.700000047683716,
+					"min": 2.8999998569488525,
+					"mean": 3.759999942779541,
+					"p95": 4.700000047683716,
+					"sd": 0.6841053223222145,
+					"rme": 22.58757411204923,
+					"scoreRme": 22.58757411204923,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 4.700000047683716
+				},
+				"search_send_6x_hydration_work": {
+					"score": 0.259999942779541,
+					"median": 0,
+					"min": 0,
+					"mean": 0.259999942779541,
+					"p95": 1.1999998092651367,
+					"sd": 0.5272569752824671,
+					"rme": 251.7581514711301,
+					"scoreRme": 251.7581514711301,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 1.1999998092651367
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 29.959999990463256,
+					"median": 29.59999990463257,
+					"min": 26.200000047683716,
+					"mean": 29.959999990463256,
+					"p95": 36.200000047683716,
+					"sd": 4.008491006804708,
+					"rme": 16.610150378098645,
+					"scoreRme": 16.610150378098645,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 36.200000047683716
+				},
+				"keyboard_send_6x_first_input": {
+					"score": 11,
+					"median": 10,
+					"min": 9.700000047683716,
+					"mean": 11,
+					"p95": 13.299999952316284,
+					"sd": 1.5795568727239018,
+					"rme": 17.826949817933915,
+					"scoreRme": 17.826949817933915,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 13.299999952316284
+				},
+				"keyboard_send_6x_pre_hydration_typing": {
+					"score": 139.3,
+					"median": 124.59999990463257,
+					"min": 83.89999985694885,
+					"mean": 139.3,
+					"p95": 197.10000014305115,
+					"sd": 43.67648117766948,
+					"rme": 38.92521186865398,
+					"scoreRme": 38.92521186865398,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 197.10000014305115
+				},
+				"keyboard_send_6x_hydration": {
+					"score": 4.2400001049041744,
+					"median": 3.9000000953674316,
+					"min": 3.1000001430511475,
+					"mean": 4.2400001049041744,
+					"p95": 5.299999952316284,
+					"sd": 0.9316651203766002,
+					"rme": 27.27899894301406,
+					"scoreRme": 27.27899894301406,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 5.299999952316284
+				},
+				"keyboard_send_6x_hydration_work": {
+					"score": 0.2800000190734863,
+					"median": 0.10000014305114746,
+					"min": 0,
+					"mean": 0.2800000190734863,
+					"p95": 0.7000000476837158,
+					"sd": 0.34205260104287394,
+					"rme": 151.65938688669902,
+					"scoreRme": 151.65938688669902,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 0.7000000476837158
+				},
+				"keyboard_send_6x_interaction_to_hydration": {
+					"score": 20.420000076293945,
+					"median": 20.300000190734863,
+					"min": 16.40000009536743,
+					"mean": 20.420000076293945,
+					"p95": 24.799999952316284,
+					"sd": 3.0044965798219985,
+					"rme": 18.26629361210322,
+					"scoreRme": 18.26629361210322,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 24.799999952316284
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 3,
+						"interactionToHydration": 86.79999995231628,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": true,
+						"replayRootInitialized": true
+					},
+					{
+						"hydration": 5.099999904632568,
+						"interactionToHydration": 90.09999990463257,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": true,
+						"replayRootInitialized": true
+					},
+					{
+						"hydration": 3.799999952316284,
+						"interactionToHydration": 69.59999990463257,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": true,
+						"replayRootInitialized": true
+					},
+					{
+						"hydration": 3.0999999046325684,
+						"interactionToHydration": 75.20000004768372,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": true,
+						"replayRootInitialized": true
+					},
+					{
+						"hydration": 4.8999998569488525,
+						"interactionToHydration": 86.09999990463257,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": true,
+						"replayRootInitialized": true
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					}
+				],
+				"keyboardSendResults": [
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": true,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					}
+				],
+				"keyboardExperience": {
+					"status": "pass",
+					"samples": 5,
+					"deliveredSendClicks": 5,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 5,
+					"droppedSendClicks": 0,
+					"preservedSearches": 5,
+					"exactDeliveries": 5,
+					"issues": []
+				},
+				"userExperience": {
+					"status": "pass",
+					"samples": 5,
+					"deliveredSendClicks": 5,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 5,
+					"droppedSendClicks": 0,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 5,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": []
+				},
+				"hydrationEventReplay": true,
+				"preRootInteractionReplay": false,
+				"browser": "chromium"
+			}
+		},
+		{
+			"name": "preact",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.5,
+					"median": 1.5,
+					"min": 1.3999998569488525,
+					"mean": 1.5,
+					"p95": 1.6000001430511475,
+					"sd": 0.07071077927109118,
+					"rme": 5.852330228231848,
+					"scoreRme": 5.852330228231848,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 1.6000001430511475
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 15.559999990463258,
+					"median": 15.299999952316284,
+					"min": 14.5,
+					"mean": 15.559999990463258,
+					"p95": 17,
+					"sd": 0.9476285923179159,
+					"rme": 7.5607177074238665,
+					"scoreRme": 7.5607177074238665,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 17
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 6.6400000095367435,
+					"median": 7.5,
+					"min": 3.700000047683716,
+					"mean": 6.6400000095367435,
+					"p95": 10,
+					"sd": 2.752816781101197,
+					"rme": 51.468757803044376,
+					"scoreRme": 51.468757803044376,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 2.1599999904632567,
+					"median": 2.1000001430511475,
+					"min": 1.8999998569488525,
+					"mean": 2.1599999904632567,
+					"p95": 2.5999999046325684,
+					"sd": 0.26076808066515367,
+					"rme": 14.987705154403685,
+					"scoreRme": 14.987705154403685,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 2.5999999046325684
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 14.939999961853028,
+					"median": 14.299999952316284,
+					"min": 13.900000095367432,
+					"mean": 14.939999961853028,
+					"p95": 17.5,
+					"sd": 1.479188969869326,
+					"rme": 12.291574645616576,
+					"scoreRme": 12.291574645616576,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 17.5
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 7.5800000667572025,
+					"median": 6.900000095367432,
+					"min": 6.3999998569488525,
+					"mean": 7.5800000667572025,
+					"p95": 10.200000047683716,
+					"sd": 1.5270887470886718,
+					"rme": 25.010911936337255,
+					"scoreRme": 25.010911936337255,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.200000047683716
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 68.42000002861023,
+					"median": 65.79999995231628,
+					"min": 58.299999952316284,
+					"mean": 68.42000002861023,
+					"p95": 88.5,
+					"sd": 12.213394286348128,
+					"rme": 22.16091904719124,
+					"scoreRme": 22.16091904719124,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 88.5
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 19.76000008583069,
+					"median": 19.299999952316284,
+					"min": 16.600000143051147,
+					"mean": 19.76000008583069,
+					"p95": 22.800000190734863,
+					"sd": 2.4398770444212508,
+					"rme": 15.329057682722006,
+					"scoreRme": 15.329057682722006,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 22.800000190734863
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 13.700000095367432,
+					"median": 12.700000047683716,
+					"min": 12.400000095367432,
+					"mean": 13.700000095367432,
+					"p95": 16,
+					"sd": 1.6124515311770957,
+					"rme": 14.61169365881235,
+					"scoreRme": 14.61169365881235,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 16
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 128.1199999809265,
+					"median": 124.60000014305115,
+					"min": 93.59999990463257,
+					"mean": 128.1199999809265,
+					"p95": 159.69999980926514,
+					"sd": 26.00859472504811,
+					"rme": 25.20196575354164,
+					"scoreRme": 25.20196575354164,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 159.69999980926514
+				},
+				"controlled_6x_first_input": {
+					"score": 8.779999923706054,
+					"median": 8.599999904632568,
+					"min": 7.099999904632568,
+					"mean": 8.779999923706054,
+					"p95": 11.099999904632568,
+					"sd": 1.4956603768258032,
+					"rme": 21.148176967747368,
+					"scoreRme": 21.148176967747368,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.099999904632568
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 75.20000004768372,
+					"median": 67.5,
+					"min": 66.80000019073486,
+					"mean": 75.20000004768372,
+					"p95": 100.20000004768372,
+					"sd": 14.314852413688477,
+					"rme": 23.632164092365837,
+					"scoreRme": 23.632164092365837,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 100.20000004768372
+				},
+				"controlled_6x_hydration": {
+					"score": 18.440000009536742,
+					"median": 18.200000047683716,
+					"min": 16.90000009536743,
+					"mean": 18.440000009536742,
+					"p95": 21.199999809265137,
+					"sd": 1.6682324802136752,
+					"rme": 11.231302259932905,
+					"scoreRme": 11.231302259932905,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21.199999809265137
+				},
+				"controlled_6x_hydration_work": {
+					"score": 14.000000095367431,
+					"median": 14.100000143051147,
+					"min": 11.600000143051147,
+					"mean": 14.000000095367431,
+					"p95": 17.299999952316284,
+					"sd": 2.1667947931797187,
+					"rme": 19.2142839427397,
+					"scoreRme": 19.2142839427397,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 17.299999952316284
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 116.8,
+					"median": 123.70000004768372,
+					"min": 94.29999995231628,
+					"mean": 116.8,
+					"p95": 139.70000004768372,
+					"sd": 19.773467095397,
+					"rme": 21.017179934148718,
+					"scoreRme": 21.017179934148718,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 139.70000004768372
+				},
+				"interaction_6x_hydration": {
+					"score": 15.860000038146973,
+					"median": 16,
+					"min": 15.400000095367432,
+					"mean": 15.860000038146973,
+					"p95": 16.200000047683716,
+					"sd": 0.38470767379655385,
+					"rme": 3.0113561692613375,
+					"scoreRme": 3.0113561692613375,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 16.200000047683716
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 64.23999996185303,
+					"median": 65.09999990463257,
+					"min": 59.200000047683716,
+					"mean": 64.23999996185303,
+					"p95": 68.89999985694885,
+					"sd": 3.6657877170646684,
+					"rme": 7.084288504019506,
+					"scoreRme": 7.084288504019506,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 68.89999985694885
+				},
+				"search_send_6x_first_input": {
+					"score": 8.2,
+					"median": 8,
+					"min": 6.299999952316284,
+					"mean": 8.2,
+					"p95": 9.799999952316284,
+					"sd": 1.3171939845168767,
+					"rme": 19.942075029462224,
+					"scoreRme": 19.942075029462224,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.799999952316284
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 64.35999999046325,
+					"median": 63.39999985694885,
+					"min": 58.700000047683716,
+					"mean": 64.35999999046325,
+					"p95": 75.60000014305115,
+					"sd": 6.782551223583953,
+					"rme": 13.083125476375946,
+					"scoreRme": 13.083125476375946,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 75.60000014305115
+				},
+				"search_send_6x_hydration": {
+					"score": 18.180000019073486,
+					"median": 17.90000009536743,
+					"min": 16.59999990463257,
+					"mean": 18.180000019073486,
+					"p95": 21.40000009536743,
+					"sd": 1.895257295337602,
+					"rme": 12.942219384334704,
+					"scoreRme": 12.942219384334704,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21.40000009536743
+				},
+				"search_send_6x_hydration_work": {
+					"score": 13.799999952316284,
+					"median": 13.599999904632568,
+					"min": 12,
+					"mean": 13.799999952316284,
+					"p95": 16.40000009536743,
+					"sd": 1.6232683572781357,
+					"rme": 14.60312146763697,
+					"scoreRme": 14.60312146763697,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 16.40000009536743
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 43.25999999046326,
+					"median": 41.59999990463257,
+					"min": 39.200000047683716,
+					"mean": 43.25999999046326,
+					"p95": 52.5,
+					"sd": 5.3835861849922,
+					"rme": 15.449684483527395,
+					"scoreRme": 15.449684483527395,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 52.5
+				},
+				"keyboard_send_6x_first_input": {
+					"score": 8.200000047683716,
+					"median": 7.700000047683716,
+					"min": 5.800000190734863,
+					"mean": 8.200000047683716,
+					"p95": 10.5,
+					"sd": 1.8947294837041255,
+					"rme": 28.685856258824753,
+					"scoreRme": 28.685856258824753,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.5
+				},
+				"keyboard_send_6x_pre_hydration_typing": {
+					"score": 74.32000002861022,
+					"median": 68,
+					"min": 58.30000019073486,
+					"mean": 74.32000002861022,
+					"p95": 95.59999990463257,
+					"sd": 15.943556638851346,
+					"rme": 26.632624591068527,
+					"scoreRme": 26.632624591068527,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 95.59999990463257
+				},
+				"keyboard_send_6x_hydration": {
+					"score": 16.760000038146973,
+					"median": 16.40000009536743,
+					"min": 14.900000095367432,
+					"mean": 16.760000038146973,
+					"p95": 19.40000009536743,
+					"sd": 1.694992652500176,
+					"rme": 12.555333822941202,
+					"scoreRme": 12.555333822941202,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 19.40000009536743
+				},
+				"keyboard_send_6x_hydration_work": {
+					"score": 13.02000002861023,
+					"median": 12.400000095367432,
+					"min": 11.700000047683716,
+					"mean": 13.02000002861023,
+					"p95": 15.299999952316284,
+					"sd": 1.4342244821000258,
+					"rme": 13.675417882436438,
+					"scoreRme": 13.675417882436438,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 15.299999952316284
+				},
+				"keyboard_send_6x_interaction_to_hydration": {
+					"score": 28.940000009536742,
+					"median": 27.299999952316284,
+					"min": 25.799999952316284,
+					"mean": 28.940000009536742,
+					"p95": 32.700000047683716,
+					"sd": 3.3842281368862874,
+					"rme": 14.517624683036168,
+					"scoreRme": 14.517624683036168,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 32.700000047683716
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 16,
+						"interactionToHydration": 65.09999990463257,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 16.200000047683716,
+						"interactionToHydration": 68.89999985694885,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 15.5,
+						"interactionToHydration": 59.200000047683716,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 15.400000095367432,
+						"interactionToHydration": 62.299999952316284,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 16.200000047683716,
+						"interactionToHydration": 65.70000004768372,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"exactDeliveries": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"userExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 0,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"hydrationEventReplay": false,
+				"preRootInteractionReplay": false,
+				"browser": "chromium"
+			}
+		},
+		{
+			"name": "solid",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.459999942779541,
+					"median": 1.5,
+					"min": 1.3999998569488525,
+					"mean": 1.459999942779541,
+					"p95": 1.5,
+					"sd": 0.05477233410285695,
+					"rme": 4.657392821666175,
+					"scoreRme": 4.657392821666175,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 1.5
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 15.219999980926513,
+					"median": 15.299999952316284,
+					"min": 14.799999952316284,
+					"mean": 15.219999980926513,
+					"p95": 15.599999904632568,
+					"sd": 0.3563705581661255,
+					"rme": 2.906843328257088,
+					"scoreRme": 2.906843328257088,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 15.599999904632568
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 10.680000019073486,
+					"median": 10.700000047683716,
+					"min": 9.700000047683716,
+					"mean": 10.680000019073486,
+					"p95": 11.5,
+					"sd": 0.8318653599662731,
+					"rme": 9.669772268500513,
+					"scoreRme": 9.669772268500513,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.5
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 3.040000009536743,
+					"median": 3.0999999046325684,
+					"min": 2.9000000953674316,
+					"mean": 3.040000009536743,
+					"p95": 3.1000001430511475,
+					"sd": 0.08944267378483346,
+					"rme": 3.6526297169236175,
+					"scoreRme": 3.6526297169236175,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 3.1000001430511475
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 8.279999923706054,
+					"median": 8.199999809265137,
+					"min": 7.5,
+					"mean": 8.279999923706054,
+					"p95": 9.099999904632568,
+					"sd": 0.6058052106659078,
+					"rme": 9.083163491692074,
+					"scoreRme": 9.083163491692074,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.099999904632568
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 7.8199999809265135,
+					"median": 7.5,
+					"min": 6.400000095367432,
+					"mean": 7.8199999809265135,
+					"p95": 10.599999904632568,
+					"sd": 1.6361539850120796,
+					"rme": 25.974780250648926,
+					"scoreRme": 25.974780250648926,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.599999904632568
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 73.81999998092651,
+					"median": 64.59999990463257,
+					"min": 58,
+					"mean": 73.81999998092651,
+					"p95": 102.39999985694885,
+					"sd": 18.87569863859251,
+					"rme": 31.744131813580484,
+					"scoreRme": 31.744131813580484,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 102.39999985694885
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 24.799999904632568,
+					"median": 23.5,
+					"min": 22.199999809265137,
+					"mean": 24.799999904632568,
+					"p95": 29.399999856948853,
+					"sd": 2.893959221578312,
+					"rme": 14.486890840327055,
+					"scoreRme": 14.486890840327055,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 29.399999856948853
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 19.47999987602234,
+					"median": 18.899999856948853,
+					"min": 17.399999856948853,
+					"mean": 19.47999987602234,
+					"p95": 24.399999856948853,
+					"sd": 2.852542715914593,
+					"rme": 18.17932134167828,
+					"scoreRme": 18.17932134167828,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 24.399999856948853
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 74.2199999332428,
+					"median": 68.59999990463257,
+					"min": 53.19999980926514,
+					"mean": 74.2199999332428,
+					"p95": 120.70000004768372,
+					"sd": 27.637601295520206,
+					"rme": 46.22893168359914,
+					"scoreRme": 46.22893168359914,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 120.70000004768372
+				},
+				"controlled_6x_first_input": {
+					"score": 7.9,
+					"median": 7.8999998569488525,
+					"min": 7.099999904632568,
+					"mean": 7.9,
+					"p95": 8.900000095367432,
+					"sd": 0.6782330721336273,
+					"rme": 10.65826051840243,
+					"scoreRme": 10.65826051840243,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 8.900000095367432
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 62.97999997138977,
+					"median": 60.5,
+					"min": 59.19999980926514,
+					"mean": 62.97999997138977,
+					"p95": 73.30000019073486,
+					"sd": 5.891264849084976,
+					"rme": 11.612891032459029,
+					"scoreRme": 11.612891032459029,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 73.30000019073486
+				},
+				"controlled_6x_hydration": {
+					"score": 23.999999952316283,
+					"median": 24.299999952316284,
+					"min": 22.59999990463257,
+					"mean": 23.999999952316283,
+					"p95": 25.299999952316284,
+					"sd": 1.2429803124830499,
+					"rme": 6.4296520145871865,
+					"scoreRme": 6.4296520145871865,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 25.299999952316284
+				},
+				"controlled_6x_hydration_work": {
+					"score": 19.180000066757202,
+					"median": 18.90000009536743,
+					"min": 17.700000047683716,
+					"mean": 19.180000066757202,
+					"p95": 21.200000047683716,
+					"sd": 1.3442469917123234,
+					"rme": 8.700915050010954,
+					"scoreRme": 8.700915050010954,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21.200000047683716
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 59.060000038146974,
+					"median": 55.39999985694885,
+					"min": 49.80000019073486,
+					"mean": 59.060000038146974,
+					"p95": 74.90000009536743,
+					"sd": 9.89055106688915,
+					"rme": 20.79033591237583,
+					"scoreRme": 20.79033591237583,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 74.90000009536743
+				},
+				"interaction_6x_hydration": {
+					"score": 22.07999997138977,
+					"median": 20.299999952316284,
+					"min": 19.5,
+					"mean": 22.07999997138977,
+					"p95": 27.299999952316284,
+					"sd": 3.2744465011505293,
+					"rme": 18.41082671186203,
+					"scoreRme": 18.41082671186203,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 27.299999952316284
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 75.57999992370605,
+					"median": 71.89999985694885,
+					"min": 67.5,
+					"mean": 75.57999992370605,
+					"p95": 96.70000004768372,
+					"sd": 12.086852415030107,
+					"rme": 19.853669670219865,
+					"scoreRme": 19.853669670219865,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 96.70000004768372
+				},
+				"search_send_6x_first_input": {
+					"score": 7.740000009536743,
+					"median": 7.700000047683716,
+					"min": 6,
+					"mean": 7.740000009536743,
+					"p95": 10.099999904632568,
+					"sd": 1.490972794079249,
+					"rme": 23.914605293467392,
+					"scoreRme": 23.914605293467392,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.099999904632568
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 69.8,
+					"median": 63.10000014305115,
+					"min": 58,
+					"mean": 69.8,
+					"p95": 102.79999995231628,
+					"sd": 18.63048574459894,
+					"rme": 33.136239094168744,
+					"scoreRme": 33.136239094168744,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 102.79999995231628
+				},
+				"search_send_6x_hydration": {
+					"score": 25.2,
+					"median": 23.5,
+					"min": 23,
+					"mean": 25.2,
+					"p95": 31.800000190734863,
+					"sd": 3.7195430874811453,
+					"rme": 18.3241362700318,
+					"scoreRme": 18.3241362700318,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 31.800000190734863
+				},
+				"search_send_6x_hydration_work": {
+					"score": 19.840000009536745,
+					"median": 18.40000009536743,
+					"min": 17.700000047683716,
+					"mean": 19.840000009536745,
+					"p95": 26,
+					"sd": 3.463091098445288,
+					"rme": 21.66989004292344,
+					"scoreRme": 21.66989004292344,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 26
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 52.77999997138977,
+					"median": 53.299999952316284,
+					"min": 45.59999990463257,
+					"mean": 52.77999997138977,
+					"p95": 64.40000009536743,
+					"sd": 7.55029806173992,
+					"rme": 17.7594360432852,
+					"scoreRme": 17.7594360432852,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 64.40000009536743
+				},
+				"keyboard_send_6x_first_input": {
+					"score": 8.280000066757202,
+					"median": 7.700000047683716,
+					"min": 6.400000095367432,
+					"mean": 8.280000066757202,
+					"p95": 12.600000143051147,
+					"sd": 2.4752778009121603,
+					"rme": 37.113171311103265,
+					"scoreRme": 37.113171311103265,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 12.600000143051147
+				},
+				"keyboard_send_6x_pre_hydration_typing": {
+					"score": 69.74000000953674,
+					"median": 60.5,
+					"min": 57,
+					"mean": 69.74000000953674,
+					"p95": 109.5,
+					"sd": 22.41122486317774,
+					"rme": 39.894966950266415,
+					"scoreRme": 39.894966950266415,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 109.5
+				},
+				"keyboard_send_6x_hydration": {
+					"score": 23.020000076293947,
+					"median": 23.200000047683716,
+					"min": 20.600000143051147,
+					"mean": 23.020000076293947,
+					"p95": 26.300000190734863,
+					"sd": 2.190205502688008,
+					"rme": 11.81174342483529,
+					"scoreRme": 11.81174342483529,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 26.300000190734863
+				},
+				"keyboard_send_6x_hydration_work": {
+					"score": 18.700000047683716,
+					"median": 18.5,
+					"min": 17.100000143051147,
+					"mean": 18.700000047683716,
+					"p95": 21.5,
+					"sd": 1.7986105364189402,
+					"rme": 11.940705443730405,
+					"scoreRme": 11.940705443730405,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 21.5
+				},
+				"keyboard_send_6x_interaction_to_hydration": {
+					"score": 34.600000095367434,
+					"median": 33.30000019073486,
+					"min": 30.90000009536743,
+					"mean": 34.600000095367434,
+					"p95": 41.40000009536743,
+					"sd": 4.051542900676525,
+					"rme": 14.537134262198704,
+					"scoreRme": 14.537134262198704,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 41.40000009536743
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					1,
+					1,
+					1,
+					1,
+					1
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 20,
+						"interactionToHydration": 68.09999990463257,
+						"replayedClicks": 1,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 20.299999952316284,
+						"interactionToHydration": 71.89999985694885,
+						"replayedClicks": 1,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 27.299999952316284,
+						"interactionToHydration": 96.70000004768372,
+						"replayedClicks": 1,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 23.299999952316284,
+						"interactionToHydration": 73.69999980926514,
+						"replayedClicks": 1,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 19.5,
+						"interactionToHydration": 67.5,
+						"replayedClicks": 1,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					}
+				],
+				"keyboardSendResults": [
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					},
+					{
+						"clickDelivered": true,
+						"clickReplayed": true,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "typed before hydration",
+						"deliveredExactlyOnce": true,
+						"issues": []
+					}
+				],
+				"keyboardExperience": {
+					"status": "pass",
+					"samples": 5,
+					"deliveredSendClicks": 5,
+					"replayedSendClicks": 5,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 0,
+					"preservedSearches": 5,
+					"exactDeliveries": 5,
+					"issues": []
+				},
+				"userExperience": {
+					"status": "pass",
+					"samples": 5,
+					"deliveredSendClicks": 5,
+					"replayedSendClicks": 5,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 0,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 5,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": []
+				},
+				"hydrationEventReplay": true,
+				"preRootInteractionReplay": true,
+				"browser": "chromium"
+			}
+		},
+		{
+			"name": "svelte",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.4200000286102294,
+					"median": 1.4000000953674316,
+					"min": 1.3999998569488525,
+					"mean": 1.4200000286102294,
+					"p95": 1.5,
+					"sd": 0.04472134355651045,
+					"rme": 3.9098576778893945,
+					"scoreRme": 3.9098576778893945,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 1.5
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 14.819999980926514,
+					"median": 14.799999952316284,
+					"min": 14.299999952316284,
+					"mean": 14.819999980926514,
+					"p95": 15.299999952316284,
+					"sd": 0.4324349783382691,
+					"rme": 3.6224889717047426,
+					"scoreRme": 3.6224889717047426,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 15.299999952316284
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 8.420000028610229,
+					"median": 10,
+					"min": 5,
+					"mean": 8.420000028610229,
+					"p95": 11.400000095367432,
+					"sd": 3.0727837648176113,
+					"rme": 45.30585870147797,
+					"scoreRme": 45.30585870147797,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 11.400000095367432
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 2.080000114440918,
+					"median": 2.1000001430511475,
+					"min": 2,
+					"mean": 2.080000114440918,
+					"p95": 2.1000001430511475,
+					"sd": 0.044721423524413786,
+					"rme": 2.6692344407356083,
+					"scoreRme": 2.6692344407356083,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 2.1000001430511475
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 8.319999933242798,
+					"median": 8.199999809265137,
+					"min": 7.799999952316284,
+					"mean": 8.319999933242798,
+					"p95": 9,
+					"sd": 0.5167204882163224,
+					"rme": 7.710220860815396,
+					"scoreRme": 7.710220860815396,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 8.219999980926513,
+					"median": 8.099999904632568,
+					"min": 7.200000047683716,
+					"mean": 8.219999980926513,
+					"p95": 8.900000095367432,
+					"sd": 0.6833739867174148,
+					"rme": 10.320983554055548,
+					"scoreRme": 10.320983554055548,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 8.900000095367432
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 62.13999996185303,
+					"median": 60.60000014305115,
+					"min": 59.799999952316284,
+					"mean": 62.13999996185303,
+					"p95": 65.69999980926514,
+					"sd": 2.6359058745906028,
+					"rme": 5.266148589271681,
+					"scoreRme": 5.266148589271681,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 65.69999980926514
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 23.14000000953674,
+					"median": 23.200000047683716,
+					"min": 21.5,
+					"mean": 23.14000000953674,
+					"p95": 24.899999856948853,
+					"sd": 1.2300405999205306,
+					"rme": 6.599188765390231,
+					"scoreRme": 6.599188765390231,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 24.899999856948853
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 13.240000009536743,
+					"median": 13.100000143051147,
+					"min": 12.800000190734863,
+					"mean": 13.240000009536743,
+					"p95": 13.899999856948853,
+					"sd": 0.4098779160470858,
+					"rme": 3.843270865107963,
+					"scoreRme": 3.843270865107963,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 13.899999856948853
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 58.19999995231628,
+					"median": 58.09999990463257,
+					"min": 57.200000047683716,
+					"mean": 58.19999995231628,
+					"p95": 59.09999990463257,
+					"sd": 0.8396427613106681,
+					"rme": 1.7910430448045442,
+					"scoreRme": 1.7910430448045442,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 59.09999990463257
+				},
+				"controlled_6x_first_input": {
+					"score": 7.820000028610229,
+					"median": 7.799999952316284,
+					"min": 7.299999952316284,
+					"mean": 7.820000028610229,
+					"p95": 8.200000047683716,
+					"sd": 0.3898717933613503,
+					"rme": 6.189413826268133,
+					"scoreRme": 6.189413826268133,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 8.200000047683716
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 62.13999996185303,
+					"median": 61.700000047683716,
+					"min": 57.799999952316284,
+					"mean": 62.13999996185303,
+					"p95": 67,
+					"sd": 3.34110761526742,
+					"rme": 6.675036967121647,
+					"scoreRme": 6.675036967121647,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 67
+				},
+				"controlled_6x_hydration": {
+					"score": 22.6,
+					"median": 22.199999809265137,
+					"min": 21,
+					"mean": 22.6,
+					"p95": 24.299999952316284,
+					"sd": 1.3656500091706996,
+					"rme": 7.501799151367621,
+					"scoreRme": 7.501799151367621,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 24.299999952316284
+				},
+				"controlled_6x_hydration_work": {
+					"score": 13.62000002861023,
+					"median": 13.800000190734863,
+					"min": 12.799999952316284,
+					"mean": 13.62000002861023,
+					"p95": 14,
+					"sd": 0.4816638361155933,
+					"rme": 4.390372721592851,
+					"scoreRme": 4.390372721592851,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 14
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 59.27999997138977,
+					"median": 58.09999990463257,
+					"min": 55.60000014305115,
+					"mean": 59.27999997138977,
+					"p95": 66,
+					"sd": 3.9442362889667333,
+					"rme": 8.260173877464432,
+					"scoreRme": 8.260173877464432,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 66
+				},
+				"interaction_6x_hydration": {
+					"score": 21.259999990463257,
+					"median": 21.299999952316284,
+					"min": 20.199999809265137,
+					"mean": 21.259999990463257,
+					"p95": 22.200000047683716,
+					"sd": 0.7635444426301866,
+					"rme": 4.4586719516855515,
+					"scoreRme": 4.4586719516855515,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 22.200000047683716
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 68.08000001907348,
+					"median": 69.10000014305115,
+					"min": 65,
+					"mean": 68.08000001907348,
+					"p95": 70.39999985694885,
+					"sd": 2.277498589880601,
+					"rme": 4.153106128036523,
+					"scoreRme": 4.153106128036523,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 70.39999985694885
+				},
+				"search_send_6x_first_input": {
+					"score": 7.219999933242798,
+					"median": 7.299999952316284,
+					"min": 6.299999952316284,
+					"mean": 7.219999933242798,
+					"p95": 7.8999998569488525,
+					"sd": 0.6760177272639195,
+					"rme": 11.623993292596115,
+					"scoreRme": 11.623993292596115,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 7.8999998569488525
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 60.159999990463255,
+					"median": 59.299999952316284,
+					"min": 58.5,
+					"mean": 60.159999990463255,
+					"p95": 62.59999990463257,
+					"sd": 1.9514097435252806,
+					"rme": 4.026939465935839,
+					"scoreRme": 4.026939465935839,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 62.59999990463257
+				},
+				"search_send_6x_hydration": {
+					"score": 21.840000057220458,
+					"median": 21.800000190734863,
+					"min": 20.899999856948853,
+					"mean": 21.840000057220458,
+					"p95": 22.700000047683716,
+					"sd": 0.6730528027876322,
+					"rme": 3.8258766299727993,
+					"scoreRme": 3.8258766299727993,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 22.700000047683716
+				},
+				"search_send_6x_hydration_work": {
+					"score": 13.6,
+					"median": 13.700000047683716,
+					"min": 13.200000047683716,
+					"mean": 13.6,
+					"p95": 13.799999952316284,
+					"sd": 0.25495094294923043,
+					"rme": 2.327298951278424,
+					"scoreRme": 2.327298951278424,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 13.799999952316284
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 47.44000005722046,
+					"median": 46.60000014305115,
+					"min": 44.59999990463257,
+					"mean": 47.44000005722046,
+					"p95": 49.90000009536743,
+					"sd": 2.328733656923669,
+					"rme": 6.094100313578448,
+					"scoreRme": 6.094100313578448,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 49.90000009536743
+				},
+				"keyboard_send_6x_first_input": {
+					"score": 7.440000009536743,
+					"median": 7.400000095367432,
+					"min": 6.900000095367432,
+					"mean": 7.440000009536743,
+					"p95": 8.099999904632568,
+					"sd": 0.5128351901821196,
+					"rme": 8.557350918836056,
+					"scoreRme": 8.557350918836056,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 8.099999904632568
+				},
+				"keyboard_send_6x_pre_hydration_typing": {
+					"score": 61.22000002861023,
+					"median": 61.39999985694885,
+					"min": 57,
+					"mean": 61.22000002861023,
+					"p95": 65.20000004768372,
+					"sd": 3.1830802895465453,
+					"rme": 6.454888242987271,
+					"scoreRme": 6.454888242987271,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 65.20000004768372
+				},
+				"keyboard_send_6x_hydration": {
+					"score": 21.94000005722046,
+					"median": 22.200000047683716,
+					"min": 21.100000143051147,
+					"mean": 21.94000005722046,
+					"p95": 22.5,
+					"sd": 0.6107372332287546,
+					"rme": 3.4558289029411395,
+					"scoreRme": 3.4558289029411395,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 22.5
+				},
+				"keyboard_send_6x_hydration_work": {
+					"score": 13.759999990463257,
+					"median": 14,
+					"min": 13.200000047683716,
+					"mean": 13.759999990463257,
+					"p95": 14.299999952316284,
+					"sd": 0.4827007196402472,
+					"rme": 4.355058291397114,
+					"scoreRme": 4.355058291397114,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 14.299999952316284
+				},
+				"keyboard_send_6x_interaction_to_hydration": {
+					"score": 32.7,
+					"median": 31.700000047683716,
+					"min": 31.09999990463257,
+					"mean": 32.7,
+					"p95": 34.60000014305115,
+					"sd": 1.6628289277359105,
+					"rme": 6.312978033162528,
+					"scoreRme": 6.312978033162528,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 34.60000014305115
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 20.199999809265137,
+						"interactionToHydration": 70.39999985694885,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 22.200000047683716,
+						"interactionToHydration": 69.10000014305115,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 20.90000009536743,
+						"interactionToHydration": 66.40000009536743,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 21.700000047683716,
+						"interactionToHydration": 65,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 21.299999952316284,
+						"interactionToHydration": 69.5,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"exactDeliveries": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"userExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 0,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"hydrationEventReplay": false,
+				"preRootInteractionReplay": false,
+				"browser": "chromium"
+			}
+		},
+		{
+			"name": "vue-vapor",
+			"ops": {
+				"uncontrolled_1x_first_input": {
+					"score": 1.459999942779541,
+					"median": 1.5,
+					"min": 1.2999999523162842,
+					"mean": 1.459999942779541,
+					"p95": 1.5999999046325684,
+					"sd": 0.11401754878313837,
+					"rme": 9.695122947460131,
+					"scoreRme": 9.695122947460131,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 1.5999999046325684
+				},
+				"uncontrolled_1x_pre_hydration_typing": {
+					"score": 14.959999990463256,
+					"median": 15.299999952316284,
+					"min": 14.099999904632568,
+					"mean": 14.959999990463256,
+					"p95": 15.599999904632568,
+					"sd": 0.6655824491842837,
+					"rme": 5.523377517418167,
+					"scoreRme": 5.523377517418167,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 15.599999904632568
+				},
+				"uncontrolled_1x_hydration": {
+					"score": 6.980000066757202,
+					"median": 5.400000095367432,
+					"min": 5.099999904632568,
+					"mean": 6.980000066757202,
+					"p95": 10,
+					"sd": 2.452957419338846,
+					"rme": 43.62837548731465,
+					"scoreRme": 43.62837548731465,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10
+				},
+				"uncontrolled_1x_hydration_work": {
+					"score": 2.3200000286102296,
+					"median": 2.3000001907348633,
+					"min": 2.1999998092651367,
+					"mean": 2.3200000286102296,
+					"p95": 2.4000000953674316,
+					"sd": 0.08366610809041578,
+					"rme": 4.477092184150321,
+					"scoreRme": 4.477092184150321,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 2.4000000953674316
+				},
+				"uncontrolled_1x_post_hydration_typing": {
+					"score": 8.100000047683716,
+					"median": 8.200000047683716,
+					"min": 7.400000095367432,
+					"mean": 8.100000047683716,
+					"p95": 8.5,
+					"sd": 0.4183299990188158,
+					"rme": 6.411629932571006,
+					"scoreRme": 6.411629932571006,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 8.5
+				},
+				"uncontrolled_6x_first_input": {
+					"score": 7.880000019073487,
+					"median": 7.900000095367432,
+					"min": 5.700000047683716,
+					"mean": 7.880000019073487,
+					"p95": 9.299999952316284,
+					"sd": 1.4289856245333572,
+					"rme": 22.513141496335976,
+					"scoreRme": 22.513141496335976,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9.299999952316284
+				},
+				"uncontrolled_6x_pre_hydration_typing": {
+					"score": 63.619999933242795,
+					"median": 58.200000047683716,
+					"min": 57.19999980926514,
+					"mean": 63.619999933242795,
+					"p95": 80.79999995231628,
+					"sd": 9.998099828932714,
+					"rme": 19.510044684597684,
+					"scoreRme": 19.510044684597684,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 80.79999995231628
+				},
+				"uncontrolled_6x_hydration": {
+					"score": 22.27999997138977,
+					"median": 22.399999856948853,
+					"min": 21.200000047683716,
+					"mean": 22.27999997138977,
+					"p95": 23,
+					"sd": 0.661059728913275,
+					"rme": 3.683494068572568,
+					"scoreRme": 3.683494068572568,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 23
+				},
+				"uncontrolled_6x_hydration_work": {
+					"score": 14.840000009536743,
+					"median": 14.399999856948853,
+					"min": 13.700000047683716,
+					"mean": 14.840000009536743,
+					"p95": 17.300000190734863,
+					"sd": 1.4081904165935286,
+					"rme": 11.780451694619266,
+					"scoreRme": 11.780451694619266,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 17.300000190734863
+				},
+				"uncontrolled_6x_post_hydration_typing": {
+					"score": 58.240000057220456,
+					"median": 58.10000014305115,
+					"min": 49.799999952316284,
+					"mean": 58.240000057220456,
+					"p95": 66.60000014305115,
+					"sd": 5.943315642096627,
+					"rme": 12.668986944285365,
+					"scoreRme": 12.668986944285365,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 66.60000014305115
+				},
+				"controlled_6x_first_input": {
+					"score": 7.660000038146973,
+					"median": 7.200000047683716,
+					"min": 6.6000001430511475,
+					"mean": 7.660000038146973,
+					"p95": 10.299999952316284,
+					"sd": 1.5009996236842673,
+					"rme": 24.326872064493188,
+					"scoreRme": 24.326872064493188,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 10.299999952316284
+				},
+				"controlled_6x_pre_hydration_typing": {
+					"score": 65.58000001907348,
+					"median": 58.799999952316284,
+					"min": 56.5,
+					"mean": 65.58000001907348,
+					"p95": 96.29999995231628,
+					"sd": 17.22054002033327,
+					"rme": 32.59941551688189,
+					"scoreRme": 32.59941551688189,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 96.29999995231628
+				},
+				"controlled_6x_hydration": {
+					"score": 21.919999980926512,
+					"median": 22.600000143051147,
+					"min": 19.700000047683716,
+					"mean": 21.919999980926512,
+					"p95": 24.299999952316284,
+					"sd": 1.9227584564931723,
+					"rme": 10.889768321314046,
+					"scoreRme": 10.889768321314046,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 24.299999952316284
+				},
+				"controlled_6x_hydration_work": {
+					"score": 15.02000002861023,
+					"median": 14.900000095367432,
+					"min": 13.700000047683716,
+					"mean": 15.02000002861023,
+					"p95": 17.5,
+					"sd": 1.495660376825803,
+					"rme": 12.362249787593688,
+					"scoreRme": 12.362249787593688,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 17.5
+				},
+				"controlled_6x_post_hydration_typing": {
+					"score": 58,
+					"median": 52.80000019073486,
+					"min": 49.90000009536743,
+					"mean": 58,
+					"p95": 75.39999985694885,
+					"sd": 10.409851012945616,
+					"rme": 22.28183633573856,
+					"scoreRme": 22.28183633573856,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 75.39999985694885
+				},
+				"interaction_6x_hydration": {
+					"score": 19.799999952316284,
+					"median": 19.5,
+					"min": 18.200000047683716,
+					"mean": 19.799999952316284,
+					"p95": 22.899999856948853,
+					"sd": 1.850675497580333,
+					"rme": 11.603781581547903,
+					"scoreRme": 11.603781581547903,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 22.899999856948853
+				},
+				"interaction_6x_interaction_to_hydration": {
+					"score": 67.59999995231628,
+					"median": 64.79999995231628,
+					"min": 62.09999990463257,
+					"mean": 67.59999995231628,
+					"p95": 81.89999985694885,
+					"sd": 8.09104438820458,
+					"rme": 14.859094603534077,
+					"scoreRme": 14.859094603534077,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 81.89999985694885
+				},
+				"search_send_6x_first_input": {
+					"score": 7.3599999904632565,
+					"median": 7.099999904632568,
+					"min": 6.5,
+					"mean": 7.3599999904632565,
+					"p95": 9,
+					"sd": 0.955510339338655,
+					"rme": 16.11729060722964,
+					"scoreRme": 16.11729060722964,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 9
+				},
+				"search_send_6x_pre_hydration_typing": {
+					"score": 61.28000001907348,
+					"median": 59.09999990463257,
+					"min": 58.60000014305115,
+					"mean": 61.28000001907348,
+					"p95": 70.40000009536743,
+					"sd": 5.109500993860875,
+					"rme": 10.351283205711178,
+					"scoreRme": 10.351283205711178,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 70.40000009536743
+				},
+				"search_send_6x_hydration": {
+					"score": 19.940000009536742,
+					"median": 19.5,
+					"min": 19,
+					"mean": 19.940000009536742,
+					"p95": 22.700000047683716,
+					"sd": 1.5630099378454152,
+					"rme": 9.731304109880869,
+					"scoreRme": 9.731304109880869,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 22.700000047683716
+				},
+				"search_send_6x_hydration_work": {
+					"score": 14.780000114440918,
+					"median": 14.300000190734863,
+					"min": 14.100000143051147,
+					"mean": 14.780000114440918,
+					"p95": 16.90000009536743,
+					"sd": 1.19666200659933,
+					"rme": 10.051514993544197,
+					"scoreRme": 10.051514993544197,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 16.90000009536743
+				},
+				"search_send_6x_interaction_to_hydration": {
+					"score": 46.32000002861023,
+					"median": 45.60000014305115,
+					"min": 42.89999985694885,
+					"mean": 46.32000002861023,
+					"p95": 52.59999990463257,
+					"sd": 3.9480374761061756,
+					"rme": 10.581498509798095,
+					"scoreRme": 10.581498509798095,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 52.59999990463257
+				},
+				"keyboard_send_6x_first_input": {
+					"score": 7.699999904632568,
+					"median": 7.8999998569488525,
+					"min": 6.599999904632568,
+					"mean": 7.699999904632568,
+					"p95": 8.599999904632568,
+					"sd": 0.7483314885057984,
+					"rme": 12.065289854719255,
+					"scoreRme": 12.065289854719255,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 8.599999904632568
+				},
+				"keyboard_send_6x_pre_hydration_typing": {
+					"score": 61.29999990463257,
+					"median": 61.5,
+					"min": 57.59999990463257,
+					"mean": 61.29999990463257,
+					"p95": 65.59999990463257,
+					"sd": 3.123299528188026,
+					"rme": 6.325394569097216,
+					"scoreRme": 6.325394569097216,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 65.59999990463257
+				},
+				"keyboard_send_6x_hydration": {
+					"score": 19.819999933242798,
+					"median": 20.09999990463257,
+					"min": 18.399999856948853,
+					"mean": 19.819999933242798,
+					"p95": 20.600000143051147,
+					"sd": 0.8786353697697474,
+					"rme": 5.503506615845053,
+					"scoreRme": 5.503506615845053,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 20.600000143051147
+				},
+				"keyboard_send_6x_hydration_work": {
+					"score": 14.339999914169312,
+					"median": 14.200000047683716,
+					"min": 13.899999856948853,
+					"mean": 14.339999914169312,
+					"p95": 14.799999952316284,
+					"sd": 0.3577709017231843,
+					"rme": 3.0973503075060274,
+					"scoreRme": 3.0973503075060274,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 14.799999952316284
+				},
+				"keyboard_send_6x_interaction_to_hydration": {
+					"score": 31.1,
+					"median": 31.200000047683716,
+					"min": 28.09999990463257,
+					"mean": 31.1,
+					"p95": 33.5,
+					"sd": 1.9557607520372462,
+					"rme": 7.8071009866528245,
+					"scoreRme": 7.8071009866528245,
+					"warmupRatio": 1,
+					"samples": 5,
+					"p99": 33.5
+				}
+			},
+			"meta": {
+				"cardCount": 180,
+				"cpuRates": [
+					1,
+					6
+				],
+				"nativeInputEvents": 43,
+				"inputPreservation": {
+					"uncontrolled_1x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"uncontrolled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					],
+					"controlled_6x": [
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						},
+						{
+							"text": true,
+							"focus": true,
+							"caret": true
+						}
+					]
+				},
+				"preHydrationText": "typed before hydration",
+				"postHydrationText": " and still responsive",
+				"replayedClicks": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"replayedFocusEvents": [
+					0,
+					0,
+					0,
+					0,
+					0
+				],
+				"interactionResults": [
+					{
+						"hydration": 22.899999856948853,
+						"interactionToHydration": 81.89999985694885,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 19.5,
+						"interactionToHydration": 63.799999952316284,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 18.59999990463257,
+						"interactionToHydration": 64.79999995231628,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 18.200000047683716,
+						"interactionToHydration": 62.09999990463257,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					},
+					{
+						"hydration": 19.799999952316284,
+						"interactionToHydration": 65.40000009536743,
+						"replayedClicks": 0,
+						"replayedFocusEvents": 0,
+						"handledBeforeHydrationChunk": false,
+						"replayRootInitialized": false
+					}
+				],
+				"searchSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardSendResults": [
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					},
+					{
+						"clickDelivered": false,
+						"clickReplayed": false,
+						"focusReplayed": false,
+						"handledBeforeHydrationChunk": false,
+						"searchPreserved": true,
+						"submitted": "",
+						"deliveredExactlyOnce": false,
+						"issues": [
+							"Send click was not delivered"
+						]
+					}
+				],
+				"keyboardExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"exactDeliveries": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"userExperience": {
+					"status": "fail",
+					"samples": 5,
+					"deliveredSendClicks": 0,
+					"replayedSendClicks": 0,
+					"handledBeforeHydrationChunk": 0,
+					"droppedSendClicks": 5,
+					"preservedSearches": 5,
+					"lostSearches": 0,
+					"exactDeliveries": 0,
+					"incorrectSubmissions": 0,
+					"focusOnlyReplays": 0,
+					"issues": [
+						"Send click was not delivered"
+					]
+				},
+				"hydrationEventReplay": false,
+				"preRootInteractionReplay": false,
+				"browser": "chromium"
+			}
+		}
+	],
+	"harnessExit": 0
+}

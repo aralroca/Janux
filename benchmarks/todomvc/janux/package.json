@@ -1,0 +1,18 @@
+{
+	"name": "janux-todomvc",
+	"private": true,
+	"type": "module",
+	"version": "0.0.1",
+	"description": "TodoMVC fixture for Janux - the Janux column for the app-shaped scripted ops + app-code bundle size.",
+	"scripts": {
+		"dev": "vite --host --port 5240 --strictPort",
+		"build": "vite build",
+		"preview": "vite preview --port 5240 --strictPort"
+	},
+	"dependencies": {
+		"janux": "workspace:*"
+	},
+	"devDependencies": {
+		"vite": "^8.1.5"
+	}
+}

@@ -1,0 +1,727 @@
+{
+	"suite": "scheduler-responsiveness",
+	"iterations": 8,
+	"targets": [
+		{
+			"name": "janux",
+			"ops": {
+				"input_during_updates": {
+					"score": 491.45999999046325,
+					"median": 494.7999999523163,
+					"min": 474.7999999523163,
+					"mean": 492.34999999403954,
+					"p95": 511.2999999523163,
+					"sd": 12.163998403312945,
+					"rme": 2.0658013827886363,
+					"scoreRme": 2.3809917500076696,
+					"warmupRatio": 1.0089529158020702,
+					"samples": 8,
+					"p99": 511.2999999523163
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 702.6000001430511,
+						"focused": true,
+						"frameCount": 31,
+						"maxFrameGap": 41.69999999999999,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 684.5,
+						"focused": true,
+						"frameCount": 32,
+						"maxFrameGap": 34.10000000000002,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 721,
+						"focused": true,
+						"frameCount": 33,
+						"maxFrameGap": 41.69999999999999,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 708.0999999046326,
+						"focused": true,
+						"frameCount": 33,
+						"maxFrameGap": 42.00000000000003,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 715,
+						"focused": true,
+						"frameCount": 33,
+						"maxFrameGap": 34.19999999999999,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 707.8000001907349,
+						"focused": true,
+						"frameCount": 28,
+						"maxFrameGap": 34.10000000000002,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 697.0999999046326,
+						"focused": true,
+						"frameCount": 29,
+						"maxFrameGap": 33.30000000000001,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 684.9000000953674,
+						"focused": true,
+						"frameCount": 31,
+						"maxFrameGap": 33.39999999999998,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					}
+				]
+			}
+		},
+		{
+			"name": "react",
+			"ops": {
+				"input_during_updates": {
+					"score": 331.439999961853,
+					"median": 320.7000000476837,
+					"min": 302.40000009536743,
+					"mean": 323.09999999403954,
+					"p95": 372.39999985694885,
+					"sd": 22.565713464517987,
+					"rme": 5.839803886817455,
+					"scoreRme": 9.47678992154062,
+					"warmupRatio": 0.9581824764902895,
+					"samples": 8,
+					"p99": 372.39999985694885
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 538.4000000953674,
+						"focused": true,
+						"frameCount": 34,
+						"maxFrameGap": 17.600000000000023,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 534.8999998569489,
+						"focused": true,
+						"frameCount": 34,
+						"maxFrameGap": 17.69999999999999,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 518.7000000476837,
+						"focused": true,
+						"frameCount": 29,
+						"maxFrameGap": 17.5,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 536.8999998569489,
+						"focused": true,
+						"frameCount": 30,
+						"maxFrameGap": 25.099999999999966,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 571.0999999046326,
+						"focused": true,
+						"frameCount": 32,
+						"maxFrameGap": 24.199999999999932,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 512.5,
+						"focused": true,
+						"frameCount": 32,
+						"maxFrameGap": 17.5,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 551.2000000476837,
+						"focused": true,
+						"frameCount": 29,
+						"maxFrameGap": 25,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 606,
+						"focused": true,
+						"frameCount": 34,
+						"maxFrameGap": 25.899999999999977,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					}
+				]
+			}
+		},
+		{
+			"name": "preact",
+			"ops": {
+				"input_during_updates": {
+					"score": 302.52000002861024,
+					"median": 284.2999999523163,
+					"min": 274.90000009536743,
+					"mean": 295.92500001192093,
+					"p95": 376.2999999523163,
+					"sd": 33.32702674809365,
+					"rme": 9.41675053328751,
+					"scoreRme": 17.125193919294283,
+					"warmupRatio": 0.9264180880987768,
+					"samples": 8,
+					"p99": 376.2999999523163
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 484.89999985694885,
+						"focused": true,
+						"frameCount": 30,
+						"maxFrameGap": 17.400000000000034,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 476.5,
+						"focused": true,
+						"frameCount": 30,
+						"maxFrameGap": 17.5,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 473.60000014305115,
+						"focused": true,
+						"frameCount": 30,
+						"maxFrameGap": 17.5,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 474.39999985694885,
+						"focused": true,
+						"frameCount": 32,
+						"maxFrameGap": 16.80000000000001,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 473,
+						"focused": true,
+						"frameCount": 31,
+						"maxFrameGap": 16.899999999999977,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 503,
+						"focused": true,
+						"frameCount": 29,
+						"maxFrameGap": 17.5,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 586.2000000476837,
+						"focused": true,
+						"frameCount": 29,
+						"maxFrameGap": 24.899999999999977,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 532.2000000476837,
+						"focused": true,
+						"frameCount": 28,
+						"maxFrameGap": 17.600000000000023,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					}
+				]
+			}
+		},
+		{
+			"name": "solid",
+			"ops": {
+				"input_during_updates": {
+					"score": 321.44000000953673,
+					"median": 328.5,
+					"min": 285.59999990463257,
+					"mean": 321.16249999403954,
+					"p95": 340.7999999523163,
+					"sd": 17.45066005961447,
+					"rme": 4.543318468484492,
+					"scoreRme": 8.114137113315048,
+					"warmupRatio": 1.0120706818419447,
+					"samples": 8,
+					"p99": 340.7999999523163
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 541.1000001430511,
+						"focused": true,
+						"frameCount": 28,
+						"maxFrameGap": 17.5,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 552.6999998092651,
+						"focused": true,
+						"frameCount": 35,
+						"maxFrameGap": 16.80000000000001,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 538.7000000476837,
+						"focused": true,
+						"frameCount": 28,
+						"maxFrameGap": 25.69999999999999,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 548.1000001430511,
+						"focused": true,
+						"frameCount": 28,
+						"maxFrameGap": 26,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 556.2000000476837,
+						"focused": true,
+						"frameCount": 28,
+						"maxFrameGap": 25.5,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 560.5,
+						"focused": true,
+						"frameCount": 29,
+						"maxFrameGap": 17.600000000000023,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 547.4000000953674,
+						"focused": true,
+						"frameCount": 28,
+						"maxFrameGap": 25.80000000000001,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 477,
+						"focused": true,
+						"frameCount": 31,
+						"maxFrameGap": 17.399999999999977,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					}
+				]
+			}
+		},
+		{
+			"name": "svelte",
+			"ops": {
+				"input_during_updates": {
+					"score": 446.1800000190735,
+					"median": 423.5,
+					"min": 404.7000000476837,
+					"mean": 434.0625,
+					"p95": 535.2999999523163,
+					"sd": 42.54604016483182,
+					"rme": 8.195831666947633,
+					"scoreRme": 14.10714877195385,
+					"warmupRatio": 0.9824734411486936,
+					"samples": 8,
+					"p99": 535.2999999523163
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 652.3999998569489,
+						"focused": true,
+						"frameCount": 33,
+						"maxFrameGap": 33.400000000000034,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 614.7000000476837,
+						"focused": true,
+						"frameCount": 36,
+						"maxFrameGap": 25.69999999999999,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 602.7999999523163,
+						"focused": true,
+						"frameCount": 31,
+						"maxFrameGap": 26,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 752.0999999046326,
+						"focused": true,
+						"frameCount": 28,
+						"maxFrameGap": 34.200000000000045,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 680.1000001430511,
+						"focused": true,
+						"frameCount": 33,
+						"maxFrameGap": 25.900000000000034,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 620.7000000476837,
+						"focused": true,
+						"frameCount": 35,
+						"maxFrameGap": 25.899999999999977,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 629.5999999046326,
+						"focused": true,
+						"frameCount": 33,
+						"maxFrameGap": 25.19999999999999,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 627,
+						"focused": true,
+						"frameCount": 34,
+						"maxFrameGap": 25.599999999999966,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					}
+				]
+			}
+		},
+		{
+			"name": "vue-vapor",
+			"ops": {
+				"input_during_updates": {
+					"score": 300.2,
+					"median": 305.40000009536743,
+					"min": 290,
+					"mean": 300.11250001192093,
+					"p95": 310.10000014305115,
+					"sd": 8.297407095357029,
+					"rme": 2.3117691576944797,
+					"scoreRme": 3.740819706518798,
+					"warmupRatio": 1.0082611592907178,
+					"samples": 8,
+					"p99": 310.10000014305115
+				}
+			},
+			"meta": {
+				"browser": "chromium",
+				"correctness": "pass",
+				"samples": [
+					{
+						"completedAt": 512.5,
+						"focused": true,
+						"frameCount": 28,
+						"maxFrameGap": 17.299999999999955,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 501.2000000476837,
+						"focused": true,
+						"frameCount": 31,
+						"maxFrameGap": 25,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 497,
+						"focused": true,
+						"frameCount": 30,
+						"maxFrameGap": 16.69999999999999,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 537.2000000476837,
+						"focused": true,
+						"frameCount": 34,
+						"maxFrameGap": 16.80000000000001,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 511.40000009536743,
+						"focused": true,
+						"frameCount": 27,
+						"maxFrameGap": 26,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 509.40000009536743,
+						"focused": true,
+						"frameCount": 30,
+						"maxFrameGap": 16.80000000000001,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 513.9000000953674,
+						"focused": true,
+						"frameCount": 34,
+						"maxFrameGap": 9.199999999999989,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					},
+					{
+						"completedAt": 506.90000009536743,
+						"focused": true,
+						"frameCount": 30,
+						"maxFrameGap": 17.299999999999955,
+						"notifications": 4864,
+						"selectionEnd": 16,
+						"value": "responsive input",
+						"cpuRate": 6,
+						"rowCount": 96,
+						"subscriberCount": 512
+					}
+				]
+			}
+		}
+	],
+	"harnessExit": 0
+}

@@ -1,0 +1,16 @@
+{
+	"name": "janux-news-bench",
+	"private": true,
+	"type": "module",
+	"version": "0.0.0",
+	"description": "News-site SSR and resume benchmark fixture for Janux.",
+	"scripts": {
+		"dev": "vite --host --port 5191 --strictPort"
+	},
+	"dependencies": {
+		"janux": "workspace:*"
+	},
+	"devDependencies": {
+		"vite": "^8.1.5"
+	}
+}

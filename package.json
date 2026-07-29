@@ -16,7 +16,9 @@
   "workspaces": [
     "packages/*",
     "examples/*",
-    "apps/*"
+    "apps/*",
+    "benchmarks/*",
+    "benchmarks/*/*"
   ],
   "scripts": {
     "test": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs",
@@ -29,7 +31,11 @@
     "dev:i18n": "bun run --cwd examples/i18n dev",
     "dev:web-agent": "bun run --cwd examples/with-web-agent dev",
     "dev:suspense": "bun run --cwd examples/with-suspense dev",
-    "release": "bun scripts/release.ts"
+    "release": "bun scripts/release.ts",
+    "bench": "node benchmarks/bench.mjs"
+  },
+  "overrides": {
+    "babel-preset-solid": "2.0.0-beta.20"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

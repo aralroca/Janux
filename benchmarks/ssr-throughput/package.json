@@ -1,0 +1,22 @@
+{
+	"name": "octane-ssr-throughput-benchmarks",
+	"private": true,
+	"type": "module",
+	"version": "0.0.0",
+	"description": "Node-only buffered SSR throughput across Octane, React, Preact, Solid, Svelte, Ripple, and Vue, plus Octane-only stress fixtures.",
+	"scripts": {
+		"bench": "node run.mjs",
+		"bench:smoke": "node run.mjs 2"
+	},
+	"dependencies": {
+		"vite": "^8.1.5",
+		"react": "^19.2.7",
+		"react-dom": "^19.2.7",
+		"preact": "^10.29.7",
+		"preact-render-to-string": "^6.7.0",
+		"solid-js": "2.0.0-beta.20",
+		"@solidjs/web": "2.0.0-beta.20",
+		"vue": "3.6.0-rc.1",
+		"svelte": "^5.56.7"
+	}
+}

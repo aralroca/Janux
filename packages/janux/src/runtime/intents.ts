@@ -1,4 +1,5 @@
 import { validate } from '../schema';
+import { batch } from '../signals';
 import { dryRunDiff } from './dry-run';
 import { withGate, type MutationGate } from '../state/mutation-gate';
 import type { ComponentDef, Ctx, GuardValue, IntentDef, Origin, RunBag } from '../define/types';
@@ -93,7 +94,10 @@ function audit(hooks: IntentHooks, entry: Omit<AuditEntry, 'at'>): void {
 }
 
 async function execute(def: IntentDef, bag: RunBag, input: unknown, origin: Origin, gate: MutationGate): Promise<unknown> {
-  return withGate(gate, () => def.run({ ...bag, input, origin }));
+  // One flush per run: the synchronous span of the body batches its state
+  // writes (async continuations flush per write, as ever). Derived reads stay
+  // fresh mid-batch — `computed` recomputes on demand (see signals/index.ts).
+  return withGate(gate, () => batch(() => def.run({ ...bag, input, origin })));
 }
 
 function propose(

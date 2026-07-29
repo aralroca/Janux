@@ -1,0 +1,12 @@
+{
+	"name": "janux-bench-runtime-stress-shared",
+	"private": true,
+	"type": "module",
+	"version": "0.0.1",
+	"description": "Shared runtime-stress fixture core; owns the store deps shared.js imports.",
+	"dependencies": {
+		"@tanstack/query-core": "^5.101.3",
+		"jotai": "^2.20.2",
+		"zustand": "^5.0.14"
+	}
+}
