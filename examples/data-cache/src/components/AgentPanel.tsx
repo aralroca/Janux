@@ -55,6 +55,9 @@ export const AgentPanel = component({
     tools: list({ name: str(), guard: str(), description: str(), example: str() }),
     uri: str(),
     resource: str(),
+    // What the last call answered, per tool: a read-only tool changes nothing
+    // on the page, so without this its button looks dead.
+    lastCall: schema({ tool: str(), output: str() }).nullable(),
     proposal: schema({ id: str(), tool: str() }).nullable(),
   }),
 
@@ -73,6 +76,7 @@ export const AgentPanel = component({
           .call(input.tool, input.example ? JSON.parse(input.example) : undefined)
           .catch((error: unknown) => ({ error: String(error) }));
 
+        state.lastCall = { tool: input.tool, output: JSON.stringify(result ?? null) };
         if (result?.status === 'proposal') state.proposal = { id: result.id, tool: input.tool };
         await refresh(state);
       },
@@ -118,6 +122,7 @@ export const AgentPanel = component({
           <button onClick={intents.callTool.with({ tool: tool.name, example: tool.example })}>
             Call as agent
           </button>
+          {state.lastCall?.tool === tool.name ? <pre class="tool-result">{state.lastCall.output}</pre> : null}
         </div>
       ))}
       {state.resource ? (

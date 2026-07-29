@@ -3,7 +3,7 @@ import { cpSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'no
 import { basename, join } from 'node:path';
 
 // Install artifacts from running the template/examples in place (local dev of this package).
-const SKIP = new Set(['node_modules', 'bun.lock', 'dist']);
+const SKIP = new Set(['node_modules', 'bun.lock', 'dist', '.janux']);
 const VERSION: string = JSON.parse(readFileSync(join(import.meta.dirname, 'package.json'), 'utf-8')).version;
 
 const [name, flag, exampleName] = process.argv.slice(2);
@@ -62,10 +62,15 @@ const readme = join(target, 'README.md');
 if (existsSync(readme)) {
   writeFileSync(readme, readFileSync(readme, 'utf-8').replace(/__APP_NAME__/g, name));
 }
+
+// The examples pin their own dev port; the hint must match what dev will print.
+const devScript: string = JSON.parse(readFileSync(join(target, 'package.json'), 'utf-8')).scripts?.dev ?? '';
+const devPort = /--port (\d+)/.exec(devScript)?.[1] ?? '3000';
+
 console.log(`✔ ${name} created
 
   cd ${name}
   bun install
   bun run dev
 
-The right panel is the agent surface — same thing as: curl localhost:3000/_janux/manifest`);
+The right panel is the agent surface — same thing as: curl localhost:${devPort}/_janux/manifest`);

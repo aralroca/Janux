@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { bool, buildDefault, enums, int, list, money, num, obj, schema, str, toJsonSchema, validate } from 'janux';
+import { bool, buildDefault, coerceForm, enums, int, list, money, num, obj, schema, str, toJsonSchema, validate } from 'janux';
 
 /**
  * reference/schema-api.md and guide/schema.md are two tables and a precedence
@@ -104,5 +104,19 @@ describe('reference/schema-api.md — validate()', () => {
   it('money is an integer in minor units — no floats', () => {
     expect(validate(money(), 2500).ok).toBe(true);
     expect(validate(money(), 25.5).ok).toBe(false);
+  });
+});
+
+describe('reference/schema-api.md — coerceForm()', () => {
+  it('converts form strings to what the typed schema means, without validating', () => {
+    const draft = schema({ attendees: int(), optIn: bool() });
+
+    expect(coerceForm({ attendees: '3', optIn: 'on' }, draft)).toEqual({ attendees: 3, optIn: true });
+  });
+
+  it('leaves blank numerics alone so validate still rejects them, and never scales money', () => {
+    expect(coerceForm('', int())).toBe('');
+    expect(coerceForm('1250', money())).toBe(1250);
+    expect(validate(money(), coerceForm('12.5', money())).ok).toBe(false);
   });
 });

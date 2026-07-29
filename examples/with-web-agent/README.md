@@ -10,7 +10,7 @@ A mini product console operated in natural language, with the interaction visual
 
 ```bash
 bun install
-bun run dev   # http://localhost:3000
+bun run dev   # http://localhost:4321
 ```
 
 Ask it: **"invite jane@acme.com as admin"**, **"search Kenji"**, **"change my display name to Neo"** (the DOM fallback), or **"build a workflow"** — the ring follows every node as it appears.

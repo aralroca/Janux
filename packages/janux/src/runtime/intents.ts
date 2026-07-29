@@ -1,4 +1,4 @@
-import { validate } from '../schema';
+import { coerceForm, validate } from '../schema';
 import { batch } from '../signals';
 import { dryRunDiff } from './dry-run';
 import { withGate, type MutationGate } from '../state/mutation-gate';
@@ -78,7 +78,8 @@ function checkInvocable(tool: string, def: IntentDef, bag: RunBag): void {
 
 function parseInput(tool: string, def: IntentDef, input: unknown): unknown {
   if (!def.input) return undefined;
-  const result = validate(def.input, input ?? {});
+  const candidate = def.coerce === 'form' ? coerceForm(input ?? {}, def.input) : input ?? {};
+  const result = validate(def.input, candidate);
 
   if (!result.ok) {
     const detail = result.errors.map((e) => `${e.path}: ${e.message}`).join('; ');

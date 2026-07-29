@@ -57,6 +57,7 @@ Same as `component` minus `view`. Projects as `store://<name>`. `scope: 'app' | 
 |---|---|---|
 | `description` | `string` | The agent reads this — make it actionable |
 | `input` | `schema({...})` | Validated before `run`; errors carry paths |
+| `coerce` | `'form'` | Form strings become what `input` means before validating: numbers via `Number` (blank stays invalid), checkboxes `'on'`/absent → `true`/`false`, `money()` never scaled. Typed input passes through — one schema, both faces ([forms](/docs/recipes/forms)) |
 | `guard` | `'auto' \| 'confirm' \| 'forbidden'` or `({ ctx }) => guard` | Default `'auto'` |
 | `ready` | `(bag) => boolean` | Announced in the manifest; not-ready calls throw `not_ready` |
 | `glowTarget` | `(bag) => string \| undefined` | CSS selector for the DOM this intent's effect lands on |
@@ -161,7 +162,7 @@ const manifest = buildManifest([{ def: Cart, key: 'default', instance }], ctx);
 // { janux: '0.1', resources: [...], tools: [...], events: [...] }
 ```
 
-`resources` are the `ui://`/`store://` snapshots (with JSON Schema for typed state), `tools` are the non-`forbidden` intents (guard, input schema, `ready`), `events` are the union of every `emits` key. `resolveGuard(def, ctx)` is the same helper it uses to collapse function guards to a concrete `'auto' | 'confirm' | 'forbidden'`.
+`resources` are the `ui://`/`store://` snapshots (with JSON Schema for typed state), `tools` are the non-`forbidden` intents (guard, input schema, `ready`), `events` are the union of every `emits` key. Passing `instance` is what makes a tool's projection *live*: `ready` is evaluated against it, and so is any input field declaring [`options()`](/docs/reference/schema-api#optionsresolve), whose currently-valid values are published as that property's `enum`. `resolveGuard(def, ctx)` is the same helper it uses to collapse function guards to a concrete `'auto' | 'confirm' | 'forbidden'`.
 
 ### createBus()
 

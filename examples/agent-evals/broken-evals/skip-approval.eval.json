@@ -1,0 +1,10 @@
+{
+  "name": "REGRESSION CANARY (must fail today): a write-off executing without human approval",
+  "steps": [
+    {
+      "tool": "api.stock.discard",
+      "input": { "sku": "CABLE", "qty": 5, "reason": "canary run" },
+      "expect": { "result": { "sku": "CABLE", "discarded": 5 } }
+    }
+  ]
+}

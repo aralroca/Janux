@@ -11,7 +11,7 @@ The flagship example: a small storefront that is simultaneously a UI and an agen
 
 ```bash
 bun install
-bun run dev   # http://localhost:3000
+bun run dev   # http://localhost:4321
 ```
 
-The right panel is the agent surface — the same thing as `curl localhost:3000/_janux/manifest`.
+The right panel is the agent surface — the same thing as `curl localhost:4321/_janux/manifest`.

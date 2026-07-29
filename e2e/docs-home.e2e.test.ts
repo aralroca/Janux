@@ -1,7 +1,5 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
-import { join } from 'node:path';
-import { createJanuxServer } from '../packages/janux-server/src/index';
-import { prodServerOptions } from '../packages/janux-cli/src/prod';
+import { ssrApp } from './support/app';
 
 /**
  * The home page sells three things — an MCP server from `api()`, WebMCP tools
@@ -10,17 +8,14 @@ import { prodServerOptions } from '../packages/janux-cli/src/prod';
  * and link those sections advertise exists and answers with what was promised.
  */
 
-const APP_ROOT = join(import.meta.dir, '../apps/docs');
-
-let server: ReturnType<typeof createJanuxServer>;
+let server: Awaited<ReturnType<typeof ssrApp>>['server'];
+let get: Awaited<ReturnType<typeof ssrApp>>['get'];
 let home: string;
 
 beforeAll(async () => {
-  server = createJanuxServer(await prodServerOptions(APP_ROOT));
+  ({ server, get } = await ssrApp('apps/docs'));
   home = await (await get('/')).text();
 });
-
-const get = (path: string) => server.fetch(new Request(`http://test${path}`));
 
 function rpc(method: string, params?: unknown) {
   return server.fetch(

@@ -3,6 +3,7 @@ import { component, intent, source, store } from '../define/factories';
 import { jsx, Fragment } from '../jsx-runtime';
 import { int, list, schema, str } from '../schema';
 import { buildManifest } from '../manifest';
+import { createInstance } from '../runtime/instance';
 import { renderToStream, renderToString } from './server';
 
 function PriceTag({ amount }: { amount: number }) {
@@ -429,6 +430,11 @@ describe('suspense boundaries', () => {
     expect(full).toContain('<template id="jxu:slow#default" key="jxt:slow#default"><p>got:2</p></template>');
     expect(full).toContain('jx$u("slow#default",document.currentScript)');
     expect(full).toContain('self.jx$u=');
+    // The sentinel is keyed like its chunk siblings: it is the one node that
+    // stays in the settled DOM, and unkeyed the navigation diff would morph
+    // the next page's content template into it — losing the content, which
+    // lives in `.content` where the diff's child walker never looks.
+    expect(full).toContain('<template data-jxs key="jxq:slow#default"></template>');
     expect(summary.snapshots[0]?.sources).toEqual({ data: { value: ['a', 'b'] } });
   });
 
@@ -655,6 +661,34 @@ describe('suspense boundaries', () => {
   });
 });
 
+describe('store wiring', () => {
+  const session = store({
+    name: 'session',
+    state: schema({ locale: str().default('en') }),
+    intents: {},
+  });
+  const greeter = component({
+    name: 'greeter',
+    use: { session },
+    view: ({ use }: any) => jsx('p', { children: use.session.state.locale }),
+  });
+
+  it('resolves a use alias against the storeDefs keys', async () => {
+    const { html } = await renderToString(jsx(greeter as any, {}), { storeDefs: { session } } as any);
+
+    expect(html).toContain('<p>en</p>');
+  });
+
+  it('a use alias with no matching storeDefs key fails with a named error, not a TypeError', async () => {
+    // The app exported `Session`, the island asked for `session` — this used to
+    // surface mid-stream as "undefined is not an object (evaluating
+    // 'instance.handle')", pointing nowhere near the actual mistake.
+    const render = renderToString(jsx(greeter as any, {}), { storeDefs: { Session: session } } as any);
+
+    await expect(render).rejects.toThrow(/store "session".*greeter.*Session/s);
+  });
+});
+
 describe('buildManifest', () => {
   const session = store({
     name: 'session',
@@ -693,5 +727,62 @@ describe('buildManifest', () => {
       required: ['id'],
       additionalProperties: false,
     });
+  });
+});
+
+/**
+ * `ready` says whether a tool can be called at all; `options()` says which values
+ * it currently accepts. Both are resolved against the live instance, so an agent
+ * reading the manifest never has to guess an id that stopped existing.
+ */
+describe('buildManifest live options', () => {
+  const desk = component({
+    name: 'desk',
+    state: schema({ rows: list({ id: str(), done: str() }).default([{ id: 'a', done: 'no' }, { id: 'b', done: 'yes' }]) }),
+    intents: {
+      pick: intent({
+        input: schema({
+          id: str().default('a').options(({ state }: any) => state.rows.filter((r: any) => r.done === 'no').map((r: any) => r.id)),
+        }),
+        run: () => {},
+      }),
+      churn: intent({
+        run: ({ state }: any) => {
+          state.rows[0].done = 'yes';
+          state.rows.push({ id: 'c', done: 'no' });
+        },
+      }),
+    },
+    view: () => null,
+  });
+  const inputOf = (instance?: any) =>
+    buildManifest([{ def: desk, instance }]).tools.find((t) => t.name === 'desk.pick')!.input as any;
+
+  it('advertises the values a field currently accepts, resolved against the instance', () => {
+    const instance = createInstance(desk);
+
+    expect(inputOf(instance).properties.id).toEqual({ type: 'string', default: 'a', enum: ['a'] });
+  });
+
+  it('follows the state: a value that stops being valid leaves the advertised list', async () => {
+    const instance = createInstance(desk);
+
+    await instance.intents.churn!(undefined);
+
+    expect(inputOf(instance).properties.id.enum).toEqual(['c']);
+  });
+
+  it('stays a plain schema with no instance, no options left, or a resolver that throws', () => {
+    const empty = createInstance(desk, { initial: { rows: [] } });
+    const broken = component({
+      name: 'broken',
+      intents: { pick: intent({ input: schema({ id: str().options(() => { throw new Error('boom'); }) }), run: () => {} }) },
+      view: () => null,
+    });
+    const brokenInput = buildManifest([{ def: broken, instance: createInstance(broken) }]).tools[0]!.input as any;
+
+    expect(inputOf().properties.id).toEqual({ type: 'string', default: 'a' });
+    expect(inputOf(empty).properties.id).toEqual({ type: 'string', default: 'a' });
+    expect(brokenInput.properties.id).toEqual({ type: 'string' });
   });
 });

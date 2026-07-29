@@ -1,4 +1,4 @@
-import type { Ctx } from 'janux';
+import { toJsonSchema, type Ctx } from 'janux';
 import type { ApiTool } from './api';
 import { mcpLandingPage } from './mcp-landing';
 import { decorateResult, discoverResult, modernGate } from './mcp-modern';
@@ -47,7 +47,7 @@ function toolDescriptor(tool: ApiTool) {
   return {
     name: tool.name,
     description: tool.description ?? '',
-    inputSchema: tool.input ?? { type: 'object', properties: {} },
+    inputSchema: tool.input ? toJsonSchema(tool.input) : { type: 'object', properties: {} },
     annotations: tool.guard === 'confirm' ? { requiresApproval: true } : undefined,
   };
 }
@@ -126,7 +126,7 @@ export function createMcpEndpoint(deps: McpDeps) {
         return new Response(null, { status: 405, headers: { allow: 'POST' } });
       }
 
-      return new Response(mcpLandingPage(deps.serverName, new URL(req.url).href, deps.tools), {
+      return new Response(mcpLandingPage(deps.serverName, new URL(req.url).href, deps.tools, deps.auth !== undefined), {
         headers: { 'content-type': 'text/html;charset=utf-8' },
       });
     }

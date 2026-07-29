@@ -53,6 +53,21 @@ describe('hosted MCP endpoint (/_janux/mcp)', () => {
     expect(wipe.annotations).toEqual({ requiresApproval: true });
   });
 
+  it('serves inputSchema as standard JSON Schema, not the internal JxType', async () => {
+    const { body } = await rpc(server(), 'tools/list');
+    const greet = body.result.tools.find((tool: any) => tool.name === 'demo.greet');
+
+    expect(greet.inputSchema).toEqual({
+      type: 'object',
+      properties: { name: { type: 'string' } },
+      required: ['name'],
+      additionalProperties: false,
+    });
+    expect(greet.inputSchema).not.toHaveProperty('kind');
+    expect(greet.inputSchema).not.toHaveProperty('flags');
+    expect(greet.inputSchema).not.toHaveProperty('shape');
+  });
+
   it('calls a tool and returns its result as content', async () => {
     const { body } = await rpc(server(), 'tools/call', { name: 'demo.greet', arguments: { name: 'ada' } });
 
@@ -102,6 +117,25 @@ describe('hosted MCP endpoint (/_janux/mcp)', () => {
     expect(html).toContain('claude mcp add --transport http demo http://x/_janux/mcp');
     expect(html).toContain('demo.greet');
     expect(html).toContain('Greet a person');
+  });
+
+  /** A protected endpoint whose landing prints token-free commands teaches every visitor a 401. */
+  it('adds the bearer header (placeholder, never the token) to the connect commands when auth is on', async () => {
+    const target = server({ mcpAuth: { verify: (token: string) => (token === 'sekret' ? {} : null) } });
+    const res = await target.fetch(new Request('http://x/_janux/mcp', { headers: { accept: 'text/html' } }));
+    const html = await res.text();
+
+    expect(html).toContain('--header "Authorization: Bearer $TOKEN"');
+    expect(html).toContain('-H "Authorization: Bearer $TOKEN"');
+    expect(html).toContain('requires a bearer token');
+    expect(html).not.toContain('sekret');
+  });
+
+  it('keeps the connect commands header-free when the endpoint is open', async () => {
+    const res = await server().fetch(new Request('http://x/_janux/mcp', { headers: { accept: 'text/html' } }));
+    const html = await res.text();
+
+    expect(html).not.toContain('Authorization: Bearer');
   });
 
   /** The visitor's actual confusion: that a browsable URL means it stopped being JSON-RPC. */
@@ -161,6 +195,10 @@ describe('hosted MCP endpoint — 2026-07-28 modern era', () => {
 
     expect(status).toBe(200);
     expect(body.result.tools.map((tool: any) => tool.name)).toContain('demo.greet');
+    const greet = body.result.tools.find((tool: any) => tool.name === 'demo.greet');
+
+    expect(greet.inputSchema.type).toBe('object');
+    expect(greet.inputSchema).not.toHaveProperty('kind');
     expect(body.result.ttlMs).toBeGreaterThan(0);
     expect(body.result.cacheScope).toBe('public');
     expect(body.result.resultType).toBe('complete');

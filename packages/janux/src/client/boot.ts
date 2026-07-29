@@ -1,7 +1,7 @@
 import { createBus } from '../runtime/bus';
 import type { ComponentDef } from '../define/types';
 import type { ForeignDef } from '../interop';
-import type { Proposal } from '../runtime/intents';
+import type { AuditEntry, Proposal } from '../runtime/intents';
 import { createBridge, type JanuxBridge } from './bridge';
 import { listen } from './events';
 import { mountDocumentForeigns, mountIsland, type MountContext } from './mount';
@@ -28,6 +28,13 @@ export interface BootOptions {
   navigation?: boolean;
   /** Register mounted tools with `document.modelContext` (WebMCP), polyfilled when absent. Default: true. */
   webmcp?: boolean;
+  /**
+   * Observes every client-side `AuditEntry` (tool, origin, guard, input,
+   * ok/error). Each entry is also dispatched as a `janux:audit` DOM event —
+   * the same mirror `janux:proposal` has — so an audit-trail island can
+   * subscribe instead of re-recording actions inside every `run()`.
+   */
+  onAudit?: (entry: AuditEntry) => void;
 }
 
 export interface JanuxClient extends JanuxBridge {
@@ -170,6 +177,10 @@ export function boot(options: BootOptions = {}): JanuxClient {
     onProposal: (proposal) => {
       proposals.set((proposal as Proposal).id, proposal as Proposal);
       document.dispatchEvent(new CustomEvent('janux:proposal', { detail: proposal }));
+    },
+    onAudit: (entry) => {
+      options.onAudit?.(entry as AuditEntry);
+      document.dispatchEvent(new CustomEvent('janux:audit', { detail: entry }));
     },
   };
 

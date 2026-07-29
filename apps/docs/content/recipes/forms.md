@@ -35,29 +35,36 @@ export const Signup = component({
 On submit, Janux calls `new FormData(form)` and turns the entries into the intent's input object. Consequences worth knowing:
 
 - **`name` is what matters.** A control without a `name` is not submitted — no `name`, no field, and the intent's schema validation will tell you so.
-- **Everything arrives as a string** (or a `File`) — and schema types **do not coerce**. `int()` rejects `"42"`, `bool()` rejects `"on"`. This is deliberate: the same schema validates agent calls, where a real number is expected. See the pattern below.
+- **Everything arrives as a string** (or a `File`) — and schema types **do not coerce** by default. `int()` rejects `"42"`, `bool()` rejects `"on"`. Declare `coerce: 'form'` on the intent when its input comes from a form — see the pattern below.
 - **The default submit is prevented** for you — no full page reload, no `event.preventDefault()` to remember.
-- **Unchecked checkboxes are absent**, not `false`. Model them as `bool().default(false)` so the default fills the gap.
+- **Unchecked checkboxes are absent**, not `false`. With `coerce: 'form'` absence means `false`; without it, model them as `bool().default(false)` so the default fills the gap.
 - **Same-named controls collapse** to the last value (`FormData.entries()` semantics). For multi-select, read the values in `run` from your own state instead.
 
-### Numbers and checkboxes: declare what the form sends
+### Numbers and checkboxes: `coerce: 'form'`
 
-Take the string, convert in `run`. The intent stays callable by an agent (which can pass the string too) and your state stays typed:
+Keep ONE typed schema and declare that the intent is fed by a form. Before validation, string values are converted to what the schema means; everything else is the usual pipeline:
 
 ```tsx
 intents: {
   submit: intent({
     description: 'Subscribe an email address',
-    input: schema({ email: str().min(3), age: str(), optIn: str().optional() }),
+    input: schema({ email: str().min(3), age: int().min(18), optIn: bool().default(false) }),
+    coerce: 'form',
     run: ({ state, input }) => {
-      state.age = Number(input.age);          // "42" → 42
-      state.optIn = input.optIn === 'on';     // absent → false
+      state.age = input.age;      // "42" arrived, 42 validated
+      state.optIn = input.optIn;  // checkbox: 'on' → true, absent → false
     },
   }),
 },
 ```
 
-If you'd rather keep a numeric contract for agents (`age: int()`), give the agent that intent and let the form call a separate string-taking one that converts and delegates. Two names, one behavior — and neither lies about what it accepts.
+The rules, per schema type:
+
+- `int()` / `num()` / `money()` — parsed with `Number`. A blank or non-numeric field stays invalid (`""` never becomes `0`), and `money()` is **never scaled**: it remains minor units, so a euros text field still needs your own `×100` (keep `str()` and convert in `run` for that one field, or collect minor units).
+- `bool()` — checkbox semantics: `'on'`/`'true'` mean checked, an absent field means `false`.
+- `str()` / `enums()` — untouched.
+
+Coercion only pre-processes strings: input that is already typed passes through as-is, so **the same intent accepts an agent's JSON** and the manifest keeps announcing the typed schema — the agent sees `integer`, the form sends `"3"`, both work. Without `coerce`, nothing changes: strings are rejected as ever.
 
 ## Validation is the schema, not the markup
 
@@ -89,6 +96,6 @@ See [events and interactions](/docs/guide/events-and-interactions) for controlle
 
 ## Uploads
 
-File inputs work the same way — the entry is a `File`. For drag-and-drop, paste and progress, use [`dropzone`](/docs/reference/client-state) with an [HTTP handler](/docs/guide/http-handlers) endpoint.
+File inputs work the same way — the entry is a `File`. For drag-and-drop, paste and progress, use [`dropzone`](/docs/reference/client-state) with an [HTTP handler](/docs/guide/http-handlers) endpoint: `zone.upload(url, files)` POSTs each file as multipart and reports per-file progress through the `onProgress` callback, while the handler bounds the body with `formDataWithin` and validates real content with `matchesType` (magic bytes, not the declared MIME type).
 
 Related: [Intents and guards](/docs/guide/intents-and-guards) · [Views and JSX](/docs/guide/views-and-jsx) · [Schema types](/docs/reference/schema-api)

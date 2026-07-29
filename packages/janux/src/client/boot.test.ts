@@ -1,10 +1,10 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { component, intent, source, store } from '../define/factories';
 import { jsx } from '../jsx-runtime';
 import { int, list, schema, str } from '../schema';
 import { renderToString } from '../render/server';
-import { boot, navigateAction, type JanuxClient } from './boot';
+import { boot, navigateAction, type BootOptions, type JanuxClient } from './boot';
 
 beforeAll(() => GlobalRegistrator.register());
 afterAll(() => GlobalRegistrator.unregister());
@@ -42,7 +42,7 @@ const counter = component({
   },
 });
 
-async function serveAndBoot(): Promise<JanuxClient> {
+async function serveAndBoot(options: Partial<BootOptions> = {}): Promise<JanuxClient> {
   const { html, snapshots } = await renderToString(jsx(counter as any, {}), {
     initialState: { 'ui://counter#default': { n: 5, history: [] } },
     storeDefs: { session },
@@ -57,7 +57,7 @@ async function serveAndBoot(): Promise<JanuxClient> {
   document.body.innerHTML = html + scripts;
   viewRenders.mockClear();
 
-  return boot({ defs: [counter, session] });
+  return boot({ defs: [counter, session], ...options });
 }
 
 describe('client boot (resume without hydration)', () => {
@@ -470,6 +470,151 @@ describe('client boot (resume without hydration)', () => {
 
     expect(manifest.tools.map((t) => t.name)).toContain('counter.inc');
     expect(manifest.resources.map((r) => r.uri)).toContain('ui://counter');
+  });
+});
+
+/**
+ * The audit trail an instance produces (see runtime/intents.ts) reaches the
+ * page as a first-class signal: `boot({ onAudit })` for the app's own code and
+ * a `janux:audit` DOM event for islands that only see the document — the same
+ * mirror `janux:proposal` already has. Apps stop re-recording actions by hand
+ * inside every `run()`.
+ */
+describe('client audit mirroring', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('every client AuditEntry reaches boot({ onAudit }) and fires janux:audit', async () => {
+    const entries: any[] = [];
+    const events: any[] = [];
+    const onEvent = (event: any) => events.push(event.detail);
+
+    document.addEventListener('janux:audit', onEvent);
+    const client = await serveAndBoot({ onAudit: (entry: any) => entries.push(entry) });
+
+    await client.call('counter.inc');
+    document.querySelector('button')!.click();
+    await client.settled();
+    document.removeEventListener('janux:audit', onEvent);
+
+    expect(entries.map((entry) => `${entry.tool}:${entry.origin}:${entry.ok}`)).toEqual([
+      'counter.inc:agent:true',
+      'counter.inc:human:true',
+    ]);
+    expect(events).toEqual(entries);
+  });
+
+  it('a parked proposal audits as proposed on call and as executed on approval', async () => {
+    const entries: any[] = [];
+    const client = await serveAndBoot({ onAudit: (entry: any) => entries.push(entry) });
+    const proposal: any = await client.call('counter.reset');
+
+    expect(entries.map((entry) => `${entry.tool}:${entry.proposed ?? false}`)).toEqual(['counter.reset:true']);
+    await client.approve(proposal.id);
+    expect(entries.map((entry) => `${entry.tool}:${entry.proposed ?? false}`)).toEqual([
+      'counter.reset:true',
+      'counter.reset:false',
+    ]);
+  });
+});
+
+/**
+ * The manifest announces `api.*` server tools, so `window.janux.call` must
+ * dispatch them too — over their HTTP endpoint, as the agent surface. A
+ * `confirm` guard parks the proposal on the server; the bridge mirrors it
+ * locally so `janux:proposal`, `approve()` and `reject()` behave exactly like
+ * they do for component intents.
+ */
+describe('bridge api.* server tools', () => {
+  const originalFetch = globalThis.fetch;
+  const requests: { url: string; init: RequestInit }[] = [];
+  const proposalBody = {
+    ok: true,
+    result: { status: 'proposal', id: 'prop_api_1', tool: 'payments.transfer', input: { to: 'Acme' } },
+  };
+  let respond: (url: string) => unknown;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    requests.length = 0;
+    respond = () => ({ ok: true, result: { paid: true } });
+    globalThis.fetch = mock(async (input: any, init?: RequestInit) => {
+      requests.push({ url: String(input), init: init! });
+
+      return Response.json(respond(String(input)));
+    }) as any;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('routes api.* calls to /_janux/api with the agent origin and unwraps the result', async () => {
+    const client = await serveAndBoot();
+    const result = await client.call('api.payments.transfer', { to: 'Acme' });
+
+    expect(result).toEqual({ paid: true });
+    const [request] = requests;
+
+    expect(request!.url).toBe('/_janux/api/payments.transfer');
+    expect((request!.init.headers as any)['x-janux-origin']).toBe('agent');
+    expect(JSON.parse(String(request!.init.body))).toEqual({ to: 'Acme' });
+  });
+
+  it('surfaces a failed api call as a thrown error', async () => {
+    respond = () => ({ ok: false, error: 'boom' });
+    const client = await serveAndBoot();
+
+    expect(client.call('api.payments.transfer', {})).rejects.toThrow('boom');
+  });
+
+  it('emits janux:tool-call activity around api calls', async () => {
+    respond = (url) => (url.startsWith('/_janux/api/') ? proposalBody : { ok: true, result: true });
+    const phases: string[] = [];
+    const onTool = (event: any) => phases.push(event.detail.phase);
+    const client = await serveAndBoot();
+
+    document.addEventListener('janux:tool-call', onTool);
+    await client.call('api.payments.transfer', { to: 'Acme' });
+    document.removeEventListener('janux:tool-call', onTool);
+    expect(phases).toEqual(['start', 'proposal']);
+  });
+
+  it('mirrors a server proposal: janux:proposal fires and approve settles via /_janux/approve', async () => {
+    respond = (url) => (url.startsWith('/_janux/api/') ? proposalBody : { ok: true, result: { transferId: 'tr_1' } });
+    const proposalEvents: any[] = [];
+    const onProposal = (event: any) => proposalEvents.push(event.detail);
+
+    document.addEventListener('janux:proposal', onProposal);
+    const client = await serveAndBoot();
+    const proposed: any = await client.call('api.payments.transfer', { to: 'Acme' });
+
+    document.removeEventListener('janux:proposal', onProposal);
+    expect(proposed.status).toBe('proposal');
+    expect(proposalEvents.map((proposal) => proposal.id)).toEqual(['prop_api_1']);
+    expect(client.proposals.has('prop_api_1')).toBe(true);
+
+    const approved = await client.approve('prop_api_1');
+
+    expect(approved).toEqual({ transferId: 'tr_1' });
+    const settle = requests.at(-1)!;
+
+    expect(settle.url).toBe('/_janux/approve');
+    expect(JSON.parse(String(settle.init.body))).toEqual({ id: 'prop_api_1' });
+    // Approval is a human act: the agent origin header must NOT ride along.
+    expect((settle.init.headers as any)['x-janux-origin']).toBeUndefined();
+    expect(client.proposals.has('prop_api_1')).toBe(false);
+  });
+
+  it('reject clears the mirrored proposal locally and tells the server', async () => {
+    respond = (url) => (url.startsWith('/_janux/api/') ? proposalBody : { ok: true, result: true });
+    const client = await serveAndBoot();
+
+    await client.call('api.payments.transfer', { to: 'Acme' });
+    expect(client.reject('prop_api_1')).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(requests.at(-1)!.url).toBe('/_janux/reject');
   });
 });
 

@@ -25,12 +25,39 @@ export interface NavigationConfig {
   speculationRules?: boolean | SpeculationRulesConfig;
 }
 
+/**
+ * Bearer protection for the hosted MCP endpoint, declared as data: the CLI
+ * maps it to the `mcpAuth` verifier the server takes. `tokenEnv` names the
+ * env var read at boot and wins over `token` (the literal, for demos) —
+ * so the config file never has to contain a production secret.
+ */
+export interface McpAuthConfig {
+  /** Env var holding the bearer token, read at boot: `tokenEnv: 'AGENT_TOKEN'`. */
+  tokenEnv?: string;
+  /** Literal token — demos and tests; prefer `tokenEnv` for real deployments. */
+  token?: string;
+  /** Advertised in the `WWW-Authenticate` resource metadata. */
+  resourceMetadataUrl?: string;
+}
+
+/** Web Bot Auth agent identity (same shape `@janux/server` takes as `agents`). */
+export interface AgentsAuthConfig {
+  webBotAuth: { keys: JsonWebKey[] };
+  policy?: 'observe' | 'require';
+}
+
 export interface JanuxConfig {
   routesDir?: string;
   serverDir?: string;
   clientEntry?: string;
   agentModule?: string;
   storesModule?: string;
+  /** Module whose default export is the app's WebSocket endpoint (path + handlers). Default: `src/ws.ts` when present. */
+  websocket?: string;
+  /** Bearer token for `POST /_janux/mcp` — by env var or value. GET (the landing) stays public. */
+  mcpAuth?: McpAuthConfig;
+  /** Web Bot Auth verification for agent-originated requests. */
+  agents?: AgentsAuthConfig;
   title?: string;
   /** Document language for `<html lang>`. Defaults to `en`; i18n apps take it from the locale. */
   lang?: string;

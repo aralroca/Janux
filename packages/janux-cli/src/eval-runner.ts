@@ -8,6 +8,7 @@ export interface EvalExpect {
 export interface EvalStep {
   tool?: string;
   approve?: string;
+  reject?: string;
   input?: unknown;
   expect?: EvalExpect;
 }
@@ -15,6 +16,8 @@ export interface EvalStep {
 export interface EvalScenario {
   name: string;
   url?: string;
+  /** Reboot the `--start` app before this scenario, so it runs from seed state. */
+  reset?: boolean;
   steps: EvalStep[];
 }
 
@@ -63,12 +66,33 @@ export function resolveRefs(value: unknown, outcomes: StepOutcome[]): unknown {
   return value;
 }
 
+const ABSENT = '$absent';
+
+/**
+ * `{ "$some": X }` matches any array item; `{ "$not": X }` inverts a match.
+ * Both are single-key wrappers — mixed with literal keys they are plain keys.
+ * `undefined` means "no matcher here".
+ */
+function matcherResult(expected: Record<string, unknown>, actual: unknown): boolean | undefined {
+  const [key, ...rest] = Object.keys(expected);
+
+  if (rest.length > 0) return undefined;
+  if (key === '$not') return !deepSubset(expected['$not'], actual);
+  if (key === '$some') return Array.isArray(actual) && actual.some((item) => deepSubset(expected['$some'], item));
+
+  return undefined;
+}
+
 /** Structural subset match: every expected key/index must match; extra actual data is fine. */
 export function deepSubset(expected: unknown, actual: unknown): boolean {
+  if (expected === ABSENT) return actual === undefined;
   if (expected === null || typeof expected !== 'object') return Object.is(expected, actual);
   if (Array.isArray(expected)) {
     return Array.isArray(actual) && expected.every((item, index) => deepSubset(item, actual[index]));
   }
+  const matched = matcherResult(expected as Record<string, unknown>, actual);
+
+  if (matched !== undefined) return matched;
 
   return (
     actual !== null &&
@@ -89,10 +113,14 @@ function checkExpect(expect: EvalExpect | undefined, outcome: StepOutcome): stri
 }
 
 function stepRequest(step: EvalStep, outcomes: StepOutcome[]): { path: string; body: unknown; headers: Record<string, string> } {
+  // Settlement steps (approve/reject) are HUMAN acts: no agent header, on purpose.
   if (step.approve) {
     return { path: '/_janux/approve', body: { id: resolveRefs(step.approve, outcomes) }, headers: {} };
   }
-  if (!step.tool) throw new Error('step needs "tool" or "approve"');
+  if (step.reject) {
+    return { path: '/_janux/reject', body: { id: resolveRefs(step.reject, outcomes) }, headers: {} };
+  }
+  if (!step.tool) throw new Error('step needs "tool", "approve" or "reject"');
 
   return {
     path: `/_janux/api/${step.tool.replace(/^api\./, '')}`,
@@ -113,6 +141,13 @@ async function performStep(step: EvalStep, outcomes: StepOutcome[], baseUrl: str
   return { status: res.status, ok: envelope.ok === true, result: envelope.result, error: envelope.error };
 }
 
+function stepLabel(step: EvalStep, index: number): string {
+  if (step.approve) return `approve ${step.approve}`;
+  if (step.reject) return `reject ${step.reject}`;
+
+  return step.tool ?? `step ${index}`;
+}
+
 /** Runs one scenario's steps in order against a live app's agent surface. */
 export async function runScenario(scenario: EvalScenario, baseUrl: string, fetchImpl: typeof fetch = fetch): Promise<ScenarioReport> {
   const outcomes: StepOutcome[] = [];
@@ -120,7 +155,7 @@ export async function runScenario(scenario: EvalScenario, baseUrl: string, fetch
 
   // Sequential by design: later steps reference earlier outcomes ($steps[i]).
   for (const [index, step] of scenario.steps.entries()) {
-    const label = step.approve ? `approve ${step.approve}` : (step.tool ?? `step ${index}`);
+    const label = stepLabel(step, index);
     let report: StepReport;
 
     try {

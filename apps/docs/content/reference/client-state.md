@@ -6,21 +6,27 @@ Three browser-side helpers from `janux/client`: state that survives a reload, st
 import { persistStore, urlState, dropzone } from 'janux/client';
 ```
 
-## persistStore(store, config?)
+## Persisted stores
 
-Mirrors a [store](/docs/guide/stores)'s state into storage and restores it on boot.
+Mirrors a [store](/docs/guide/stores)'s state into storage and restores it on boot. Declare it on the store def — `'local'` for the defaults, or a config object:
 
 ```ts
-import { persistStore } from 'janux/client';
-import { theme } from './stores';
+import { store, schema, str } from 'janux';
 
-persistStore(theme, {
-  name: 'my-app:theme',
-  partialize: (state) => ({ mode: state.mode }),   // don't persist transient fields
-  version: 2,
-  migrate: (persisted, from) => (from < 2 ? { mode: persisted.dark ? 'dark' : 'light' } : persisted),
+export const theme = store({
+  name: 'theme',
+  state: schema({ mode: str().default('light') }),
+  intents: {},
+  persist: {
+    name: 'my-app:theme',
+    partialize: (state) => ({ mode: state.mode }),   // don't persist transient fields
+    version: 2,
+    migrate: (persisted, from) => (from < 2 ? { mode: persisted.dark ? 'dark' : 'light' } : persisted),
+  },
 });
 ```
+
+The runtime wires it up when the store first mounts (`persistStore` under the hood — the low-level `persistStore(instance, config)` from `janux/client` is for embedders holding a live `JanuxInstance`).
 
 | `PersistConfig` | Default | Notes |
 |---|---|---|
@@ -62,7 +68,8 @@ const zone = dropzone({
   accept: ['image/*', 'application/pdf'],
   multiple: true,
   maxSize: 5_000_000,
-  onFiles: (files) => upload(files),
+  onFiles: (files) => zone.upload('/api/upload', files),
+  onProgress: ({ file, sent, total }) => console.log(file.name, sent, total),
 });
 
 const detach = zone.attach(hostElement);   // drag & drop, paste, click-to-pick
@@ -76,7 +83,10 @@ zone.open();                                // open the native picker yourself
 | `multiple` | Defaults to `false` |
 | `maxSize` | Bytes; oversized files are filtered out |
 | `onFiles` | Called with the files that passed the filters — **never called with an empty list** |
+| `onProgress` | Per-file progress for `zone.upload()`: `{ file, sent, total }`, with a **guaranteed final `sent === total` tick** |
 
-`attach(el)` returns a detach function; wire it up in an `attach` lifecycle and call it in `detach`, or let the [ownership scope](/docs/reference/owners) do it. Filtering happens before `onFiles`, so a rejected file never reaches your code. Pair it with an [HTTP handler](/docs/guide/http-handlers) for the upload endpoint.
+`attach(el)` returns a detach function; wire it up in an `attach` lifecycle and call it in `detach`, or let the [ownership scope](/docs/reference/owners) do it. Filtering happens before `onFiles`, so a rejected file never reaches your code.
+
+`zone.upload(url, files, field?)` POSTs each file as `multipart/form-data` (field defaults to `"file"`, via `XMLHttpRequest` — the transport browsers report upload progress on) and resolves one `UploadOutcome` per file: `{ file, status, ok, body }`, where `body` is the parsed JSON response. A network error resolves `{ ok: false, status: 0 }` instead of sinking the batch. Pair it with an [HTTP handler](/docs/guide/http-handlers) for the upload endpoint.
 
 Related: [Stores](/docs/guide/stores) · [Data cache & URL state](/docs/guide/data-cache) · [HTTP handlers & uploads](/docs/guide/http-handlers)

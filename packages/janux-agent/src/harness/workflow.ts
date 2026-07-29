@@ -48,8 +48,6 @@ export function createStep<TState>(step: StepDef<TState>): StepDef<TState> {
   return step;
 }
 
-let runSeq = 0;
-
 async function advance<TState>(
   def: WorkflowDef<TState>,
   storage: HarnessStorage,
@@ -100,8 +98,9 @@ export function createWorkflowRunner(storage: HarnessStorage) {
       input: unknown,
       requestContext: Record<string, unknown> = {},
     ): Promise<RunResult<TState>> {
-      runSeq += 1;
-      const runId = `run_${def.id}_${runSeq}_${Math.abs(JSON.stringify(input ?? '').length)}`;
+      // Random, not sequential: two processes starting runs concurrently must
+      // never mint the same id — the snapshot of one would overwrite the other.
+      const runId = `run_${def.id}_${crypto.randomUUID()}`;
       const snapshot: Snapshot<TState> = {
         workflowId: def.id,
         state: def.initialState(input),

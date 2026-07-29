@@ -1,4 +1,4 @@
-import { toJsonSchema } from '../schema';
+import { toJsonSchema, type JxType } from '../schema';
 import type { ComponentDef, Ctx } from '../define/types';
 import { resolveGuard } from '../runtime/intents';
 import type { JanuxInstance } from '../runtime/instance';
@@ -45,11 +45,42 @@ function toolsFor(def: ComponentDef, ctx: Ctx, instance?: JanuxInstance): Manife
       name: `${def.name}.${name}`,
       description: intentDef.description,
       guard,
-      input: intentDef.input ? toJsonSchema(intentDef.input) : undefined,
+      input: inputFor(intentDef, instance),
       ready: instance && intentDef.ready ? safeReady(intentDef, instance) : true,
       server: intentDef.server || undefined,
       prefetch: intentDef.prefetch,
     }));
+}
+
+/** A field's live `options()`. A resolver that cannot answer advertises nothing, like `ready`. */
+function optionsFor(field: JxType | undefined, instance: JanuxInstance): readonly unknown[] {
+  try {
+    return field?.optionsOf?.(instance.bag) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** Overlays each property with the values its field currently accepts. */
+function withLiveOptions(shape: Record<string, JxType>, base: Record<string, unknown>, instance: JanuxInstance) {
+  const properties = Object.entries((base.properties ?? {}) as Record<string, unknown>).map(([key, property]) => {
+    const values = optionsFor(shape[key], instance);
+
+    return [key, values.length ? { ...(property as object), enum: [...values] } : property];
+  });
+
+  return { ...base, properties: Object.fromEntries(properties) };
+}
+
+/** The tool's JSON Schema — static from the declaration, live wherever a field declares `options()`. */
+function inputFor(
+  intentDef: NonNullable<ComponentDef['intents']>[string],
+  instance?: JanuxInstance,
+): Record<string, unknown> | undefined {
+  if (!intentDef.input) return undefined;
+  const base = toJsonSchema(intentDef.input);
+
+  return instance && intentDef.input.shape ? withLiveOptions(intentDef.input.shape, base, instance) : base;
 }
 
 function safeReady(intentDef: NonNullable<ComponentDef['intents']>[string], instance: JanuxInstance): boolean {

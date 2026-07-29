@@ -1,0 +1,112 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: light-dark(#f7f7f9, #101014);
+  color: light-dark(#1c1c22, #eaeaf0);
+}
+
+.bar {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid light-dark(#e2e2e8, #26262e);
+}
+
+.brand {
+  font-weight: 700;
+}
+
+.bar-hint {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+}
+
+.items,
+.favorites {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid light-dark(#ececf1, #1e1e26);
+}
+
+.star,
+.reset {
+  border: 1px solid light-dark(#d4d4dc, #34343e);
+  border-radius: 999px;
+  background: light-dark(#fff, #191920);
+  color: inherit;
+  padding: 0.35rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.star.idle:hover {
+  border-color: light-dark(#f0b429, #b98a1d);
+  background: light-dark(#fff8e6, #241d0d);
+  transform: translateY(-1px);
+}
+
+/* Optimistic means no interim look: in-flight and confirmed wear the same gold. */
+.star.saving,
+.star.starred {
+  border-color: transparent;
+  background: light-dark(#f7c948, #a9821e);
+  color: light-dark(#3d2f00, #14110a);
+}
+
+.star.starred:disabled,
+.star.saving:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.star:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+
+.fav {
+  padding: 0.35rem 0;
+}
+
+.fav::before {
+  content: '⭐ ';
+}
+
+/* .fav.pending is a DOM marker only: optimistically-added rows look final. */
+
+.count {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.notice {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid light-dark(#e3b3b3, #6d3535);
+  border-radius: 6px;
+  background: light-dark(#fdeaea, #2a1616);
+}
+
+.reset {
+  margin-top: 1rem;
+}

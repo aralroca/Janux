@@ -91,7 +91,38 @@ jobs:
       - run: bunx janux eval --start "bunx janux start --port 3000"
 ```
 
-`--start` boots the app, waits for it, runs every scenario and stops it; the exit code is the gate. This is the layer that catches a renamed tool, a broken guard, a validation regression or an approval flow that stopped working.
+`--start` boots the app, waits for it, runs every scenario and stops it; the exit code is the gate. This is the layer that catches a renamed tool, a broken guard, a validation regression or an approval flow that stopped working. Scenario files run sorted by filename — the gate's order is deterministic — and with `--json` the booted app's stdout is silenced, so the report is the only thing on stdout and a CI step can pipe it straight into `jq`.
+
+### The expect language, beyond happy paths
+
+Positional array matching is fragile when order is an implementation detail. `{ "$some": {…} }` passes when *any* item matches, `{ "$not": {…} }` inverts a match, and the value `"$absent"` asserts a field is missing — so you can state what must **not** have happened. `$some` and `$not` are single-key wrappers; never mix them with literal keys in the same object.
+
+A proposal is settled by a human one of two ways, and both deserve a scenario: `approve` executes it, `reject` (`POST /_janux/reject`) discards it. Reject answers `{ "ok": true }` when the proposal existed, `{ "ok": false }` (status 200) once it is gone — and a rejected proposal must be unapprovable afterwards:
+
+```jsonc
+{
+  "name": "rejected write-off leaves stock untouched",
+  "steps": [
+    { "tool": "api.stock.discard", "input": { "sku": "CABLE", "qty": 5, "reason": "miscounted" },
+      "expect": { "result": { "status": "proposal", "discarded": "$absent" } } },
+    { "reject": "$steps[0].result.id", "expect": { "ok": true } },
+    { "tool": "api.stock.levels",
+      "expect": { "result": { "items": { "$some": { "sku": "CABLE", "stock": 120 } } } } },
+    { "tool": "api.stock.levels",
+      "expect": { "result": { "items": { "$not": { "$some": { "sku": "CABLE", "stock": 115 } } } } } },
+    { "approve": "$steps[0].result.id", "expect": { "ok": false, "status": 404 } }
+  ]
+}
+```
+
+Business errors are part of the contract too. A `throw` inside a tool's `run()` reaches the wire as `{ "ok": false, "error": "Error: <message>" }` with status **500** (schema validation is `400`, a forbidden guard `403`), so an eval can pin it down:
+
+```jsonc
+{ "tool": "api.stock.restock", "input": { "sku": "GHOST", "qty": 5 },
+  "expect": { "ok": false, "status": 500, "error": "Error: Unknown SKU" } }
+```
+
+Scenarios share one live app on purpose — a checkout that builds on the catalog eval's state is realistic. When a scenario must not inherit state, give it `"reset": true`: `janux eval` reboots the `--start` app before running it, so it starts from seed (without `--start` there is nothing to reboot and the flag is ignored).
 
 ## Layer 3 — a real model, nightly, never gating
 

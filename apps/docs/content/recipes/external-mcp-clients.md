@@ -13,7 +13,7 @@ claude mcp add --transport http my-app https://your.app/_janux/mcp
 
 - **tools** — every `api()` function, with its JSON schema; `confirm`-guarded tools carry `annotations.requiresApproval`.
 - **resources** — every page, readable as clean **Markdown** (`janux://page/<path>`). The same projection is served over plain HTTP with the `.md` suffix (`GET /pricing.md`) — the whole site is agent-readable content, zero hand-written MCP code.
-- **auth** — configure `mcpAuth: { verify(token, req) }` in the server options and unauthenticated calls get `401` + `WWW-Authenticate` (Bearer, with optional resource-metadata URL); the verified identity lands in `ctx.mcpIdentity` for tenant scoping. Without it the endpoint is open (dev, public corpora).
+- **auth** — for a shared bearer, one line in `janux.config.ts` is enough: `mcpAuth: { tokenEnv: 'AGENT_TOKEN' }` (or a literal `token`; `tokenEnv` wins, read at boot). Custom verification stays available as `mcpAuth: { verify(token, req) }` in the server options. Either way unauthenticated `POST`s get `401` + `WWW-Authenticate` (Bearer, with optional resource-metadata URL), the browser landing stays public — its connect commands switch to `--header "Authorization: Bearer $TOKEN"` placeholders — and the verified identity lands in `ctx.mcpIdentity` for tenant scoping. Without it the endpoint is open (dev, public corpora).
 
 ## Discovery
 

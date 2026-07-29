@@ -12,11 +12,16 @@ export interface RedisCounterOptions {
   keyPrefix?: string;
 }
 
-export async function createRedisCounterStore(options: RedisCounterOptions): Promise<CounterStore> {
-  const client =
-    typeof options.redis === 'string'
-      ? new ((await import('ioredis')).default)(options.redis, { maxRetriesPerRequest: 1 })
-      : options.redis;
+export interface RedisCounterStore extends CounterStore {
+  /** Disconnects the client this store created; no-op for a caller-supplied client. */
+  close(): Promise<void>;
+}
+
+export async function createRedisCounterStore(options: RedisCounterOptions): Promise<RedisCounterStore> {
+  const owned = typeof options.redis === 'string';
+  const client = owned
+    ? new ((await import('ioredis')).default)(options.redis as string, { maxRetriesPerRequest: 1 })
+    : (options.redis as Exclude<RedisCounterOptions['redis'], string>);
   const prefix = options.keyPrefix ?? 'janux:';
 
   return {
@@ -27,6 +32,9 @@ export async function createRedisCounterStore(options: RedisCounterOptions): Pro
       if (count === 1) await client.pexpire(windowKey, windowMs);
 
       return count;
+    },
+    async close() {
+      if (owned) await (client as { quit(): Promise<unknown> }).quit();
     },
   };
 }

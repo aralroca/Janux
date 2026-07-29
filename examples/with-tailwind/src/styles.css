@@ -1,0 +1,2 @@
+/* The whole Tailwind setup: one import, no config files, no vite.config. */
+@import "@janux/tailwind";

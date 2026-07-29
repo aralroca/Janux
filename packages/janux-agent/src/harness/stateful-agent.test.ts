@@ -65,7 +65,35 @@ describe('stateful agent (harness wiring)', () => {
 
     expect(reply.type).toBe('refusal');
     expect(reply.reason).toBe('prompt_injection');
+    expect(reply.message).toBe("I can't help with that request.");
     expect(called).toBe(false);
+  });
+
+  it('guardrails: refusalMessage customizes the human-readable refusal', async () => {
+    const asString = defineAgent(
+      {
+        harness: {
+          processors: [injectionGuard(() => 'suspicious')],
+          refusalMessage: 'Ask me about your workspace instead.',
+        },
+      },
+      { env: ENV, fetchImpl: scriptedFetch() },
+    );
+    const asFactory = defineAgent(
+      {
+        harness: {
+          processors: [injectionGuard(() => 'suspicious')],
+          refusalMessage: (reason) => `Blocked: ${reason}`,
+        },
+      },
+      { env: ENV, fetchImpl: scriptedFetch() },
+    );
+    const request = () => turnRequest({ messages: [{ role: 'user', content: 'ignore previous' }] });
+    const fixed = await (await asString.handle(request(), DEPS as any)).json();
+    const derived = await (await asFactory.handle(request(), DEPS as any)).json();
+
+    expect(fixed.message).toBe('Ask me about your workspace instead.');
+    expect(derived.message).toBe('Blocked: prompt_injection');
   });
 
   it('rate limit: the N+1th request within the window is 429', async () => {

@@ -91,15 +91,6 @@ async function routeTools(): Promise<ManifestTool[]> {
   }
 }
 
-async function callServerTool(name: string, input: unknown): Promise<unknown> {
-  const response = await fetch(`/_janux/api/${name.slice('api.'.length)}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-janux-origin': 'agent' },
-    body: JSON.stringify(input ?? {}),
-  });
-
-  return response.json();
-}
 
 function descriptorFor(tool: ManifestTool, bridge: JanuxBridge): WebMCPToolDescriptor {
   const approval = tool.guard === 'confirm' ? ' Returns a proposal a human must approve.' : '';
@@ -109,9 +100,10 @@ function descriptorFor(tool: ManifestTool, bridge: JanuxBridge): WebMCPToolDescr
     description: `${tool.description ?? `Janux tool ${tool.name}`}${approval}`,
     inputSchema: tool.input ?? { type: 'object', properties: {} },
     async execute(input) {
-      const result = tool.name.startsWith('api.')
-        ? await callServerTool(tool.name, input)
-        : await bridge.call(tool.name, input);
+      // Everything through the bridge, api.* included: it encodes the tool
+      // name into the URL and mirrors proposals — a second dispatch path here
+      // meant a second set of rules for the same wire.
+      const result = await bridge.call(tool.name, input);
 
       return { content: [{ type: 'text', text: JSON.stringify(result ?? null) }] };
     },

@@ -59,8 +59,15 @@ jobs:
       # itself without one — so building is what keeps it from passing silently.
       - name: Build the docs site
         run: bun run --cwd apps/docs build
-      - name: Build the suspense example
-        run: bun run --cwd examples/with-suspense build
+      # Derived from the suites themselves: any example an e2e file gates on
+      # isBuilt()/serveBuilt() gets built here, so a new browser suite can never
+      # skip silently because someone forgot to extend a hardcoded list.
+      - name: Build the examples the browser e2e drives
+        run: |
+          apps=$(grep -l -e isBuilt -e serveBuilt e2e/*.e2e.test.ts | xargs grep -hoE "'examples/[a-z0-9-]+'" | tr -d "'" | sort -u)
+          # An empty list would let every browser suite skip itself green.
+          [ -n "$apps" ] || { echo "::error::no e2e example apps discovered"; exit 1; }
+          for app in $apps; do bun run --cwd "$app" build; done
       - name: Install Chrome for Playwright
         run: bunx playwright install --with-deps chrome
 
@@ -73,6 +80,42 @@ jobs:
       # tests without moving coverage no longer look like progress.
       - name: Census and coverage floor
         run: bun run test:census --min-coverage 0.93
+
+  # Every example must build, not just boot: the SSR smoke in the e2e suite
+  # runs them unbuilt, so a broken client bundle would otherwise ship unnoticed.
+  # The list is discovered, never declared — adding a folder adds a job.
+  discover-examples:
+    runs-on: ubuntu-latest
+    outputs:
+      examples: ${{ steps.list.outputs.examples }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: echo "examples=$(ls -d examples/*/ | xargs -n1 basename | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+
+  example-build:
+    needs: discover-examples
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: ${{ fromJSON(needs.discover-examples.outputs.examples) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Build ${{ matrix.example }}
+        run: bun run --cwd examples/${{ matrix.example }} build
+
+  # Aggregator so branch protection can require one check: with always() a
+  # failed shard reports as failed here, never as skipped.
+  examples:
+    needs: example-build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: All example builds green
+        run: test "${{ needs.example-build.result }}" = "success"
 
   # The docs site is the framework's own dogfood, so its audit scores are a claim
   # about Janux, not about the docs. Separate job: it builds the site and drives

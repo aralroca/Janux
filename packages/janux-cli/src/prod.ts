@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { defineAgent } from '@janux/agent';
 import type { ServerOptions } from '@janux/server';
-import { apiFiles, apiModuleName, resolveAppConfig, shellOptions, type JanuxAppConfig } from '@janux/vite/config';
+import { apiFiles, apiModuleName, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxAppConfig } from '@janux/vite/config';
 
 /**
  * The production wiring, kept away from the build commands on purpose.
@@ -42,6 +42,18 @@ async function builtStyles(root: string, app: { inlineStyles?: boolean }): Promi
   return (await sheet.exists()) ? [await sheet.text()] : undefined;
 }
 
+/**
+ * The island catalog the client build emitted (see @janux/vite `islands.json`).
+ * A page whose only islands sit behind suspense boundaries has an empty SSR
+ * registry when the streaming interlude flushes — without this map the shell
+ * gates the runtime on that registry and the page never boots.
+ */
+async function builtIslandModules(root: string): Promise<Record<string, string> | undefined> {
+  const catalog = Bun.file(join(root, 'dist/client/islands.json'));
+
+  return (await catalog.exists()) ? await catalog.json() : undefined;
+}
+
 type Loader = (file: string) => Promise<Record<string, unknown>>;
 
 /** A prebuilt app looks its modules up; everything else imports them. */
@@ -74,6 +86,7 @@ export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): P
   const middlewareModule = await optionalModule(load, app.middlewareModule);
   const ctxModule = await optionalModule(load, app.ctxModule);
   const matchersModule = await optionalModule(load, app.matchersModule);
+  const websocketModule = await optionalModule(load, app.websocketModule);
 
   return {
     routesDir: app.routesDir,
@@ -82,6 +95,7 @@ export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): P
     agent: agentModule?.default ?? defineAgent(),
     storeDefs: storesModule ?? {},
     runtimeUrl: existsSync(join(root, 'dist/client/client.js')) ? '/client.js' : undefined,
+    islandModules: await builtIslandModules(root),
     ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : []),
     inlineStyles,
     llmsTxt: app.llmsTxt,
@@ -89,6 +103,9 @@ export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): P
     middleware: middlewareModule?.default,
     ctxFor: ctxModule?.default,
     matchers: matchersModule,
+    websocket: websocketModule?.default,
+    mcpAuth: mcpAuthOptions(app.mcpAuth),
+    agents: app.agents,
     httpHandlers: app.httpHandlersDir ? { dir: app.httpHandlersDir, loadModule: load as any } : undefined,
     // Foreign runtime (react) resolved from the app root — see @janux/vite.
     foreignImport: (spec) => import(createRequire(join(root, 'package.json')).resolve(spec)),

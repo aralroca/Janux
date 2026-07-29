@@ -19,6 +19,8 @@ const client = boot({ defs: [Cart], ctx: {}, glow: true });
 
 `webmcp: false` disables WebMCP registration (on by default). `boot()` registers every mounted tool with the browser's `document.modelContext` — polyfilled when the browser doesn't ship WebMCP — and re-syncs on every SPA navigation. See [Debugging agent tools with Chrome's WebMCP panel](/docs/recipes/debugging-webmcp). Lower-level: `installWebMCP(bridge)`, `createModelContextPolyfill()`.
 
+`onAudit: (entry) => …` observes every client-side `AuditEntry` — tool, origin, guard, input, ok/error, `proposed` for parked `confirm` calls. The same entries are dispatched as `janux:audit` DOM events, so an island can subscribe without touching `boot()` (see [Errors and audit](/docs/guide/intents-and-guards#errors-and-audit)).
+
 ## SPA navigation
 
 | Member / attribute | Purpose |
@@ -42,8 +44,8 @@ Called once in `src/client.ts`. It indexes islands and state snapshots, installs
 | Method | Purpose |
 |---|---|
 | `read(uri)` | Typed resource snapshot: `ui://cart`, `store://session` |
-| `call(tool, input)` | Guard-checked agent-origin invocation; `confirm` returns `{ status: 'proposal', id }` |
-| `approve(id)` / `reject(id)` | Resolve a pending proposal (approve executes exactly once) |
+| `call(tool, input)` | Guard-checked agent-origin invocation; `confirm` returns `{ status: 'proposal', id }`. `api.*` server tools dispatch too — POSTed to `/_janux/api/<name>` with `x-janux-origin: agent`, envelope unwrapped |
+| `approve(id)` / `reject(id)` | Resolve a pending proposal (approve executes exactly once). Mirrored `api.*` proposals settle through `/_janux/approve` / `/_janux/reject` — a human act, so no agent header |
 | `settled(scope?)` | Resolves when nothing is in flight — sources, effects, debounces, delegated intents |
 | `subscribe(event, fn)` | Typed component/store events |
 | `manifest()` | Live manifest of the mounted tree |
@@ -53,7 +55,8 @@ Called once in `src/client.ts`. It indexes islands and state snapshots, installs
 | Event | detail | When |
 |---|---|---|
 | `janux:tool-call` | `{ tool, input, phase: 'start' \| 'ok' \| 'proposal' \| 'error' }` | Around every bridge call — build glows, activity feeds, spinners |
-| `janux:proposal` | the proposal | An agent hit a `confirm` guard |
+| `janux:proposal` | the proposal | An agent hit a `confirm` guard (component intents and page-initiated `api.*` calls alike) |
+| `janux:audit` | the `AuditEntry` | Every client-side invocation — the same entries `boot({ onAudit })` receives |
 | `janux:error` | message string | A delegated intent failed |
 
 ## Markup conventions

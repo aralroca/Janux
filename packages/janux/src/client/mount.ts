@@ -56,8 +56,8 @@ export async function ensureStore(storeDef: ComponentDef, mount: MountContext): 
   registry.stores.set(storeDef.name, instance);
   await instance.attach();
   // Local persistence rehydrates after attach and keeps writing back.
-  if (storeDef.persist === 'local') {
-    const stop = await persistStore(instance);
+  if (storeDef.persist && storeDef.persist !== 'none') {
+    const stop = await persistStore(instance, storeDef.persist === 'local' ? {} : storeDef.persist);
     const dispose = instance.dispose.bind(instance);
 
     instance.dispose = async () => {

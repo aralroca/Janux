@@ -452,3 +452,69 @@ describe('inlined CSS on a client navigation', () => {
     expect(html).toContain('<h1>Home</h1>');
   });
 });
+
+/**
+ * First-class WebSockets: `fetch` stays Request→Response pure, so the server
+ * exposes the seam the `Bun.serve` owner mounts instead — `serve(req, bun)`
+ * decides the upgrade when the request matches `websocket.path`, and
+ * `websocket` is the Bun-shaped handler object. `janux start` wires both.
+ */
+describe('first-class websockets', () => {
+  const wsServer = createJanuxServer({
+    routes: { '/': () => jsx('p', { children: 'page' }) },
+    websocket: {
+      path: '/live',
+      data: (req) => ({ from: new URL(req.url).searchParams.get('u') }),
+      message: () => undefined,
+    },
+  });
+
+  it('426s the websocket path on the pure fetch — nobody upgraded', async () => {
+    const res = await wsServer.fetch(new Request('http://test/live'));
+
+    expect(res.status).toBe(426);
+    expect(res.headers.get('upgrade')).toBe('websocket');
+  });
+
+  it('serve() upgrades a matching request and hands over the per-socket data', async () => {
+    const upgraded: unknown[] = [];
+    const bun = {
+      upgrade: (_req: Request, init?: { data?: unknown }) => {
+        upgraded.push(init?.data);
+
+        return true;
+      },
+    };
+
+    expect(await wsServer.serve(new Request('http://test/live?u=ana'), bun)).toBeUndefined();
+    expect(upgraded).toEqual([{ from: 'ana' }]);
+  });
+
+  it('answers 426 itself when the runtime refuses the upgrade', async () => {
+    const res = await wsServer.serve(new Request('http://test/live'), { upgrade: () => false });
+
+    expect(res?.status).toBe(426);
+  });
+
+  it('serves every other path through the normal fetch', async () => {
+    const bun = {
+      upgrade: (): boolean => {
+        throw new Error('must not upgrade');
+      },
+    };
+    const res = await wsServer.serve(new Request('http://test/'), bun);
+
+    expect(res?.status).toBe(200);
+    expect(await res?.text()).toContain('page');
+  });
+
+  it('exposes exactly the Bun-shaped handlers', () => {
+    expect(Object.keys(wsServer.websocket).sort()).toEqual(['close', 'drain', 'message', 'open']);
+  });
+
+  it('stays out of the way when no websocket is configured', async () => {
+    expect((await server.serve(new Request('http://test/'), { upgrade: () => true }))?.status).toBe(200);
+    expect((await server.fetch(new Request('http://test/ws'))).status).toBe(404);
+    expect(server.websocket.message('socket' as never, 'frame')).toBeUndefined();
+  });
+});

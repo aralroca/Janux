@@ -16,10 +16,17 @@ export interface JxFlags {
   max?: number;
 }
 
+/**
+ * Values a field accepts *right now*, resolved against the live run bag. Typed
+ * loosely on purpose: the schema layer cannot import `RunBag` without a cycle.
+ */
+export type OptionsResolver = (bag: any) => readonly unknown[];
+
 export interface JxExtra {
   values?: readonly string[];
   item?: JxType;
   shape?: Record<string, JxType>;
+  optionsOf?: OptionsResolver;
 }
 
 const BOUNDED_KINDS = new Set<JxKind>(['string', 'int', 'number', 'money']);
@@ -30,6 +37,7 @@ export class JxType {
   readonly values?: readonly string[];
   readonly item?: JxType;
   readonly shape?: Record<string, JxType>;
+  readonly optionsOf?: OptionsResolver;
 
   constructor(kind: JxKind, extra: JxExtra = {}, flags: JxFlags = {}) {
     this.kind = kind;
@@ -37,12 +45,22 @@ export class JxType {
     this.values = extra.values;
     this.item = extra.item;
     this.shape = extra.shape;
+    this.optionsOf = extra.optionsOf;
   }
 
-  private with(patch: JxFlags): JxType {
-    const extra = { values: this.values, item: this.item, shape: this.shape };
+  private with(patch: JxFlags, extra: JxExtra = {}): JxType {
+    const carried = { values: this.values, item: this.item, shape: this.shape, optionsOf: this.optionsOf };
 
-    return new JxType(this.kind, extra, { ...this.flags, ...patch });
+    return new JxType(this.kind, { ...carried, ...extra }, { ...this.flags, ...patch });
+  }
+
+  /**
+   * The values this field accepts right now, resolved per instance when the
+   * manifest is built — the value-level twin of an intent's `ready`. Advisory:
+   * validation is unchanged, so a list that goes stale never rejects a caller.
+   */
+  options(resolve: OptionsResolver): JxType {
+    return this.with({}, { optionsOf: resolve });
   }
 
   optional(): JxType {

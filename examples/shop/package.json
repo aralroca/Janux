@@ -4,9 +4,9 @@
   "version": "0.2.1",
   "type": "module",
   "scripts": {
-    "dev": "janux dev",
+    "dev": "janux dev --port 4321",
     "build": "janux build",
-    "start": "janux start"
+    "start": "janux start --port 4321"
   },
   "dependencies": {
     "janux": "workspace:*",

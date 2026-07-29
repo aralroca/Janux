@@ -1,0 +1,60 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.page {
+  max-width: 720px;
+  padding: 48px 24px;
+}
+
+.masthead h1 {
+  margin: 0 0 8px;
+}
+
+.hint {
+  color: color-mix(in srgb, currentColor 65%, transparent);
+  line-height: 1.6;
+}
+
+table {
+  width: 100%;
+  margin: 24px 0;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+}
+
+.badge.critical {
+  color: #c62828;
+}
+
+.badge.high {
+  color: #b26a00;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  font-size: 13px;
+}

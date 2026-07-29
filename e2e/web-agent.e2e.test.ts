@@ -1,18 +1,13 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
-import { join } from 'node:path';
-import { createJanuxServer } from '../packages/janux-server/src/index';
-import { prodServerOptions } from '../packages/janux-cli/src/prod';
 import { planFor } from '../examples/with-web-agent/src/demo-plan';
+import { ssrApp } from './support/app';
 
-const APP_ROOT = join(import.meta.dir, '../examples/with-web-agent');
-
-let server: ReturnType<typeof createJanuxServer>;
+let server: Awaited<ReturnType<typeof ssrApp>>['server'];
+let get: Awaited<ReturnType<typeof ssrApp>>['get'];
 
 beforeAll(async () => {
-  server = createJanuxServer(await prodServerOptions(APP_ROOT));
+  ({ server, get } = await ssrApp('examples/with-web-agent'));
 });
-
-const get = (path: string) => server.fetch(new Request(`http://test${path}`));
 
 describe('examples/with-web-agent end to end', () => {
   it('renders the whole console server-side, before any JS runs', async () => {

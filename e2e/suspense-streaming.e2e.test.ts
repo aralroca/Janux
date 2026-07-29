@@ -1,10 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { chromium, type Browser, type Page } from 'playwright';
-import { createJanuxServer } from '../packages/janux-server/src/index';
-import { prodServerOptions } from '../packages/janux-cli/src/prod';
-import { staticResponse } from '../packages/janux-cli/src/static-assets';
+import { type Browser, type Page } from 'playwright';
+import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt } from './support/app';
 
 /**
  * Streaming suspense in a real browser, against the built with-suspense
@@ -16,40 +12,24 @@ import { staticResponse } from '../packages/janux-cli/src/static-assets';
  * re-executes them instead of morphing them in place.
  */
 
-const APP_ROOT = join(import.meta.dir, '../examples/with-suspense');
-const BUILT = existsSync(join(APP_ROOT, 'dist/client'));
-const PORT = 4397;
-const BASE = `http://localhost:${PORT}`;
-const TIMEOUT = 60_000;
+const APP = 'examples/with-suspense';
+const BUILT = isBuilt(APP);
 
-let server: ReturnType<typeof Bun.serve> | undefined;
+let BASE = '';
+let stop: (() => void) | undefined;
 let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  const app = createJanuxServer(await prodServerOptions(APP_ROOT));
-  const staticDir = join(APP_ROOT, 'dist/client');
-
-  server = Bun.serve({
-    port: PORT,
-    fetch: async (req) => (await staticResponse(staticDir, req)) ?? app.fetch(req),
-  });
-  browser = await chromium.launch({ channel: 'chrome' });
+  ({ base: BASE, stop } = await serveBuilt(APP));
+  browser = await launchChrome();
 });
 
 afterAll(async () => {
-  await browser?.close();
-  server?.stop(true);
+  stop?.();
 });
 
-async function openPage(): Promise<{ page: Page; errors: string[] }> {
-  const page = await browser!.newPage();
-  const errors: string[] = [];
-
-  page.on('pageerror', (error) => errors.push(String(error)));
-
-  return { page, errors };
-}
+const openPage = () => newPage(browser!);
 
 const pendingCount = (page: Page) => page.locator('janux-island[data-jx-pending]').count();
 const swapped = (page: Page) =>

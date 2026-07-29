@@ -1,8 +1,8 @@
-import { component, effect, intent, schema, str } from 'janux';
+import { component, effect, enums, intent, schema, str } from 'janux';
 import { urlState, useQuery, type UrlStateHandle } from 'janux/client';
 import { listProducts } from '../server/products.api';
 
-const TAGS = ['all', 'input', 'display', 'video'];
+const TAGS = ['all', 'input', 'display', 'video'] as const;
 
 /**
  * One binding per island: `urlState` owns a signal and a popstate listener, so
@@ -34,13 +34,20 @@ export const Catalog = component({
     followUrl: effect({
       description: 'Mirrors the ?tag= param into state',
       when: (state: any) => tagParam(state).value.value,
-      run: ({ state }: any) => (state.tag = tagParam(state).value.value),
+      run: ({ state }: any) => {
+        state.tag = tagParam(state).value.value;
+      },
     }),
   },
   intents: {
     filter: intent({
       description: 'Filter products by tag',
-      input: schema({ tag: str() }),
+      // The enum IS the contract: the manifest (and the example payloads
+      // generated from it) name real tags, and an unknown one is a validation
+      // error instead of a filter that silently matches nothing. A real tag
+      // leads — the generated example must DO something, and the page opens
+      // on 'all', so 'all' would read as a no-op.
+      input: schema({ tag: enums(['input', 'display', 'video', 'all']) }),
       run: ({ state, input }: any) => {
         state.tag = input.tag;
         tagParam(state).set(input.tag);
@@ -53,7 +60,7 @@ export const Catalog = component({
       queryKey: ['products', state.tag],
       queryFn: () => listProducts({ tag: state.tag }),
     }));
-    const items = q.data.value ?? [];
+    const items = (q.data.value ?? []) as any[];
 
     return (
       <section class="catalog">
@@ -64,7 +71,17 @@ export const Catalog = component({
             </button>
           ))}
         </div>
-        {q.isPending.value ? <p>Loading…</p> : <ul>{items.map((product: any) => <li class="item">{product.name}</li>)}</ul>}
+        {q.isPending.value ? (
+          <p class="loading">Loading…</p>
+        ) : (
+          <ul class="items">
+            {items.map((product: any) => (
+              <li class="item" key={product.id}>
+                {product.name}
+              </li>
+            ))}
+          </ul>
+        )}
         <p class="count">total:{items.length}</p>
       </section>
     );

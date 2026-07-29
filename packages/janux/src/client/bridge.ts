@@ -82,6 +82,74 @@ function guardOf(mount: MountContext, component: string, intentName: string): st
   return intentDef ? resolveGuard(intentDef, mount.ctx, 'agent') : 'unknown';
 }
 
+const API_PREFIX = 'api.';
+
+/** POSTs JSON and unwraps the server's `{ ok, result }` envelope; a refusal becomes a thrown error. */
+async function postJson(url: string, payload: unknown, asAgent: boolean): Promise<unknown> {
+  const origin: Record<string, string> = asAgent ? { 'x-janux-origin': 'agent' } : {};
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...origin },
+    body: JSON.stringify(payload ?? {}),
+  });
+  const body: any = await response.json().catch(() => ({}));
+
+  if (!body.ok) throw new Error(String(body.error ?? `Janux: request to ${url} failed (${response.status})`));
+
+  return body.result;
+}
+
+/**
+ * An api() proposal lives on the server; the local mirror lets the page treat
+ * it like any other: `janux:proposal` fires, and `execute` settles it through
+ * `/_janux/approve` — a human act, so no agent origin header rides along.
+ */
+function mirrorApiProposal(tool: string, result: any, mount: MountContext, remote: Set<string>): void {
+  remote.add(result.id);
+  const proposal: Proposal = {
+    id: result.id,
+    tool,
+    input: result.input,
+    execute: () => postJson('/_janux/approve', { id: result.id }, false),
+  };
+
+  mount.onProposal(proposal);
+}
+
+/** The manifest announces api.* tools, so the bridge dispatches them too — over their HTTP endpoint. */
+async function callApiTool(tool: string, input: unknown, mount: MountContext, remote: Set<string>): Promise<unknown> {
+  // Encoded, not interpolated raw: tool names arrive over the public bridge,
+  // and api names are `module.export` (dots only), so a name carrying slashes
+  // or `..` would resolve out of /_janux/api/ — onto /_janux/llm, say.
+  const result: any = await postJson(`/_janux/api/${encodeURIComponent(tool.slice(API_PREFIX.length))}`, input, true);
+
+  if (result?.status === 'proposal') mirrorApiProposal(tool, result, mount, remote);
+
+  return result;
+}
+
+/** The server copy must not outlive a local rejection; failures only mean an eventual eviction there. */
+function rejectApiProposal(id: string): void {
+  postJson('/_janux/reject', { id }, false).catch(() => {});
+}
+
+/** A mirrored api() proposal has no island to glow: the approval events carry the server tool's name. */
+async function settleApiProposal(proposal: Proposal): Promise<unknown> {
+  const extras = { guard: 'confirm', approval: true };
+
+  emitToolEvent(proposal.tool, proposal.input, 'start', extras);
+  try {
+    const result = await proposal.execute();
+
+    emitToolEvent(proposal.tool, proposal.input, 'ok', extras);
+
+    return result;
+  } catch (error) {
+    emitToolEvent(proposal.tool, proposal.input, 'error', extras);
+    throw error;
+  }
+}
+
 /**
  * A tool is addressed as exactly `component.intent`.
  *
@@ -117,6 +185,8 @@ function emitToolEvent(
 /** The gui-agent bridge: `ui.read / ui.call / ui.settled / ui.subscribe` over the mounted tree. */
 export function createBridge(mount: MountContext, proposals: Map<string, Proposal>): JanuxBridge {
   const { registry } = mount;
+  // api() proposals mirrored from the server: their settlement is an HTTP call.
+  const remoteProposals = new Set<string>();
 
   return {
     async read(uri) {
@@ -139,6 +209,23 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
           return result;
         } catch (error) {
           emitToolEvent(tool, input, 'error', { guard: 'auto' });
+          throw error;
+        }
+      }
+      // Server api() tools: same call surface, dispatched over HTTP as the
+      // agent surface. The guard lives server-side; a proposal result is the
+      // `confirm` outcome, so the activity event can say so.
+      if (tool.startsWith(API_PREFIX)) {
+        emitToolEvent(tool, input, 'start', {});
+        try {
+          const result: any = await callApiTool(tool, input, mount, remoteProposals);
+          const proposed = result?.status === 'proposal';
+
+          emitToolEvent(tool, input, proposed ? 'proposal' : 'ok', proposed ? { guard: 'confirm' } : {});
+
+          return result;
+        } catch (error) {
+          emitToolEvent(tool, input, 'error', {});
           throw error;
         }
       }
@@ -177,6 +264,7 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
 
       if (!proposal) throw new Error(`Janux: unknown proposal "${id}"`);
       proposals.delete(id);
+      if (remoteProposals.delete(id)) return settleApiProposal(proposal);
       const [component, intentName] = splitTool(proposal.tool);
       const extras = { guard: 'confirm', approval: true };
 
@@ -203,6 +291,8 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
     },
 
     reject(id) {
+      if (remoteProposals.delete(id)) rejectApiProposal(id);
+
       return proposals.delete(id);
     },
 

@@ -72,8 +72,12 @@ The returned object is a `HarnessStorage` plus `close(): Promise<void>`; call it
 ```ts
 export default defineAgent({
   instructions: 'You are the shop copilot.',
-  harness: { memory: { storage: await createPgStorage({ connectionString: process.env.DATABASE_URL! }) } },
+  harness: {
+    memory: createMemory({ storage: await createPgStorage({ connectionString: process.env.DATABASE_URL! }) }),
+  },
 });
 ```
+
+`harness.memory` takes the `HarnessMemory` that `createMemory` returns — the storage adapter alone is not enough, because the memory layer is what owns the history window and thread ownership.
 
 Related: [The agent and your copilot](/docs/guide/agent-and-copilot) · [Agent guardrails](/docs/reference/agent-guardrails) · [Durable workflows](/docs/reference/agent-workflows)

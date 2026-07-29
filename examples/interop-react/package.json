@@ -4,9 +4,9 @@
   "version": "0.2.1",
   "type": "module",
   "scripts": {
-    "dev": "janux dev",
+    "dev": "janux dev --port 4321",
     "build": "janux build",
-    "start": "janux start"
+    "start": "janux start --port 4321"
   },
   "dependencies": {
     "janux": "workspace:*",
@@ -15,5 +15,9 @@
     "@janux/cli": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0"
   }
 }

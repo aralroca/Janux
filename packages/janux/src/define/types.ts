@@ -2,6 +2,14 @@ import type { JxType } from '../schema';
 import type { JanuxNode } from '../jsx-runtime';
 import type { I18n } from '../i18n/types';
 
+/** Structural mirror of the client's PersistConfig — defs must not import client code. */
+export interface PersistLikeConfig {
+  name?: string;
+  partialize?: (state: Record<string, unknown>) => Record<string, unknown>;
+  version?: number;
+  migrate?: (persisted: Record<string, unknown>, from: number) => Record<string, unknown>;
+}
+
 export type GuardValue = 'auto' | 'confirm' | 'forbidden';
 /**
  * A dynamic guard sees who is asking: `origin` is `'human'` for a DOM
@@ -54,17 +62,23 @@ export interface RunBag {
   event?: any;
   signal?: AbortSignal;
   /**
-   * Who invoked the running intent — set during intent runs only. `'human'`
-   * is a DOM interaction; `'agent'` is Janux's own agent surface. An external
-   * driver clicking real DOM (Playwright, computer-use) reads as `'human'`:
-   * this is a UX/governance signal, not an anti-automation mechanism.
+   * Who is driving the running code — always present. Outside an intent run
+   * (view, effects, lifecycle, `on` handlers) it is `'human'`: that code runs
+   * on behalf of the session's user. During an intent run it is the caller's
+   * origin: `'human'` for a DOM interaction, `'agent'` for any call through
+   * Janux's own agent surface. An external driver clicking real DOM
+   * (Playwright, computer-use) reads as `'human'`: this is a UX/governance
+   * signal, not an anti-automation mechanism.
    */
-  origin?: Origin;
+  origin: Origin;
 }
 
 export interface SourceReader {
   readonly value: any;
+  /** No value to show yet — false as soon as the source holds one, refreshes included. */
   readonly pending: boolean;
+  /** A query is in flight, first load or refresh. Show a hint, not a placeholder. */
+  readonly refreshing: boolean;
   readonly error: unknown;
 }
 
@@ -77,6 +91,16 @@ export interface StoreHandle {
 export interface IntentDef {
   description?: string;
   input?: JxType;
+  /**
+   * `'form'` converts string input values to what the typed `input` schema
+   * means BEFORE validating — FormData only ever submits strings. Numbers
+   * parse via `Number` (a blank field stays invalid), booleans follow
+   * checkbox semantics (`'on'`/`'true'` → true, absent → false), `money()`
+   * parses numerically but is never scaled. Already-typed input (an agent's
+   * JSON) passes through untouched, so one typed schema serves both faces —
+   * and the manifest keeps announcing it.
+   */
+  coerce?: 'form';
   guard?: Guard;
   server?: boolean;
   prefetch?: 'eager' | 'visible' | 'idle';
@@ -141,7 +165,8 @@ export interface ComponentDef {
    */
   error?: (bag: RunBag & { error: unknown }) => unknown;
   scope?: 'app' | 'route';
-  persist?: 'local' | 'none';
+  /** `'local'` uses defaults; a config object customizes key/partialize/version/migrate (localStorage-backed either way). */
+  persist?: 'local' | 'none' | PersistLikeConfig;
   /** Extra i18n keys (exact or prefix strings, or RegExp) this island uses only after interaction — shipped to the client along with the keys recorded during SSR. */
   i18nKeys?: (string | RegExp)[];
 }

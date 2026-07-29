@@ -1,8 +1,22 @@
 export { api, collectApis, invokeApi, apiManifestTools, isApi, type ApiDef, type ApiTool } from './api';
-export { createJanuxServer, NAVIGATION_HEADER, type ServerOptions, type AgentMount, type AgentDeps } from './server';
+export {
+  createJanuxServer,
+  NAVIGATION_HEADER,
+  type ServerOptions,
+  type AgentMount,
+  type AgentDeps,
+  type JanuxSocket,
+  type WebSocketConfig,
+  type WebSocketUpgrader,
+} from './server';
 export { createFsRouter, type RouteMatch } from './router';
 export {
   createHttpHandlers,
+  formDataWithin,
+  matchesType,
+  readBodyWithin,
+  rejectOversized,
+  sniffContentType,
   type HandlerContext,
   type HandlerModule,
   type HttpMethod,

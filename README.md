@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-3431%20passing-brightgreen" alt="3431 tests passing" />
+  <img src="https://img.shields.io/badge/tests-3603%20passing-brightgreen" alt="3603 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -205,7 +205,24 @@ Full tables, methodology and machine specs:
 - [`examples/i18n`](examples/i18n) — internationalization: locale-prefixed routing, language switcher, type-safe `t()` with plurals, and page-scoped client translations.
 - [`examples/interop-react`](examples/interop-react) — a React component (unchanged) mounted with `foreign()`: tracked props, callbacks→intents.
 - [`examples/nested-islands`](examples/nested-islands) — stateful islands inside stateful islands, with dispose semantics.
-- [`examples/data-cache`](examples/data-cache) — `useQuery`/`mutation` + persisted stores + typed URL state.
+- [`examples/data-cache`](examples/data-cache) — `useQuery` with a reactive query key, typed URL state (`urlState`) that deep-links and honors Back, and agent parity for the same filter.
+- [`examples/with-suspense`](examples/with-suspense) — streaming SSR: independent `suspense` boundaries that reveal mid-stream, and `error` boundaries that bubble.
+- [`examples/with-tailwind`](examples/with-tailwind) — `@janux/tailwind` zero-config: a pricing page with dark mode and a stateful billing toggle, styled only with v4 utilities.
+- [`examples/with-forms`](examples/with-forms) — one `schema()` as the contract for three surfaces: the form UI (per-field errors, no reload), the `api()` endpoint, and the typed agent tool.
+- [`examples/with-optimistic-ui`](examples/with-optimistic-ui) — `mutation()` with optimistic writes and real rollback: the server rejects every third save and `onError` restores the snapshot with a visible notice.
+- [`examples/cross-island-state`](examples/cross-island-state) — a `store()` cart shared by five islands with no prop drilling, `persist: 'local'` across reloads, a bus event that crosses islands, and `batch()`ed bundle adds.
+- [`examples/with-advanced-routing`](examples/with-advanced-routing) — the full router grammar: `[slug]`, `[...path]`, `[[...rest]]`, `[id=integer]`/`[uid=uuid]` matchers, nested `_layout.tsx` chains and `(marketing)` groups, plus SPA navigation with a `persist` island.
+- [`examples/with-sqlite`](examples/with-sqlite) — real persistence with `bun:sqlite` and both server surfaces on one database: `api()` RPC (delete is `confirm`-guarded — agents propose, humans approve) next to classic REST handlers.
+- [`examples/with-uploads`](examples/with-uploads) — end-to-end file uploads: `dropzone()` feeding a validating multipart handler (type + size), server-rendered gallery, previews without a reload.
+- [`examples/realtime-chat`](examples/realtime-chat) — a custom server composing `createJanuxServer` with Bun's native WebSockets: optimistic delivery, cursor-based replay on reconnect, live presence.
+- [`examples/blog-static`](examples/blog-static) — a markdown blog exported with `output: 'static'` + `staticParams`: zero-JS pages, speculation rules, and the agent face (`llms.txt`, sitemap, `.md` projections) from the same build.
+- [`examples/hacker-news`](examples/hacker-news) — the canonical clone: streaming suspense front page over a local deterministic fixture, `[page=integer]` pagination, a server-rendered nested comment tree, `useQuery` refresh and hover prefetch.
+- [`examples/with-mcp-url`](examples/with-mcp-url) — the app as a bearer-protected MCP server by URL, with a committed tool contract (`agent-contract.json`) that turns CI red if the agent surface drifts.
+- [`examples/human-in-the-loop`](examples/human-in-the-loop) — who invokes changes what happens: the same `confirm` intent executes on a human click but parks as a Proposal for an agent, with an approvals inbox and an origin-labeled audit trail.
+- [`examples/durable-agent`](examples/durable-agent) — the agent harness in production shape: Postgres conversation memory that survives restarts, Redis rate limiting, injection guardrails, and a durable two-step workflow.
+- [`examples/with-mcp-client`](examples/with-mcp-client) — the outbound direction: the app's agent connects to an external MCP server by URL, filters the remote tools and re-exposes them on its own surface.
+- [`examples/with-local-llm`](examples/with-local-llm) — the copilot's model runs in the browser over WebGPU (`localLlm()`), with `supportsLocalLlm()` detection, a `serverLlm()` fallback and a live local↔cloud swap.
+- [`examples/agent-evals`](examples/agent-evals) — `janux eval` as a CI gate: scripted, model-free agent tasks replayed over the real webMCP surface, including a human approval step — plus a broken eval that proves the gate can fail.
 - [`examples/with-web-agent`](examples/with-web-agent) — the demo above: a console operated in natural language, `createCopilot({ visualize })` for the chips/ring/veil, `glowTarget` for React Flow nodes that mount late, and a `forbidden` intent that forces the DOM fallback.
 
 ```bash
@@ -218,7 +235,7 @@ bun run --cwd examples/with-web-agent dev
 
 ```bash
 bun install
-bun test             # 3431 tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
+bun test             # 3603 tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
 bun run test:census  # per-area counts and the coverage floor
 bun run typecheck
 ```

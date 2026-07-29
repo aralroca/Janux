@@ -1,4 +1,4 @@
-import { component, int, intent, list, obj, schema, str } from 'janux';
+import { component, enums, int, intent, list, obj, schema, str } from 'janux';
 import { foreign } from 'janux/interop';
 import { Mixer } from './Mixer';
 
@@ -22,11 +22,14 @@ export const MixerShell = component({
   intents: {
     setBand: intent({
       description: 'Set one band level (0-10)',
-      input: schema({ name: str(), level: int() }),
+      // The enum IS the contract: agents get real band names in the manifest
+      // (and in generated example payloads), and an unknown name is a
+      // validation error instead of a silent no-op.
+      input: schema({ name: enums(['low', 'mid', 'high']), level: int().min(0).max(10) }),
       run: ({ state, input }) => {
         const band = state.bands.find((candidate: any) => candidate.name === input.name);
 
-        if (band) band.level = Math.max(0, Math.min(10, input.level));
+        if (band) band.level = input.level;
       },
     }),
     flat: intent({

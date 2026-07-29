@@ -1,10 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { chromium, type Browser, type Page } from 'playwright';
-import { createJanuxServer } from '../packages/janux-server/src/index';
-import { prodServerOptions } from '../packages/janux-cli/src/prod';
-import { staticResponse } from '../packages/janux-cli/src/static-assets';
+import { type Browser, type Page } from 'playwright';
+import { TIMEOUT, isBuilt, launchChrome, serveBuilt } from './support/app';
 
 /**
  * The Ask AI panel is a `persist` island: opening it and touring the menu must
@@ -16,34 +12,24 @@ import { staticResponse } from '../packages/janux-cli/src/static-assets';
  * browser that actually performs the default action of an uncancelled click.
  */
 
-const APP_ROOT = join(import.meta.dir, '../apps/docs');
-const BUILT = existsSync(join(APP_ROOT, 'dist/client'));
-const PORT = 4399;
-const BASE = `http://localhost:${PORT}`;
+const APP = 'apps/docs';
+const BUILT = isBuilt(APP);
 const DOCS_PAGE = '/docs/getting-started/what-is-janux';
 const OTHER_DOCS_PAGE = '/docs/getting-started/quick-start';
-/** Launching Chrome and driving real navigations does not fit bun's 5s default. */
-const TIMEOUT = 60_000;
 
-let server: ReturnType<typeof Bun.serve> | undefined;
+let BASE = '';
+let stop: (() => void) | undefined;
 let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  const app = createJanuxServer(await prodServerOptions(APP_ROOT));
-  const staticDir = join(APP_ROOT, 'dist/client');
-
-  server = Bun.serve({
-    port: PORT,
-    fetch: async (req) => (await staticResponse(staticDir, req)) ?? app.fetch(req),
-  });
+  ({ base: BASE, stop } = await serveBuilt(APP));
   // Chrome proper: the Navigation API drives both behaviors under test.
-  browser = await chromium.launch({ channel: 'chrome' });
+  browser = await launchChrome();
 });
 
 afterAll(async () => {
-  await browser?.close();
-  server?.stop(true);
+  stop?.();
 });
 
 async function openDocsWithAssistant(): Promise<{ page: Page; warnings: string[] }> {

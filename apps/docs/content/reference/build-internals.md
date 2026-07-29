@@ -69,6 +69,20 @@ These bridge Vite's Node middleware to Janux's Fetch-API handlers, and they're w
 
 Builds the router for `src/api/**` — the [HTTP handlers](/docs/guide/http-handlers) feature — dispatching on exported method names (`export function POST`) and handling uploads. Import it when you assemble a server yourself instead of using `createJanuxServer`.
 
+## Upload guards
+
+The body-limit and content-sniffing helpers handlers validate uploads with (see [HTTP handlers & uploads](/docs/guide/http-handlers) for the full recipe):
+
+```ts
+import { formDataWithin, matchesType, readBodyWithin, rejectOversized, sniffContentType } from '@janux/server';
+
+rejectOversized(req, maxBytes);          // null | 413 Response — content-length checked before any body byte
+await readBodyWithin(req, maxBytes);     // Uint8Array | 413 Response — chunked bodies cut at the limit
+await formDataWithin(req, maxBytes);     // FormData | 413 Response — multipart under the same protection
+sniffContentType(bytes);                 // 'image/png' | … | undefined, from magic bytes
+await matchesType(file, ['image/*']);    // the file's real bytes against MIME patterns
+```
+
 ## renderNode(node, scope)
 
 The lower-level renderer under [`renderToString`](/docs/reference/core-api): renders one node against a render scope and returns HTML. Use `renderToString` unless you're building a renderer — it's what gives you `snapshots`, `registry` and `i18nKeys` alongside the HTML.

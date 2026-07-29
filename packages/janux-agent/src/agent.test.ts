@@ -85,6 +85,32 @@ describe('agent loop', () => {
     expect(body.message).toContain('JANUX_MODEL');
   });
 
+  /**
+   * The gate is the door, not a step inside the room: an unconfigured model
+   * must not turn `/_janux/agent` into an open, unmetered endpoint that also
+   * skips the fail-closed identity check.
+   */
+  it('gates before resolving the model: no key still means auth and rate limits', async () => {
+    const denied = defineAgent(
+      { harness: { identityFor: () => undefined } },
+      { env: {} },
+    );
+
+    expect((await ask(buildServer(denied), { messages: [] })).status).toBe(401);
+
+    const limited = defineAgent(
+      { harness: { identityFor: () => 'caller', rateLimit: { limit: 1, windowMs: 60_000 } } },
+      { env: {} },
+    );
+    const server = buildServer(limited);
+
+    expect((await ask(server, { messages: [] })).status).toBe(200);
+    const rejected = await ask(server, { messages: [] });
+
+    expect(rejected.status).toBe(429);
+    expect(((await rejected.json()) as any).error).toBe('rate_limited');
+  });
+
   it('answers plain text and reports the resolved model', async () => {
     const { fetchImpl } = scriptedFetch([anthropicReply([{ type: 'text', text: 'Hello!' }])]);
     const server = buildServer(defineAgent({}, { env, fetchImpl }));
@@ -153,6 +179,107 @@ describe('agent loop', () => {
 
     expect(toolNames).toContain('counter__rename');
     expect(toolNames).toContain('api__shop__search');
+  });
+});
+
+/** A second Janux app playing the remote MCP server the agent connects to. */
+const remoteMcpApp = createJanuxServer({
+  title: 'remote-mcp',
+  apis: {
+    docs: {
+      search: api({ description: 'Search remote docs', input: schema({ q: str() }), run: ({ input }) => [`doc:${input.q}`] }),
+      secret: api({ description: 'Should stay hidden', run: () => 'nope' }),
+    },
+  },
+});
+
+/** Routes MCP traffic to the in-process remote app, everything else to the scripted provider. */
+function mcpRoutedFetch(replies: Response[]) {
+  const providerCalls: { url: string; body: any }[] = [];
+  const mcpBodies: any[] = [];
+  const mcpHeaders: Record<string, string>[] = [];
+  const fetchImpl = async (url: string, init: RequestInit) => {
+    if (!url.includes('/_janux/mcp')) {
+      providerCalls.push({ url, body: JSON.parse(String(init.body)) });
+
+      return replies.shift() ?? anthropicReply([{ type: 'text', text: 'done' }]);
+    }
+    mcpBodies.push(JSON.parse(String(init.body)));
+    mcpHeaders.push((init.headers ?? {}) as Record<string, string>);
+
+    return remoteMcpApp.fetch(new Request(url, init));
+  };
+
+  return { fetchImpl, providerCalls, mcpBodies, mcpHeaders };
+}
+
+const MCP = {
+  url: 'http://remote/_janux/mcp',
+  prefix: 'remote',
+  tools: { exclude: ['remote.docs.secret'] },
+  headers: { authorization: 'Bearer remote-token' },
+};
+
+describe('remote MCP tools (defineAgent({ mcp }))', () => {
+  const env = { ANTHROPIC_API_KEY: 'sk-test' };
+
+  it('advertises the filtered, prefixed remote tools next to the local ones', async () => {
+    const { fetchImpl, providerCalls, mcpHeaders } = mcpRoutedFetch([anthropicReply([{ type: 'text', text: 'ok' }])]);
+    const server = buildServer(defineAgent({ mcp: MCP }, { env, fetchImpl }));
+
+    await ask(server, { messages: [{ role: 'user', content: 'hi' }] });
+    const names = providerCalls[0]!.body.tools.map((tool: any) => tool.name);
+
+    expect(names).toContain('remote__docs__search');
+    expect(names).not.toContain('remote__docs__secret');
+    expect(names).toContain('api__shop__search');
+    // The configured headers ride on every MCP request (auth beyond bearer tokens).
+    expect(mcpHeaders[0]!.authorization).toBe('Bearer remote-token');
+  });
+
+  it('dispatches a remote tool call through the MCP connection and continues the loop', async () => {
+    const { fetchImpl, providerCalls } = mcpRoutedFetch([
+      anthropicReply([{ type: 'tool_use', id: 'r1', name: 'remote__docs__search', input: { q: 'janux' } }]),
+      anthropicReply([{ type: 'text', text: 'found it' }]),
+    ]);
+    const server = buildServer(defineAgent({ mcp: MCP }, { env, fetchImpl }));
+    const body: any = await (await ask(server, { messages: [{ role: 'user', content: 'search' }] })).json();
+
+    expect(body.type).toBe('text');
+    expect(body.text).toBe('found it');
+    const toolResult = providerCalls[1]!.body.messages.find((m: any) => m.content?.[0]?.type === 'tool_result');
+
+    expect(toolResult.content[0].content).toContain('doc:janux');
+  });
+
+  it('discovers lazily and caches: one tools/list across turns', async () => {
+    const { fetchImpl, mcpBodies } = mcpRoutedFetch([
+      anthropicReply([{ type: 'text', text: 'one' }]),
+      anthropicReply([{ type: 'text', text: 'two' }]),
+    ]);
+    const server = buildServer(defineAgent({ mcp: MCP }, { env, fetchImpl }));
+
+    await ask(server, { messages: [{ role: 'user', content: 'a' }] });
+    await ask(server, { messages: [{ role: 'user', content: 'b' }] });
+
+    expect(mcpBodies.filter((body) => body.method === 'tools/list')).toHaveLength(1);
+  });
+
+  it('a dead remote degrades to a turn without remote tools instead of crashing', async () => {
+    const providerCalls: { body: any }[] = [];
+    const fetchImpl = async (url: string, init: RequestInit) => {
+      if (url.includes('/_janux/mcp')) return new Response(null, { status: 502 });
+      providerCalls.push({ body: JSON.parse(String(init.body)) });
+
+      return anthropicReply([{ type: 'text', text: 'still here' }]);
+    };
+    const server = buildServer(defineAgent({ mcp: { url: 'http://dead/_janux/mcp' } }, { env, fetchImpl }));
+    const body: any = await (await ask(server, { messages: [{ role: 'user', content: 'hi' }] })).json();
+
+    expect(body).toMatchObject({ type: 'text', text: 'still here' });
+    const names = providerCalls[0]!.body.tools.map((tool: any) => tool.name);
+
+    expect(names.some((name: string) => name.startsWith('mcp__'))).toBe(false);
   });
 });
 

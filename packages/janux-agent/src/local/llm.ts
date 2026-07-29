@@ -6,6 +6,16 @@ import { sseData } from '../sse';
 /** Apache-2.0, ~500 MB in q4f16 and the strongest tool-caller of its size class. */
 export const DEFAULT_LOCAL_MODEL = 'onnx-community/Qwen3-0.6B-ONNX';
 
+/** What `localLlm()` needs from a provider's model: the session download plus the AI SDK model itself. */
+export interface LocalLlmModel {
+  createSessionWithProgress(onProgress: (fraction: number) => void): Promise<unknown>;
+}
+
+/** The interface of `@browser-ai/transformers-js` — inject a stub to test a turn without WebGPU. */
+export interface LocalLlmProvider {
+  transformersJS(modelId: string, config: Record<string, unknown>): LocalLlmModel;
+}
+
 export interface LocalLlmOptions {
   /** Hugging Face model id (ONNX). Defaults to {@link DEFAULT_LOCAL_MODEL}. */
   modelId?: string;
@@ -15,6 +25,8 @@ export interface LocalLlmOptions {
   worker?: Worker;
   /** Extra settings forwarded to `generateText` (temperature, maxOutputTokens…). */
   settings?: Record<string, unknown>;
+  /** Model factory. Defaults to importing `@browser-ai/transformers-js`. */
+  provider?: LocalLlmProvider;
 }
 
 export interface LocalLlm extends Llm {
@@ -22,9 +34,57 @@ export interface LocalLlm extends Llm {
   load(options?: { onProgress?: (fraction: number) => void }): Promise<void>;
 }
 
-/** Whether this browser can run the local model (WebGPU available). */
+/** How long {@link probeLocalLlm} waits for `requestAdapter()` before calling WebGPU unusable. */
+const PROBE_TIMEOUT_MS = 1_000;
+/** Keyed by the `navigator.gpu` object itself: one probe per page, and tests get a fresh cache per fake gpu. */
+const probes = new WeakMap<object, Promise<boolean>>();
+
+/**
+ * Sync fast-path: whether the browser exposes WebGPU at all. Headless browsers
+ * expose `navigator.gpu` with no usable adapter — {@link probeLocalLlm} asks
+ * for one and is the check to trust before defaulting to the local brain.
+ */
 export function supportsLocalLlm(): boolean {
   return typeof navigator !== 'undefined' && 'gpu' in navigator;
+}
+
+export interface ProbeOptions {
+  /** Defaults to {@link PROBE_TIMEOUT_MS} (1s). A hung probe resolves `false` — degrade, don't stall. */
+  timeoutMs?: number;
+}
+
+function usableAdapter(gpu: any, timeoutMs: number): Promise<{ usable: boolean; timedOut: boolean }> {
+  const adapter = Promise.resolve()
+    .then(() => gpu.requestAdapter?.())
+    .then((value: unknown) => ({ usable: Boolean(value), timedOut: false }), () => ({ usable: false, timedOut: false }));
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<{ usable: boolean; timedOut: boolean }>((resolve) => {
+    timer = setTimeout(() => resolve({ usable: false, timedOut: true }), timeoutMs);
+  });
+
+  return Promise.race([adapter, timeout]).finally(() => clearTimeout(timer));
+}
+
+/** Whether this browser can *actually* run the local model: a real `requestAdapter()` probe, cached. */
+export function probeLocalLlm({ timeoutMs = PROBE_TIMEOUT_MS }: ProbeOptions = {}): Promise<boolean> {
+  const gpu = supportsLocalLlm() ? (navigator as any).gpu : undefined;
+
+  if (!gpu) return Promise.resolve(false);
+  const cached = probes.get(gpu);
+
+  if (cached) return cached;
+  // A timeout is "too slow to answer within THIS budget", not a verdict: a cold
+  // GPU must not be written off for the page's lifetime, so only real answers
+  // are cached — a later probe with a longer budget can still find it usable.
+  const probe = usableAdapter(gpu, timeoutMs).then((result) => {
+    if (result.timedOut) probes.delete(gpu);
+
+    return result.usable;
+  });
+
+  probes.set(gpu, probe);
+
+  return probe;
 }
 
 async function importProvider(): Promise<any> {
@@ -38,8 +98,23 @@ async function importProvider(): Promise<any> {
   }
 }
 
+/** A closed reasoning block: the model thinking out loud, not part of the answer. */
+const REASONING_BLOCK = /<think>[\s\S]*?<\/think>/g;
+/** Chat-template control tokens (`<|im_end|>`, `<|eot_id|>`, …) — never prose. */
+const TEMPLATE_MARKER = /<\|[^|]*\|>/g;
+
+/**
+ * What the model meant to say. Chat-template models emit their reasoning and
+ * turn terminators as literal text, so a UI rendering the answer verbatim shows
+ * the stage directions too. Only closed blocks and `<|…|>` tokens go: a bare
+ * `<think>` a user actually typed about survives.
+ */
+function answerOf(text: string): string {
+  return text.replace(REASONING_BLOCK, '').replace(TEMPLATE_MARKER, '').trim();
+}
+
 async function createSession(options: LocalLlmOptions, onProgress?: (fraction: number) => void): Promise<Llm> {
-  const { transformersJS } = await importProvider();
+  const { transformersJS } = options.provider ?? (await importProvider());
   const model = transformersJS(options.modelId ?? DEFAULT_LOCAL_MODEL, {
     device: options.device ?? 'webgpu',
     dtype: options.dtype ?? 'q4f16',
@@ -47,8 +122,13 @@ async function createSession(options: LocalLlmOptions, onProgress?: (fraction: n
   });
 
   await model.createSessionWithProgress((fraction: number) => onProgress?.(fraction));
+  const llm = createAiSdkLlm({ model: model as any, settings: options.settings });
 
-  return createAiSdkLlm({ model, settings: options.settings });
+  return async (request) => {
+    const reply = await llm(request);
+
+    return { ...reply, text: answerOf(reply.text ?? '') };
+  };
 }
 
 /**
@@ -59,8 +139,14 @@ async function createSession(options: LocalLlmOptions, onProgress?: (fraction: n
 export function localLlm(options: LocalLlmOptions = {}): LocalLlm {
   let session: Promise<Llm> | undefined;
 
+  // A failed download must not poison the cache: `??=` never clears a rejected
+  // promise, so every later attempt would rethrow the same stale error and no
+  // retry button could ever work.
   const ensure = (onProgress?: (fraction: number) => void): Promise<Llm> =>
-    (session ??= createSession(options, onProgress));
+    (session ??= createSession(options, onProgress).catch((error) => {
+      session = undefined;
+      throw error;
+    }));
   const llm = (async (request: LlmRequest): Promise<LlmResponse> => (await ensure())(request)) as LocalLlm;
 
   llm.load = async ({ onProgress } = {}) => {
@@ -127,6 +213,15 @@ async function failure(response: Response): Promise<Error> {
   return new Error(body?.message ?? body?.error ?? `janux: /_janux/llm returned ${response.status}`);
 }
 
+/** `createRemoteLlm` throws bare status codes — failing here first keeps the mount's words in both modes. */
+async function fetchOrFailure(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const response = await fetch(input, init);
+
+  if (!response.ok) throw await failure(response);
+
+  return response;
+}
+
 async function streamedTurn(
   options: ServerLlmOptions,
   request: LlmRequest,
@@ -155,7 +250,11 @@ export function serverLlm(options: ServerLlmOptions = {}): StreamingLlm {
   // Only built when it is the path actually taken.
   let remote: Llm | undefined;
   const oneShot = (request: LlmRequest): Promise<LlmResponse> => {
-    remote ??= createRemoteLlm({ api: options.endpoint ?? '/_janux/llm', headers: options.headers });
+    remote ??= createRemoteLlm({
+      api: options.endpoint ?? '/_janux/llm',
+      headers: options.headers,
+      fetch: fetchOrFailure as typeof fetch,
+    });
 
     return remote(request);
   };

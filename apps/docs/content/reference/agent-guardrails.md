@@ -30,6 +30,21 @@ interface TurnContext {
 
 `runProcessors(processors, turn)` runs them **in order and short-circuits**: the first processor that returns an `aborted` turn stops the chain, so a blocking guard is never undone by a later step. Order matters — normalize before you classify, filter before you budget.
 
+## The refusal, and refusalMessage
+
+When the chain aborts, the agent answers `{ type: 'refusal', reason, message }` without ever calling the model. `reason` is the processor's typed code (`prompt_injection`); `message` is the human-readable reply a UI can show as-is. Configure it next to the processors:
+
+```ts
+export default defineAgent({
+  harness: {
+    processors: [unicodeNormalizer(), injectionGuard(classify)],
+    refusalMessage: 'I can’t help with that. Ask me about your workspace instead.',
+  },
+});
+```
+
+`refusalMessage` is a string or a `(reason) => string` factory when different guards deserve different replies. Default: `"I can't help with that request."`.
+
 ## unicodeNormalizer()
 
 NFKC-normalizes text and strips zero-width and bidi control characters. Those are the classic smuggling vector: invisible codepoints that a model reads but a human reviewer never sees. Put it **first**, so every later processor sees the same text the model will.

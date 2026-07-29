@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ServerOptions } from '@janux/server';
-import type { JanuxConfig, JanuxOutput, NavigationConfig } from 'janux';
+import type { AgentsAuthConfig, JanuxConfig, JanuxOutput, McpAuthConfig, NavigationConfig } from 'janux';
 
 export type { JanuxOutput } from 'janux';
 
@@ -19,6 +19,9 @@ export interface JanuxAppConfig {
   middlewareModule?: string;
   ctxModule?: string;
   matchersModule?: string;
+  websocketModule?: string;
+  mcpAuth?: McpAuthConfig;
+  agents?: AgentsAuthConfig;
   httpHandlersDir?: string;
   stylesheet?: string;
   favicon?: string;
@@ -71,6 +74,9 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     middlewareModule: optional(resolve(root, 'src/middleware.ts')),
     ctxModule: optional(resolve(root, 'src/ctx.ts')),
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
+    websocketModule: options.websocket ? resolve(root, options.websocket) : optional(resolve(root, 'src/ws.ts')),
+    mcpAuth: options.mcpAuth,
+    agents: options.agents,
     httpHandlersDir: optional(resolve(root, 'src/api')),
     stylesheet: optional(resolve(root, 'src/styles.css')),
     favicon: optional(resolve(root, 'public/favicon.svg')) ? '/favicon.svg' : undefined,
@@ -103,6 +109,30 @@ export function shellOptions(
     favicon: app.favicon,
     stylesheets,
     navigation: app.navigation,
+  };
+}
+
+/**
+ * `mcpAuth` in janux.config.ts → the bearer verifier `ServerOptions` takes.
+ * The env var (`tokenEnv`) is read here, at boot, and wins over the literal
+ * `token`; declaring neither leaves the endpoint open, exactly as before.
+ */
+export function mcpAuthOptions(config: McpAuthConfig | undefined): ServerOptions['mcpAuth'] {
+  const fromEnv = config?.tokenEnv ? process.env[config.tokenEnv] : undefined;
+  const token = fromEnv ?? config?.token;
+
+  // Declaring tokenEnv is a statement that the endpoint is protected: a missing
+  // secret must stop the boot, never quietly serve every tool to anyone.
+  if (config?.tokenEnv && !fromEnv && !config.token) {
+    throw new Error(
+      `Janux: mcpAuth.tokenEnv "${config.tokenEnv}" is not set — refusing to serve /_janux/mcp unauthenticated`,
+    );
+  }
+  if (!token) return undefined;
+
+  return {
+    verify: (candidate) => (candidate === token ? { method: 'bearer' } : null),
+    resourceMetadataUrl: config?.resourceMetadataUrl,
   };
 }
 

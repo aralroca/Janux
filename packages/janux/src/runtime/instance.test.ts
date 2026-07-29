@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test';
 import { component, intent, effect, source, store, onEvent } from '../define/factories';
-import { int, list, schema, str } from '../schema';
+import { bool, int, list, schema, str } from '../schema';
 import { createBus } from './bus';
 import { createInstance } from './instance';
 import type { Proposal } from './intents';
@@ -284,6 +284,45 @@ describe('instance: sources, effects, settled', () => {
     await shop.dispose();
   });
 
+  /**
+   * A refresh must not make the view look empty: `pending` means "nothing to
+   * show yet", so once a source holds a value it stays false and `refreshing`
+   * carries the in-flight signal. Otherwise the natural
+   * `pending ? spinner : table` collapses the table on every event refresh —
+   * a full layout shift for data that is already on screen.
+   */
+  it('a refresh keeps pending false and reports refreshing instead', async () => {
+    const bus = createBus();
+    const gates: ((rows: string[]) => void)[] = [];
+    const shop = createInstance(
+      catalogDef(() => new Promise<string[]>((resolve) => gates.push(resolve))),
+      { bus },
+    );
+    const tick = () => new Promise((resolve) => setTimeout(resolve));
+    const attached = shop.attach();
+
+    await tick();
+    expect(shop.sources.catalog.pending).toBe(true);
+    expect(shop.sources.catalog.refreshing).toBe(true);
+    gates[0]!(['p1']);
+    await attached;
+    await shop.settled();
+    expect(shop.sources.catalog.pending).toBe(false);
+
+    bus.emit('inventory.changed', {});
+    await tick();
+    // Mid-refresh: the old rows are still readable and the view still renders.
+    expect(shop.sources.catalog.pending).toBe(false);
+    expect(shop.sources.catalog.refreshing).toBe(true);
+    expect(shop.sources.catalog.value).toEqual(['p1']);
+
+    gates[1]!(['p1', 'p2']);
+    await shop.settled();
+    expect(shop.sources.catalog.refreshing).toBe(false);
+    expect(shop.sources.catalog.value).toEqual(['p1', 'p2']);
+    await shop.dispose();
+  });
+
   it('re-queries sources when a refresh event fires', async () => {
     const bus = createBus();
     const query = mock(async () => 'data');
@@ -384,5 +423,61 @@ describe('instance: events and stores', () => {
     expect(resource.state.items).toEqual([{ id: 'a', qty: 2 }]);
     expect(resource.derived.count).toBe(2);
     expect(resource.sync).toBe('idle');
+  });
+});
+
+describe('instance: coerce form intents', () => {
+  const signupDef = () =>
+    component({
+      name: 'signup',
+      state: schema({ attendees: int().default(0), optIn: bool().default(false) }),
+      intents: {
+        submit: intent({
+          input: schema({ attendees: int().min(1), optIn: bool().default(false) }),
+          coerce: 'form',
+          run: ({ state, input }) => {
+            state.attendees = input.attendees;
+            state.optIn = input.optIn;
+          },
+        }),
+        strict: intent({
+          input: schema({ attendees: int().min(1) }),
+          run: ({ state, input }) => (state.attendees = input.attendees),
+        }),
+      },
+      view: noopView,
+    });
+
+  it('coerces FormData strings before validating against the typed schema', async () => {
+    const signup = createInstance(signupDef());
+
+    await signup.intents.submit!({ attendees: '3', optIn: 'on' });
+    expect(signup.snapshot()).toEqual({ attendees: 3, optIn: true });
+  });
+
+  it('treats an absent checkbox as false', async () => {
+    const signup = createInstance(signupDef());
+
+    await signup.intents.submit!({ attendees: '2' });
+    expect(signup.snapshot()).toEqual({ attendees: 2, optIn: false });
+  });
+
+  it('accepts already-typed input on the same intent (agent JSON)', async () => {
+    const signup = createInstance(signupDef());
+
+    await signup.intents.submit!({ attendees: 4, optIn: true }, { origin: 'agent' });
+    expect(signup.snapshot()).toEqual({ attendees: 4, optIn: true });
+  });
+
+  it('a blank numeric field stays invalid_input, not zero', async () => {
+    const signup = createInstance(signupDef());
+
+    await expect(signup.intents.submit!({ attendees: '' })).rejects.toThrow(/attendees: expected int/);
+  });
+
+  it('without coerce, form strings are rejected as ever (regression)', async () => {
+    const signup = createInstance(signupDef());
+
+    await expect(signup.intents.strict!({ attendees: '3' })).rejects.toThrow(/attendees: expected int/);
   });
 });

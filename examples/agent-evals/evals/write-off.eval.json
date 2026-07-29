@@ -1,0 +1,27 @@
+{
+  "name": "confirm-guarded write-off: proposal, human approval, consumed proposal",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.stock.discard",
+      "input": { "sku": "TSHIRT", "qty": 15, "reason": "water damage" },
+      "expect": { "result": { "status": "proposal", "tool": "stock.discard" } }
+    },
+    {
+      "tool": "api.stock.levels",
+      "expect": { "result": { "items": [{ "sku": "TSHIRT", "stock": 40 }] } }
+    },
+    {
+      "approve": "$steps[0].result.id",
+      "expect": { "result": { "sku": "TSHIRT", "discarded": 15, "stock": 25 } }
+    },
+    {
+      "tool": "api.stock.levels",
+      "expect": { "result": { "items": [{ "sku": "TSHIRT", "stock": 25 }] } }
+    },
+    {
+      "approve": "$steps[0].result.id",
+      "expect": { "ok": false, "status": 404 }
+    }
+  ]
+}

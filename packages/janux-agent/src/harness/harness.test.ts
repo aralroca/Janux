@@ -123,6 +123,16 @@ describe('durable workflows (suspend/resume + snapshots)', () => {
     expect(await storage.loadSnapshot(first.runId)).toBeUndefined();
   });
 
+  it('run ids carry a random component, never a guessable per-process sequence', async () => {
+    const storage = createMemoryStorage();
+    const runner = createWorkflowRunner(storage);
+    const first = await runner.start(interview, {});
+    const second = await runner.start(interview, {});
+
+    expect(first.runId).not.toBe(second.runId);
+    expect(first.runId).toMatch(/^run_interview_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  });
+
   it('rejects resumes of unknown runs and mismatched workflows', async () => {
     const storage = createMemoryStorage();
     const runner = createWorkflowRunner(storage);

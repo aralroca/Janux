@@ -57,7 +57,17 @@ async function invokeMarker(marker: string, root: Element, mount: MountContext, 
 }
 
 function formInput(form: HTMLFormElement): Record<string, unknown> {
-  return Object.fromEntries(new FormData(form).entries());
+  const data = new FormData(form);
+
+  // getAll: repeated names (multi-select, checkbox groups) must arrive as a
+  // list — fromEntries would keep only the last value.
+  return Object.fromEntries(
+    [...new Set(data.keys())].map((key) => {
+      const values = data.getAll(key);
+
+      return [key, values.length > 1 ? values : values[0]];
+    }),
+  );
 }
 
 type Track = (work: Promise<unknown>) => void;

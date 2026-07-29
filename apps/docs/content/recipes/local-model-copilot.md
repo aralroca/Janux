@@ -15,9 +15,9 @@ bun add @browser-ai/transformers-js @huggingface/transformers
 ## Wire it
 
 ```ts
-import { createCopilot, localLlm, serverLlm, supportsLocalLlm } from '@janux/agent/local';
+import { createCopilot, localLlm, probeLocalLlm, serverLlm } from '@janux/agent/local';
 
-const llm = supportsLocalLlm() ? localLlm() : serverLlm();
+const llm = (await probeLocalLlm()) ? localLlm() : serverLlm();
 
 // Optional, but recommended: download with consent + progress before the first question.
 await llm.load?.({ onProgress: (fraction) => render(fraction) });
@@ -87,10 +87,10 @@ The model downloads once and lands in the browser cache. Small models can't memo
 
 ## Local ↔ server, symmetric
 
-`serverLlm()` posts each turn to the built-in `/_janux/llm` mount — a stateless one-turn proxy that resolves the model exactly like [`defineAgent()`](/docs/guide/agent-and-copilot) (`JANUX_MODEL` / provider API keys). Tools still execute in the page. Typical policy:
+`serverLlm()` posts each turn to the built-in `/_janux/llm` mount — a stateless one-turn proxy that resolves the model exactly like [`defineAgent()`](/docs/guide/agent-and-copilot) (`JANUX_MODEL` / provider API keys). Tools still execute in the page. When the mount refuses (no model configured, rate limited), the error carries the mount's own message in both modes, streaming or not — show it in the chat and the setup card explains itself. Typical policy:
 
 ```ts
-const llm = supportsLocalLlm() ? localLlm() : serverLlm();
+const llm = (await probeLocalLlm()) ? localLlm() : serverLlm();
 ```
 
 On a static deploy there is no `/_janux/llm`, so the local model isn't a nice-to-have there — it's the only brain available.
@@ -121,9 +121,27 @@ It works with any `Llm`: with `localLlm()` (or a `serverLlm()` without `stream`)
 
 `for await` over a `ReadableStream` is not in every engine yet (Safari); `stream.getReader()` in a `while` loop is the portable form, and it is what this site's Ask AI uses.
 
+## Test a turn without a GPU
+
+`localLlm({ provider })` swaps the model factory — the same interface as `@browser-ai/transformers-js` — so a test can script a whole local turn (tool call included) with no WebGPU and no download. The stub's model is a plain AI SDK model:
+
+```ts
+import { localLlm, type LocalLlmProvider } from '@janux/agent/local';
+
+const provider: LocalLlmProvider = {
+  transformersJS: () => ({
+    createSessionWithProgress: async (onProgress) => onProgress(1),
+    // ...an AI SDK LanguageModel: `doGenerate` answering your script.
+  }),
+};
+const llm = localLlm({ provider });
+```
+
+This is how the `with-local-llm` example's e2e runs a real local turn in headless CI: the page injects a scripted provider, presses the real "Load model" button and watches the model's `tasks_add` tool call land on the task list.
+
 ## Requirements & gotchas
 
-- **WebGPU**: enabled by default in current Chrome, Edge, Firefox and Safari 26; `supportsLocalLlm()` feature-detects it.
+- **WebGPU**: enabled by default in current Chrome, Edge, Firefox and Safari 26. `supportsLocalLlm()` is the sync fast-path (`navigator.gpu` exists); `probeLocalLlm()` asks for a real adapter — headless browsers expose `navigator.gpu` with none — with a short timeout and a cached verdict. Gate the default brain on the probe.
 - **Consent**: never start a ~0.5 GB download silently — gate it behind a click, like this site's Ask AI does.
 - **Off the main thread**: pass `localLlm({ worker })` a worker module wired to `TransformersJSWorkerHandler` from `@browser-ai/transformers-js` to keep the page smooth during generation.
 - **Lazy by construction**: `import('@janux/agent/local')` from your copilot UI instead of importing it statically — the agent runtime then loads only when the panel is first used (this site does exactly that), and the model weights only after `load()`. Dynamic imports are cached, so it all happens once.

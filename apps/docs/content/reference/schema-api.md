@@ -26,7 +26,27 @@ str().nullable()          // null allowed; JSON Schema type becomes ['string','n
 int().optional()          // may be missing
 int().default(1)          // applied when missing; also removes it from `required`
 int().min(1).max(99)      // value bounds (length bounds for strings)
+str().options(({ state }) => state.drafts.map((d) => d.id))  // values accepted right now
 ```
+
+### options(resolve)
+
+The values a field accepts **right now**, resolved against the live instance when the [manifest](/docs/reference/core-api#buildmanifestentries-ctx) is built — the value-level twin of an intent's `ready`.
+
+```ts
+send: intent({
+  guard: 'confirm',
+  input: schema({ id: str().default('pay_acme').options(({ state }) => pendingIds(state)) }),
+  run: ({ state, input }) => pay(state, input.id),
+});
+// manifest: { type: 'string', default: 'pay_acme', enum: ['pay_lumen'] }
+```
+
+An agent reading the manifest sees the ids that still exist instead of guessing one that already went out. Notes:
+
+- **Advisory, not validation.** The enum only rides the published JSON Schema; `validate` is unchanged, so a list that goes stale never rejects a caller — your `run()` stays the authority on what is possible.
+- Resolved **per instance**: with no instance (a schema-only projection via `toJsonSchema`), an empty list, or a resolver that throws, the published schema is left exactly as declared.
+- Keep a `.default()` too: it is what the tool means in general, the enum is what it takes today.
 
 ## validate(type, value)
 
@@ -40,6 +60,21 @@ const result = validate(cartSchema, input);
 - Error paths are precise: `items[0].qty: below min 1`.
 
 The framework calls this for you on every intent input, api input/output and event payload. You call it directly only for custom validation flows.
+
+## coerceForm(value, type)
+
+The pre-processing behind an intent's [`coerce: 'form'`](/docs/reference/core-api): converts the strings FormData submits into what a typed schema means, without validating.
+
+```ts
+coerceForm({ attendees: '3', optIn: 'on' }, schema({ attendees: int(), optIn: bool() }));
+// { attendees: 3, optIn: true }
+```
+
+- `int()` / `num()` / `money()` — parsed with `Number`; a blank or non-numeric string is left alone (so `validate` still rejects it), and `money()` is never scaled.
+- `bool()` — checkbox semantics: `'on'`/`'true'` → `true`, absent → `false`.
+- `str()` / `enums()` and already-typed values — untouched.
+
+You call it directly only when converting form drafts yourself (say, live per-field validation before submit); intents with `coerce: 'form'` run it for you before `validate`.
 
 ## buildDefault(type)
 
@@ -63,7 +98,7 @@ function field(name: string, type: JxType) {
 field('email', str().min(3));
 ```
 
-It's **immutable**: `.optional()`, `.nullable()` and `.default(v)` return a *new* `JxType` with the extra flag, which is why a shared base type can be reused without a modifier on one field leaking into another.
+It's **immutable**: `.optional()`, `.nullable()`, `.default(v)` and `.options(fn)` return a *new* `JxType` with the extra flag, which is why a shared base type can be reused without a modifier on one field leaking into another.
 
 ```ts
 const id = str();

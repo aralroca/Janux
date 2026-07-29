@@ -19,10 +19,15 @@ function createOne(
 ) {
   const value = signal<unknown>(initial?.value);
   const pending = signal(initial === undefined);
+  const refreshing = signal(initial === undefined);
   const error = signal<unknown>(null);
 
   const load = async (): Promise<void> => {
-    pending.value = true;
+    refreshing.value = true;
+    // `pending` means "nothing to show yet", so a refresh over existing data
+    // leaves it false: `pending ? spinner : rows` must not blank a table the
+    // user is already looking at. `refreshing` is the in-flight signal.
+    if (value.value === undefined) pending.value = true;
     await tracker.track(
       Promise.resolve()
         .then(() => def.query({ ctx }))
@@ -35,6 +40,7 @@ function createOne(
         })
         .finally(() => {
           pending.value = false;
+          refreshing.value = false;
         }),
     );
   };
@@ -57,6 +63,9 @@ function createOne(
     },
     get pending() {
       return pending.value;
+    },
+    get refreshing() {
+      return refreshing.value;
     },
     get error() {
       return error.value;

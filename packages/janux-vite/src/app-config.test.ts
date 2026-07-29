@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveAppConfig } from './app-config';
+import { mcpAuthOptions, resolveAppConfig } from './app-config';
 
 function app(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), 'janux-app-'));
@@ -83,5 +83,78 @@ describe('resolveAppConfig src/ctx.ts', () => {
     const root = app({ 'package.json': '{"name":"x"}' });
 
     expect((await resolveAppConfig(root)).ctxModule).toBeUndefined();
+  });
+});
+
+describe('resolveAppConfig websocket module', () => {
+  it('resolves src/ws.ts by convention', async () => {
+    const root = app({});
+
+    mkdirSync(join(root, 'src'), { recursive: true });
+    writeFileSync(join(root, 'src/ws.ts'), 'export default { path: "/ws" };');
+
+    expect((await resolveAppConfig(root)).websocketModule).toBe(join(root, 'src/ws.ts'));
+  });
+
+  it('lets the config point somewhere else', async () => {
+    const root = app({ 'janux.config.ts': `export default { websocket: 'src/live.ts' };` });
+
+    expect((await resolveAppConfig(root)).websocketModule).toBe(join(root, 'src/live.ts'));
+  });
+
+  it('is undefined without the file', async () => {
+    expect((await resolveAppConfig(app({}))).websocketModule).toBeUndefined();
+  });
+});
+
+describe('resolveAppConfig mcpAuth and agents', () => {
+  it('passes both through from the config file', async () => {
+    const root = app({
+      'janux.config.ts': `export default {
+        mcpAuth: { token: 'demo', resourceMetadataUrl: 'https://x/meta' },
+        agents: { webBotAuth: { keys: [] }, policy: 'require' },
+      };`,
+    });
+    const config = await resolveAppConfig(root);
+
+    expect(config.mcpAuth).toEqual({ token: 'demo', resourceMetadataUrl: 'https://x/meta' });
+    expect(config.agents).toEqual({ webBotAuth: { keys: [] }, policy: 'require' });
+  });
+});
+
+describe('mcpAuthOptions', () => {
+  it('maps a literal token to a bearer verifier', () => {
+    const auth = mcpAuthOptions({ token: 'demo' })!;
+
+    expect(auth.verify('demo', new Request('http://x'))).toBeTruthy();
+    expect(auth.verify('wrong', new Request('http://x'))).toBeNull();
+  });
+
+  it('prefers the env var over the literal and remembers the metadata url', () => {
+    process.env.JANUX_TEST_MCP_TOKEN = 'from-env';
+    const auth = mcpAuthOptions({ tokenEnv: 'JANUX_TEST_MCP_TOKEN', token: 'demo', resourceMetadataUrl: 'https://x/meta' })!;
+
+    expect(auth.verify('from-env', new Request('http://x'))).toBeTruthy();
+    expect(auth.verify('demo', new Request('http://x'))).toBeNull();
+    expect(auth.resourceMetadataUrl).toBe('https://x/meta');
+    delete process.env.JANUX_TEST_MCP_TOKEN;
+  });
+
+  it('falls back to the literal when the env var is unset', () => {
+    expect(mcpAuthOptions({ tokenEnv: 'JANUX_TEST_MCP_UNSET', token: 'demo' })!.verify('demo', new Request('http://x'))).toBeTruthy();
+  });
+
+  it('is off entirely when no protection was declared', () => {
+    expect(mcpAuthOptions(undefined)).toBeUndefined();
+    expect(mcpAuthOptions({})).toBeUndefined();
+  });
+
+  /**
+   * Declaring `tokenEnv` states the endpoint is protected. Serving it open
+   * because a secret is missing from the deploy inverts that intent silently —
+   * every api() tool would answer any anonymous MCP client.
+   */
+  it('refuses to boot when the declared tokenEnv is missing, instead of failing open', () => {
+    expect(() => mcpAuthOptions({ tokenEnv: 'JANUX_TEST_MCP_UNSET' })).toThrow(/JANUX_TEST_MCP_UNSET/);
   });
 });
