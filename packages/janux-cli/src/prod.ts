@@ -42,6 +42,18 @@ async function builtStyles(root: string, app: { inlineStyles?: boolean }): Promi
   return (await sheet.exists()) ? [await sheet.text()] : undefined;
 }
 
+/**
+ * The island catalog the client build emitted (see @janux/vite `islands.json`).
+ * A page whose only islands sit behind suspense boundaries has an empty SSR
+ * registry when the streaming interlude flushes — without this map the shell
+ * gates the runtime on that registry and the page never boots.
+ */
+async function builtIslandModules(root: string): Promise<Record<string, string> | undefined> {
+  const catalog = Bun.file(join(root, 'dist/client/islands.json'));
+
+  return (await catalog.exists()) ? await catalog.json() : undefined;
+}
+
 type Loader = (file: string) => Promise<Record<string, unknown>>;
 
 /** A prebuilt app looks its modules up; everything else imports them. */
@@ -82,6 +94,7 @@ export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): P
     agent: agentModule?.default ?? defineAgent(),
     storeDefs: storesModule ?? {},
     runtimeUrl: existsSync(join(root, 'dist/client/client.js')) ? '/client.js' : undefined,
+    islandModules: await builtIslandModules(root),
     ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : []),
     inlineStyles,
     llmsTxt: app.llmsTxt,

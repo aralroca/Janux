@@ -9,6 +9,7 @@ import { packageDir, runtimeIncludes } from './deps';
 import { mimeFor, resolvePublicFile } from './static-files';
 import { apiFiles, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
+import { collectIslands } from './islands';
 import { sendFetchResponse, toFetchRequest } from './request-adapter';
 
 const SSR_PACKAGES = ['janux', '@janux/server', '@janux/agent'];
@@ -95,11 +96,15 @@ const FOREIGN_PACKAGES = ['react', 'react-dom', 'react-dom/client'];
 export function janux(options: JanuxPluginOptions = {}): Plugin {
   /** Where the app keeps its `*.api.ts` modules, learned in `config`. */
   let serverDir = '';
+  /** Island defs met while bundling the client graph — the build's catalog, see islands.ts. */
+  const islandCatalog: Record<string, string> = {};
+  let bundling = false;
 
   return {
     name: 'janux',
 
-    async config(config) {
+    async config(config, env) {
+      bundling = env.command === 'build';
       const root = resolve(config.root ?? process.cwd());
       const app = await resolveAppConfig(root, options);
       const { clientEntry } = app;
@@ -137,10 +142,17 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
      * `languages.register is not a function`.
      */
     transform(code, id, transformOptions) {
+      if (bundling && !transformOptions?.ssr) collectIslands(islandCatalog, id, code);
       if (!id.startsWith(serverDir) || !/\.api\.[tj]s($|\?)/.test(id)) return undefined;
       if (transformOptions?.ssr) return undefined;
 
       return { code: apiStubModule(id, code), map: null };
+    },
+
+    /** The island catalog, read back by `prodServerOptions` as `islandModules`. */
+    generateBundle() {
+      if (Object.keys(islandCatalog).length === 0) return;
+      this.emitFile({ type: 'asset', fileName: 'islands.json', source: JSON.stringify(islandCatalog) });
     },
 
     configureServer(vite) {
