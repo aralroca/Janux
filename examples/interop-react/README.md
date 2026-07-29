@@ -9,5 +9,5 @@ A plain React component (`Mixer.tsx`, hooks and all) mounted **unchanged** insid
 
 ```bash
 bun install
-bun run dev   # http://localhost:3000
+bun run dev   # http://localhost:4321
 ```

@@ -10,5 +10,5 @@ Internationalized site in three locales (`en`, `es`, `fr`):
 
 ```bash
 bun install
-bun run dev   # http://localhost:3000
+bun run dev   # http://localhost:4321
 ```

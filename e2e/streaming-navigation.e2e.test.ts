@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { chromium, type Browser, type Page } from 'playwright';
+import { type Browser, type Page } from 'playwright';
 import { createJanuxServer } from '../packages/janux-server/src/index';
 import { prodServerOptions } from '../packages/janux-cli/src/prod';
 import { staticResponse } from '../packages/janux-cli/src/static-assets';
+import { TIMEOUT, appRoot, isBuilt, launchChrome } from './support/app';
 
 /**
  * Navigation in a real browser, against the real docs app.
@@ -15,10 +15,8 @@ import { staticResponse } from '../packages/janux-cli/src/static-assets';
  * verified in an engine. Chrome is the engine that has both.
  */
 
-const APP_ROOT = join(import.meta.dir, '../apps/docs');
-const BUILT = existsSync(join(APP_ROOT, 'dist/client'));
-const PORT = 4398;
-const BASE = `http://localhost:${PORT}`;
+const APP_ROOT = appRoot('apps/docs');
+const BUILT = isBuilt('apps/docs');
 const FIRST = '/docs/getting-started/what-is-janux';
 const SECOND = '/docs/getting-started/quick-start';
 const THIRD = '/docs/getting-started/mental-model';
@@ -38,8 +36,8 @@ let browser: Browser | undefined;
  * leave the heading itself pending.
  */
 const CHUNK_PAUSE_MS = 2_500;
-/** Launching Chrome and driving real navigations does not fit bun's 5s default. */
-const TIMEOUT = 60_000;
+
+let BASE = '';
 
 function slowProxy(app: ReturnType<typeof createJanuxServer>) {
   // The client bundle lives on disk, like `janux start` serves it — without it
@@ -77,10 +75,11 @@ beforeAll(async () => {
   if (!BUILT) return;
   const app = createJanuxServer(await prodServerOptions(APP_ROOT));
 
-  server = Bun.serve({ port: PORT, fetch: slowProxy(app) });
+  server = Bun.serve({ port: 0, fetch: slowProxy(app) });
+  BASE = `http://localhost:${server.port}`;
   // Chrome proper, not the bundled Chromium: the Navigation API and speculation
   // rules are what this suite exercises, and it is the engine that ships both.
-  browser = await chromium.launch({ channel: 'chrome' });
+  browser = await launchChrome();
 });
 
 afterAll(async () => {

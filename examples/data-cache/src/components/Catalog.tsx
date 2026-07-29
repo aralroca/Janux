@@ -34,7 +34,9 @@ export const Catalog = component({
     followUrl: effect({
       description: 'Mirrors the ?tag= param into state',
       when: (state: any) => tagParam(state).value.value,
-      run: ({ state }: any) => (state.tag = tagParam(state).value.value),
+      run: ({ state }: any) => {
+        state.tag = tagParam(state).value.value;
+      },
     }),
   },
   intents: {
@@ -53,7 +55,7 @@ export const Catalog = component({
       queryKey: ['products', state.tag],
       queryFn: () => listProducts({ tag: state.tag }),
     }));
-    const items = q.data.value ?? [];
+    const items = (q.data.value ?? []) as any[];
 
     return (
       <section class="catalog">

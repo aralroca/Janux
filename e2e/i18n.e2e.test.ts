@@ -1,18 +1,12 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
-import { join } from 'node:path';
-import { createJanuxServer } from '../packages/janux-server/src/index';
-import { prodServerOptions } from '../packages/janux-cli/src/prod';
+import { ssrApp } from './support/app';
 
-const APP_ROOT = join(import.meta.dir, '../examples/i18n');
-
-let server: ReturnType<typeof createJanuxServer>;
+let server: Awaited<ReturnType<typeof ssrApp>>['server'];
+let get: Awaited<ReturnType<typeof ssrApp>>['get'];
 
 beforeAll(async () => {
-  server = createJanuxServer(await prodServerOptions(APP_ROOT));
+  ({ server, get } = await ssrApp('examples/i18n'));
 });
-
-const get = (path: string, headers: Record<string, string> = {}) =>
-  server.fetch(new Request(`http://test${path}`, { headers }));
 
 describe('examples/i18n end to end', () => {
   it('redirects the bare root to the detected locale', async () => {

@@ -31,6 +31,9 @@ describe('create-janux', () => {
     expect(existsSync(join(cwd, 'my-shop', 'src/routes/index.tsx'))).toBe(true);
     expect(existsSync(join(cwd, 'my-shop', 'dist'))).toBe(false);
     expect(existsSync(join(cwd, 'my-shop', 'node_modules'))).toBe(false);
+    expect(existsSync(join(cwd, 'my-shop', '.janux'))).toBe(false);
+    // The closing hint must advertise the port the copied dev script pins.
+    expect(result.stdout.toString()).toContain('localhost:4321/_janux/manifest');
     rmSync(cwd, { recursive: true, force: true });
   });
 
