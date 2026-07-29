@@ -1,8 +1,10 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { bundleInputs, cssAssetName, devBanner, localeRedirectStub } from './commands';
+import { createJanuxServer } from '@janux/server';
+import { jsx } from 'janux';
+import { bundleInputs, cssAssetName, devBanner, localeRedirectStub, prerenderPages } from './commands';
 import { prodServerOptions } from './prod';
 
 /** Runs the stub's inline script with a fake navigator/location and returns the redirect target. */
@@ -59,6 +61,46 @@ describe('cssAssetName', () => {
     expect(cssAssetName('/app', undefined)({ names: ['styles.css'], originalFileNames: ['src/styles.css'] })).toBe(
       'assets/[name]-[hash][extname]',
     );
+  });
+});
+
+/**
+ * A running server projects every page as markdown at `<page>.md` (`/` → `/.md`,
+ * see the server's `.md` suffix handling). A pure static host has no server to
+ * project anything, so the build must emit those projections as files — before
+ * this, the agent-face URLs a static export advertises 404'd on any static host.
+ */
+describe('prerenderPages', () => {
+  const server = () =>
+    createJanuxServer({
+      routes: {
+        '/': () => jsx('h1', { children: 'home sweet home' }),
+        '/posts/hello': () => jsx('h1', { children: 'hello post' }),
+        '/tags/[tag]': () => jsx('h1', { children: 'a tag' }),
+      },
+    });
+
+  async function staticBuild(): Promise<string> {
+    const outDir = mkdtempSync(join(tmpdir(), 'janux-prerender-'));
+
+    await prerenderPages(server(), outDir);
+
+    return outDir;
+  }
+
+  it('prerenders one index.html per concrete page and skips patterns', async () => {
+    const outDir = await staticBuild();
+
+    expect(readFileSync(join(outDir, 'index.html'), 'utf8')).toContain('home sweet home');
+    expect(readFileSync(join(outDir, 'posts/hello/index.html'), 'utf8')).toContain('hello post');
+    expect(existsSync(join(outDir, 'tags'))).toBe(false);
+  });
+
+  it('emits the .md projection of every page at the URL the server answers', async () => {
+    const outDir = await staticBuild();
+
+    expect(readFileSync(join(outDir, 'posts/hello.md'), 'utf8')).toContain('# hello post');
+    expect(readFileSync(join(outDir, '.md'), 'utf8')).toContain('# home sweet home');
   });
 });
 

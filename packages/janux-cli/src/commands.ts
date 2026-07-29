@@ -113,12 +113,22 @@ export async function build({ root }: CliCommand): Promise<void> {
   if (app.output === 'static') await prerenderStatic(root);
 }
 
-async function writePage(server: { fetch(req: Request): Promise<Response> }, outDir: string, page: string): Promise<void> {
+type PageServer = { fetch(req: Request): Promise<Response>; listPages(): Promise<string[]> };
+
+async function writePage(server: PageServer, outDir: string, page: string): Promise<void> {
   const response = await server.fetch(new Request(`http://localhost${page}`));
   const dir = join(outDir, page.slice(1));
 
   mkdirSync(dir, { recursive: true });
   await Bun.write(join(dir, 'index.html'), await response.text());
+  await writePageMarkdown(server, outDir, page);
+}
+
+/** The page's `.md` projection, at the URL a running server answers: `/posts/x` → `posts/x.md`, `/` → `.md`. */
+async function writePageMarkdown(server: PageServer, outDir: string, page: string): Promise<void> {
+  const response = await server.fetch(new Request(`http://localhost${page}.md`));
+
+  if (response.status === 200) await Bun.write(join(outDir, `${page.slice(1)}.md`), await response.text());
 }
 
 /** No-JS fallback is the meta refresh; with JS the stub matches the visitor's languages against the app's locales. */
@@ -137,20 +147,28 @@ export function localeRedirectStub(locales: string[], defaultLocale: string): st
   ].join('');
 }
 
-/** `output: "static"`: prerenders every concrete page (dynamic routes via `staticParams`) into dist/client. */
-async function prerenderStatic(root: string): Promise<void> {
-  const options = await prodServerOptions(root);
-  const server = createJanuxServer({ ...options, staticExport: true });
+/** Every concrete page (dynamic routes via `staticParams`) → `<page>/index.html` + `<page>.md` in outDir. */
+export async function prerenderPages(server: PageServer, outDir: string): Promise<number> {
   const pages = await server.listPages();
-  const outDir = join(root, 'dist/client');
   const concrete = pages.filter((page) => !page.includes('['));
   const skipped = pages.filter((page) => page.includes('['));
 
   skipped.forEach((page) => console.log(`janux build: skipped ${page} — dynamic route without staticParams.`));
   await Promise.all(concrete.map((page) => writePage(server, outDir, page)));
+
+  return concrete.length;
+}
+
+/** `output: "static"`: prerenders every concrete page into dist/client. */
+async function prerenderStatic(root: string): Promise<void> {
+  const options = await prodServerOptions(root);
+  const server = createJanuxServer({ ...options, staticExport: true });
+  const outDir = join(root, 'dist/client');
+  const count = await prerenderPages(server, outDir);
+
   await writeGeneratedFiles(server, outDir);
   if (options.i18n) await Bun.write(join(outDir, 'index.html'), localeRedirectStub(options.i18n.locales, options.i18n.defaultLocale));
-  console.log(`janux build: prerendered ${concrete.length} pages (output: static).`);
+  console.log(`janux build: prerendered ${count} pages (output: static).`);
 }
 
 /**

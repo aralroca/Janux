@@ -98,4 +98,12 @@ describe.skipIf(!isBuilt('examples/blog-static'))('examples/blog-static static b
     expect(existsSync(join(DIST, 'sitemap.xml'))).toBe(true);
     expect(existsSync(join(DIST, 'robots.txt'))).toBe(true);
   });
+
+  it('emits the .md projection of every page, at the URL a running server answers', () => {
+    const post = readFileSync(join(DIST, 'posts/agent-readable-pages.md'), 'utf8');
+
+    expect(post).toContain('## Three machine-readable views');
+    expect(readFileSync(join(DIST, '.md'), 'utf8')).toContain('Latest posts');
+    SLUGS.forEach((slug) => expect(existsSync(join(DIST, `posts/${slug}.md`))).toBe(true));
+  });
 });
