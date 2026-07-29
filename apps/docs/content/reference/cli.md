@@ -136,7 +136,7 @@ Everything is optional — the defaults are the [conventional layout](#project-c
 | Value | Meaning |
 |---|---|
 | `"bun"` (default) | `janux start` serves the app on a Bun server |
-| `"static"` | `janux build` also prerenders every page into `dist/client` (`/docs/x` → `docs/x/index.html` + `docs/x.md`, plus `llms.txt`) — deploy to any static host, no server. Dynamic routes need `staticParams` ([Route modules](/docs/reference/server-api)); those without it are skipped with a warning |
+| `"static"` | `janux build` also prerenders every page into `dist/client` (`/docs/x` → `docs/x/index.html` + `docs/x.md`, plus `llms.txt` and, from `_404.tsx`, `404.html`) — deploy to any static host, no server. Dynamic routes need `staticParams` ([Route modules](/docs/reference/server-api)); those without it are skipped with a warning |
 
 More output targets will come later. Full walkthrough: [Deploying → Static export](/docs/recipes/deploying).
 

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -23,6 +23,22 @@ describe('appModules', () => {
     const app = await resolveAppConfig(APP);
 
     expect(appModules(app)).toEqual([join(APP, 'src/routes/index.tsx'), join(APP, 'src/agent.ts')]);
+  });
+
+  /** No URL matches `_404`/`_500`, so the route list never names them — and a bundle without them has no error pages. */
+  it('includes the error pages', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-vercel-errors-'));
+
+    mkdirSync(join(root, 'src/routes'), { recursive: true });
+    ['index.tsx', '_404.tsx', '_500.tsx'].forEach((file) =>
+      writeFileSync(join(root, 'src/routes', file), 'export default () => null;'),
+    );
+
+    expect(appModules(await resolveAppConfig(root))).toEqual([
+      join(root, 'src/routes/index.tsx'),
+      join(root, 'src/routes/_404.tsx'),
+      join(root, 'src/routes/_500.tsx'),
+    ]);
   });
 });
 

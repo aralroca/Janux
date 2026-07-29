@@ -1,3 +1,4 @@
+import { notFound } from 'janux';
 import type { Story } from '../../data/stories';
 import { CommentThread } from '../../components/CommentTree';
 import { LiveScore } from '../../components/LiveScore';
@@ -6,8 +7,11 @@ import { getItem } from '../../server/hn.api';
 export const meta = async ({ params }: { params: { id: string } }) => {
   const story = (await getItem({ id: Number(params.id) })) as Story | null;
 
+  // No such story: the page calls notFound() and `_404.tsx` brings its own meta.
+  if (!story) return {};
+
   return {
-    title: story ? `${story.title} — Janux HN` : 'Janux HN — no such item',
+    title: `${story.title} — Janux HN`,
     description: 'One story with its server-rendered nested comment tree.',
   };
 };
@@ -16,16 +20,9 @@ export const meta = async ({ params }: { params: { id: string } }) => {
 export default async function ItemPage({ params }: { params: { id: string } }) {
   const story = (await getItem({ id: Number(params.id) })) as Story | null;
 
-  if (!story) {
-    return (
-      <main class="page item">
-        <h1>No such item</h1>
-        <p>
-          <a href="/">← back to the front page</a>
-        </p>
-      </main>
-    );
-  }
+  // `[id=integer]` only proves the shape of the segment; whether that story
+  // exists is a question only the data can answer — and 999 is a 404.
+  if (!story) notFound();
 
   return (
     <main class="page item">

@@ -1,5 +1,6 @@
 import {
   buildManifest,
+  isNotFoundError,
   renderToStream,
   renderToString,
   selectMessages,
@@ -143,6 +144,33 @@ async function resolveStaticParams(rawParams: unknown): Promise<Array<Record<str
 
 type RenderSummary = Omit<RenderResult, 'html'>;
 
+interface RenderablePage {
+  vnode: unknown;
+  meta?: PageMeta;
+}
+
+/**
+ * What a request answers with. No `page` means the app has nothing to render
+ * for it — a miss with no `_404` file — and the status line travels alone. It
+ * is a separate field on purpose: a page whose render is empty (`null`) is
+ * still a page, and still gets its document.
+ */
+interface ResolvedDocument {
+  status: number;
+  page?: RenderablePage;
+}
+
+type ErrorPageKind = 'notFound' | 'serverError';
+
+const ERROR_PAGE_STATUS: Record<ErrorPageKind, number> = { notFound: 404, serverError: 500 };
+/** The body an app with no `_404`/`_500` page answers with — the status line, in words. */
+const STATUS_TEXT: Record<number, string> = { 404: 'Not found', 500: 'Internal Server Error' };
+
+/** A page that threw is the app's bug, not the visitor's: it reaches the log even when `_500` swallows it. */
+function reportRenderFailure(error: unknown): void {
+  console.error('Janux: page render failed —', error);
+}
+
 /**
  * A render that fails after the first flush cannot change the status line
  * anymore, so the failure is reported in-page: `janux:error` for the app (the
@@ -212,6 +240,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
     ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers })
     : undefined;
   const loadRoute = options.loadRoute ?? ((filePath: string) => import(/* @vite-ignore */ filePath));
+  // Absent for an app with no routes dir (inline `routes`), which then has no
+  // error pages either and degrades to the bare status line.
+  const errorPages: Partial<Record<ErrorPageKind, string>> = router?.errorPages ?? {};
+  const rootLayouts = router?.rootLayouts ?? [];
   const proposals = new Map<string, PendingApiProposal>();
 
   const resolveCtx = async (req: Request): Promise<Ctx> => (await options.ctxFor?.(req)) ?? {};
@@ -312,25 +344,77 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return { vnode, meta };
   };
 
+  /**
+   * `_404` renders inside the app's root layout — a missing page is still a page
+   * of the site. `_500` renders on its own: the layout is code too, and code is
+   * what just failed.
+   */
+  const renderErrorPage = async (filePath: string, kind: ErrorPageKind, ctx: Ctx, error: unknown): Promise<ResolvedDocument> => {
+    const module = (await loadRoute(filePath)) as any;
+    const vnode = await module.default({ ctx, error });
+    const wrapped = kind === 'notFound' ? await applyLayouts(vnode, rootLayouts, ctx, {}) : vnode;
+
+    return {
+      status: ERROR_PAGE_STATUS[kind],
+      page: { vnode: wrapped, meta: await resolveMeta(module.meta, ctx, {}) },
+    };
+  };
+
+  /** No `_404`/`_500` file — or one that failed itself — degrades to the bare status line. */
+  const resolveErrorPage = async (kind: ErrorPageKind, ctx: Ctx, error?: unknown): Promise<ResolvedDocument> => {
+    const filePath = errorPages[kind];
+
+    if (!filePath) return { status: ERROR_PAGE_STATUS[kind] };
+
+    return renderErrorPage(filePath, kind, ctx, error).catch((failure) => {
+      console.error(`Janux: ${filePath} failed to render —`, failure);
+
+      return { status: ERROR_PAGE_STATUS[kind] };
+    });
+  };
+
+  /** The document a request answers with: the matched route, or the app's error page. */
+  const resolveDocument = async (pathname: string, ctx: Ctx): Promise<ResolvedDocument> => {
+    try {
+      const page = await resolvePage(pathname, ctx);
+
+      return page ? { status: 200, page } : await resolveErrorPage('notFound', ctx);
+    } catch (error) {
+      if (isNotFoundError(error)) return resolveErrorPage('notFound', ctx);
+      reportRenderFailure(error);
+
+      return resolveErrorPage('serverError', ctx, error);
+    }
+  };
+
   const renderOptions = (ctx: Ctx) => ({ ctx, storeDefs: options.storeDefs, foreignImport: options.foreignImport });
 
-  const renderPageStream = async (pathname: string, ctx: Ctx, extra?: Parameters<typeof renderToStream>[1]) => {
-    const page = await resolvePage(pathname, ctx);
+  const renderPageStream = (page: RenderablePage, ctx: Ctx, extra?: Parameters<typeof renderToStream>[1]) => ({
+    ...renderToStream(page.vnode, { ...renderOptions(ctx), ...extra }),
+    meta: page.meta,
+  });
 
-    return page && { ...renderToStream(page.vnode, { ...renderOptions(ctx), ...extra }), meta: page.meta };
+  /** For the buffered consumers, a page that called `notFound()` is not a failure: there is simply no page. */
+  const resolvePageOrNone = async (pathname: string, ctx: Ctx) => {
+    try {
+      return await resolvePage(pathname, ctx);
+    } catch (error) {
+      if (isNotFoundError(error)) return undefined;
+      throw error;
+    }
   };
 
   /** Buffered render for consumers that need the whole page at once (manifest, markdown projections). */
   const renderPage = async (pathname: string, ctx: Ctx) => {
-    const page = await resolvePage(pathname, ctx);
+    const page = await resolvePageOrNone(pathname, ctx);
 
     return page && { ...(await renderToString(page.vnode, renderOptions(ctx))), meta: page.meta };
   };
 
-  const manifestFor = async (pathname: string, ctx: Ctx): Promise<unknown> => {
-    const { locale, pathname: page } = localize(pathname);
-    // Unprefixed manifest paths resolve to the default locale — pages may assume ctx.i18n exists.
-    const result = await renderPage(page, localeCtx(ctx, locale ?? options.i18n?.defaultLocale));
+  type PageRender = Awaited<ReturnType<typeof renderPage>>;
+
+  /** The manifest of a rendered page — or, without one, of the app alone: same shape, no islands. */
+  const manifestOf = (result: PageRender, ctx: Ctx): unknown => {
     const entries = result
       ? [
           ...result.registry.islands.map(({ def, key, instance }) => ({ def, key, instance })),
@@ -340,12 +424,17 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const base = buildManifest(entries, ctx);
     // App-wide route map: the agent can target pages that are NOT mounted
     // (ui_navigate) — patterns only, params stay for the model to fill.
-    const routes = [
-      ...Object.keys(options.routes ?? {}),
-      ...(router?.routes.map((route) => route.pattern) ?? []),
-    ];
+    const routes = [...Object.keys(options.routes ?? {}), ...(router?.routes.map((route) => route.pattern) ?? [])];
 
     return { ...base, routes, tools: [...base.tools, ...apiManifestTools(apiTools, ctx)] };
+  };
+
+  const manifestFor = async (pathname: string, ctx: Ctx): Promise<unknown> => {
+    const { locale, pathname: page } = localize(pathname);
+    // Unprefixed manifest paths resolve to the default locale — pages may assume ctx.i18n exists.
+    const result = await renderPage(page, localeCtx(ctx, locale ?? options.i18n?.defaultLocale));
+
+    return manifestOf(result, ctx);
   };
 
   /** Agent + `confirm`: register a pending proposal for a human instead of running the tool. */
@@ -460,10 +549,19 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return { locale, dir: localeDir(locale), payload };
   };
 
-  /** Markdown projection of one page — `.md` suffix and content-MCP resources. */
+  /**
+   * Markdown projection of one page — `.md` suffix and content-MCP resources.
+   * A page that fails has no projection, and says so quietly: the document
+   * surface already answered that URL with `_500` and logged the failure.
+   */
   const readPageMarkdown = async (pathname: string, baseCtx: Ctx): Promise<string | undefined> => {
     const { locale, pathname: page } = localize(pathname);
-    const result = await renderPage(page, localeCtx(baseCtx, locale ?? options.i18n?.defaultLocale));
+    const ctx = localeCtx(baseCtx, locale ?? options.i18n?.defaultLocale);
+    const result = await renderPage(page, ctx).catch((error) => {
+      reportRenderFailure(error);
+
+      return undefined;
+    });
 
     if (!result) return undefined;
 
@@ -479,7 +577,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     auth: options.mcpAuth,
   });
 
-  const handlePage = async (req: Request, pathname: string): Promise<Response> => {
+  const handlePage = async (req: Request, pathname: string, kind?: ErrorPageKind): Promise<Response> => {
     const { locale, pathname: page } = localize(pathname);
     /*
      * A client navigation is being diffed into a document that already has the
@@ -506,7 +604,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
      */
     const interludeUris = new Set<string>();
     let interludeSent = false;
-    const rendered = await renderPageStream(page, ctx, {
+    const document = kind ? await resolveErrorPage(kind, ctx) : await resolveDocument(page, ctx);
+
+    if (!document.page) return new Response(STATUS_TEXT[document.status], { status: document.status });
+    const rendered = renderPageStream(document.page, ctx, {
       onBeforeBoundaries: (summary) => {
         const shell = shellFor(summary);
 
@@ -521,7 +622,6 @@ export function createJanuxServer(options: ServerOptions = {}) {
       },
     });
 
-    if (!rendered) return new Response('Not found', { status: 404 });
     /*
      * The same options build both shell parts, in two moments: the prelude
      * before the body renders (nothing in it may depend on the render — title,
@@ -563,7 +663,19 @@ export function createJanuxServer(options: ServerOptions = {}) {
       rendered.cancel,
     );
 
-    return new Response(body, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+    return new Response(body, { status: document.status, headers: { 'content-type': 'text/html; charset=utf-8' } });
+  };
+
+  /**
+   * The `_404` page as a standalone document, for a host that has no server to
+   * ask: `output: "static"` writes it to `404.html`. Undefined when the app has
+   * no `_404` page — there is nothing to write.
+   */
+  const notFoundPage = async (): Promise<Response | undefined> => {
+    if (!errorPages.notFound) return undefined;
+    const base = options.i18n ? `/${options.i18n.defaultLocale}` : '/';
+
+    return handlePage(new Request(`http://localhost${base}`), base, 'notFound');
   };
 
   const fetch = async (req: Request): Promise<Response> => {
@@ -604,7 +716,18 @@ export function createJanuxServer(options: ServerOptions = {}) {
       });
     }
     if (pathname === '/_janux/manifest') {
-      return json(await manifestFor(url.searchParams.get('path') ?? '/', await resolveCtx(req)));
+      const ctx = await resolveCtx(req);
+
+      // The page may fail; this request must not fail with it. The client asks
+      // for the manifest of the page it just landed on — including a `_500` —
+      // and an escaping error would take the response down with it.
+      return json(
+        await manifestFor(url.searchParams.get('path') ?? '/', ctx).catch((error) => {
+          reportRenderFailure(error);
+
+          return manifestOf(undefined, ctx);
+        }),
+      );
     }
     if (pathname === '/_janux/mcp') return mcpEndpoint(req, await ctxWithAgent(req));
     if (pathname.endsWith('.md')) {
@@ -653,5 +776,5 @@ export function createJanuxServer(options: ServerOptions = {}) {
     drain: options.websocket?.drain,
   };
 
-  return { fetch, serve, websocket, apiTools, manifestFor, listPages };
+  return { fetch, serve, websocket, apiTools, manifestFor, listPages, notFoundPage };
 }

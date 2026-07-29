@@ -38,7 +38,7 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 | `onAudit` | `(entry: AuditEntry) => void` | Called for every api() dispatch: tool, origin, guard, ok, and the verified agent key |
 | `runtimeUrl`, `stylesheets`, `favicon`, `title`, `lang`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
 
-Returns `{ fetch(req): Promise<Response>, apiTools, manifestFor }` — mount `fetch` on Bun.serve, or anything Request/Response-shaped.
+Returns `{ fetch(req): Promise<Response>, apiTools, manifestFor, listPages, notFoundPage }` — mount `fetch` on Bun.serve, or anything Request/Response-shaped. `notFoundPage()` renders the app's `_404.tsx` as a standalone document (or `undefined` when the app has none), which is how `janux build` writes `404.html` for a static host.
 
 ## Route modules
 
@@ -53,6 +53,8 @@ export default async function Page({ ctx, params }) { ... }         // async sup
 ```
 
 `routes/index.tsx` → `/` · `routes/orders/[id].tsx` → `/orders/:id` (params decoded).
+
+`routes/_404.tsx` and `routes/_500.tsx` are pages no URL matches: the first answers an unmatched path (or a page that called `notFound()`) with a `404`, wrapped in the root `_layout`; the second answers a page that threw with a `500`, on its own. Both receive `{ ctx }`, `_500` also the thrown `error`. See [Navigation § Not found & server errors](/docs/guide/navigation).
 
 `staticParams` enumerates the concrete pages of a dynamic route: `llms.txt` lists `/orders/1`, `/orders/2` instead of the raw `/orders/[id]` pattern, and with `output: "static"` they become the prerendered pages. Without it, the pattern is listed as-is (and the route is skipped in static builds). See [Deploying → Static export](/docs/recipes/deploying).
 

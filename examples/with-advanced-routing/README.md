@@ -21,7 +21,10 @@ bun run dev   # http://localhost:4321
 ```txt
 src/routes
 ├── _layout.tsx               → root shell on every page (nav + NavCounter island)
+├── _404.tsx                  → no pattern matched → this page, with a 404 (inside the shell)
+├── _500.tsx                  → a page threw → this page, with a 500 (no shell: the layout is code too)
 ├── index.tsx                 → /
+├── boom.tsx                  → /boom — throws on purpose, so _500 has something to answer
 ├── (marketing)               → group: organizes files, invisible in the URL
 │   ├── _layout.tsx           → the group's banner sub-shell
 │   ├── about.tsx             → /about

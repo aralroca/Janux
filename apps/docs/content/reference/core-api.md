@@ -191,6 +191,25 @@ type Proposal   = { id: string; tool: string; input: unknown; execute: () => Pro
 
 `AuditEntry.agent` is the verified Web Bot Auth key id, present only for authenticated external agents. A `Proposal` is what a `confirm` guard produces; `execute()` runs it exactly once (the `/_janux/approve` endpoint calls it for you).
 
+### notFound() / isNotFoundError(error)
+
+`notFound()` ends a page's render and answers the request with the app's [`_404.tsx`](/docs/guide/navigation) page, under a `404`. It never returns (`never`), so the code after it is unreachable and TypeScript narrows accordingly:
+
+```tsx
+import { notFound } from 'janux';
+import { postBySlug } from '../../content';
+
+export default function PostPage({ params }: { params: { slug: string } }) {
+  const post = postBySlug(params.slug);
+
+  if (!post) notFound();
+
+  return <article>{post.title}</article>;
+}
+```
+
+Call it from the route module (or something it awaits): once the document starts streaming the status line is already sent. `isNotFoundError(error)` recognizes the signal, for a [custom server](/docs/recipes/custom-server) that wraps `server.fetch` and wants to answer a `notFound()` its own way.
+
 ### parseDuration(input)
 
 Parses the duration strings used by `every()` and `effect({ debounce })` into milliseconds — `'300ms'`, `'2s'`, `'5m'`, `'1h'`. Throws on anything else. Exposed mostly so custom refresh/debounce logic can share one parser.

@@ -113,7 +113,11 @@ export async function build({ root }: CliCommand): Promise<void> {
   if (app.output === 'static') await prerenderStatic(root);
 }
 
-type PageServer = { fetch(req: Request): Promise<Response>; listPages(): Promise<string[]> };
+type PageServer = {
+  fetch(req: Request): Promise<Response>;
+  listPages(): Promise<string[]>;
+  notFoundPage(): Promise<Response | undefined>;
+};
 
 async function writePage(server: PageServer, outDir: string, page: string): Promise<void> {
   const response = await server.fetch(new Request(`http://localhost${page}`));
@@ -147,7 +151,7 @@ export function localeRedirectStub(locales: string[], defaultLocale: string): st
   ].join('');
 }
 
-/** Every concrete page (dynamic routes via `staticParams`) → `<page>/index.html` + `<page>.md` in outDir. */
+/** Every concrete page (dynamic routes via `staticParams`) → `<page>/index.html` + `<page>.md` in outDir, plus `404.html`. */
 export async function prerenderPages(server: PageServer, outDir: string): Promise<number> {
   const pages = await server.listPages();
   const concrete = pages.filter((page) => !page.includes('['));
@@ -155,8 +159,16 @@ export async function prerenderPages(server: PageServer, outDir: string): Promis
 
   skipped.forEach((page) => console.log(`janux build: skipped ${page} — dynamic route without staticParams.`));
   await Promise.all(concrete.map((page) => writePage(server, outDir, page)));
+  await writeNotFound(server, outDir);
 
   return concrete.length;
+}
+
+/** `404.html`: the file every static host serves for a path it has nothing at. */
+async function writeNotFound(server: PageServer, outDir: string): Promise<void> {
+  const response = await server.notFoundPage();
+
+  if (response) await Bun.write(join(outDir, '404.html'), await response.text());
 }
 
 /** `output: "static"`: prerenders every concrete page into dist/client. */

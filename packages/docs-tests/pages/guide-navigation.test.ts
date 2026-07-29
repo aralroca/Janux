@@ -57,3 +57,36 @@ describe('guide/navigation.md', () => {
     expect(await serve({ speculationRules: false })).not.toContain('speculationrules');
   });
 });
+
+/** The § Not found & server errors table, one assertion per column. */
+describe('guide/navigation.md — _404 and _500', () => {
+  const app = createJanuxServer({ routesDir: `${import.meta.dir}/../__fixtures__/routes` });
+  const get = (path: string) => app.fetch(new Request(`http://test${path}`));
+
+  it('_404 answers an unmatched URL with a 404, inside the layout', async () => {
+    const response = await get('/nothing/here');
+    const html = await response.text();
+
+    expect(response.status).toBe(404);
+    expect(html).toContain('This page does not exist');
+    expect(html).toContain('class="app-shell"');
+  });
+
+  it('_404 also answers the page that called notFound()', async () => {
+    const missing = await get('/posts/nope');
+    const found = await get('/posts/hello');
+
+    expect(missing.status).toBe(404);
+    expect(await missing.text()).toContain('This page does not exist');
+    expect(found.status).toBe(200);
+  });
+
+  it('_500 answers a page that threw, with the error and without the layout', async () => {
+    const response = await get('/boom');
+    const html = await response.text();
+
+    expect(response.status).toBe(500);
+    expect(html).toContain('page exploded');
+    expect(html).not.toContain('app-shell');
+  });
+});

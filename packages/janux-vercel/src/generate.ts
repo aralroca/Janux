@@ -41,8 +41,12 @@ function walkFiles(dir: string): string[] {
 /** Every module the server imports on the way up: routes, layouts, apis, and the conventional singles. */
 export function appModules(app: JanuxAppConfig): string[] {
   // An app with no routes yet is a legitimate state for the command to run in.
-  const found = existsSync(app.routesDir) ? createFsRouter(app.routesDir).routes : [];
-  const routes = found.flatMap((route) => [route.filePath, ...route.layouts]);
+  const router = existsSync(app.routesDir) ? createFsRouter(app.routesDir) : undefined;
+  const found = router?.routes ?? [];
+  // `_404`/`_500` are pages no URL matches, so the route list never mentions
+  // them — and a bundled function that cannot import them has no error pages.
+  const errorPages = Object.values(router?.errorPages ?? {});
+  const routes = [...found.flatMap((route) => [route.filePath, ...route.layouts]), ...errorPages];
   const singles = [app.agentModule, app.storesModule, app.i18nModule, app.middlewareModule, app.ctxModule, app.matchersModule];
   const handlers = app.httpHandlersDir ? walkFiles(app.httpHandlersDir) : [];
 

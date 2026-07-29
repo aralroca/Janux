@@ -52,10 +52,13 @@ function parseSegment(raw: string): Segment {
   return matcher ? { raw, kind: 'typed', name, matcher } : { raw, kind: 'dynamic', name };
 }
 
-function layoutIn(dir: string): string | undefined {
-  const candidates = ['_layout.tsx', '_layout.jsx', '_layout.ts', '_layout.js'];
+/** `_layout`, `_404`, `_500`: the underscore files, in the extension order the router accepts. */
+function moduleIn(dir: string, base: string): string | undefined {
+  return ['.tsx', '.jsx', '.ts', '.js'].map((extension) => join(dir, `${base}${extension}`)).find(existsSync);
+}
 
-  return candidates.map((name) => join(dir, name)).find(existsSync);
+function layoutIn(dir: string): string | undefined {
+  return moduleIn(dir, '_layout');
 }
 
 interface RawRoute {
@@ -125,6 +128,7 @@ function compareRoutes(a: Route, b: Route): number {
  */
 export function createFsRouter(dir: string, customMatchers: Record<string, Matcher> = {}) {
   const matchers = { ...BUILTIN_MATCHERS, ...customMatchers };
+  const rootLayout = layoutIn(dir);
   const routes: Route[] = walk(dir)
     .map(({ filePath, urlSegments, layouts }) => ({
       pattern: `/${urlSegments.join('/')}`.replace(/\/+/g, '/'),
@@ -136,6 +140,10 @@ export function createFsRouter(dir: string, customMatchers: Record<string, Match
 
   return {
     routes,
+    /** The pages no URL matches: they answer a miss (`_404`) or a failed render (`_500`). */
+    errorPages: { notFound: moduleIn(dir, '_404'), serverError: moduleIn(dir, '_500') },
+    /** The chain `_404` renders inside — a missing page is still a page of the site. */
+    rootLayouts: rootLayout ? [rootLayout] : [],
     match(pathname: string): RouteMatch | undefined {
       const pathSegments = pathname.split('/').filter(Boolean);
 

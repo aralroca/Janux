@@ -51,6 +51,17 @@ describe('prefetch cache', () => {
     expect(consumePrefetched('/broken')).toBeUndefined();
   });
 
+  /** The `_404` page is a page: a warmed one must survive to be diffed in. */
+  it('keeps a warmed error document, and drops a bodyless failure', async () => {
+    (globalThis as any).fetch = mock(async () =>
+      new Response('<p>gone</p>', { status: 404, headers: { 'content-type': 'text/html' } }),
+    );
+    prefetch('/gone');
+    await Bun.sleep(1);
+
+    expect(await consumePrefetched('/gone')).toBeDefined();
+  });
+
   /** Prefetching spends someone's data plan on a page they may never open. */
   it('does nothing when the user asked to save data', () => {
     const fetched = mockFetch();

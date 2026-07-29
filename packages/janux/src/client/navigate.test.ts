@@ -412,6 +412,28 @@ describe('SPA navigation (streamed diff)', () => {
   });
 
   /**
+   * A `_404`/`_500` document is the page for that URL, not a failed navigation:
+   * diffing it in is the whole point of having those pages. Reloading instead
+   * would throw the SPA away — and report an error the app already answered.
+   */
+  it('diffs in an error document instead of handing the URL to the browser', async () => {
+    const notFound = await pageHtml('Not found', jsx('h1', { children: 'No such page' }));
+
+    document.write(await pageHtml('Page A', jsx(chat as any, {})));
+    document.close();
+    const client = boot({ defs: [chat] });
+    const errors: string[] = [];
+
+    document.addEventListener('janux:error', (event: any) => errors.push(event.detail));
+    (globalThis as any).fetch = mock(async () => new Response(notFound, { status: 404, headers: { 'content-type': 'text/html' } }));
+    await client.navigate('/gone');
+
+    expect(document.querySelector('h1')!.textContent).toBe('No such page');
+    expect(document.title).toBe('Not found');
+    expect(errors).toEqual([]);
+  });
+
+  /**
    * The page is already on screen by the time islands mount, so a mount that
    * throws must not send the browser to fetch the same URL again: on a
    * deterministic failure (a broken editor island, say) the reload mounts it,

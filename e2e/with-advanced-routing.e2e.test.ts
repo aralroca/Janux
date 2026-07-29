@@ -94,9 +94,24 @@ describe('examples/with-advanced-routing end to end', () => {
     expect((await get('/marketing/pricing')).status).toBe(404);
   });
 
-  it('404s a route no pattern matches', async () => {
-    expect((await get('/nope')).status).toBe(404);
+  it('404s a route no pattern matches, with the app\'s own page inside the shell', async () => {
+    const response = await get('/nope');
+    const html = await response.text();
+
+    expect(response.status).toBe(404);
+    expect(html).toContain('<title>No such page — Janux KB</title>');
+    expect(html).toContain('Nothing here');
+    expect(html).toContain('data-shell="root"');
     expect((await get('/wiki/too/deep')).status).toBe(404);
+  });
+
+  it('answers a page that throws with _500, alone — no shell around it', async () => {
+    const response = await get('/boom');
+    const html = await response.text();
+
+    expect(response.status).toBe(500);
+    expect(html).toContain('Something broke');
+    expect(html).not.toContain('data-shell="root"');
   });
 });
 

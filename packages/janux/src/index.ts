@@ -63,6 +63,7 @@ export {
   type SpeculationRulesConfig,
 } from './config';
 export type { PageMeta, HeadTag } from './meta';
+export { isNotFoundError, notFound } from './not-found';
 export {
   translateCore,
   formatElements,

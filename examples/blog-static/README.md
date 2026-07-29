@@ -25,5 +25,6 @@ bun run build   # dist/client is fully static
 | `src/routes/_layout.tsx` | Masthead and the machine-readable footer |
 | `src/markdown.ts` | Tiny dependency-free markdown → HTML renderer |
 | `src/routes/index.tsx` | The post index |
-| `src/routes/posts/[slug].tsx` | One post — `staticParams` + per-post `meta` |
+| `src/routes/posts/[slug].tsx` | One post — `staticParams` + per-post `meta`, and `notFound()` for a slug with no post |
+| `src/routes/_404.tsx` | The page an unknown URL gets — prerendered to `dist/client/404.html` |
 | `janux.config.ts` | `output: 'static'`, `siteUrl`, `llmsTxt`, speculation rules |

@@ -16,6 +16,9 @@ describe('create-janux', () => {
       expect(content).not.toContain('__APP_NAME__');
       expect(content).toContain('my-app');
     }
+    // A new app answers a bad URL and a broken render with its own pages, not with bare text.
+    expect(existsSync(join(cwd, 'my-app', 'src/routes/_404.tsx'))).toBe(true);
+    expect(existsSync(join(cwd, 'my-app', 'src/routes/_500.tsx'))).toBe(true);
     rmSync(cwd, { recursive: true, force: true });
   });
 
