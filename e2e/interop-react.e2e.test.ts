@@ -107,6 +107,32 @@ describe.skipIf(!BUILT)('examples/interop-react in the browser', () => {
     await page.close();
   }, TIMEOUT);
 
+  it('the panel example payload for setBand actually moves a band when called as agent', async () => {
+    const { page, errors } = await openPage();
+
+    await page.goto(`${BASE}/`);
+    await page.waitForSelector('.mixer input[type="range"]');
+    await page.waitForSelector('.tool-row:has-text("mixer.setBand") button');
+
+    // The payload shown next to the tool is what the button sends — it must
+    // name a real band, not a placeholder the intent silently drops.
+    const example = await page.locator('.tool-row:has-text("mixer.setBand") code.example').textContent();
+
+    await page.click('.tool-row:has-text("mixer.setBand") button');
+    await page.waitForFunction(
+      (initial) => document.querySelector('.mixer-shell .levels')?.textContent !== initial,
+      'low=5 mid=5 high=5',
+      { timeout: 5_000 },
+    );
+    const target = JSON.parse(example ?? '{}');
+
+    // Janux state, the React label and the slider all agree on the new level.
+    expect(await levels(page)).toContain(`${target.name}=${target.level}`);
+    expect(await page.locator(`.band:has-text("${target.name}")`).textContent()).toContain(`${target.name}: ${target.level}`);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
+
   it('the guarded flat intent stays a proposal until a human approves it', async () => {
     const { page, errors } = await openPage();
 
