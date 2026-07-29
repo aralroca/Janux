@@ -370,6 +370,16 @@
         "vite": "^8.1.5",
       },
     },
+    "examples/blog-static": {
+      "name": "janux-example-blog-static",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/cross-island-state": {
       "name": "janux-example-cross-island-state",
       "version": "0.2.1",
@@ -382,6 +392,16 @@
     },
     "examples/data-cache": {
       "name": "janux-example-data-cache",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
+    "examples/hacker-news": {
+      "name": "janux-example-hacker-news",
       "version": "0.2.1",
       "dependencies": {
         "@janux/agent": "workspace:*",
@@ -418,6 +438,16 @@
     },
     "examples/nested-islands": {
       "name": "janux-example-nested-islands",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
+    "examples/realtime-chat": {
+      "name": "janux-example-realtime-chat",
       "version": "0.2.1",
       "dependencies": {
         "@janux/agent": "workspace:*",
@@ -466,6 +496,16 @@
         "janux": "workspace:*",
       },
     },
+    "examples/with-sqlite": {
+      "name": "janux-example-with-sqlite",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/with-suspense": {
       "name": "janux-example-with-suspense",
       "version": "0.1.0",
@@ -484,6 +524,16 @@
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
         "@janux/tailwind": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
+    "examples/with-uploads": {
+      "name": "janux-example-with-uploads",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
         "janux": "workspace:*",
       },
     },
@@ -1465,15 +1515,21 @@
 
     "janux-docs": ["janux-docs@workspace:apps/docs"],
 
+    "janux-example-blog-static": ["janux-example-blog-static@workspace:examples/blog-static"],
+
     "janux-example-cross-island-state": ["janux-example-cross-island-state@workspace:examples/cross-island-state"],
 
     "janux-example-data-cache": ["janux-example-data-cache@workspace:examples/data-cache"],
+
+    "janux-example-hacker-news": ["janux-example-hacker-news@workspace:examples/hacker-news"],
 
     "janux-example-i18n": ["janux-example-i18n@workspace:examples/i18n"],
 
     "janux-example-interop-react": ["janux-example-interop-react@workspace:examples/interop-react"],
 
     "janux-example-nested-islands": ["janux-example-nested-islands@workspace:examples/nested-islands"],
+
+    "janux-example-realtime-chat": ["janux-example-realtime-chat@workspace:examples/realtime-chat"],
 
     "janux-example-shop": ["janux-example-shop@workspace:examples/shop"],
 
@@ -1483,9 +1539,13 @@
 
     "janux-example-with-optimistic-ui": ["janux-example-with-optimistic-ui@workspace:examples/with-optimistic-ui"],
 
+    "janux-example-with-sqlite": ["janux-example-with-sqlite@workspace:examples/with-sqlite"],
+
     "janux-example-with-suspense": ["janux-example-with-suspense@workspace:examples/with-suspense"],
 
     "janux-example-with-tailwind": ["janux-example-with-tailwind@workspace:examples/with-tailwind"],
+
+    "janux-example-with-uploads": ["janux-example-with-uploads@workspace:examples/with-uploads"],
 
     "janux-example-with-web-agent": ["janux-example-with-web-agent@workspace:examples/with-web-agent"],
 

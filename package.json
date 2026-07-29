@@ -39,6 +39,11 @@
     "dev:optimistic-ui": "bun run --cwd examples/with-optimistic-ui dev",
     "dev:cross-island-state": "bun run --cwd examples/cross-island-state dev",
     "dev:advanced-routing": "bun run --cwd examples/with-advanced-routing dev",
+    "dev:sqlite": "bun run --cwd examples/with-sqlite dev",
+    "dev:uploads": "bun run --cwd examples/with-uploads dev",
+    "dev:realtime-chat": "bun run --cwd examples/realtime-chat dev",
+    "dev:blog-static": "bun run --cwd examples/blog-static dev",
+    "dev:hacker-news": "bun run --cwd examples/hacker-news dev",
     "release": "bun scripts/release.ts",
     "bench": "node benchmarks/bench.mjs"
   },

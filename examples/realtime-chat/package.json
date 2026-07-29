@@ -1,0 +1,18 @@
+{
+  "name": "janux-example-realtime-chat",
+  "private": true,
+  "version": "0.2.1",
+  "type": "module",
+  "scripts": {
+    "dev": "janux build && bun run src/serve.ts",
+    "build": "janux build",
+    "serve": "bun run src/serve.ts",
+    "start": "bun run src/serve.ts"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*"
+  }
+}

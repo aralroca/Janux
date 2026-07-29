@@ -1,0 +1,78 @@
+:root {
+  --ink: #1c1e21;
+  --muted: #5f6672;
+  --accent: #0062ff;
+  --line: #e3e6ea;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background: #fff;
+}
+
+.blog {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+}
+
+.brand {
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a {
+  color: var(--accent);
+}
+
+.post-card {
+  margin-bottom: 2rem;
+}
+
+.post-card h2 {
+  margin: 0 0 0.25rem;
+}
+
+.post-card h2 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.byline {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin: 0 0 0.5rem;
+}
+
+.post-body pre {
+  background: #f5f6f8;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+
+.post-body code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.agent-face {
+  margin-top: 3rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}

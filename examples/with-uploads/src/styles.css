@@ -1,0 +1,138 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  background: light-dark(#f4f5f7, #14161a);
+}
+
+.page {
+  width: min(38rem, 92vw);
+  padding: 2.5rem 0 4rem;
+}
+
+.masthead h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.6rem;
+}
+
+.hint {
+  margin: 0 0 1.5rem;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.dropzone {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  border: 2px dashed light-dark(#c3c8d0, #3a4048);
+  border-radius: 12px;
+  background: light-dark(#fff, #1e2127);
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dropzone.over {
+  border-color: #0062ff;
+  background: light-dark(#eef4ff, #1a2334);
+}
+
+.dropzone p {
+  margin: 0;
+}
+
+.limits {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.pick {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: #0062ff;
+  color: #fff;
+  cursor: pointer;
+}
+
+.busy {
+  margin: 1rem 0 0;
+  opacity: 0.7;
+}
+
+.error {
+  margin: 1rem 0 0;
+  color: light-dark(#a33, #e88);
+}
+
+.preview {
+  margin: 1.5rem 0 0;
+  padding: 1rem;
+  border-radius: 12px;
+  background: light-dark(#fff, #1e2127);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+}
+
+.preview img {
+  max-width: 100%;
+  max-height: 12rem;
+  border-radius: 8px;
+}
+
+.preview figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.gallery {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+
+.shot {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: light-dark(#fff, #1e2127);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+}
+
+.shot img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: light-dark(#f0f1f3, #14161a);
+}
+
+.shot span {
+  font-size: 0.72rem;
+  opacity: 0.7;
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  margin: 1.5rem 0 0;
+  opacity: 0.6;
+}
+
+.count {
+  margin: 1rem 0 0;
+  font-size: 0.75rem;
+  opacity: 0.55;
+}

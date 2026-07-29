@@ -41,8 +41,17 @@ export async function serveBuilt(name: string) {
   return { base: `http://localhost:${server.port}`, stop: () => server.stop(true) };
 }
 
+let sharedChrome: Promise<Browser> | undefined;
+
+/**
+ * One Chrome for the whole test process. Launch/teardown churn across a dozen
+ * suites is what made goto() flake under load; suites must NOT close this —
+ * pages yes, the browser dies with the process.
+ */
 export function launchChrome(): Promise<Browser> {
-  return chromium.launch({ channel: 'chrome' });
+  sharedChrome ??= chromium.launch({ channel: 'chrome' });
+
+  return sharedChrome;
 }
 
 /** New page that records uncaught page errors for the final assertion. */

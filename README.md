@@ -212,6 +212,11 @@ Full tables, methodology and machine specs:
 - [`examples/with-optimistic-ui`](examples/with-optimistic-ui) — `mutation()` with optimistic writes and real rollback: the server rejects every third save and `onError` restores the snapshot with a visible notice.
 - [`examples/cross-island-state`](examples/cross-island-state) — a `store()` cart shared by five islands with no prop drilling, `persist: 'local'` across reloads, a bus event that crosses islands, and `batch()`ed bundle adds.
 - [`examples/with-advanced-routing`](examples/with-advanced-routing) — the full router grammar: `[slug]`, `[...path]`, `[[...rest]]`, `[id=integer]`/`[uid=uuid]` matchers, nested `_layout.tsx` chains and `(marketing)` groups, plus SPA navigation with a `persist` island.
+- [`examples/with-sqlite`](examples/with-sqlite) — real persistence with `bun:sqlite` and both server surfaces on one database: `api()` RPC (delete is `confirm`-guarded — agents propose, humans approve) next to classic REST handlers.
+- [`examples/with-uploads`](examples/with-uploads) — end-to-end file uploads: `dropzone()` feeding a validating multipart handler (type + size), server-rendered gallery, previews without a reload.
+- [`examples/realtime-chat`](examples/realtime-chat) — a custom server composing `createJanuxServer` with Bun's native WebSockets: optimistic delivery, cursor-based replay on reconnect, live presence.
+- [`examples/blog-static`](examples/blog-static) — a markdown blog exported with `output: 'static'` + `staticParams`: zero-JS pages, speculation rules, and the agent face (`llms.txt`, sitemap, `.md` projections) from the same build.
+- [`examples/hacker-news`](examples/hacker-news) — the canonical clone: streaming suspense front page over a local deterministic fixture, `[page=integer]` pagination, a server-rendered nested comment tree, `useQuery` refresh and hover prefetch.
 - [`examples/with-web-agent`](examples/with-web-agent) — the demo above: a console operated in natural language, `createCopilot({ visualize })` for the chips/ring/veil, `glowTarget` for React Flow nodes that mount late, and a `forbidden` intent that forces the DOM fallback.
 
 ```bash
