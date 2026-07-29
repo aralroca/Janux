@@ -1,5 +1,6 @@
 {
   "name": "confirm-guarded write-off: proposal, human approval, consumed proposal",
+  "reset": true,
   "steps": [
     {
       "tool": "api.stock.discard",

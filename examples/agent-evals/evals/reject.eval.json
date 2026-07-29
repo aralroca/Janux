@@ -1,0 +1,30 @@
+{
+  "name": "rejected write-off: proposal, human rejection, stock untouched, settled id gone",
+  "steps": [
+    {
+      "tool": "api.stock.discard",
+      "input": { "sku": "CABLE", "qty": 5, "reason": "miscounted pallet" },
+      "expect": { "result": { "status": "proposal", "tool": "stock.discard", "discarded": "$absent" } }
+    },
+    {
+      "reject": "$steps[0].result.id",
+      "expect": { "ok": true }
+    },
+    {
+      "tool": "api.stock.levels",
+      "expect": { "result": { "items": { "$some": { "sku": "CABLE", "stock": 120 } } } }
+    },
+    {
+      "tool": "api.stock.levels",
+      "expect": { "result": { "items": { "$not": { "$some": { "sku": "CABLE", "stock": 115 } } } } }
+    },
+    {
+      "approve": "$steps[0].result.id",
+      "expect": { "ok": false, "status": 404 }
+    },
+    {
+      "reject": "$steps[0].result.id",
+      "expect": { "ok": false }
+    }
+  ]
+}

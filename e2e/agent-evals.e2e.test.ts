@@ -43,9 +43,9 @@ function evalArgs(port: number, files: string[] = []): string[] {
   return ['eval', ...files, '--json', '--start', `bunx janux start --port ${port}`, '--url', `http://localhost:${port}`];
 }
 
-/** `--start` inherits the server's stdio, so boot logs share stdout with the JSON report. */
+/** Under `--json` the child app's stdout is silenced, so the report is the whole stdout. */
 function reportsFrom(stdout: string): ScenarioReport[] {
-  return JSON.parse(stdout.slice(stdout.indexOf('[')));
+  return JSON.parse(stdout);
 }
 
 describe('examples/agent-evals — janux eval as the CI gate', () => {
@@ -74,15 +74,39 @@ describe('examples/agent-evals — janux eval as the CI gate', () => {
   );
 
   it(
-    'janux eval --json exits 0 and every scripted agent task passes, approval step included',
+    'janux eval --json exits 0 and every scripted agent task passes, approval and rejection included',
     () => {
       const run = runJanux(EXAMPLE, evalArgs(4761));
       const reports = reportsFrom(run.stdout);
       const labels = reports.flatMap((report) => report.steps.map((step) => step.label));
 
       expect(run.code).toBe(0);
-      expect(reports.map((report) => report.pass)).toEqual([true, true, true]);
+      // Pure JSON on stdout: the booted app's logs are silenced under --json.
+      expect(run.stdout.trimStart().startsWith('[')).toBe(true);
+      expect(reports.map((report) => report.pass)).toEqual([true, true, true, true]);
+      // Deterministic order: the evals/ glob runs sorted by filename.
+      expect(reports.map((report) => report.name.split(':')[0])).toEqual([
+        'rejected write-off',
+        'agent restocks a low SKU using only the agent surface',
+        'the surface defends itself',
+        'confirm-guarded write-off',
+      ]);
       expect(labels.some((label) => label.startsWith('approve '))).toBe(true);
+      expect(labels.some((label) => label.startsWith('reject '))).toBe(true);
+    },
+    CLI_TIMEOUT,
+  );
+
+  it(
+    '"reset": true isolates scenarios: the same mutating eval passes twice in one run',
+    () => {
+      const twice = ['evals/write-off.eval.json', 'evals/write-off.eval.json'];
+      const run = runJanux(EXAMPLE, evalArgs(4764, twice));
+      const reports = reportsFrom(run.stdout);
+
+      // Without the reboot the second pass would find TSHIRT at 25, not 40.
+      expect(run.code).toBe(0);
+      expect(reports.map((report) => report.pass)).toEqual([true, true]);
     },
     CLI_TIMEOUT,
   );

@@ -49,10 +49,24 @@ janux eval evals/checkout.eval.json --json
 
 Steps run in order with `x-janux-origin: agent`. `$steps[i].<path>` references
 resolve against earlier outcomes (`{ status, ok, result, error }`) anywhere in
-`input` or `approve`. An `approve` step exercises the real human-in-the-loop
-flow (`POST /_janux/approve`) — the same pipeline your UI uses. `expect`
-checks any of `ok` (default `true` when omitted), `status`, `error`
+`input`, `approve` or `reject`. An `approve` step exercises the real
+human-in-the-loop flow (`POST /_janux/approve`) — the same pipeline your UI
+uses — and a `reject` step its mirror (`POST /_janux/reject`), answering
+`{ "ok": true }` when the proposal existed and `{ "ok": false }` once settled.
+`expect` checks any of `ok` (default `true` when omitted), `status`, `error`
 (substring) and `result` (deep subset match).
+
+Inside `result`, three matchers extend the positional subset match:
+`{ "$some": {…} }` passes when *any* item of an array matches, `{ "$not": {…} }`
+inverts a match, and the value `"$absent"` requires the field to be missing.
+`$some`/`$not` are single-key wrappers — never mixed with literal keys. A
+`throw` inside a tool's `run()` surfaces as `{ "ok": false, "status": 500 }`
+with `error` starting `"Error: …"`, assertable like any other outcome.
+
+Scenario files run sorted by filename, and a scenario with `"reset": true`
+reboots the `--start` app first, so it starts from seed state (without
+`--start`, `reset` is ignored). With `--json` the booted app's stdout is
+silenced — the report is the only thing on stdout, safe to pipe.
 
 ## create-janux
 

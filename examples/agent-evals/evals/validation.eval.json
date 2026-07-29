@@ -9,7 +9,7 @@
     {
       "tool": "api.stock.restock",
       "input": { "sku": "GHOST", "qty": 5 },
-      "expect": { "ok": false, "error": "Unknown SKU" }
+      "expect": { "ok": false, "status": 500, "error": "Error: Unknown SKU" }
     },
     {
       "tool": "api.stock.discard",
