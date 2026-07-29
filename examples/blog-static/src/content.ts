@@ -50,3 +50,15 @@ export function posts(): Post[] {
 export function postBySlug(slug: string): Post | undefined {
   return posts().find((post) => post.slug === slug);
 }
+
+const DATE_FORMAT = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' });
+
+/** `2026-07-20` → `Jul 20, 2026`; the raw value stays in `<time datetime>`. */
+export function formatDate(date: string): string {
+  return date ? DATE_FORMAT.format(new Date(date)) : '';
+}
+
+/** Rough byline figure at 200 words a minute, never below one minute. */
+export function readingMinutes(post: Post): number {
+  return Math.max(1, Math.round(post.body.split(/\s+/).length / 200));
+}

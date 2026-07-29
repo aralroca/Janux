@@ -64,7 +64,7 @@ describe('examples/blog-static end to end', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('text/markdown');
     expect(body).toContain('## Three machine-readable views');
-    expect(body).toContain('[llms.txt](/llms.txt)');
+    expect(body).toContain('[/llms.txt](/llms.txt)');
   });
 
   it('serves a sitemap with absolute post urls', async () => {

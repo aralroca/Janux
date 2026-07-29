@@ -1,5 +1,5 @@
 import type { PageMeta } from 'janux';
-import { postBySlug, posts } from '../../content';
+import { formatDate, postBySlug, posts, readingMinutes } from '../../content';
 import { markdownToHtml } from '../../markdown';
 
 /** Enumerates the concrete pages: the static prerender, llms.txt and the sitemap all read this. */
@@ -19,10 +19,13 @@ export function meta({ params }: { params: { slug: string } }): PageMeta {
 
 function NotFound({ slug }: { slug: string }) {
   return (
-    <article>
-      <h1>Post not found</h1>
-      <p>
-        No post named “{slug}”. <a href="/">Back to the index</a>.
+    <article class="post">
+      <header class="post-head">
+        <h1>Post not found</h1>
+        <p class="lede">No post named “{slug}”.</p>
+      </header>
+      <p class="crumb">
+        <a href="/">← All posts</a>
       </p>
     </article>
   );
@@ -35,14 +38,28 @@ export default function PostPage({ params }: { params: { slug: string } }) {
 
   return (
     <article class="post">
-      <h1>{post.title}</h1>
-      <p class="byline">
-        <time dateTime={post.date}>{post.date}</time> · <a href={`/posts/${post.slug}.md`}>view as markdown</a>
-      </p>
-      <div class="post-body" dangerHTML={markdownToHtml(post.body)} />
-      <p>
+      <p class="crumb">
         <a href="/">← All posts</a>
       </p>
+      <header class="post-head">
+        <p class="meta">
+          <time dateTime={post.date}>{formatDate(post.date)}</time>
+          <span class="sep">·</span>
+          <span>{readingMinutes(post)} min read</span>
+          <a class="md-link" href={`/posts/${post.slug}.md`}>
+            .md
+          </a>
+        </p>
+        <h1>{post.title}</h1>
+        <p class="lede">{post.description}</p>
+      </header>
+      <div class="post-body" dangerHTML={markdownToHtml(post.body)} />
+      <footer class="post-foot">
+        <a href="/">← All posts</a>
+        <span>
+          Read this page as <a href={`/posts/${post.slug}.md`}>markdown</a>
+        </span>
+      </footer>
     </article>
   );
 }

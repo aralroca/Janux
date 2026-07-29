@@ -1,48 +1,163 @@
+/* ── Tokens ─────────────────────────────────────────────────────── */
+/* One palette for both themes: `light-dark()` resolves against `color-scheme`,
+   so the blog follows the OS without a line of JavaScript. */
 :root {
-  --ink: #1c1e21;
-  --muted: #5f6672;
-  --accent: #0062ff;
-  --line: #e3e6ea;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  color-scheme: light dark;
+
+  --ink: light-dark(#0f172a, #e7eaf3);
+  --muted: light-dark(#64748b, #949db4);
+  --border: light-dark(#e2e8f0, #242a38);
+  --bg: light-dark(#ffffff, #0a0d14);
+  --surface: light-dark(#ffffff, #11151f);
+  --tint: light-dark(#f8fafc, #171c27);
+  --violet: light-dark(#6d28d9, #a78bfa);
+  --hover-line: light-dark(#c4b5fd, #4c3d8f);
+  --shadow-color: light-dark(rgba(15, 23, 42, 0.25), rgba(0, 0, 0, 0.6));
+  --code-bg: light-dark(#0f172a, #151a24);
+  --code-ink: light-dark(#e2e8f0, #ced7e5);
+  --code-line: light-dark(transparent, #29313f);
+  --accent: linear-gradient(90deg, #7c3aed, #06b6d4);
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  background: var(--bg);
   color: var(--ink);
-  background: #fff;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* The gradient hairline that opens every page. */
+body::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: var(--accent);
+}
+
+a {
+  color: var(--violet);
+}
+
+/* ── Shell ──────────────────────────────────────────────────────── */
 .blog {
-  max-width: 44rem;
+  max-width: 46rem;
   margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
+  padding: 0 1.5rem 4rem;
 }
 
 .masthead {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 1rem;
-  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 1.5rem 0 1.25rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.0625rem;
   font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--ink);
   text-decoration: none;
 }
 
-a {
-  color: var(--accent);
+.brand-mark {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 0.4rem;
+  background: var(--accent);
+}
+
+.masthead nav {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-left: auto;
+  font-size: 0.875rem;
+}
+
+.masthead nav a {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.masthead nav a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.badge {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--tint);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ── Index ──────────────────────────────────────────────────────── */
+.page-head {
+  margin-bottom: 2.25rem;
+}
+
+.page-head h1 {
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.lede {
+  max-width: 60ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.lede code {
+  font-family: var(--mono);
+  font-size: 0.875em;
+}
+
+.post-list {
+  display: grid;
+  gap: 1rem;
 }
 
 .post-card {
-  margin-bottom: 2rem;
+  padding: 1.35rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 20px 40px -24px var(--shadow-color);
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.post-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--hover-line);
+  box-shadow: 0 26px 46px -22px var(--shadow-color);
 }
 
 .post-card h2 {
-  margin: 0 0 0.25rem;
+  margin: 0.35rem 0 0.5rem;
+  font-size: 1.3rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
 }
 
 .post-card h2 a {
@@ -50,29 +165,308 @@ a {
   text-decoration: none;
 }
 
-.byline {
-  color: var(--muted);
-  font-size: 0.875rem;
-  margin: 0 0 0.5rem;
+.post-card h2 a:hover {
+  color: var(--violet);
 }
 
-.post-body pre {
-  background: #f5f6f8;
-  border: 1px solid var(--line);
+.excerpt {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.card-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+}
+
+.read-link {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.read-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Byline ─────────────────────────────────────────────────────── */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.meta .sep {
+  opacity: 0.45;
+}
+
+/* The `.md` projection of the page, one click away wherever a byline appears. */
+.md-link {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0.75rem 1rem;
-  overflow-x: auto;
+  background: var(--tint);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+
+.md-link:hover {
+  border-color: var(--violet);
+  color: var(--violet);
+}
+
+/* ── Post ───────────────────────────────────────────────────────── */
+.crumb {
+  margin: 0 0 1.5rem;
+  font-size: 0.875rem;
+}
+
+.crumb a,
+.post-foot > a {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.crumb a:hover,
+.post-foot > a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.post-head {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.post-head h1 {
+  margin: 0.7rem 0 0.75rem;
+  font-size: clamp(1.9rem, 6vw, 2.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+}
+
+.post-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* ── Reading column ─────────────────────────────────────────────── */
+.post-body {
+  max-width: 68ch;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+
+.post-body > :first-child {
+  margin-top: 0;
+}
+
+.post-body p {
+  margin: 0 0 1.3rem;
+}
+
+.post-body h2 {
+  margin: 2.5rem 0 0.85rem;
+  font-size: 1.375rem;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.post-body h3 {
+  margin: 2rem 0 0.6rem;
+  font-size: 1.0625rem;
+  line-height: 1.4;
+}
+
+.post-body a {
+  color: var(--violet);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.post-body a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.post-body strong {
+  font-weight: 650;
+}
+
+.post-body ul {
+  margin: 0 0 1.3rem;
+  padding: 0;
+  list-style: none;
+}
+
+.post-body li {
+  position: relative;
+  margin-bottom: 0.55rem;
+  padding-left: 1.35rem;
+}
+
+.post-body li::before {
+  content: '';
+  position: absolute;
+  top: 0.72em;
+  left: 0.3rem;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.post-body blockquote {
+  margin: 0 0 1.3rem;
+  padding: 0.35rem 0 0.35rem 1.1rem;
+  border: 0;
+  border-left: 3px solid;
+  border-image: linear-gradient(180deg, #7c3aed, #06b6d4) 1;
+  color: var(--muted);
+  font-style: italic;
 }
 
 .post-body code {
-  font-family: ui-monospace, monospace;
-  font-size: 0.9em;
+  padding: 0.12em 0.38em;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--tint);
+  color: light-dark(#5b21b6, #c4b5fd);
+  font-family: var(--mono);
+  font-size: 0.85em;
 }
 
-.agent-face {
-  margin-top: 3rem;
-  border-top: 1px solid var(--line);
-  padding-top: 1rem;
-  color: var(--muted);
+.post-body pre {
+  margin: 0 0 1.5rem;
+  padding: 1.05rem 1.2rem;
+  border: 1px solid var(--code-line);
+  border-radius: 12px;
+  background: var(--code-bg);
+  color: var(--code-ink);
   font-size: 0.875rem;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+/* Inside a block the inline-code chrome would fight the block itself. */
+.post-body pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* ── Agent face ─────────────────────────────────────────────────── */
+/* Part of what this example demonstrates: the same pages, machine-readable. */
+.agent-face {
+  margin-top: 3.5rem;
+  padding: 1.25rem 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--tint);
+}
+
+.agent-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agent-title::before {
+  content: '';
+  width: 1.5rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.agent-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.85rem;
+  margin: 0 0 1.1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-links a {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.agent-links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.agent-links span {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.agent-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.agent-note code {
+  font-family: var(--mono);
+}
+
+/* ── Narrow screens ─────────────────────────────────────────────── */
+@media (max-width: 34rem) {
+  .blog {
+    padding: 0 1.1rem 3rem;
+  }
+
+  .masthead {
+    padding: 1.25rem 0 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .post-card {
+    padding: 1.15rem 1.2rem;
+  }
+
+  .agent-face {
+    padding: 1.1rem;
+  }
+
+  .post-body pre {
+    padding: 0.9rem 1rem;
+    font-size: 0.8125rem;
+  }
 }
