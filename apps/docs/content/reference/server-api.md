@@ -33,6 +33,8 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 | `ctxFor` | `(req) => Ctx` | Auth: builds the per-request context |
 | `llmsTxt` | `{ title?, description? }` | Opt-in: serves `GET /llms.txt` — pages + agent tools index (`confirm` tools annotated "requires human approval"; dynamic routes expanded via `staticParams`) |
 | `agents` | `{ webBotAuth: { keys }, policy? }` | Web Bot Auth agent identity — see below |
+| `websocket` | `{ path, data?, open?, message?, close?, drain? }` | First-class WebSocket endpoint (`WebSocketConfig`): `janux dev`/`janux start` upgrade `path` themselves; a custom `Bun.serve` uses the returned `serve(req, bunServer)` + `websocket` handlers — see [custom server](/docs/recipes/custom-server). The pure `fetch` answers `426` on `path` |
+| `mcpAuth` | `{ verify(token, req), resourceMetadataUrl? }` | Bearer verification for `POST /_janux/mcp` (`401` + `WWW-Authenticate` otherwise; the GET landing stays public and prints `$TOKEN`-placeholder connect commands). Declarable as `mcpAuth: { tokenEnv }` in `janux.config.ts` |
 | `onAudit` | `(entry: AuditEntry) => void` | Called for every api() dispatch: tool, origin, guard, ok, and the verified agent key |
 | `runtimeUrl`, `stylesheets`, `favicon`, `title`, `lang`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
 

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
 import { build } from 'vite';
-import { islandNamesIn } from './islands';
+import { islandCatalogFromDir, islandNamesIn } from './islands';
 import { janux } from './plugin';
 
 describe('islandNamesIn', () => {
@@ -58,5 +58,23 @@ describe('janux build island catalog', () => {
     });
 
     expect(JSON.parse(readFileSync(join(outDir, 'islands.json'), 'utf8'))).toEqual({ counter: '' });
+  });
+});
+
+/**
+ * Dev has no bundle and so no islands.json: the catalog is derived by
+ * scanning the app source instead (same names, '' URLs). Without it a page
+ * whose only islands sit behind suspense boundaries never boots under
+ * `janux dev` — the exact bug the build catalog fixed in production.
+ */
+describe('islandCatalogFromDir (the dev catalog)', () => {
+  it('collects the same islands the build would', () => {
+    const root = join(import.meta.dirname, '__fixtures__/island-app');
+
+    expect(islandCatalogFromDir(join(root, 'src'))).toEqual({ counter: '' });
+  });
+
+  it('is empty for a directory that does not exist', () => {
+    expect(islandCatalogFromDir(join(tmpdir(), 'janux-nope-does-not-exist'))).toEqual({});
   });
 });

@@ -46,6 +46,35 @@ export interface AgentDeps {
   manifestFor: (path: string) => Promise<unknown>;
 }
 
+/**
+ * One live connection, as the handlers see it: Bun's `ServerWebSocket` in
+ * production, an equivalent adapter under `janux dev`. Handlers that stick to
+ * this surface (plus module state of their own) run identically in both.
+ */
+export interface JanuxSocket<Data = unknown> {
+  data: Data;
+  readyState: number;
+  send(message: string | ArrayBufferLike | Uint8Array): void;
+  close(code?: number, reason?: string): void;
+}
+
+/** First-class WebSocket endpoint: Bun.serve-style handlers behind one path the framework upgrades. */
+export interface WebSocketConfig<Data = any> {
+  /** The pathname whose requests upgrade instead of routing, e.g. `/ws`. */
+  path: string;
+  /** Per-socket data attached at upgrade time; handlers read it back on `socket.data`. */
+  data?: (req: Request) => Data;
+  open?(socket: JanuxSocket<Data>): void | Promise<void>;
+  message?(socket: JanuxSocket<Data>, message: string | Uint8Array): void | Promise<void>;
+  close?(socket: JanuxSocket<Data>, code?: number, reason?: string): void | Promise<void>;
+  drain?(socket: JanuxSocket<Data>): void | Promise<void>;
+}
+
+/** What `serve()` needs from the `Bun.serve` instance: the upgrade seam, nothing else. */
+export interface WebSocketUpgrader {
+  upgrade(req: Request, options?: { data?: unknown }): boolean;
+}
+
 export interface ServerOptions {
   routesDir?: string;
   loadRoute?: (filePath: string) => Promise<Record<string, unknown>>;
@@ -78,6 +107,8 @@ export interface ServerOptions {
   httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
   /** Bearer verification for the hosted MCP endpoint (`/_janux/mcp`). Absent → open. */
   mcpAuth?: McpAuth;
+  /** First-class WebSocket endpoint — see `serve()` and the `websocket` handlers on the returned server. */
+  websocket?: WebSocketConfig;
   /**
    * Prerendering for a static host: omit links to `/_janux/*`, which won't
    * exist there. Without it every static page fetches a 404 manifest.
@@ -541,6 +572,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const intercepted = await options.middleware?.(req);
 
     if (intercepted) return intercepted;
+    if (pathname === options.websocket?.path) {
+      // Reaching the pure fetch means nobody upgraded — see serve().
+      return new Response('WebSocket upgrade required', { status: 426, headers: { upgrade: 'websocket' } });
+    }
     if (httpHandlers?.handles(pathname)) return httpHandlers.dispatch(req, await ctxWithAgent(req));
     if (pathname.startsWith('/_janux/api/')) return handleApi(req, pathname.slice('/_janux/api/'.length));
     if (pathname === '/_janux/approve') return handleApprove(req);
@@ -595,5 +630,28 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return handlePage(req, pathname);
   };
 
-  return { fetch, apiTools, manifestFor, listPages };
+  /**
+   * Drop-in `Bun.serve` fetch for the owner of the listening socket: a request
+   * on `websocket.path` is upgraded (returning `undefined`, per Bun's
+   * contract); everything else — failed upgrades included, they land on the
+   * 426 — goes through the pure `fetch`.
+   */
+  const serve = (req: Request, bun?: WebSocketUpgrader): Promise<Response> | undefined => {
+    const config = options.websocket;
+    const matches = config && bun && new URL(req.url).pathname === config.path;
+
+    if (matches && bun.upgrade(req, { data: config.data?.(req) })) return undefined;
+
+    return fetch(req);
+  };
+
+  /** The handler object `Bun.serve({ websocket })` takes — Bun requires `message` even when the app has none. */
+  const websocket = {
+    open: options.websocket?.open,
+    message: options.websocket?.message ?? ((): undefined => undefined),
+    close: options.websocket?.close,
+    drain: options.websocket?.drain,
+  };
+
+  return { fetch, serve, websocket, apiTools, manifestFor, listPages };
 }

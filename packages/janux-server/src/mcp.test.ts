@@ -119,6 +119,25 @@ describe('hosted MCP endpoint (/_janux/mcp)', () => {
     expect(html).toContain('Greet a person');
   });
 
+  /** A protected endpoint whose landing prints token-free commands teaches every visitor a 401. */
+  it('adds the bearer header (placeholder, never the token) to the connect commands when auth is on', async () => {
+    const target = server({ mcpAuth: { verify: (token: string) => (token === 'sekret' ? {} : null) } });
+    const res = await target.fetch(new Request('http://x/_janux/mcp', { headers: { accept: 'text/html' } }));
+    const html = await res.text();
+
+    expect(html).toContain('--header "Authorization: Bearer $TOKEN"');
+    expect(html).toContain('-H "Authorization: Bearer $TOKEN"');
+    expect(html).toContain('requires a bearer token');
+    expect(html).not.toContain('sekret');
+  });
+
+  it('keeps the connect commands header-free when the endpoint is open', async () => {
+    const res = await server().fetch(new Request('http://x/_janux/mcp', { headers: { accept: 'text/html' } }));
+    const html = await res.text();
+
+    expect(html).not.toContain('Authorization: Bearer');
+  });
+
   /** The visitor's actual confusion: that a browsable URL means it stopped being JSON-RPC. */
   it('explains that POST is the protocol and GET is why they are seeing a page', async () => {
     const res = await server().fetch(new Request('http://x/_janux/mcp', { headers: { accept: 'text/html' } }));

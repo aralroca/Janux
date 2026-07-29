@@ -55,8 +55,10 @@ export {
   defineConfig,
   SPECULATION_SCRIPT_ID,
   speculationRules,
+  type AgentsAuthConfig,
   type JanuxConfig,
   type JanuxOutput,
+  type McpAuthConfig,
   type NavigationConfig,
   type SpeculationRulesConfig,
 } from './config';

@@ -1,3 +1,5 @@
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { parseSync } from '@swc/core';
 
 /**
@@ -54,6 +56,24 @@ export function islandNamesIn(code: string, tsx = false): string[] {
       return [];
     }
   }
+}
+
+/**
+ * Dev's answer to the build catalog: `janux dev` bundles nothing, so the
+ * catalog is derived by scanning the app source on demand (same names, ''
+ * URLs — defs ship inside the runtime graph). Without it a page whose only
+ * islands sit behind suspense boundaries never boots under the dev server.
+ */
+export function islandCatalogFromDir(dir: string): Record<string, string> {
+  const catalog: Record<string, string> = {};
+
+  if (!existsSync(dir)) return catalog;
+  readdirSync(dir, { recursive: true })
+    .map((name) => join(dir, String(name)))
+    .filter((file) => MODULE_PATH.test(file) && !file.includes('node_modules'))
+    .forEach((file) => collectIslands(catalog, file, readFileSync(file, 'utf8')));
+
+  return catalog;
 }
 
 /** Folds one bundled module into the catalog; dependencies and virtual modules are not the app's islands. */

@@ -126,7 +126,7 @@ export function createMcpEndpoint(deps: McpDeps) {
         return new Response(null, { status: 405, headers: { allow: 'POST' } });
       }
 
-      return new Response(mcpLandingPage(deps.serverName, new URL(req.url).href, deps.tools), {
+      return new Response(mcpLandingPage(deps.serverName, new URL(req.url).href, deps.tools, deps.auth !== undefined), {
         headers: { 'content-type': 'text/html;charset=utf-8' },
       });
     }

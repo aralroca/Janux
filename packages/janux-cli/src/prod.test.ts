@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
@@ -40,5 +40,48 @@ describe('prodServerOptions island catalog', () => {
     expect(html).toContain('rows:2');
     expect(html).toContain('key="jx-runtime"');
     expect(html).toContain('src="/client.js"');
+  });
+});
+
+/** First-class WebSockets + config-level MCP auth reach production through the same wiring dev uses. */
+describe('prodServerOptions websocket and mcpAuth', () => {
+  const app = (files: Record<string, string>): string => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-prod-ws-'));
+
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'fixture' }));
+    mkdirSync(join(root, 'src/routes'), { recursive: true });
+    Object.entries(files).forEach(([name, content]) => writeFileSync(join(root, name), content));
+
+    return root;
+  };
+
+  it('loads the src/ws.ts default export as ServerOptions.websocket', async () => {
+    const root = app({ 'src/ws.ts': `export default { path: '/ws', message: () => undefined };` });
+    const options = await prodServerOptions(root);
+
+    expect(options.websocket?.path).toBe('/ws');
+    expect(typeof options.websocket?.message).toBe('function');
+  });
+
+  it('leaves websocket undefined without the module', async () => {
+    expect((await prodServerOptions(app({}))).websocket).toBeUndefined();
+  });
+
+  it('maps mcpAuth from janux.config.ts onto the bearer verifier the endpoint enforces', async () => {
+    const root = app({ 'janux.config.ts': `export default { mcpAuth: { token: 'demo-token' } };` });
+    const server = createJanuxServer(await prodServerOptions(root));
+    const rpc = (headers: Record<string, string> = {}) =>
+      server.fetch(
+        new Request('http://test/_janux/mcp', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...headers },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+        }),
+      );
+    const denied = await rpc();
+
+    expect(denied.status).toBe(401);
+    expect(denied.headers.get('www-authenticate')).toContain('Bearer');
+    expect((await rpc({ authorization: 'Bearer demo-token' })).status).toBe(200);
   });
 });

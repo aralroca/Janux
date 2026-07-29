@@ -4,10 +4,9 @@
   "version": "0.2.1",
   "type": "module",
   "scripts": {
-    "dev": "janux build && bun run src/serve.ts",
+    "dev": "janux dev --port 4321",
     "build": "janux build",
-    "serve": "bun run src/serve.ts",
-    "start": "bun run src/serve.ts"
+    "start": "janux start --port 4321"
   },
   "dependencies": {
     "janux": "workspace:*",

@@ -44,6 +44,7 @@ Anything you don't intercept before it. These paths belong to the framework:
 | `/sitemap.xml`, `/robots.txt` | when `siteUrl` is configured |
 | `<page>.md` | markdown projection of a page |
 | `/api/**` | `src/api/**` HTTP handlers (`httpHandlers.prefix` to move them) |
+| `websocket.path` | `426 Upgrade Required` — the pure `fetch` cannot upgrade; see [First-class WebSockets](#first-class-websockets) |
 | anything else | a page render, or `404` |
 
 **Static files are not on that list.** `server.fetch` never reads from disk, which is why the order in the handler is yours to decide: check files first (a real asset always wins) or check routes first (a page may shadow a stale asset).
@@ -76,6 +77,58 @@ createJanuxServer({
 
 See [auth & context](/docs/recipes/auth-and-context) for the full pattern.
 
+## First-class WebSockets
+
+Most apps never need this recipe for realtime: declare the endpoint in
+`src/ws.ts` (or point `websocket:` in `janux.config.ts` at another module) and
+`janux dev` **and** `janux start` upgrade it themselves, on the same port as
+the pages:
+
+```ts
+import type { WebSocketConfig } from '@janux/server';
+
+export default {
+  path: '/ws',
+  // Per-socket data, attached at upgrade time from the request.
+  data: (req) => ({ user: new URL(req.url).searchParams.get('u') ?? 'anon' }),
+  open(socket) {
+    socket.send(`hello ${socket.data.user}`);
+  },
+  message(socket, frame) {
+    socket.send(`echo:${frame}`);
+  },
+} satisfies WebSocketConfig<{ user: string }>;
+```
+
+The handlers are `Bun.serve`-style (`open`/`message`/`close`/`drain`) and the
+socket surface is production's `ServerWebSocket` — under `janux dev` an
+adapter provides the same `data`/`send`/`close` contract, so the module runs
+identically in both (fan out by iterating your own socket set rather than
+Bun-only pub/sub topics if dev parity matters to you). A plain HTTP request on
+`path` gets `426` from `fetch` itself.
+
+When you DO own the `Bun.serve`, the framework hands you the two pieces
+`janux start` uses: `serve(request, bunServer)` decides the upgrade when the
+request matches `path` (returning `undefined`, per Bun's contract) and
+delegates everything else — failed upgrades included — to the pure `fetch`;
+`websocket` is the handler object `Bun.serve` takes:
+
+```ts
+import { createJanuxServer } from '@janux/server';
+import { prodServerOptions } from '@janux/cli';
+
+const server = createJanuxServer(await prodServerOptions(process.cwd()));
+
+Bun.serve({
+  port: Number(process.env.PORT ?? 3000),
+  fetch: (request, bun) => server.serve(request, bun),
+  websocket: server.websocket,
+});
+```
+
+`examples/realtime-chat` is the full story: optimistic delivery, presence and
+cursor replay over exactly this seam.
+
 ## Node, Hono, and anything else
 
 Hono, Elysia and other Web-standard frameworks take the handler as-is:
@@ -101,7 +154,7 @@ Note the one difference: `toFetchRequest` buffers the body, so streaming uploads
 
 ## Development stays on `janux dev`
 
-The Vite plugin *is* the dev server, and it wraps `server.fetch` the same way this recipe does — `public/` first, then the app, falling through to Vite only on a genuine page-router `404`. It also owns HMR, the JSX transform and the `*.api.ts` client stubs, so a custom production server doesn't need a custom dev server: keep `janux dev` for development and reserve the wrapper for `start`.
+The Vite plugin *is* the dev server, and it wraps `server.fetch` the same way this recipe does — `public/` first, then the app, falling through to Vite only on a genuine page-router `404` — and upgrades the `src/ws.ts` endpoint on its own port too. It also owns HMR, the JSX transform and the `*.api.ts` client stubs, so a custom production server doesn't need a custom dev server: keep `janux dev` for development and reserve the wrapper for `start`.
 
 ## Fully static instead
 

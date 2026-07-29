@@ -7,9 +7,10 @@ import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
 import { packageDir, runtimeIncludes } from './deps';
 import { mimeFor, resolvePublicFile } from './static-files';
-import { apiFiles, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
+import { apiFiles, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
-import { collectIslands } from './islands';
+import { collectIslands, islandCatalogFromDir } from './islands';
+import { attachDevWebSocket } from './dev-websocket';
 import { sendFetchResponse, toFetchRequest } from './request-adapter';
 
 const SSR_PACKAGES = ['janux', '@janux/server', '@janux/agent'];
@@ -30,6 +31,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
   const middlewareModule = app.middlewareModule ? await vite.ssrLoadModule(app.middlewareModule) : undefined;
   const ctxModule = app.ctxModule ? await vite.ssrLoadModule(app.ctxModule) : undefined;
   const matchersModule = app.matchersModule ? await vite.ssrLoadModule(app.matchersModule) : undefined;
+  const websocketModule = app.websocketModule ? await vite.ssrLoadModule(app.websocketModule) : undefined;
 
   return {
     routesDir: app.routesDir,
@@ -38,8 +40,14 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     agent: (agentModule?.default as ServerOptions['agent']) ?? defineAgent(),
     storeDefs: (storesModule ?? {}) as ServerOptions['storeDefs'],
     runtimeUrl: app.clientEntry ? `/${relativeToRoot(vite.config.root, app.clientEntry)}` : undefined,
+    // Dev bundles nothing, so the build's islands.json is derived from source:
+    // without it a suspense-only page ships no runtime under `janux dev`.
+    islandModules: islandCatalogFromDir(join(vite.config.root, 'src')),
     ...shellOptions(app, devStylesheets(vite.config.root, app.stylesheet)),
     llmsTxt: app.llmsTxt,
+    websocket: websocketModule?.default as ServerOptions['websocket'],
+    mcpAuth: mcpAuthOptions(app.mcpAuth),
+    agents: app.agents,
     i18n: i18nModule?.default as ServerOptions['i18n'],
     foreignImport: appForeignImport(vite.config.root),
     middleware: middlewareModule?.default as ServerOptions['middleware'],
@@ -167,6 +175,15 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       vite.watcher.on('change', () => {
         cached = undefined;
       });
+
+      const loadWebSocket = async () => {
+        const app = await resolveAppConfig(vite.config.root, options);
+        const module = app.websocketModule ? await vite.ssrLoadModule(app.websocketModule) : undefined;
+
+        return module?.default as ServerOptions['websocket'];
+      };
+
+      attachDevWebSocket(vite, loadWebSocket);
 
       return () => {
         vite.middlewares.use((req, res, next) => {

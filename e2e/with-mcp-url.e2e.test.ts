@@ -5,10 +5,11 @@ import { appRoot, ssrApp } from './support/app';
 
 /**
  * examples/with-mcp-url sells one thing: the app IS a bearer-protected MCP
- * server by URL. So the suite exercises the endpoint the way a real client
- * would — landing for browsers, 401 without the token, JSON-RPC with it — and
- * pins the tool contract to a committed golden file: rename a tool, change a
- * guard or touch an input schema and this suite goes red until
+ * server by URL — the protection being one `mcpAuth` line in janux.config.ts.
+ * So the suite exercises the endpoint the way a real client would — landing
+ * for browsers (bearer hint included), 401 without the token, JSON-RPC with
+ * it — and pins the tool contract to a committed golden file: rename a tool,
+ * change a guard or touch an input schema and this suite goes red until
  * `agent-contract.json` is updated on purpose.
  */
 
@@ -46,6 +47,10 @@ describe('examples/with-mcp-url — the landing stays public', () => {
 
     expect(res.status).toBe(200);
     expect(page).toContain('claude mcp add --transport http');
+    // Auth-aware landing: the commands carry the bearer header as a
+    // placeholder — the real token must never render into HTML.
+    expect(page).toContain('--header "Authorization: Bearer $TOKEN"');
+    expect(page).not.toContain(TOKEN);
     expect(page).toContain('incidents.list');
   });
 

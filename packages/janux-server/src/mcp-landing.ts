@@ -75,11 +75,21 @@ function toolList(tools: ApiTool[]): string {
   return `<ul>${rows.join('')}</ul>`;
 }
 
-/** The page a browser gets when it opens the MCP endpoint. */
-export function mcpLandingPage(serverName: string, endpoint: string, tools: ApiTool[]): string {
+/**
+ * The auth-aware half of the connect commands. The landing never sees the
+ * real token (`McpAuth` only verifies), so the snippets ship a `$TOKEN`
+ * placeholder the visitor fills in — nothing secret can leak into HTML.
+ */
+const AUTH_NOTE =
+  '<p>This endpoint requires a bearer token — set <code>$TOKEN</code> to yours before pasting the commands below.</p>';
+
+/** The page a browser gets when it opens the MCP endpoint. `auth` switches the commands to bearer mode. */
+export function mcpLandingPage(serverName: string, endpoint: string, tools: ApiTool[], auth = false): string {
   const name = safeAttr(serverName);
   const url = safeAttr(endpoint);
   const count = tools.length === 1 ? '1 tool' : `${tools.length} tools`;
+  const addHeader = auth ? ' \\\n  --header "Authorization: Bearer $TOKEN"' : '';
+  const curlHeader = auth ? '\n  -H "Authorization: Bearer $TOKEN" \\' : '';
 
   return `<!doctype html>
 <html lang="en">
@@ -91,10 +101,10 @@ export function mcpLandingPage(serverName: string, endpoint: string, tools: ApiT
 <h2>How this URL answers</h2>
 ${methodList()}
 <h2>Connect it</h2>
-<pre>claude mcp add --transport http ${safeAttr(slug(serverName))} ${url}</pre>
+${auth ? AUTH_NOTE : ''}<pre>claude mcp add --transport http ${safeAttr(slug(serverName))} ${url}${addHeader}</pre>
 <h2>Or see the protocol yourself</h2>
 <pre>curl -s ${url} \\
-  -H 'content-type: application/json' \\
+  -H 'content-type: application/json' \\${curlHeader}
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'</pre>
 <h2>Tools (${count})</h2>
 ${toolList(tools)}

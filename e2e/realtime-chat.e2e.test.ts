@@ -1,17 +1,35 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { join } from 'node:path';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage } from './support/app';
-import { createChatServer, type ChatServer } from '../examples/realtime-chat/src/server';
+import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage as newPage } from './support/app';
+import { createJanuxServer } from '../packages/janux-server/src/index';
+import { prodServerOptions } from '../packages/janux-cli/src/prod';
+import { staticResponse } from '../packages/janux-cli/src/static-assets';
 
 /**
- * What examples/realtime-chat exists to demonstrate: the custom-server recipe
- * with a WebSocket seam — `createChatServer` composes `createJanuxServer`
- * inside `Bun.serve` — plus optimistic delivery (a send renders as `pending`
- * before the ~300ms server echo confirms it) and cursor replay (a client that
- * reconnects re-joins with its last confirmed seq and receives what it missed).
+ * What examples/realtime-chat exists to demonstrate: first-class WebSockets —
+ * `src/ws.ts` is the whole server story, `janux dev`/`janux start` upgrade it
+ * themselves — plus optimistic delivery (a send renders as `pending` before
+ * the ~300ms server echo confirms it) and cursor replay (a reconnecting
+ * client re-joins with its last confirmed seq and receives what it missed).
+ * The boot below is byte-for-byte what `janux start` mounts.
  */
 
+const ROOT = appRoot('examples/realtime-chat');
 const BUILT = isBuilt('examples/realtime-chat');
+
+/** Exactly the `janux start` wiring: static assets, then `serve` (upgrade or fetch), plus the app's handlers. */
+async function startChat() {
+  const server = createJanuxServer(await prodServerOptions(ROOT));
+  const staticDir = join(ROOT, 'dist/client');
+  const bun = Bun.serve({
+    port: 0,
+    fetch: async (req, bunServer) => (await staticResponse(staticDir, req)) ?? server.serve(req, bunServer),
+    websocket: server.websocket,
+  });
+
+  return { url: `http://localhost:${bun.port}`, stop: () => bun.stop(true) };
+}
 
 const openSocket = (url: string): Promise<WebSocket> =>
   new Promise((resolve, reject) => {
@@ -42,9 +60,18 @@ const joinRoom = (socket: WebSocket, room: string, user: string, cursor = 0): Pr
   return history;
 };
 
-describe('examples/realtime-chat server composition', () => {
+describe('examples/realtime-chat first-class websocket server', () => {
+  beforeAll(() => {
+    // The optimistic window is for humans; socket-level assertions want the echo now.
+    process.env.CHAT_ECHO_DELAY_MS = '0';
+  });
+
+  afterAll(() => {
+    delete process.env.CHAT_ECHO_DELAY_MS;
+  });
+
   it('serves the Janux SSR page and upgrades /ws on the same port', async () => {
-    const chat = await createChatServer(0, { echoDelayMs: 0 });
+    const chat = await startChat();
     const home = await fetch(`${chat.url}/`);
 
     expect(home.status).toBe(200);
@@ -59,7 +86,7 @@ describe('examples/realtime-chat server composition', () => {
   }, TIMEOUT);
 
   it('fans a message out to the room, tracks presence and replays history from a cursor', async () => {
-    const chat = await createChatServer(0, { echoDelayMs: 0 });
+    const chat = await startChat();
     const ana = await openSocket(chat.url);
     const bob = await openSocket(chat.url);
 
@@ -91,12 +118,12 @@ describe('examples/realtime-chat server composition', () => {
 });
 
 let BASE = '';
-let chat: ChatServer | undefined;
+let chat: Awaited<ReturnType<typeof startChat>> | undefined;
 let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  chat = await createChatServer(0);
+  chat = await startChat();
   BASE = chat.url;
   browser = await launchChrome();
 });

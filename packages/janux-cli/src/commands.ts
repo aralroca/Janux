@@ -203,9 +203,12 @@ export async function start({ root, port }: CliCommand): Promise<void> {
   const server = createJanuxServer(options);
   const staticDir = join(root, 'dist/client');
 
+  // `serve` (not `fetch`) so a request on `websocket.path` upgrades; the
+  // handlers come from the same server, so `janux start` needs no custom server.
   Bun.serve({
     port,
-    fetch: async (req) => (await staticResponse(staticDir, req)) ?? server.fetch(req),
+    fetch: async (req, bun) => (await staticResponse(staticDir, req)) ?? server.serve(req, bun),
+    websocket: server.websocket,
   });
   console.log(`janux start: production server on http://localhost:${port}/ (Bun)`);
 }
