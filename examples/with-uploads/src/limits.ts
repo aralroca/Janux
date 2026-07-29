@@ -5,3 +5,6 @@
  */
 export const ACCEPT = ['image/*'];
 export const MAX_SIZE_BYTES = 1024 * 1024; // 1 MB
+
+/** Transport ceiling: the file limit plus room for the multipart envelope. */
+export const MAX_BODY_BYTES = MAX_SIZE_BYTES + 4096;

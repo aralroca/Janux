@@ -1,5 +1,5 @@
-import { component, enums, intent, onEvent, schema, source, str } from 'janux';
-import { dropzone, type Dropzone } from 'janux/client';
+import { component, enums, int, intent, onEvent, schema, source, str } from 'janux';
+import { dropzone, type Dropzone, type UploadOutcome } from 'janux/client';
 import { ACCEPT, MAX_SIZE_BYTES } from '../limits';
 import { list } from '../server/uploads.api';
 
@@ -8,47 +8,39 @@ const zones = new WeakMap<object, Dropzone>();
 
 let unwire: (() => void) | undefined;
 
-interface UploadResult {
-  ok: boolean;
-  meta?: { id: string; name: string };
-  error?: string;
-}
-
-/** One file → one multipart POST to the `src/api` handler. */
-async function postFile(file: File): Promise<UploadResult> {
-  const body = new FormData();
-
-  body.set('file', file);
-  const response = await fetch('/api/uploads', { method: 'POST', body });
-  const payload: any = await response.json();
-
-  return response.ok ? { ok: true, meta: payload } : { ok: false, error: payload.error };
-}
+const meta = (outcome: UploadOutcome) => outcome.body as { id?: string; name?: string; error?: string };
 
 /**
- * Uploads the dropped files. Files are not JSON, so the bytes ride plain
- * multipart HTTP; state only ever changes through the declared intents.
+ * Uploads the dropped files through `zone.upload()` — one multipart POST per
+ * file, progress reported per file via `onProgress`. Files are not JSON, so
+ * the bytes ride plain HTTP; state only ever changes through the declared intents.
  */
 async function send(bag: any, files: File[]): Promise<void> {
   await bag.intents.begin();
-  const results = await Promise.all(files.map(postFile));
-  const accepted = results.filter((result) => result.ok);
-  const failed = results.find((result) => !result.ok);
+  const outcomes = await zones.get(bag.state)!.upload('/api/uploads', files);
+  const accepted = outcomes.filter((outcome) => outcome.ok);
+  const failed = outcomes.find((outcome) => !outcome.ok);
   const last = accepted[accepted.length - 1];
 
   await bag.intents.settle({
-    lastId: last?.meta?.id ?? '',
-    lastName: last?.meta?.name ?? '',
-    error: failed?.error ?? '',
+    lastId: last ? (meta(last).id ?? '') : '',
+    lastName: last ? (meta(last).name ?? '') : '',
+    error: failed ? (meta(failed).error ?? 'upload failed') : '',
   });
 }
 
-/** dropzone() wires drag & drop and paste onto the visible target. */
+/** dropzone() wires drag & drop, paste and the per-file progress feed. */
 function wireZone(bag: any): (() => void) | undefined {
   const host = document.querySelector<HTMLElement>('.dropzone');
 
   if (!host) return undefined;
-  const zone = dropzone({ accept: ACCEPT, multiple: true, maxSize: MAX_SIZE_BYTES, onFiles: (files) => send(bag, files) });
+  const zone = dropzone({
+    accept: ACCEPT,
+    multiple: true,
+    maxSize: MAX_SIZE_BYTES,
+    onFiles: (files) => send(bag, files),
+    onProgress: ({ file, sent, total }) => bag.intents.progress({ name: file.name, percent: Math.round((sent / total) * 100) }),
+  });
   const detach = zone.attach(host);
   const sync = () => host.classList.toggle('over', zone.isOver.value);
   const events = ['dragover', 'dragleave', 'drop'];
@@ -73,6 +65,8 @@ export const Gallery = component({
     error: str().default(''),
     lastId: str().default(''),
     lastName: str().default(''),
+    percent: int().default(0),
+    sending: str().default(''),
   }),
 
   sources: {
@@ -101,6 +95,17 @@ export const Gallery = component({
       run: ({ state }: any) => {
         state.status = 'uploading';
         state.error = '';
+        state.percent = 0;
+        state.sending = '';
+      },
+    }),
+    progress: intent({
+      description: 'Internal: per-file upload progress from the dropzone transport.',
+      guard: 'forbidden',
+      input: schema({ name: str().default(''), percent: int().default(0) }),
+      run: ({ state, input }: any) => {
+        state.sending = input.name;
+        state.percent = input.percent;
       },
     }),
     settle: intent({
@@ -138,13 +143,23 @@ export const Gallery = component({
           <p class="limits">Images only, up to 1 MB each</p>
         </div>
 
-        {state.status === 'uploading' ? <p class="busy">Uploading…</p> : null}
+        {state.status === 'uploading' ? (
+          <div class="busy">
+            <p>
+              Uploading {state.sending}… {state.percent}%
+            </p>
+            <progress class="bar" value={state.percent} max={100} />
+          </div>
+        ) : null}
         {state.error ? <p class="error">{state.error}</p> : null}
 
         {state.lastId ? (
           <figure class="preview">
             <img src={`/api/uploads/${state.lastId}`} alt={state.lastName} />
             <figcaption>Uploaded: {state.lastName}</figcaption>
+            <p class="progress">
+              {state.lastName} — {state.percent}%
+            </p>
           </figure>
         ) : null}
 

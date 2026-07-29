@@ -169,4 +169,35 @@ describe('reference/client-state.md — dropzone', () => {
     expect(zone.isOver.value).toBe(false);
     detach();
   });
+
+  it('zone.upload POSTs multipart per file, feeds onProgress and ends on a sent === total tick', async () => {
+    // A stub transport: the page's claims are about what dropzone drives, not the network.
+    const real = globalThis.XMLHttpRequest;
+    const sent: Array<{ sent: number; total: number }> = [];
+    const stub: any = {
+      upload: { addEventListener: (_: string, listener: (event: any) => void) => (stub.progress = listener) },
+      addEventListener: (name: string, listener: () => void) => (stub[name] = listener),
+      open: (method: string, url: string) => Object.assign(stub, { method, url }),
+      send: (body: FormData) => (stub.body = body),
+      status: 201,
+      responseText: '{"id":"up_1"}',
+    };
+
+    (globalThis as any).XMLHttpRequest = function XMLHttpRequest() {
+      return stub;
+    };
+    const zone = dropzone({ onFiles: () => {}, onProgress: ({ sent: loaded, total }) => sent.push({ sent: loaded, total }) });
+    const pending = zone.upload('/api/upload', [file('a.png', 'image/png', 40)]);
+
+    stub.progress({ loaded: 10, total: 50 });
+    stub.load();
+    const [outcome] = await pending;
+
+    (globalThis as any).XMLHttpRequest = real;
+
+    expect(stub.method).toBe('POST');
+    expect((stub.body.get('file') as File).name).toBe('a.png');
+    expect(sent).toEqual([{ sent: 10, total: 50 }, { sent: 40, total: 40 }]); // guaranteed final tick
+    expect(outcome).toMatchObject({ ok: true, status: 201, body: { id: 'up_1' } });
+  });
 });

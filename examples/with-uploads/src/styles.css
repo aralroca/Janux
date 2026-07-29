@@ -136,3 +136,15 @@ body {
   font-size: 0.75rem;
   opacity: 0.55;
 }
+
+.busy .bar {
+  width: 100%;
+  margin-top: 0.5rem;
+  accent-color: #0062ff;
+}
+
+.progress {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  opacity: 0.65;
+}

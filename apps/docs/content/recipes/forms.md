@@ -96,6 +96,6 @@ See [events and interactions](/docs/guide/events-and-interactions) for controlle
 
 ## Uploads
 
-File inputs work the same way — the entry is a `File`. For drag-and-drop, paste and progress, use [`dropzone`](/docs/reference/client-state) with an [HTTP handler](/docs/guide/http-handlers) endpoint.
+File inputs work the same way — the entry is a `File`. For drag-and-drop, paste and progress, use [`dropzone`](/docs/reference/client-state) with an [HTTP handler](/docs/guide/http-handlers) endpoint: `zone.upload(url, files)` POSTs each file as multipart and reports per-file progress through the `onProgress` callback, while the handler bounds the body with `formDataWithin` and validates real content with `matchesType` (magic bytes, not the declared MIME type).
 
 Related: [Intents and guards](/docs/guide/intents-and-guards) · [Views and JSX](/docs/guide/views-and-jsx) · [Schema types](/docs/reference/schema-api)

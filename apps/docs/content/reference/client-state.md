@@ -68,7 +68,8 @@ const zone = dropzone({
   accept: ['image/*', 'application/pdf'],
   multiple: true,
   maxSize: 5_000_000,
-  onFiles: (files) => upload(files),
+  onFiles: (files) => zone.upload('/api/upload', files),
+  onProgress: ({ file, sent, total }) => console.log(file.name, sent, total),
 });
 
 const detach = zone.attach(hostElement);   // drag & drop, paste, click-to-pick
@@ -82,7 +83,10 @@ zone.open();                                // open the native picker yourself
 | `multiple` | Defaults to `false` |
 | `maxSize` | Bytes; oversized files are filtered out |
 | `onFiles` | Called with the files that passed the filters — **never called with an empty list** |
+| `onProgress` | Per-file progress for `zone.upload()`: `{ file, sent, total }`, with a **guaranteed final `sent === total` tick** |
 
-`attach(el)` returns a detach function; wire it up in an `attach` lifecycle and call it in `detach`, or let the [ownership scope](/docs/reference/owners) do it. Filtering happens before `onFiles`, so a rejected file never reaches your code. Pair it with an [HTTP handler](/docs/guide/http-handlers) for the upload endpoint.
+`attach(el)` returns a detach function; wire it up in an `attach` lifecycle and call it in `detach`, or let the [ownership scope](/docs/reference/owners) do it. Filtering happens before `onFiles`, so a rejected file never reaches your code.
+
+`zone.upload(url, files, field?)` POSTs each file as `multipart/form-data` (field defaults to `"file"`, via `XMLHttpRequest` — the transport browsers report upload progress on) and resolves one `UploadOutcome` per file: `{ file, status, ok, body }`, where `body` is the parsed JSON response. A network error resolves `{ ok: false, status: 0 }` instead of sinking the batch. Pair it with an [HTTP handler](/docs/guide/http-handlers) for the upload endpoint.
 
 Related: [Stores](/docs/guide/stores) · [Data cache & URL state](/docs/guide/data-cache) · [HTTP handlers & uploads](/docs/guide/http-handlers)

@@ -110,6 +110,30 @@ describe('examples/with-uploads server side', () => {
     expect(body.error).toContain('exceeds');
     expect(await listedNames()).not.toContain('huge.png');
   });
+
+  it('unmasks a text file renamed to .png: magic bytes beat the declared type', async () => {
+    // The declared type lies (image/png) but the bytes are plain text —
+    // matchesType() sniffs the real content and the handler 415s it.
+    const renamed = new File(['just text pretending to be a picture'], 'fake.png', { type: 'image/png' });
+    const response = await upload(renamed);
+    const body: any = await response.json();
+
+    expect(response.status).toBe(415);
+    expect(body.error).toContain('only images are accepted');
+    expect(await listedNames()).not.toContain('fake.png');
+  });
+
+  it('cuts a grossly oversized body early with 413, before buffering it', async () => {
+    // formDataWithin() refuses this from content-length (or mid-stream) —
+    // the multipart parser never sees the 3 MB body.
+    const massive = new File([new Uint8Array(3 * MAX_SIZE)], 'massive.png', { type: 'image/png' });
+    const response = await upload(massive);
+    const body: any = await response.json();
+
+    expect(response.status).toBe(413);
+    expect(body.error).toContain('exceeds');
+    expect(await listedNames()).not.toContain('massive.png');
+  });
 });
 
 describe.skipIf(!BUILT)('examples/with-uploads in the browser', () => {
@@ -126,6 +150,9 @@ describe.skipIf(!BUILT)('examples/with-uploads in the browser', () => {
     await page.waitForSelector('.preview img');
     await page.waitForSelector('.gallery img[alt="browser.png"]');
     expect(await page.textContent('.preview figcaption')).toContain('browser.png');
+    // zone.upload() guarantees a final sent === total progress tick, so the
+    // persistent indicator deterministically lands on 100%.
+    await page.waitForFunction(() => document.querySelector('.progress')?.textContent?.includes('100%'));
     // No reload: the sentinel survives, and the server really stored it.
     expect(await page.evaluate(() => (window as any).__samePage)).toBe(true);
     const body: any = await (await fetch(`${BASE}/api/uploads`)).json();

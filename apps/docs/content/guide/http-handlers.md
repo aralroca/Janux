@@ -34,18 +34,31 @@ This is the surface for everything the `/_janux/*` RPC layer doesn't cover — i
 
 ## File uploads
 
-Handlers and form actions read multipart bodies with the platform API:
+Handlers and form actions read multipart bodies with the platform API. Bare `req.formData()` buffers the **whole** body before your code sees a byte, so guard uploads with `formDataWithin`: an oversized body 413s from `content-length` before being consumed — and a chunked body without one is cut mid-stream the moment it crosses the limit:
 
 ```ts title="src/api/upload.ts"
+import { formDataWithin, matchesType } from '@janux/server';
+
+const MAX_BODY_BYTES = 1024 * 1024;
+
 export async function POST({ req }) {
-  const form = await req.formData();
+  const form = await formDataWithin(req, MAX_BODY_BYTES);
+
+  if (form instanceof Response) return form; // 413, body never buffered past the limit
   const file = form.get('file') as File;
+
+  // Magic bytes, not the declared type: a .txt renamed to .png fails here.
+  if (!(await matchesType(file, ['image/*']))) return Response.json({ error: 'images only' }, { status: 415 });
 
   return Response.json({ name: file.name, size: file.size });
 }
 ```
 
-On the client, `dropzone()` wires drag-and-drop, paste and click-to-pick into a `File[]`:
+- `rejectOversized(req, maxBytes)` is the standalone early guard — `null` or a 413 `Response` from `content-length` alone, for handlers that stream the body themselves.
+- `readBodyWithin(req, maxBytes)` reads any body (JSON, raw bytes) under the same protection.
+- `matchesType(file, accept)` trusts only the file's magic bytes (via `sniffContentType(bytes)`, covering png, jpeg, gif, webp, pdf and zip) — `file.type` is caller-supplied fiction.
+
+On the client, `dropzone()` wires drag-and-drop, paste and click-to-pick into a `File[]`, and `zone.upload()` posts them back with per-file progress:
 
 ```ts
 import { dropzone } from 'janux/client';
@@ -53,7 +66,8 @@ import { dropzone } from 'janux/client';
 const zone = dropzone({
   accept: ['image/*', 'application/pdf'],
   maxSize: 10 * 1024 * 1024,
-  onFiles: (files) => upload(files),
+  onFiles: (files) => zone.upload('/api/upload', files),
+  onProgress: ({ file, sent, total }) => render(file.name, Math.round((sent / total) * 100)),
 });
 
 zone.attach(el);          // in lifecycle.attach; returns a disposer
