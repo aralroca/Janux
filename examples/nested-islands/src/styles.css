@@ -50,65 +50,128 @@ body {
   border-right: 1px solid var(--border);
 }
 
-/* ── Counter ────────────────────────────────────────────────────── */
-.counter {
+/* ── Board (level 1) ────────────────────────────────────────────── */
+.board {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 24px;
+  gap: 16px;
+  width: min(440px, 90%);
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 20px 40px -24px rgba(15, 23, 42, 0.25);
 }
 
-.counter h1 {
+.board > input {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  color: var(--ink);
+}
+
+.board > input:focus {
+  outline: 2px solid var(--violet);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.board h2 {
   margin: 0;
-  font-size: 3.75rem;
+  font-size: 1.75rem;
   font-weight: 800;
   color: #1e1b4b;
 }
 
-.counter .row {
+.board .row {
   display: flex;
+  gap: 10px;
+}
+
+.board .row button {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.board .row button:first-child {
+  background: linear-gradient(90deg, #7c3aed, #06b6d4);
+  color: #fff;
+}
+
+.board .row button:last-child {
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  color: var(--muted);
+}
+
+.board .row button:hover {
+  filter: brightness(0.96);
+}
+
+/* ── Cards (level 2) + badge (level 3) ──────────────────────────── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
 }
 
-.counter button {
-  padding: 10px 28px;
-  border: none;
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  font-size: 1.25rem;
-  font-weight: 700;
+  background: #f8fafc;
+}
+
+.card output {
+  min-width: 1.5ch;
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #1e1b4b;
+}
+
+.card > button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--ink);
   color: #fff;
-  cursor: pointer;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15);
-}
-
-.counter .dec {
-  background: #64748b;
-}
-
-.counter .dec:hover {
-  background: #475569;
-}
-
-.counter .inc {
-  background: linear-gradient(90deg, #7c3aed, #06b6d4);
-}
-
-.counter .inc:hover {
-  opacity: 0.9;
-}
-
-.curl {
-  color: var(--muted);
   font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.curl code {
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: #ede9fe;
-  color: #5b21b6;
-  font-size: 12px;
-  font-family: var(--mono);
+.card > button:hover {
+  background: #1e293b;
+}
+
+.badge {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: #94a3b8;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.badge-on {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #b45309;
 }
 
 /* ── Agent pane ─────────────────────────────────────────────────── */
