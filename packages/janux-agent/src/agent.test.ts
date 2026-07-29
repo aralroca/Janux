@@ -85,6 +85,32 @@ describe('agent loop', () => {
     expect(body.message).toContain('JANUX_MODEL');
   });
 
+  /**
+   * The gate is the door, not a step inside the room: an unconfigured model
+   * must not turn `/_janux/agent` into an open, unmetered endpoint that also
+   * skips the fail-closed identity check.
+   */
+  it('gates before resolving the model: no key still means auth and rate limits', async () => {
+    const denied = defineAgent(
+      { harness: { identityFor: () => undefined } },
+      { env: {} },
+    );
+
+    expect((await ask(buildServer(denied), { messages: [] })).status).toBe(401);
+
+    const limited = defineAgent(
+      { harness: { identityFor: () => 'caller', rateLimit: { limit: 1, windowMs: 60_000 } } },
+      { env: {} },
+    );
+    const server = buildServer(limited);
+
+    expect((await ask(server, { messages: [] })).status).toBe(200);
+    const rejected = await ask(server, { messages: [] });
+
+    expect(rejected.status).toBe(429);
+    expect(((await rejected.json()) as any).error).toBe('rate_limited');
+  });
+
   it('answers plain text and reports the resolved model', async () => {
     const { fetchImpl } = scriptedFetch([anthropicReply([{ type: 'text', text: 'Hello!' }])]);
     const server = buildServer(defineAgent({}, { env, fetchImpl }));

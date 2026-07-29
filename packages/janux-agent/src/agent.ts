@@ -178,12 +178,14 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
   return {
     handleLlm: createLlmHandler(config, env, fetchImpl, gate),
     async handle(req: Request, deps: AgentDeps): Promise<Response> {
-      const model = resolveModel(config.model, env, config.modelOptions);
-
-      if (!model) return json(setupCard());
+      // The gate runs first, always: a missing model is a configuration state,
+      // not a reason to answer an unauthorized caller or to stop counting.
       const identity = await gate(req);
 
       if (identity instanceof Response) return identity;
+      const model = resolveModel(config.model, env, config.modelOptions);
+
+      if (!model) return json(setupCard());
       const body = (await req.json().catch(() => ({ messages: [] }))) as AgentRequestBody & {
         continuation?: boolean;
         toolResults?: { name: string; output: unknown }[];

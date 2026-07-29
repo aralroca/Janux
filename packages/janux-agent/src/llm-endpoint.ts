@@ -89,12 +89,14 @@ export function createLlmHandler(
     // POST-only: an EventSource (or a crawler) issuing GET would otherwise buy a
     // billed provider turn for an empty transcript.
     if (req.method !== 'POST') return json({ type: 'error', error: 'method_not_allowed' }, 405);
-    const resolved = resolveModel(config.model, env, config.modelOptions);
-
-    if (!resolved) return json(setupCard(), 503);
+    // Gate first, same as /_janux/agent: an unconfigured model must not open
+    // the door to unauthorized or unmetered callers.
     const gated = await gate?.(req);
 
     if (gated instanceof Response) return gated;
+    const resolved = resolveModel(config.model, env, config.modelOptions);
+
+    if (!resolved) return json(setupCard(), 503);
     // Honest about what it cannot do: a client asking to resume gets told the
     // stream is gone instead of silently receiving a second, duplicate turn.
     if (req.headers.get('last-event-id')) return json({ type: 'error', error: 'stream_not_resumable' }, 422);
