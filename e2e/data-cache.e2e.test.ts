@@ -99,6 +99,36 @@ describe.skipIf(!BUILT)('examples/data-cache in the browser', () => {
     await page.close();
   }, TIMEOUT);
 
+  it('the panel example payload for catalog.filter really drives the filter', async () => {
+    const { page, errors } = await openPage();
+
+    await page.goto(`${BASE}/`);
+    await waitForCount(page, 4);
+    // Filter as a human first, so the agent call has something to change.
+    await page.click('.tags button:has-text("video")');
+    await waitForCount(page, 1);
+
+    // The payload shown next to the tool is what the button sends — it must
+    // name a real tag, not a placeholder the filter can never match.
+    const example = await page.locator('.tool-row:has-text("catalog.filter") code.example').textContent();
+    const target = JSON.parse(example ?? '{}').tag;
+
+    await page.click('.tool-row:has-text("catalog.filter") button');
+    await waitForCount(page, target === 'all' ? 4 : 1);
+    expect(await page.locator(`.tags .tag.on`).textContent()).toBe(target);
+    // The agent's filter flows into the URL exactly like a click does — and
+    // the fallback tag clears the param instead of pinning ?tag=all.
+    expect(new URL(page.url()).searchParams.get('tag')).toBe(target === 'all' ? null : target);
+    // The resource the agent reads back agrees with the view it just changed.
+    await page.waitForFunction(
+      (tag) => document.querySelector('.resource')?.textContent?.includes(`"tag": "${tag}"`),
+      target,
+      { timeout: 5_000 },
+    );
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
+
   it('Back undoes filters one by one: replace:false made each a history entry', async () => {
     const { page, errors } = await openPage();
 

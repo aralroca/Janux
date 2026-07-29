@@ -51,11 +51,18 @@ body {
 }
 
 /* ── Board (level 1) ────────────────────────────────────────────── */
+/* The island element is the flex item: without a width it shrinks to fit and
+   the card's own width can never resolve against it. */
+.preview > janux-island {
+  display: block;
+  width: min(440px, 90%);
+}
+
 .board {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  width: min(440px, 90%);
+  width: 100%;
   padding: 28px;
   border: 1px solid var(--border);
   border-radius: 16px;
