@@ -2,7 +2,7 @@ import diff from 'diff-dom-streaming';
 import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { scanMarkers, scanTree } from './events';
-import { consumePrefetched, NAVIGATION_HEADERS } from './prefetch';
+import { consumePrefetched, navigableBody, NAVIGATION_HEADERS } from './prefetch';
 import { runScriptsWhileStreaming } from './scripts';
 import { rescopeSpeculationRules } from './speculation';
 
@@ -188,11 +188,11 @@ async function fetchPage(url: string, signal?: AbortSignal): Promise<ReadableStr
   // any navigation existed, so it gets wrapped.
   if (cached !== undefined) return abortableStream(cached, signal);
   const response = await fetch(url, { signal, headers: NAVIGATION_HEADERS });
+  const body = navigableBody(response);
 
-  if (!response.ok) throw new Error(`navigation fetch failed (${response.status})`);
-  if (!response.body) throw new Error('navigation fetch failed (no body)');
+  if (!body) throw new Error(`navigation fetch failed (${response.status})`);
 
-  return response.body;
+  return body;
 }
 
 /**

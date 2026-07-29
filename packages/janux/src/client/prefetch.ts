@@ -15,6 +15,22 @@ export interface PrefetchConfig {
  */
 export const NAVIGATION_HEADERS = { accept: 'text/html', 'x-janux-navigation': '1' };
 
+/**
+ * The stream a navigation can apply, or nothing.
+ *
+ * A 404 or a 500 carrying a document IS the page for that URL — the app's
+ * `_404`/`_500` — and the diff applies it like any other. Only a response with
+ * no document to show (the bare status line an app without those pages answers,
+ * a proxy's plain-text error) is a failed navigation, and there the browser
+ * takes over.
+ */
+export function navigableBody(response: Response): ReadableStream<Uint8Array> | undefined {
+  if (!response.body) return undefined;
+  if (response.ok) return response.body;
+
+  return response.headers.get('content-type')?.includes('text/html') ? response.body : undefined;
+}
+
 const DEFAULT_TTL = 30_000;
 /** Warmed-but-unopened pages hold real connections; a hover tour must not pile them up. */
 const MAX_WARM = 8;
@@ -63,8 +79,8 @@ export function prefetch(url: string): void {
   evict();
   const entry: PrefetchEntry = {
     at: Date.now(),
-    body: fetch(url, { headers: NAVIGATION_HEADERS }).then((response) =>
-      response.ok && response.body ? response.body : Promise.reject(new Error('prefetch failed')),
+    body: fetch(url, { headers: NAVIGATION_HEADERS }).then(
+      (response) => navigableBody(response) ?? Promise.reject(new Error('prefetch failed')),
     ),
   };
 
