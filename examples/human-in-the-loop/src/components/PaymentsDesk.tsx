@@ -3,13 +3,19 @@ import { transfer } from '../server/payments.api';
 
 let draftSeq = 0;
 let auditSeq = 0;
+let stopAudit: (() => void) | undefined;
+
+/** The intents the visible trail mirrors — never `payments.record` itself. */
+const AUDITED_TOOLS = ['payments.draft', 'payments.send'];
 
 const euros = (cents: number) => `${(cents / 100).toFixed(2)}€`;
 
-/** App-level audit trail: every executed action remembers who did it. */
-function record(state: any, tool: string, detail: string, origin: string): void {
-  auditSeq += 1;
-  state.audit.unshift({ id: `audit_${auditSeq}`, tool, detail, origin });
+/** What the trail shows for a framework AuditEntry: payee + amount, resolved from the entry's input. */
+function detailFor(entry: any, state: any): string | undefined {
+  if (entry.tool === 'payments.draft') return `${entry.input.to} ${euros(entry.input.amountCents)}`;
+  const payment = state.queue.find((row: any) => row.id === entry.input?.id);
+
+  return payment ? `${payment.to} ${euros(payment.amountCents)}` : undefined;
 }
 
 export const PaymentsDesk = component({
@@ -28,10 +34,9 @@ export const PaymentsDesk = component({
     draft: intent({
       description: 'Queue a new outgoing payment draft. Does not move money.',
       input: schema({ to: str().min(1), amountCents: money() }),
-      run: ({ state, input, origin }: any) => {
+      run: ({ state, input }: any) => {
         draftSeq += 1;
         state.queue.push({ id: `pay_new_${draftSeq}`, to: input.to, amountCents: input.amountCents, status: 'draft', ref: '' });
-        record(state, 'payments.draft', `${input.to} ${euros(input.amountCents)}`, origin ?? 'human');
       },
     }),
 
@@ -40,7 +45,7 @@ export const PaymentsDesk = component({
       guard: 'confirm',
       input: schema({ id: str().default('pay_acme') }),
       ready: ({ state }: any) => state.queue.some((payment: any) => payment.status === 'draft'),
-      run: async ({ state, input, origin }: any) => {
+      run: async ({ state, input }: any) => {
         const payment = state.queue.find((row: any) => row.id === input.id);
 
         if (!payment) throw new Error(`Unknown payment "${input.id}"`);
@@ -49,9 +54,40 @@ export const PaymentsDesk = component({
 
         payment.status = 'sent';
         payment.ref = executed.transferId;
-        record(state, 'payments.send', `${payment.to} ${euros(payment.amountCents)}`, origin ?? 'human');
       },
     }),
+
+    record: intent({
+      description: 'Append a framework janux:audit entry to the visible trail. Not an agent tool.',
+      guard: 'forbidden',
+      input: schema({ tool: str(), detail: str(), origin: str() }),
+      run: ({ state, input }: any) => {
+        auditSeq += 1;
+        state.audit.unshift({ id: `audit_${auditSeq}`, tool: input.tool, detail: input.detail, origin: input.origin });
+      },
+    }),
+  },
+
+  /**
+   * The trail is fed by the framework's own audit stream: every executed
+   * intent arrives as a `janux:audit` DOM event (origin included), so `run()`
+   * bodies no longer re-record themselves by hand.
+   */
+  lifecycle: {
+    attach: ({ state, intents }: any) => {
+      const onAudit = (event: Event) => {
+        const entry = (event as CustomEvent<any>).detail;
+
+        if (!entry.ok || entry.proposed || !AUDITED_TOOLS.includes(entry.tool)) return;
+        const detail = detailFor(entry, state);
+
+        if (detail) intents.record({ tool: entry.tool, detail, origin: entry.origin });
+      };
+
+      document.addEventListener('janux:audit', onAudit);
+      stopAudit = () => document.removeEventListener('janux:audit', onAudit);
+    },
+    detach: () => stopAudit?.(),
   },
 
   view: ({ state, intents }: any) => (

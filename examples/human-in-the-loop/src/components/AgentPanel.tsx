@@ -1,4 +1,4 @@
-import { bool, component, intent, list, schema, str } from 'janux';
+import { component, intent, list, schema, str } from 'janux';
 
 function bridge(): any {
   return (window as any).janux;
@@ -32,7 +32,6 @@ async function refresh(state: any): Promise<void> {
     guard: tool.guard,
     description: tool.description ?? '',
     example: tool.input ? JSON.stringify(exampleInput(tool.input)) : '',
-    callable: !tool.name.startsWith('api.'),
   }));
 
   if (JSON.stringify(tools) !== JSON.stringify(state.tools)) state.tools = tools;
@@ -43,7 +42,7 @@ export const AgentPanel = component({
   description: 'Live view of this page’s agent surface: every tool, its guard, and an agent-origin trigger.',
 
   state: schema({
-    tools: list({ name: str(), guard: str(), description: str(), example: str(), callable: bool() }),
+    tools: list({ name: str(), guard: str(), description: str(), example: str() }),
     last: str(),
   }),
 
@@ -82,13 +81,9 @@ export const AgentPanel = component({
           <span class={`guard ${tool.guard}`}>{tool.guard}</span>
           <small>{tool.description}</small>
           {tool.example ? <code class="example">{tool.example}</code> : null}
-          {tool.callable ? (
-            <button onClick={intents.callTool.with({ tool: tool.name, example: tool.example })}>
-              Call as agent
-            </button>
-          ) : (
-            <small class="http-note">server tool — call it over HTTP with x-janux-origin: agent</small>
-          )}
+          <button onClick={intents.callTool.with({ tool: tool.name, example: tool.example })}>
+            Call as agent
+          </button>
         </div>
       ))}
       {state.last ? <pre class="last-result">{state.last}</pre> : null}

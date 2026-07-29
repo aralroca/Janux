@@ -141,6 +141,9 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     use,
     emit,
     ctx,
+    // Non-intent code (view, effects, lifecycle) runs on behalf of the
+    // session's user; `invokeIntent` overlays the caller's actual origin.
+    origin: 'human',
   };
   const hooks = {
     gate,

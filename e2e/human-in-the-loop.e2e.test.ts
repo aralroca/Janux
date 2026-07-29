@@ -154,6 +154,35 @@ describe.skipIf(!BUILT)('examples/human-in-the-loop in the browser', () => {
     await page.close();
   }, TIMEOUT);
 
+  it('a server api() tool called through the bridge parks in the inbox; Approve executes it server-side', async () => {
+    const { page, errors } = await openPage();
+    const ledgerLength = () =>
+      page.evaluate(async () => {
+        const response = await fetch('/_janux/api/payments.ledger', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: '{}',
+        });
+
+        return ((await response.json()) as any).result.transfers.length;
+      });
+
+    await page.goto(`${BASE}/`);
+    await page.waitForSelector('.tool-row:has-text("api.payments.transfer") button');
+    const before = await ledgerLength();
+
+    await page.click('.tool-row:has-text("api.payments.transfer") button');
+    await page.waitForSelector('.inbox .proposal-card');
+    // Parked server-side, mirrored client-side: nothing hit the ledger yet.
+    expect(await ledgerLength()).toBe(before);
+
+    await page.click('.inbox .proposal-card button.approve');
+    await page.waitForFunction(() => document.querySelectorAll('.inbox .proposal-card').length === 0);
+    expect(await ledgerLength()).toBe(before + 1);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
+
   it('the same action from a human click executes directly — no proposal in between', async () => {
     const { page, errors } = await openPage();
 

@@ -36,6 +36,8 @@ const proposal = await window.janux.call('cart.checkout'); // { status: 'proposa
 await window.janux.approve(proposal.id);                   // runs it
 ```
 
+An `api()` proposal created from the page — `window.janux.call('api.…')` — is mirrored client-side: the same `janux:proposal` event fires, and `approve(id)` / `reject(id)` settle it through `/_janux/approve` / `/_janux/reject`. A proposal a *remote* agent parks over HTTP stays server-side only: there is no push channel to open pages yet.
+
 Tip: give your copilot component human-only intents (`guard: 'forbidden'`) for `approve`/`reject`, so an agent can never approve its own proposal.
 
 ## Readiness
@@ -52,4 +54,19 @@ All compile to `data-jxa` / `data-jxform` / `data-jxe-*` markers handled by dele
 
 ## Errors and audit
 
-Invalid input throws with precise paths (`items[0].qty: below min 1`) before `run()` executes. Every invocation — human or agent, allowed or rejected — produces an audit entry: tool, origin, guard, input, ok/error.
+Invalid input throws with precise paths (`items[0].qty: below min 1`) before `run()` executes. Every invocation — human or agent, allowed or rejected — produces an audit entry: tool, origin, guard, input, ok/error (an `AuditEntry`; `proposed: true` marks a parked `confirm` call that has not run yet).
+
+On the client every entry reaches the page twice, mirroring `janux:proposal`: `boot({ onAudit })` for the app's own code, and a `janux:audit` DOM event for islands that only see the document. An audit-trail island subscribes instead of re-recording actions inside each `run()`:
+
+```ts
+import { boot } from 'janux/client';
+import type { AuditEntry } from 'janux';
+
+boot({ onAudit: (entry: AuditEntry) => console.log(entry.tool, entry.origin, entry.ok) });
+// …or, from any island / plain script:
+document.addEventListener('janux:audit', (event) => {
+  const entry = (event as CustomEvent<AuditEntry>).detail;
+});
+```
+
+`bag.origin` is always defined — `'human'` outside intent runs (view, effects, lifecycle), the caller's origin during one — so `run()` can branch on it without a fallback.

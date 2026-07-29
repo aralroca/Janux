@@ -62,12 +62,15 @@ export interface RunBag {
   event?: any;
   signal?: AbortSignal;
   /**
-   * Who invoked the running intent — set during intent runs only. `'human'`
-   * is a DOM interaction; `'agent'` is Janux's own agent surface. An external
-   * driver clicking real DOM (Playwright, computer-use) reads as `'human'`:
-   * this is a UX/governance signal, not an anti-automation mechanism.
+   * Who is driving the running code — always present. Outside an intent run
+   * (view, effects, lifecycle, `on` handlers) it is `'human'`: that code runs
+   * on behalf of the session's user. During an intent run it is the caller's
+   * origin: `'human'` for a DOM interaction, `'agent'` for any call through
+   * Janux's own agent surface. An external driver clicking real DOM
+   * (Playwright, computer-use) reads as `'human'`: this is a UX/governance
+   * signal, not an anti-automation mechanism.
    */
-  origin?: Origin;
+  origin: Origin;
 }
 
 export interface SourceReader {
