@@ -2,6 +2,14 @@ import type { JxType } from '../schema';
 import type { JanuxNode } from '../jsx-runtime';
 import type { I18n } from '../i18n/types';
 
+/** Structural mirror of the client's PersistConfig — defs must not import client code. */
+export interface PersistLikeConfig {
+  name?: string;
+  partialize?: (state: Record<string, unknown>) => Record<string, unknown>;
+  version?: number;
+  migrate?: (persisted: Record<string, unknown>, from: number) => Record<string, unknown>;
+}
+
 export type GuardValue = 'auto' | 'confirm' | 'forbidden';
 /**
  * A dynamic guard sees who is asking: `origin` is `'human'` for a DOM
@@ -141,7 +149,8 @@ export interface ComponentDef {
    */
   error?: (bag: RunBag & { error: unknown }) => unknown;
   scope?: 'app' | 'route';
-  persist?: 'local' | 'none';
+  /** `'local'` uses defaults; a config object customizes key/partialize/version/migrate (localStorage-backed either way). */
+  persist?: 'local' | 'none' | PersistLikeConfig;
   /** Extra i18n keys (exact or prefix strings, or RegExp) this island uses only after interaction — shipped to the client along with the keys recorded during SSR. */
   i18nKeys?: (string | RegExp)[];
 }

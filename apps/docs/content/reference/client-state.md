@@ -6,21 +6,27 @@ Three browser-side helpers from `janux/client`: state that survives a reload, st
 import { persistStore, urlState, dropzone } from 'janux/client';
 ```
 
-## persistStore(store, config?)
+## Persisted stores
 
-Mirrors a [store](/docs/guide/stores)'s state into storage and restores it on boot.
+Mirrors a [store](/docs/guide/stores)'s state into storage and restores it on boot. Declare it on the store def — `'local'` for the defaults, or a config object:
 
 ```ts
-import { persistStore } from 'janux/client';
-import { theme } from './stores';
+import { store, schema, str } from 'janux';
 
-persistStore(theme, {
-  name: 'my-app:theme',
-  partialize: (state) => ({ mode: state.mode }),   // don't persist transient fields
-  version: 2,
-  migrate: (persisted, from) => (from < 2 ? { mode: persisted.dark ? 'dark' : 'light' } : persisted),
+export const theme = store({
+  name: 'theme',
+  state: schema({ mode: str().default('light') }),
+  intents: {},
+  persist: {
+    name: 'my-app:theme',
+    partialize: (state) => ({ mode: state.mode }),   // don't persist transient fields
+    version: 2,
+    migrate: (persisted, from) => (from < 2 ? { mode: persisted.dark ? 'dark' : 'light' } : persisted),
+  },
 });
 ```
+
+The runtime wires it up when the store first mounts (`persistStore` under the hood — the low-level `persistStore(instance, config)` from `janux/client` is for embedders holding a live `JanuxInstance`).
 
 | `PersistConfig` | Default | Notes |
 |---|---|---|
