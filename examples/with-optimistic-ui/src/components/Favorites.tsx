@@ -58,8 +58,11 @@ export const Favorites = component({
     const favorites = q.data.value ?? [];
     const starred = new Set(favorites.map((fav) => fav.name));
     const saving = new Set(favorites.filter((fav) => fav.pending).map((fav) => fav.name));
+    // Optimism means painting the FINAL state instantly: an in-flight save
+    // already reads "★ Starred" — the rollback is what reports a rejection.
+    // 'saving' stays as a DOM marker (tests observe the window), same skin.
     const starState = (name: string) => (saving.has(name) ? 'saving' : starred.has(name) ? 'starred' : 'idle');
-    const starLabel = { saving: '★ Saving…', starred: '★ Starred', idle: '☆ Star' };
+    const starLabel = { saving: '★ Starred', starred: '★ Starred', idle: '☆ Star' };
 
     return (
       <section class="board">

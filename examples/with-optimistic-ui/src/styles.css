@@ -65,15 +65,8 @@ main {
   transform: translateY(-1px);
 }
 
-/* Optimistic write in flight: amber and visibly alive until the server answers. */
-.star.saving {
-  border-color: light-dark(#f0b429, #b98a1d);
-  background: light-dark(#fff3d6, #2c220c);
-  color: light-dark(#8a5d00, #f5c94c);
-  animation: star-pulse 0.9s ease-in-out infinite;
-}
-
-/* Confirmed: solid gold, full presence — not a washed-out disabled button. */
+/* Optimistic means no interim look: in-flight and confirmed wear the same gold. */
+.star.saving,
 .star.starred {
   border-color: transparent;
   background: light-dark(#f7c948, #a9821e);
@@ -91,11 +84,6 @@ main {
   cursor: default;
 }
 
-@keyframes star-pulse {
-  50% {
-    box-shadow: 0 0 0 4px light-dark(rgba(240, 180, 41, 0.25), rgba(240, 180, 41, 0.15));
-  }
-}
 
 .fav {
   padding: 0.35rem 0;
@@ -105,15 +93,7 @@ main {
   content: '⭐ ';
 }
 
-.fav.pending {
-  opacity: 0.55;
-  font-style: italic;
-}
-
-.fav.pending::after {
-  content: ' — saving…';
-  font-size: 0.8rem;
-}
+/* .fav.pending is a DOM marker only: optimistically-added rows look final. */
 
 .count {
   font-size: 0.85rem;
