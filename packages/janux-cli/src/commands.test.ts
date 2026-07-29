@@ -102,6 +102,16 @@ describe('prerenderPages', () => {
     expect(readFileSync(join(outDir, 'posts/hello.md'), 'utf8')).toContain('# hello post');
     expect(readFileSync(join(outDir, '.md'), 'utf8')).toContain('# home sweet home');
   });
+
+  /** A static host answers an unknown path from `404.html` — there is no server to ask. */
+  it('emits 404.html when the app has a _404 page, and nothing when it has none', async () => {
+    const withPage = createJanuxServer({ routesDir: join(import.meta.dir, '__fixtures__/static-app/routes') });
+    const outDir = mkdtempSync(join(tmpdir(), 'janux-prerender-'));
+
+    await prerenderPages(withPage, outDir);
+    expect(readFileSync(join(outDir, '404.html'), 'utf8')).toContain('no such page');
+    expect(existsSync(join(await staticBuild(), '404.html'))).toBe(false);
+  });
 });
 
 /** An app root with the conventional files a shell field is resolved from. */

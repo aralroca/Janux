@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { runtimeIncludes } from './deps';
-import { devStylesheets, foreignExternals, janux } from './plugin';
+import { devStylesheets, fallsThroughToVite, foreignExternals, janux } from './plugin';
 
 /**
  * Regression: the dev shell used to link `/src/styles.css`, which Vite's
@@ -26,6 +26,33 @@ describe('devStylesheets', () => {
 
   it('is empty when the app has no stylesheet', () => {
     expect(devStylesheets('/app', undefined)).toEqual([]);
+  });
+});
+
+/**
+ * Vite's fallback is for paths the app has no answer for. An app with a `_404`
+ * page does have one — under `janux dev` its document must reach the browser
+ * instead of Vite's own miss.
+ */
+describe('the dev 404 fall-through', () => {
+  const notFound = (body: string, contentType?: string) =>
+    new Response(body, { status: 404, headers: contentType ? { 'content-type': contentType } : {} });
+
+  it('keeps the rendered _404 document', () => {
+    expect(fallsThroughToVite(notFound('<h1>gone</h1>', 'text/html; charset=utf-8'), '/nope')).toBe(false);
+  });
+
+  it('falls through for a bare page-router miss', () => {
+    expect(fallsThroughToVite(notFound('Not found'), '/nope')).toBe(true);
+  });
+
+  it('never touches a response the framework or an api handler owns', () => {
+    expect(fallsThroughToVite(notFound('{}', 'application/json'), '/api/orders/9')).toBe(false);
+    expect(fallsThroughToVite(notFound('{}', 'application/json'), '/_janux/api/x')).toBe(false);
+  });
+
+  it('leaves everything that is not a 404 alone', () => {
+    expect(fallsThroughToVite(new Response('ok'), '/')).toBe(false);
   });
 });
 
