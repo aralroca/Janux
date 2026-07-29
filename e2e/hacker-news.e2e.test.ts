@@ -80,6 +80,14 @@ describe('examples/hacker-news server side', () => {
     expect(html).not.toContain('data-jx-pending');
   });
 
+  it('item/[id]: an id that matches the matcher but no story is a 404', async () => {
+    const { get } = await ssrApp(APP);
+    const response = await get('/item/999');
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).toContain('No such page');
+  });
+
   it('exposes the fixture apis and the mounted intents as agent tools', async () => {
     const { get } = await ssrApp(APP);
     const toolGuards = async (path: string) => {

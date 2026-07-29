@@ -1,4 +1,4 @@
-import type { PageMeta } from 'janux';
+import { notFound, type PageMeta } from 'janux';
 import { formatDate, postBySlug, posts, readingMinutes } from '../../content';
 import { markdownToHtml } from '../../markdown';
 
@@ -8,7 +8,8 @@ export const staticParams = () => posts().map(({ slug }) => ({ slug }));
 export function meta({ params }: { params: { slug: string } }): PageMeta {
   const post = postBySlug(params.slug);
 
-  if (!post) return { title: 'Post not found — Janux Static Blog', robots: 'noindex' };
+  // No such post: the render calls notFound(), and `_404.tsx` brings its own meta.
+  if (!post) return {};
 
   return {
     title: `${post.title} — Janux Static Blog`,
@@ -17,24 +18,12 @@ export function meta({ params }: { params: { slug: string } }): PageMeta {
   };
 }
 
-function NotFound({ slug }: { slug: string }) {
-  return (
-    <article class="post">
-      <header class="post-head">
-        <h1>Post not found</h1>
-        <p class="lede">No post named “{slug}”.</p>
-      </header>
-      <p class="crumb">
-        <a href="/">← All posts</a>
-      </p>
-    </article>
-  );
-}
-
 export default function PostPage({ params }: { params: { slug: string } }) {
   const post = postBySlug(params.slug);
 
-  if (!post) return <NotFound slug={params.slug} />;
+  // The route matched, but there is no such post: that is a 404, not a page
+  // about the absence of one. `notFound()` throws, so nothing below runs.
+  if (!post) notFound();
 
   return (
     <article class="post">

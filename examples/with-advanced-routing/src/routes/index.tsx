@@ -8,6 +8,8 @@ const DEMOS: [string, string, string, string][] = [
   ['/tickets/123', 'tickets/[id=integer].tsx', 'typed matcher', 'Digits only; /tickets/abc matches no route at all.'],
   ['/wiki', 'wiki/_layout.tsx', 'nested layout', 'A sub-shell wrapping /wiki and every article under it.'],
   ['/pricing', '(marketing)/pricing.tsx', 'route group', 'The (marketing) directory never shows up in the URL.'],
+  ['/nothing/here', '_404.tsx', 'not found', 'No pattern matches, so the app answers with its own page and a 404.'],
+  ['/boom', '_500.tsx', 'server error', 'A page that throws answers with its own page and a 500, layout aside.'],
 ];
 
 /** The home page: a map of every route pattern this example exercises. */

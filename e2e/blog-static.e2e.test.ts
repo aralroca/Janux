@@ -35,6 +35,16 @@ describe('examples/blog-static end to end', () => {
     expect(html).toContain('<li><strong>Bold</strong>, <code>inline code</code> and');
   });
 
+  it('answers a slug with no post with the 404 page, not a 200 that says so', async () => {
+    const response = await get('/posts/never-written');
+    const html = await response.text();
+
+    expect(response.status).toBe(404);
+    expect(html).toContain('<title>Not found — Janux Static Blog</title>');
+    // Still the blog: _404 renders inside the layout.
+    expect(html).toContain('Janux Static Blog</a>');
+  });
+
   it('emits the configured speculation rules on every page', async () => {
     const html = await (await get('/')).text();
 
@@ -89,6 +99,14 @@ describe.skipIf(!isBuilt('examples/blog-static'))('examples/blog-static static b
       expect(html).not.toContain('<script src=');
       expect(html).not.toContain('type="module"');
     });
+  });
+
+  /** A static host has no server to ask: an unknown path is served from 404.html. */
+  it('emits 404.html from _404.tsx', () => {
+    const html = readFileSync(join(DIST, '404.html'), 'utf8');
+
+    expect(html).toContain('<title>Not found — Janux Static Blog</title>');
+    expect(html).toContain('There is no page at this address.');
   });
 
   it('emits llms.txt and sitemap.xml beside the pages', () => {

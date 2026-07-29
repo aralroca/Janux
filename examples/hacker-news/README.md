@@ -33,4 +33,5 @@ bun run dev   # http://localhost:4321
 | `src/components/CommentTree.tsx` | Static recursive comment tree (server-rendered, no JS) |
 | `src/routes/index.tsx` | The front page (`page 1`) |
 | `src/routes/news/[page=integer].tsx` | Pages 2 and 3 |
-| `src/routes/item/[id=integer].tsx` | One story with its comments |
+| `src/routes/item/[id=integer].tsx` | One story with its comments — `notFound()` when the id matches no story |
+| `src/routes/_404.tsx` | The page an unknown URL (or a missing story) gets, under a 404 |

@@ -582,3 +582,18 @@ h1 {
     border: 0;
   }
 }
+
+/* No route at all (_404) and a route that threw (_500). */
+.article.gone {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.article.gone .eyebrow {
+  color: #b91c1c;
+}
+
+.article.gone.standalone {
+  max-width: 640px;
+  margin: 48px auto;
+}
