@@ -134,6 +134,19 @@ In a monorepo, set the project's **Root Directory** to the app (`apps/docs` here
 
 > **Note:** a CLI deployment is attributed to your **git commit author**. If that email is not on the Vercel team, the deployment is created and immediately blocked — *"Git author … must have access to the team"* — for a build that never started. Check `git config user.email` first.
 
+### Deploying an already-built output (`--prebuilt`)
+
+`vercel deploy --prebuilt` skips the build and ships `.vercel/output` — but it reads that folder **from the directory you run it in**, while a monorepo project with a Root Directory refuses to run anywhere but the workspace root. The adapter writes its output next to the app (`apps/docs/.vercel/output`), so the two paths differ, and a stale `.vercel/output` left at the root is deployed silently instead:
+
+```bash
+bun run --cwd apps/docs build
+bunx --cwd apps/docs janux-vercel --include content
+rm -rf .vercel/output && cp -R apps/docs/.vercel/output .vercel/output   # what the CLI will upload
+bunx vercel deploy --prebuilt --prod
+```
+
+Check what you shipped before believing it: `curl -sI https://<your-domain>/` and open a page you changed. A normal `vercel deploy --prod` (no `--prebuilt`) builds on Vercel and sidesteps all of this.
+
 ## Server, not serverless-shaped
 
 The function is a whole app booting on a cold start, not a route handler, and that is deliberate: it is the same server `janux start` runs, so behaviour cannot drift between the platform and your laptop. Two consequences worth knowing:

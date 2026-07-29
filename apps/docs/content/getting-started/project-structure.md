@@ -6,6 +6,8 @@ Janux is convention over configuration: every path below is **optional** and dis
 my-app/
   src/
     routes/           # file-system routes: index.tsx → /, orders/[id].tsx → /orders/:id
+      _404.tsx        # unmatched URLs (and notFound()) — answered with a 404
+      _500.tsx        # a page that threw while rendering — answered with a 500
     components/       # your components (static, islands, stores)
     server/           # *.api.ts — server functions that double as agent tools
     api/              # arbitrary HTTP handlers: src/api/upload.ts → POST /api/upload
@@ -28,6 +30,7 @@ my-app/
 | Path | Turns on | Details |
 |---|---|---|
 | `src/routes/**` | Routing, layouts (`_layout.tsx`), groups (`(name)/`), dynamic and typed segments | [Navigation](/docs/guide/navigation) |
+| `src/routes/_404.tsx`, `_500.tsx` | The pages an unmatched URL and a failed render answer with | [Navigation § Not found & server errors](/docs/guide/navigation) |
 | `src/server/*.api.ts` | `api()` RPC endpoints, auto-published as agent tools | [api() as agent tools](/docs/guide/api-rpc) |
 | `src/api/**` | Raw HTTP handlers by exported method (`export function POST`) and uploads | [HTTP handlers](/docs/guide/http-handlers) |
 | `src/client.ts` | The client runtime (`boot`). Omit it for a zero-JS site | [SSR and resumability](/docs/guide/ssr-and-resumability) |
@@ -47,6 +50,7 @@ my-app/
 - `src/components/Counter.tsx` — a bifacial island: schema state, an intent with a description, a view. This is the piece agents can read *and* drive.
 - `src/components/AgentPanel.tsx` — the copilot UI, talking to `/_janux/agent`.
 - `src/routes/index.tsx` — the page, with `meta` for title and description.
+- `src/routes/_404.tsx` and `_500.tsx` — the pages a bad URL and a broken render answer with, from the first run.
 - `src/client.ts` — `boot({ defs: [Counter] })`.
 - `src/components/Counter.test.ts` — a unit test driving intents through the real pipeline.
 

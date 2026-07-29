@@ -40,6 +40,7 @@ Now `janux build` also prerenders every page into `dist/client`:
 dist/client/index.html                        # /
 dist/client/docs/guide/getting-started/index.html
 dist/client/docs/guide/getting-started.md     # markdown projection of each page (`/` → `.md`)
+dist/client/404.html                          # src/routes/_404.tsx, when the app has one
 dist/client/llms.txt                          # agent index, when llmsTxt is configured
 dist/client/sitemap.xml, robots.txt           # when siteUrl is configured
 dist/client/client.js, styles.css, ...        # islands still hydrate on interaction

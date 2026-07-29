@@ -41,6 +41,67 @@ export default function TeamLayout({ children, params }) {
 
 `(group)` directories organize files and attach their own layout **without appearing in the URL** — `routes/(marketing)/pricing.tsx` serves `/pricing` wrapped in `(marketing)/_layout.tsx`. Use groups to give different sections different root shells.
 
+## Not found & server errors
+
+Two more underscore files at the root of `src/routes`, discovered the same way layouts are:
+
+| File | Renders when | Status | Wrapped in `_layout.tsx` |
+|---|---|---|---|
+| `_404.tsx` | no route matches, or a page called `notFound()` | `404` | yes |
+| `_500.tsx` | a page threw while the server was building it | `500` | no |
+
+Both receive `{ ctx }` (`_500` also gets the thrown `error`) and an optional `meta` export works as on any page. Neither receives `params`: no route matched.
+
+```tsx title="src/routes/_404.tsx"
+export const meta = { title: 'Page not found', robots: 'noindex' };
+
+export default function NotFound() {
+  return (
+    <main>
+      <h1>This page does not exist</h1>
+      <a href="/">← Back home</a>
+    </main>
+  );
+}
+```
+
+Without either file the framework answers the bare status line (`Not found` / `Internal Server Error`) — the status has always been right; the page is what was missing.
+
+### `notFound()`: a route that matched but has nothing to show
+
+`/posts/does-not-exist` matches `posts/[slug].tsx`. Only the page knows there is no such post, so the page says it:
+
+```tsx title="src/routes/posts/[slug].tsx"
+import { notFound } from 'janux';
+import { postBySlug } from '../../content';
+
+export default function PostPage({ params }: { params: { slug: string } }) {
+  const post = postBySlug(params.slug);
+
+  if (!post) notFound();
+
+  return <article>{post.title}</article>;
+}
+```
+
+`notFound()` throws, so nothing after it runs — and TypeScript narrows `post` for you. Call it from the route module (or something it awaits): once the first bytes of the document are on the wire the status line is already sent, and a `notFound()` from a component the stream reaches later can no longer change it.
+
+Alternatives that are **not** this: rendering your own "not found" markup with a `200` (a crawler indexes it, an agent believes it), or a catch-all route (`[[...slug]].tsx`) that swallows every URL to fake one.
+
+### `_500.tsx` renders alone
+
+`_500.tsx` deliberately skips the layout chain: the layout is code too, and code is what just failed. Its default export receives `{ ctx, error }` — the thrown value, for you to report, not to print:
+
+```tsx title="src/routes/_500.tsx"
+export default function ServerError({ error }: { error: unknown }) {
+  return <main><h1>Something went wrong</h1></main>;
+}
+```
+
+Janux logs the failure server-side before rendering it. Two things this does **not** cover: a failure *after* the first flush (the page is already streaming — the runtime dispatches [`janux:error`](/docs/recipes/error-handling) instead) and `api()` / HTTP handler failures, which answer with their own JSON envelope.
+
+With `output: 'static'`, `janux build` writes `_404.tsx` to `404.html` — the file static hosts serve for a path they have nothing at.
+
 ## Middleware
 
 `src/middleware.ts` runs before routing on every request; return a `Response` to short-circuit (redirects, locale hardening, auth gates), or nothing to continue:

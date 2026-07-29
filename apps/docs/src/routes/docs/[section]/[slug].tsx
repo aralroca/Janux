@@ -1,4 +1,4 @@
-import type { PageMeta } from 'janux';
+import { notFound, type PageMeta } from 'janux';
 import { Layout } from '../../../components/Layout';
 import { docContent, docIndex, groupLabel, sectionLabel } from '../../../server/docs.api';
 import { renderMarkdown, summarize, type TocEntry } from '../../../server/markdown';
@@ -48,7 +48,8 @@ function docJsonLd({ title, path, section, slug, description }: DocMeta) {
 export function meta({ params }: { params: { section: string; slug: string } }): PageMeta {
   const markdown = docContent(params.section, params.slug);
 
-  if (!markdown) return { title: 'Janux docs', robots: 'noindex' };
+  // No such doc: the page calls notFound(), and `_404.tsx` brings its own meta.
+  if (!markdown) return {};
   const title = markdown.match(/^# (.+)$/m)?.[1] ?? 'Janux docs';
   const path = `/docs/${params.section}/${params.slug}`;
   const description = summarize(markdown);
@@ -122,20 +123,13 @@ function PrevNext({ path }: { path: string }) {
   );
 }
 
-function NotFound({ slug }: { slug: string }) {
-  return (
-    <article>
-      <h1>Not found</h1>
-      <p>
-        No doc named “{slug}”. <a href="/">Back home</a>.
-      </p>
-    </article>
-  );
-}
-
 export default async function DocPage({ params }: { params: { section: string; slug: string } }) {
   const markdown = docContent(params.section, params.slug);
-  const rendered = markdown ? await renderMarkdown(markdown) : undefined;
+
+  // A URL that names no doc is a 404, not a doc page about the absence of one:
+  // `_404.tsx` answers it, with the status crawlers and readers both expect.
+  if (!markdown) notFound();
+  const rendered = await renderMarkdown(markdown);
   const path = `/docs/${params.section}/${params.slug}`;
 
   return (
@@ -143,10 +137,10 @@ export default async function DocPage({ params }: { params: { section: string; s
       <div class="doc-grid">
         <main>
           <Breadcrumb section={params.section} slug={params.slug} />
-          {rendered ? <article dangerHTML={rendered.html} /> : <NotFound slug={params.slug} />}
-          {rendered ? <PrevNext path={path} /> : null}
+          <article dangerHTML={rendered.html} />
+          <PrevNext path={path} />
         </main>
-        {rendered ? <Toc toc={rendered.toc} /> : null}
+        <Toc toc={rendered.toc} />
       </div>
     </Layout>
   );

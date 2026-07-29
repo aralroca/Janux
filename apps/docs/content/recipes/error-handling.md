@@ -122,6 +122,29 @@ Navigation is the case that heals itself: a failed SPA navigation dispatches `ja
 
 ## Pages that fail
 
-A route that throws during SSR is a server error, not a client one — handle it in your own server wrapper around `server.fetch` and render your error page there ([custom server](/docs/recipes/custom-server)). An unknown path already answers `404`.
+A route that throws during SSR is a server error, not a client one, and the app owns the page it shows: `src/routes/_500.tsx` renders it, under a `500`, with the thrown value as `error`. Janux logs the failure first, so the report reaches your terminal even if the page swallows it.
+
+```tsx title="src/routes/_500.tsx"
+export default function ServerError({ error }: { error: unknown }) {
+  return <main><h1>Something went wrong</h1></main>;
+}
+```
+
+Its sibling `_404.tsx` answers unmatched URLs — and matched ones with nothing to show, when the page calls `notFound()`:
+
+```tsx title="src/routes/orders/[id].tsx"
+import { notFound } from 'janux';
+import { orderById } from '../../server/shop.api';
+
+export default async function OrderPage({ params }: { params: { id: string } }) {
+  const order = await orderById({ id: params.id });
+
+  if (!order) notFound();
+
+  return <main>Order {order.id}</main>;
+}
+```
+
+Both files are conventions, not registrations — see [Navigation § Not found & server errors](/docs/guide/navigation). The limit is the flush: after the first bytes leave, the status line is gone and a mid-stream failure becomes a `janux:error` instead (below).
 
 Related: [Intents and guards](/docs/guide/intents-and-guards) · [Server API](/docs/reference/server-api) · [Debugging WebMCP](/docs/recipes/debugging-webmcp)
