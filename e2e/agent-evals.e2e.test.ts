@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'bun:test';
-import { appRoot, ssrApp } from './support/app';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { type Browser } from 'playwright';
+import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
 
 /**
  * examples/agent-evals exists to prove the CI gate itself: `janux eval` replays
@@ -13,6 +14,21 @@ import { appRoot, ssrApp } from './support/app';
 const EXAMPLE = appRoot('examples/agent-evals');
 const SHOP = appRoot('examples/shop');
 const CLI_TIMEOUT = 120_000;
+const BUILT = isBuilt('examples/agent-evals');
+
+let BASE = '';
+let stop: (() => void) | undefined;
+let browser: Browser | undefined;
+
+beforeAll(async () => {
+  if (!BUILT) return;
+  ({ base: BASE, stop } = await serveBuilt('examples/agent-evals'));
+  browser = await launchChrome();
+});
+
+afterAll(() => {
+  stop?.();
+});
 
 interface CliRun {
   code: number;
@@ -153,4 +169,48 @@ describe('examples/agent-evals — janux eval as the CI gate', () => {
     },
     CLI_TIMEOUT,
   );
+});
+
+/**
+ * The human face of the same app. Restocking refreshes the inventory source,
+ * and a refresh must never blank the table: `pending` means "nothing to show
+ * yet", so rows already on screen stay put while the new numbers arrive.
+ * Reported live as a full-page layout shift after every click.
+ */
+describe.skipIf(!BUILT)('examples/agent-evals in the browser', () => {
+  it('restocking updates the table in place, without ever removing it', async () => {
+    const { page, errors } = await newPage(browser!);
+
+    await page.goto(`${BASE}/`);
+    await page.waitForSelector('.stockroom tbody tr');
+    const before = await page.locator('.stockroom tbody tr').count();
+    const stockCell = '.stockroom tbody tr:first-child td:nth-child(3)';
+    // The app's stock is process state, so assert the delta, not a constant.
+    const expected = Number(await page.locator(stockCell).textContent()) + 10;
+
+    // Watch the table across the whole interaction: a single frame without
+    // rows is the glitch — the click must not swap it for a placeholder.
+    await page.evaluate(() => {
+      (window as any).__gone = 0;
+      const seen = new MutationObserver(() => {
+        if (!document.querySelector('.stockroom tbody tr')) (window as any).__gone += 1;
+      });
+
+      seen.observe(document.body, { childList: true, subtree: true });
+    });
+    await page.click('.stockroom tbody tr:first-child button');
+    // Wait for the refreshed number, not just the log line: the source
+    // re-queries after the intent, and that refresh is what used to blank it.
+    await page.waitForFunction(
+      (total) => document.querySelector('.stockroom tbody tr:first-child td:nth-child(3)')?.textContent === String(total),
+      expected,
+      { timeout: 10_000 },
+    );
+
+    expect(await page.evaluate(() => (window as any).__gone)).toBe(0);
+    expect(await page.locator('.stockroom tbody tr').count()).toBe(before);
+    expect(await page.locator('.stockroom .log li').count()).toBe(1);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
 });

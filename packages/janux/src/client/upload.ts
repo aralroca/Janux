@@ -82,9 +82,13 @@ function accepted(file: File, options: DropzoneOptions): boolean {
   if (options.maxSize && file.size > options.maxSize) return false;
   if (!options.accept?.length) return true;
 
-  return options.accept.some((type) =>
-    type.endsWith('/*') ? file.type.startsWith(type.slice(0, -1)) : file.type === type,
-  );
+  // `*/*` is an ordinary accept value (and rides straight into input.accept):
+  // treating it as a literal type rejected every file instead of allowing all.
+  return options.accept.some((type) => {
+    if (type === '*/*') return true;
+
+    return type.endsWith('/*') ? file.type.startsWith(type.slice(0, -1)) : file.type === type;
+  });
 }
 
 /** Client dropzone helper (RFC 0002 §10.2): drag, paste and file-picker → File[]. */

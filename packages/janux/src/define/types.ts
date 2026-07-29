@@ -75,7 +75,10 @@ export interface RunBag {
 
 export interface SourceReader {
   readonly value: any;
+  /** No value to show yet — false as soon as the source holds one, refreshes included. */
   readonly pending: boolean;
+  /** A query is in flight, first load or refresh. Show a hint, not a placeholder. */
+  readonly refreshing: boolean;
   readonly error: unknown;
 }
 

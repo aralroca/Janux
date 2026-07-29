@@ -3,6 +3,10 @@ import type { Ctx } from 'janux';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
 
+const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD']);
+
+const isHttpMethod = (name: string): boolean => HTTP_METHODS.has(name);
+
 export interface HandlerContext {
   req: Request;
   params: Record<string, string>;
@@ -58,7 +62,11 @@ export async function matchesType(file: File, accept: string[]): Promise<boolean
 
   if (!type) return false;
 
-  return accept.some((pattern) => (pattern.endsWith('/*') ? type.startsWith(pattern.slice(0, -1)) : type === pattern));
+  return accept.some((pattern) => {
+    if (pattern === '*/*') return true;
+
+    return pattern.endsWith('/*') ? type.startsWith(pattern.slice(0, -1)) : type === pattern;
+  });
 }
 
 const tooLarge = (maxBytes: number) =>
@@ -160,7 +168,8 @@ export function createHttpHandlers(options: HttpHandlersOptions) {
       const handler = module[method] ?? (method === 'HEAD' ? module.GET : undefined);
 
       if (!handler) {
-        const allow = Object.keys(module).join(', ');
+        // Only real verbs: other exports (config, helpers) are not methods.
+        const allow = Object.keys(module).filter(isHttpMethod).join(', ');
 
         return new Response('Method not allowed', { status: 405, headers: allow ? { allow } : undefined });
       }

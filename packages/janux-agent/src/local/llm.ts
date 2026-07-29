@@ -53,13 +53,16 @@ export interface ProbeOptions {
   timeoutMs?: number;
 }
 
-function usableAdapter(gpu: any, timeoutMs: number): Promise<boolean> {
+function usableAdapter(gpu: any, timeoutMs: number): Promise<{ usable: boolean; timedOut: boolean }> {
   const adapter = Promise.resolve()
     .then(() => gpu.requestAdapter?.())
-    .then(Boolean, () => false);
-  const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), timeoutMs));
+    .then((value: unknown) => ({ usable: Boolean(value), timedOut: false }), () => ({ usable: false, timedOut: false }));
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<{ usable: boolean; timedOut: boolean }>((resolve) => {
+    timer = setTimeout(() => resolve({ usable: false, timedOut: true }), timeoutMs);
+  });
 
-  return Promise.race([adapter, timeout]);
+  return Promise.race([adapter, timeout]).finally(() => clearTimeout(timer));
 }
 
 /** Whether this browser can *actually* run the local model: a real `requestAdapter()` probe, cached. */
@@ -67,7 +70,17 @@ export function probeLocalLlm({ timeoutMs = PROBE_TIMEOUT_MS }: ProbeOptions = {
   const gpu = supportsLocalLlm() ? (navigator as any).gpu : undefined;
 
   if (!gpu) return Promise.resolve(false);
-  const probe = probes.get(gpu) ?? usableAdapter(gpu, timeoutMs);
+  const cached = probes.get(gpu);
+
+  if (cached) return cached;
+  // A timeout is "too slow to answer within THIS budget", not a verdict: a cold
+  // GPU must not be written off for the page's lifetime, so only real answers
+  // are cached — a later probe with a longer budget can still find it usable.
+  const probe = usableAdapter(gpu, timeoutMs).then((result) => {
+    if (result.timedOut) probes.delete(gpu);
+
+    return result.usable;
+  });
 
   probes.set(gpu, probe);
 
@@ -106,8 +119,14 @@ async function createSession(options: LocalLlmOptions, onProgress?: (fraction: n
 export function localLlm(options: LocalLlmOptions = {}): LocalLlm {
   let session: Promise<Llm> | undefined;
 
+  // A failed download must not poison the cache: `??=` never clears a rejected
+  // promise, so every later attempt would rethrow the same stale error and no
+  // retry button could ever work.
   const ensure = (onProgress?: (fraction: number) => void): Promise<Llm> =>
-    (session ??= createSession(options, onProgress));
+    (session ??= createSession(options, onProgress).catch((error) => {
+      session = undefined;
+      throw error;
+    }));
   const llm = (async (request: LlmRequest): Promise<LlmResponse> => (await ensure())(request)) as LocalLlm;
 
   llm.load = async ({ onProgress } = {}) => {

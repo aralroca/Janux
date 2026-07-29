@@ -115,12 +115,19 @@ export function shellOptions(
 /**
  * `mcpAuth` in janux.config.ts → the bearer verifier `ServerOptions` takes.
  * The env var (`tokenEnv`) is read here, at boot, and wins over the literal
- * `token`; with neither the endpoint stays open, exactly as before.
+ * `token`; declaring neither leaves the endpoint open, exactly as before.
  */
 export function mcpAuthOptions(config: McpAuthConfig | undefined): ServerOptions['mcpAuth'] {
   const fromEnv = config?.tokenEnv ? process.env[config.tokenEnv] : undefined;
   const token = fromEnv ?? config?.token;
 
+  // Declaring tokenEnv is a statement that the endpoint is protected: a missing
+  // secret must stop the boot, never quietly serve every tool to anyone.
+  if (config?.tokenEnv && !fromEnv && !config.token) {
+    throw new Error(
+      `Janux: mcpAuth.tokenEnv "${config.tokenEnv}" is not set — refusing to serve /_janux/mcp unauthenticated`,
+    );
+  }
   if (!token) return undefined;
 
   return {

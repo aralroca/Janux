@@ -144,9 +144,17 @@ describe('mcpAuthOptions', () => {
     expect(mcpAuthOptions({ tokenEnv: 'JANUX_TEST_MCP_UNSET', token: 'demo' })!.verify('demo', new Request('http://x'))).toBeTruthy();
   });
 
-  it('is off entirely without a token', () => {
+  it('is off entirely when no protection was declared', () => {
     expect(mcpAuthOptions(undefined)).toBeUndefined();
     expect(mcpAuthOptions({})).toBeUndefined();
-    expect(mcpAuthOptions({ tokenEnv: 'JANUX_TEST_MCP_UNSET' })).toBeUndefined();
+  });
+
+  /**
+   * Declaring `tokenEnv` states the endpoint is protected. Serving it open
+   * because a secret is missing from the deploy inverts that intent silently —
+   * every api() tool would answer any anonymous MCP client.
+   */
+  it('refuses to boot when the declared tokenEnv is missing, instead of failing open', () => {
+    expect(() => mcpAuthOptions({ tokenEnv: 'JANUX_TEST_MCP_UNSET' })).toThrow(/JANUX_TEST_MCP_UNSET/);
   });
 });

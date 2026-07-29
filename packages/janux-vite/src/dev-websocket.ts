@@ -51,5 +51,9 @@ function adoptSocket(client: any, req: IncomingMessage, config: WebSocketConfig)
   client.data = config.data?.(fetchRequestOf(req));
   client.on('message', (raw: Buffer, isBinary: boolean) => config.message?.(client, isBinary ? raw : raw.toString()));
   client.on('close', (code: number, reason: Buffer) => config.close?.(client, code, String(reason)));
+  // Same handler surface production gets: drain fires on backpressure relief,
+  // and an unhandled 'error' would take the dev server down with it.
+  client.on('drain', () => config.drain?.(client));
+  client.on('error', () => client.close());
   config.open?.(client);
 }

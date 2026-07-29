@@ -118,7 +118,10 @@ function mirrorApiProposal(tool: string, result: any, mount: MountContext, remot
 
 /** The manifest announces api.* tools, so the bridge dispatches them too — over their HTTP endpoint. */
 async function callApiTool(tool: string, input: unknown, mount: MountContext, remote: Set<string>): Promise<unknown> {
-  const result: any = await postJson(`/_janux/api/${tool.slice(API_PREFIX.length)}`, input, true);
+  // Encoded, not interpolated raw: tool names arrive over the public bridge,
+  // and api names are `module.export` (dots only), so a name carrying slashes
+  // or `..` would resolve out of /_janux/api/ — onto /_janux/llm, say.
+  const result: any = await postJson(`/_janux/api/${encodeURIComponent(tool.slice(API_PREFIX.length))}`, input, true);
 
   if (result?.status === 'proposal') mirrorApiProposal(tool, result, mount, remote);
 

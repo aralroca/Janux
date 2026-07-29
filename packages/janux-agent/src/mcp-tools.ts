@@ -53,7 +53,9 @@ function toBridge(config: McpAgentConnection, fetchImpl: FetchLike): Bridge {
 }
 
 async function discover(bridges: Bridge[]): Promise<RemoteTool[]> {
-  const lists = await Promise.all(
+  // allSettled, not all: one unreachable server must not erase the tools of
+  // the ones that answered — it would empty the agent's toolbox every turn.
+  const lists = await Promise.allSettled(
     bridges.map(async ({ connection, filter }) => {
       const tools = await connection.tools();
 
@@ -61,7 +63,7 @@ async function discover(bridges: Bridge[]): Promise<RemoteTool[]> {
     }),
   );
 
-  return lists.flat();
+  return lists.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
 }
 
 export function createRemoteToolbox(
@@ -75,7 +77,15 @@ export function createRemoteToolbox(
   let cached: Promise<RemoteTool[]> | undefined;
   const load = () =>
     discover(bridges).then((tools) => {
-      tools.forEach((tool) => known.set(tool.name, tool));
+      tools.forEach((tool) => {
+        // Two connections sharing the default prefix would ship duplicate tool
+        // names — every provider rejects the turn, and dispatch would silently
+        // resolve to whichever server was discovered last.
+        if (known.has(tool.name)) {
+          throw new Error(`Janux: duplicate remote tool "${tool.name}" — give each mcp connection its own prefix`);
+        }
+        known.set(tool.name, tool);
+      });
 
       return tools;
     });
