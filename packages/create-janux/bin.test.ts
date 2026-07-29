@@ -37,6 +37,21 @@ describe('create-janux', () => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
+  test.each(['with-forms', 'realtime-chat', 'with-mcp-url'])('scaffolds the %s example cleanly', (example) => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app', '--example', example], { cwd });
+
+    expect(result.exitCode).toBe(0);
+    const pkg = JSON.parse(readFileSync(join(cwd, 'my-app', 'package.json'), 'utf-8'));
+
+    expect(pkg.name).toBe('my-app');
+    expect(JSON.stringify(pkg)).not.toContain('workspace:*');
+    expect(existsSync(join(cwd, 'my-app', 'src/routes'))).toBe(true);
+    expect(existsSync(join(cwd, 'my-app', 'README.md'))).toBe(true);
+    expect(existsSync(join(cwd, 'my-app', '.janux'))).toBe(false);
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
   test('unknown example fails listing the available ones', () => {
     const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
     const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-shop', '--example', 'nope'], { cwd });
