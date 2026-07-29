@@ -8,6 +8,20 @@ import { prodServerOptions } from './prod';
 const FIXTURE = join(import.meta.dirname, '__fixtures__/suspense-app');
 
 /**
+ * Stands in for `janux build`'s output. The sources are committed, but its
+ * `dist/` is not — .gitignore excludes every `dist/`, so an on-disk copy would
+ * pass locally and vanish in CI. The fixture must live inside the workspace
+ * (a tmpdir cannot resolve `janux`), so the build artifacts are written here.
+ */
+function builtApp(): string {
+  mkdirSync(join(FIXTURE, 'dist/client'), { recursive: true });
+  writeFileSync(join(FIXTURE, 'dist/client/islands.json'), JSON.stringify({ 'lazy-panel': '' }));
+  writeFileSync(join(FIXTURE, 'dist/client/client.js'), '// stub: prodServerOptions only checks it exists\n');
+
+  return FIXTURE;
+}
+
+/**
  * A page whose ONLY island sits behind a suspense boundary has an empty SSR
  * registry when the interlude flushes (the island registers once its sources
  * resolve), so the runtime only ships if `islandModules` says the app has
@@ -17,7 +31,7 @@ const FIXTURE = join(import.meta.dirname, '__fixtures__/suspense-app');
  */
 describe('prodServerOptions island catalog', () => {
   it('reads islandModules from the islands.json the build emitted', async () => {
-    const options = await prodServerOptions(FIXTURE);
+    const options = await prodServerOptions(builtApp());
 
     expect(options.islandModules).toEqual({ 'lazy-panel': '' });
     expect(options.runtimeUrl).toBe('/client.js');
@@ -33,7 +47,7 @@ describe('prodServerOptions island catalog', () => {
   });
 
   it('ships the runtime on a page whose only island is suspended', async () => {
-    const server = createJanuxServer(await prodServerOptions(FIXTURE));
+    const server = createJanuxServer(await prodServerOptions(builtApp()));
     const response = await server.fetch(new Request('http://test/'));
     const html = await response.text();
 
