@@ -50,16 +50,51 @@ main {
 .star,
 .reset {
   border: 1px solid light-dark(#d4d4dc, #34343e);
-  border-radius: 6px;
+  border-radius: 999px;
   background: light-dark(#fff, #191920);
   color: inherit;
-  padding: 0.3rem 0.7rem;
+  padding: 0.35rem 0.9rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.star.idle:hover {
+  border-color: light-dark(#f0b429, #b98a1d);
+  background: light-dark(#fff8e6, #241d0d);
+  transform: translateY(-1px);
+}
+
+/* Optimistic write in flight: amber and visibly alive until the server answers. */
+.star.saving {
+  border-color: light-dark(#f0b429, #b98a1d);
+  background: light-dark(#fff3d6, #2c220c);
+  color: light-dark(#8a5d00, #f5c94c);
+  animation: star-pulse 0.9s ease-in-out infinite;
+}
+
+/* Confirmed: solid gold, full presence — not a washed-out disabled button. */
+.star.starred {
+  border-color: transparent;
+  background: light-dark(#f7c948, #a9821e);
+  color: light-dark(#3d2f00, #14110a);
+}
+
+.star.starred:disabled,
+.star.saving:disabled {
+  opacity: 1;
+  cursor: default;
 }
 
 .star:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+@keyframes star-pulse {
+  50% {
+    box-shadow: 0 0 0 4px light-dark(rgba(240, 180, 41, 0.25), rgba(240, 180, 41, 0.15));
+  }
 }
 
 .fav {
