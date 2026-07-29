@@ -53,6 +53,21 @@ describe('hosted MCP endpoint (/_janux/mcp)', () => {
     expect(wipe.annotations).toEqual({ requiresApproval: true });
   });
 
+  it('serves inputSchema as standard JSON Schema, not the internal JxType', async () => {
+    const { body } = await rpc(server(), 'tools/list');
+    const greet = body.result.tools.find((tool: any) => tool.name === 'demo.greet');
+
+    expect(greet.inputSchema).toEqual({
+      type: 'object',
+      properties: { name: { type: 'string' } },
+      required: ['name'],
+      additionalProperties: false,
+    });
+    expect(greet.inputSchema).not.toHaveProperty('kind');
+    expect(greet.inputSchema).not.toHaveProperty('flags');
+    expect(greet.inputSchema).not.toHaveProperty('shape');
+  });
+
   it('calls a tool and returns its result as content', async () => {
     const { body } = await rpc(server(), 'tools/call', { name: 'demo.greet', arguments: { name: 'ada' } });
 
@@ -161,6 +176,10 @@ describe('hosted MCP endpoint — 2026-07-28 modern era', () => {
 
     expect(status).toBe(200);
     expect(body.result.tools.map((tool: any) => tool.name)).toContain('demo.greet');
+    const greet = body.result.tools.find((tool: any) => tool.name === 'demo.greet');
+
+    expect(greet.inputSchema.type).toBe('object');
+    expect(greet.inputSchema).not.toHaveProperty('kind');
     expect(body.result.ttlMs).toBeGreaterThan(0);
     expect(body.result.cacheScope).toBe('public');
     expect(body.result.resultType).toBe('complete');

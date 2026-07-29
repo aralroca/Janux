@@ -1,4 +1,4 @@
-import type { Ctx } from 'janux';
+import { toJsonSchema, type Ctx } from 'janux';
 import type { ApiTool } from './api';
 import { mcpLandingPage } from './mcp-landing';
 import { decorateResult, discoverResult, modernGate } from './mcp-modern';
@@ -47,7 +47,7 @@ function toolDescriptor(tool: ApiTool) {
   return {
     name: tool.name,
     description: tool.description ?? '',
-    inputSchema: tool.input ?? { type: 'object', properties: {} },
+    inputSchema: tool.input ? toJsonSchema(tool.input) : { type: 'object', properties: {} },
     annotations: tool.guard === 'confirm' ? { requiresApproval: true } : undefined,
   };
 }

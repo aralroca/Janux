@@ -14,26 +14,26 @@
       "guard": "auto",
       "requiresApproval": false,
       "inputSchema": {
-        "kind": "object",
-        "flags": {},
-        "shape": {
+        "type": "object",
+        "properties": {
           "title": {
-            "kind": "string",
-            "flags": {
-              "min": 3,
-              "max": 120
-            }
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 120
           },
           "severity": {
-            "kind": "enum",
-            "flags": {},
-            "values": [
+            "enum": [
               "low",
               "high",
               "critical"
             ]
           }
-        }
+        },
+        "required": [
+          "title",
+          "severity"
+        ],
+        "additionalProperties": false
       }
     },
     {
@@ -41,14 +41,16 @@
       "guard": "confirm",
       "requiresApproval": true,
       "inputSchema": {
-        "kind": "object",
-        "flags": {},
-        "shape": {
+        "type": "object",
+        "properties": {
           "id": {
-            "kind": "int",
-            "flags": {}
+            "type": "integer"
           }
-        }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       }
     }
   ]
