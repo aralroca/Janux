@@ -184,7 +184,9 @@ describe('WebMCP integration', () => {
     await handle.sync();
     const result: any = await polyfillOf().callTool('api_shop_pay', { total: 25 });
 
-    expect(JSON.parse(result.content[0].text)).toEqual({ ok: true, result: 'paid' });
+    // Unwrapped, like every other tool: api.* now rides the same bridge call,
+    // so an agent sees the result itself instead of the {ok,result} envelope.
+    expect(JSON.parse(result.content[0].text)).toBe('paid');
     const apiCall = fetchMock.mock.calls.find(([url]) => String(url).startsWith('/_janux/api/'));
 
     expect(String(apiCall![0])).toBe('/_janux/api/shop.pay');

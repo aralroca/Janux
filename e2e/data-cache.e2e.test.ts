@@ -113,8 +113,10 @@ describe.skipIf(!BUILT)('examples/data-cache in the browser', () => {
     const example = await page.locator('.tool-row:has-text("catalog.filter") code.example').textContent();
     const target = JSON.parse(example ?? '{}').tag;
 
+    const inTag: Record<string, number> = { all: 4, input: 2, display: 1, video: 1 };
+
     await page.click('.tool-row:has-text("catalog.filter") button');
-    await waitForCount(page, target === 'all' ? 4 : 1);
+    await waitForCount(page, inTag[target]!);
     expect(await page.locator(`.tags .tag.on`).textContent()).toBe(target);
     // The agent's filter flows into the URL exactly like a click does — and
     // the fallback tag clears the param instead of pinning ?tag=all.
@@ -125,6 +127,23 @@ describe.skipIf(!BUILT)('examples/data-cache in the browser', () => {
       target,
       { timeout: 5_000 },
     );
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
+
+  it('calling a read-only api tool shows its result instead of looking dead', async () => {
+    const { page, errors } = await openPage();
+
+    await page.goto(`${BASE}/`);
+    await waitForCount(page, 4);
+
+    // A server tool that only reads changes nothing on the page, so the panel
+    // is the only place its answer can show — otherwise the button looks broken.
+    await page.click('.tool-row:has-text("api.products.listProducts") button');
+    await page.waitForSelector('.tool-row:has-text("api.products.listProducts") .tool-result', { timeout: 5_000 });
+    const result = await page.locator('.tool-row:has-text("api.products.listProducts") .tool-result').textContent();
+
+    expect(result).toContain('Keyboard');
     expect(errors).toEqual([]);
     await page.close();
   }, TIMEOUT);

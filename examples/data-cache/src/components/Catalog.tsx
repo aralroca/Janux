@@ -44,8 +44,10 @@ export const Catalog = component({
       description: 'Filter products by tag',
       // The enum IS the contract: the manifest (and the example payloads
       // generated from it) name real tags, and an unknown one is a validation
-      // error instead of a filter that silently matches nothing.
-      input: schema({ tag: enums([...TAGS]) }),
+      // error instead of a filter that silently matches nothing. A real tag
+      // leads — the generated example must DO something, and the page opens
+      // on 'all', so 'all' would read as a no-op.
+      input: schema({ tag: enums(['input', 'display', 'video', 'all']) }),
       run: ({ state, input }: any) => {
         state.tag = input.tag;
         tagParam(state).set(input.tag);
