@@ -429,6 +429,11 @@ describe('suspense boundaries', () => {
     expect(full).toContain('<template id="jxu:slow#default" key="jxt:slow#default"><p>got:2</p></template>');
     expect(full).toContain('jx$u("slow#default",document.currentScript)');
     expect(full).toContain('self.jx$u=');
+    // The sentinel is keyed like its chunk siblings: it is the one node that
+    // stays in the settled DOM, and unkeyed the navigation diff would morph
+    // the next page's content template into it — losing the content, which
+    // lives in `.content` where the diff's child walker never looks.
+    expect(full).toContain('<template data-jxs key="jxq:slow#default"></template>');
     expect(summary.snapshots[0]?.sources).toEqual({ data: { value: ['a', 'b'] } });
   });
 

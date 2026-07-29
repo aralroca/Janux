@@ -614,7 +614,14 @@ function completionChunk(boundary: BoundaryRecord, result: BoundaryResult, runti
   // sentinel is that following sibling, so the template and the call script
   // apply the moment their own chunk lands. (A first load's parser inserts
   // nodes as they arrive and just ignores it.)
-  return `<template id="jxu:${boundary.id}" key="jxt:${boundary.id}">${result.html}</template>${call}${failed}<template data-jxs></template>`;
+  //
+  // The sentinel is also the one boundary node that stays in the settled DOM
+  // (jx$u consumes the template, the call script removes itself), so like its
+  // siblings it needs a per-boundary key: unkeyed, a later navigation's diff
+  // would morph the NEXT page's content template into it in place — and a
+  // template morph never syncs content (it lives in `.content`, invisible to
+  // the child walker), so jx$u would swap an empty fragment into the island.
+  return `<template id="jxu:${boundary.id}" key="jxt:${boundary.id}">${result.html}</template>${call}${failed}<template data-jxs key="jxq:${boundary.id}"></template>`;
 }
 
 /**

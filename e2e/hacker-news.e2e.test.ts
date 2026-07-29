@@ -143,6 +143,38 @@ describe.skipIf(!BUILT)('examples/hacker-news in the browser', () => {
     await page.close();
   }, TIMEOUT);
 
+  it('More › paginates as a streamed diff: page 2 swaps in, Prev restores page 1', async () => {
+    const { page, errors } = await openPage();
+
+    await page.goto(`${BASE}/`);
+    await settled(page);
+    await booted(page);
+    await page.click('.pager-more');
+
+    // The island key changes across pages (story-list#1 → story-list#2): the
+    // diff inserts a NEW island and its boundary chunk must still swap in.
+    await page.waitForFunction(() => document.title === 'Janux HN — page 2', null, { timeout: 10_000 });
+    await page.waitForFunction(
+      (expected) => [...document.querySelectorAll('.story-link')].some((a) => a.textContent === expected),
+      TITLE_11,
+      { timeout: 10_000 },
+    );
+    expect(await page.locator('.story-link').count()).toBe(10);
+    expect(await page.locator('.rank').first().textContent()).toBe('11.');
+
+    await page.click('.pager-prev');
+    await page.waitForFunction(
+      (expected) => [...document.querySelectorAll('.story-link')].some((a) => a.textContent === expected),
+      TITLE_1,
+      { timeout: 10_000 },
+    );
+    expect(await page.locator('.rank').first().textContent()).toBe('1.');
+    // One navigation entry across the whole trip: both hops were streamed diffs.
+    expect(await page.evaluate(() => performance.getEntriesByType('navigation').length)).toBe(1);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
+
   it('hovering a link warms the next page: a prefetch request, no navigation', async () => {
     const { page, errors } = await openPage();
 
