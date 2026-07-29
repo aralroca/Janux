@@ -68,7 +68,11 @@ const withScriptedProvider = (page: Page) =>
       supportedUrls: {},
       createSessionWithProgress: async (onProgress: (fraction: number) => void) => onProgress(1),
       doGenerate: async () =>
-        turn++ === 0 ? reply([call]) : reply([{ type: 'text', text: 'Added "buy oat milk" to the list.' }]),
+        turn++ === 0
+          ? reply([call])
+          : // Verbatim shape a chat-template model produces: reasoning block and
+            // turn terminator around the answer. The user must never read them.
+            reply([{ type: 'text', text: '<think>\nCall the tool.\n</think> Added "buy oat milk" to the list.<|im_end|>' }]),
     };
 
     (window as any).__localLlmProvider = { transformersJS: () => model };
@@ -206,7 +210,13 @@ describe.skipIf(!BUILT)('examples/with-local-llm in the browser', () => {
     await page.click('form.ask button[type="submit"]');
     await page.waitForFunction(() => document.querySelectorAll('#log .msg.assistant').length >= 2);
     // The model's tool call really ran: the task is on the list and the answer reports it.
-    expect((await assistantMessages(page)).at(-1)).toContain('buy oat milk');
+    const answer = (await assistantMessages(page)).at(-1) ?? '';
+
+    expect(answer).toContain('buy oat milk');
+    // …and what the user reads is the answer, not the model's stage directions.
+    expect(answer).not.toContain('<think>');
+    expect(answer).not.toContain('im_end');
+    expect(answer.trim().startsWith('Added')).toBe(true);
     expect(await page.textContent('#task-list')).toContain('buy oat milk');
     expect(downloads).toEqual([]);
     expect(errors).toEqual([]);

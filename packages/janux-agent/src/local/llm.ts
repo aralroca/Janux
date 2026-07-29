@@ -98,6 +98,21 @@ async function importProvider(): Promise<any> {
   }
 }
 
+/** A closed reasoning block: the model thinking out loud, not part of the answer. */
+const REASONING_BLOCK = /<think>[\s\S]*?<\/think>/g;
+/** Chat-template control tokens (`<|im_end|>`, `<|eot_id|>`, …) — never prose. */
+const TEMPLATE_MARKER = /<\|[^|]*\|>/g;
+
+/**
+ * What the model meant to say. Chat-template models emit their reasoning and
+ * turn terminators as literal text, so a UI rendering the answer verbatim shows
+ * the stage directions too. Only closed blocks and `<|…|>` tokens go: a bare
+ * `<think>` a user actually typed about survives.
+ */
+function answerOf(text: string): string {
+  return text.replace(REASONING_BLOCK, '').replace(TEMPLATE_MARKER, '').trim();
+}
+
 async function createSession(options: LocalLlmOptions, onProgress?: (fraction: number) => void): Promise<Llm> {
   const { transformersJS } = options.provider ?? (await importProvider());
   const model = transformersJS(options.modelId ?? DEFAULT_LOCAL_MODEL, {
@@ -107,8 +122,13 @@ async function createSession(options: LocalLlmOptions, onProgress?: (fraction: n
   });
 
   await model.createSessionWithProgress((fraction: number) => onProgress?.(fraction));
+  const llm = createAiSdkLlm({ model: model as any, settings: options.settings });
 
-  return createAiSdkLlm({ model: model as any, settings: options.settings });
+  return async (request) => {
+    const reply = await llm(request);
+
+    return { ...reply, text: answerOf(reply.text ?? '') };
+  };
 }
 
 /**

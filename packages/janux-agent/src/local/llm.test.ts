@@ -127,6 +127,26 @@ describe('localLlm({ provider })', () => {
     expect(transformersJS).toHaveBeenCalledWith(DEFAULT_LOCAL_MODEL, { device: 'webgpu', dtype: 'q4f16' });
   });
 
+  /**
+   * Chat-template models (Qwen3 among them) emit their reasoning block and the
+   * turn terminator as literal text. Rendered raw, a user reads
+   * `<think> </think> Added it.<|im_end|>` — the model's stage directions.
+   */
+  it('strips reasoning blocks and chat-template markers from the answer', async () => {
+    const noisy = '<think>\nThe user wants a task.\n</think> Added it.<|im_end|>';
+    const { provider } = stubProvider([{ text: noisy }]);
+    const reply = await localLlm({ provider })(request());
+
+    expect(reply.text).toBe('Added it.');
+  });
+
+  it('keeps an answer that merely mentions the markers in prose', async () => {
+    const { provider } = stubProvider([{ text: 'Write <think> in the doc.' }]);
+    const reply = await localLlm({ provider })(request());
+
+    expect(reply.text).toBe('Write <think> in the doc.');
+  });
+
   it('maps the provider tool calls to gui-agent shape', async () => {
     const { provider } = stubProvider([{ toolCall: { name: 'tasks_add', input: { title: 'buy oat milk' } } }]);
     const reply = await localLlm({ provider })(request([ADD_TOOL]));
