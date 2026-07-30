@@ -5,7 +5,7 @@ import { createInstance, jsx, renderToString } from 'janux';
 import { docExample } from '../doc-example';
 
 /**
- * recipes/tailwind.md carries the corpus' only ` ```tsx live ` fence — readers
+ * styles/tailwind.md carries the corpus' only ` ```tsx live ` fence — readers
  * can press Run on it in the playground, so it had better work. It also makes a
  * package-shape claim (`@import "@janux/tailwind"`) that the install step
  * depends on. Compiling the real stylesheet needs a build, which the commit
@@ -14,9 +14,9 @@ import { docExample } from '../doc-example';
 
 const ROOT = resolve(import.meta.dir, '../../..');
 
-describe('recipes/tailwind.md', () => {
+describe('styles/tailwind.md', () => {
   it('the playground snippet runs: the counter increments through its intent', async () => {
-    const { Counter } = await docExample('apps/docs/content/recipes/tailwind.md', 0);
+    const { Counter } = await docExample('apps/docs/content/styles/tailwind.md', 0);
     const instance = createInstance(Counter);
 
     await instance.attach();
@@ -26,7 +26,7 @@ describe('recipes/tailwind.md', () => {
   });
 
   it('utility classes survive SSR exactly as written', async () => {
-    const { Counter } = await docExample('apps/docs/content/recipes/tailwind.md', 0);
+    const { Counter } = await docExample('apps/docs/content/styles/tailwind.md', 0);
     const { html } = await renderToString(jsx(Counter, {}), {});
 
     expect(html).toContain('class="flex flex-col items-center gap-4 pt-16 font-sans"');

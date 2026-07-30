@@ -8,6 +8,7 @@ import * as client from 'janux/client';
 import * as manifest from 'janux/manifest';
 import * as interop from 'janux/interop';
 import * as query from 'janux/query';
+import * as workerEntry from 'janux/worker';
 import * as januxServer from '@janux/server';
 import * as agent from '@janux/agent';
 import * as agentLocal from '@janux/agent/local';
@@ -31,6 +32,7 @@ const ENTRIES: Record<string, Record<string, unknown>> = {
   'janux/manifest': manifest,
   'janux/interop': interop,
   'janux/query': query,
+  'janux/worker': workerEntry,
   '@janux/server': januxServer,
   '@janux/agent': agent,
   '@janux/agent/local': agentLocal,
