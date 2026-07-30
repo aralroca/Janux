@@ -1,6 +1,6 @@
 # What is Janux?
 
-Janux is a fullstack UI framework with **two first-class audiences**: the humans who use your app and the AI agents that operate it. You write one component definition; Janux projects it three ways — a view for people, a typed resource agents can read, and typed tools both can invoke. They can't drift, because they're generated from the same source.
+Janux is a fullstack framework for the **[Agentic Web](/docs/getting-started/the-agentic-web)** — the web that both people and AI agents operate. It has **two first-class audiences**: the humans who use your app and the agents that drive it. You write one component definition; Janux projects it three ways — a view for people, a typed resource agents can read, and typed tools both can invoke. They can't drift, because they're generated from the same source.
 
 ```tsx title="src/components/Counter.tsx"
 export const Counter = component({
@@ -33,6 +33,12 @@ Two shifts happened at once. Models now write most UI code, and they need a targ
 | Wiring an app to an agent is a project | The manifest, tools and MCP endpoint are generated. Connecting a copilot is a URL. |
 | Agent contracts rot | They're derived from the code that renders. Drift is structurally impossible. |
 | Agents doing dangerous things | Guards (`auto` / `confirm` / `forbidden`) are declared per intent and enforced per request origin. |
+
+## Agent-ready by default
+
+Every Janux app speaks the protocols of the Agentic Web without a line of integration code: a hosted **MCP** server at `/_janux/mcp` generated from your `api()` functions, **WebMCP** tools registered on `document.modelContext` as islands mount, an opt-in `llms.txt` with a Markdown projection of every page, and **Web Bot Auth** (RFC 9421) agent identity. The layer with no standard yet — *authority* — is a language feature here: `guard: 'confirm'` turns an agent's call into a Proposal a human approves on the real UI.
+
+More on the shift and the stack: [The Agentic Web](/docs/getting-started/the-agentic-web).
 
 ## What it is not
 

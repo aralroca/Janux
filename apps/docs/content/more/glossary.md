@@ -1,5 +1,7 @@
 # Glossary
 
+**Agentic Web** — the web as both people and AI agents operate it: pages that are simultaneously a human interface and a discoverable, callable, permissioned tool surface. Its stack is MCP (tools over HTTP), WebMCP (tools in the browser), `llms.txt` (discovery) and Web Bot Auth (identity). See [The Agentic Web](/docs/getting-started/the-agentic-web).
+
 **Bifacial component** — the core primitive: one definition projecting a view (humans), a resource (agents) and tools (both). Named after Janus.
 
 **Island** — a bifacial component mounted in a page. Server-rendered, then *resumed* (not hydrated) on first interaction.

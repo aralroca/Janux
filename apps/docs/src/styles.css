@@ -783,9 +783,21 @@ td {
   padding: 40px 0 24px;
 }
 
+/* The category line above the headline: it names the market Janux is in, which
+   the headline itself ("One component. Two faces.") deliberately doesn't.
+   --accent is contrast-checked against --bg in palette.test.ts. */
+.eyebrow {
+  margin: 16px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
 .hero h1 {
   font-size: 3.1rem;
-  margin: 18px 0 12px;
+  margin: 10px 0 12px;
 }
 
 /* Janus engraving (white-background JPEG inside an SVG): multiply melts the

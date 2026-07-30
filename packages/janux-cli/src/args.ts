@@ -11,7 +11,7 @@ export interface CliCommand {
 const COMMANDS = new Set(['dev', 'build', 'start', 'verify', 'eval', 'help']);
 const VALUE_FLAGS = new Set(['--port', '--url', '--start']);
 
-export const HELP_TEXT = `janux — the agent-native fullstack UI framework
+export const HELP_TEXT = `janux — the fullstack framework for the Agentic Web
 
 Usage:
   janux dev    [--port 3000]   Start the dev server (Vite + HMR)

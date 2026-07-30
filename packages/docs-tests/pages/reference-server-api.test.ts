@@ -26,7 +26,7 @@ describe('reference/server-api.md', () => {
     expect(head).toContain('<meta property="og:title" id="jx-og-title" content="What is Janux? — Janux docs">');
     expect(head).toContain('<meta property="og:type" id="jx-og-type" content="website">');
     expect(head).toContain(
-      '<meta property="og:description" id="jx-og-description" content="The agent-native fullstack UI framework.">',
+      '<meta property="og:description" id="jx-og-description" content="The fullstack framework for the Agentic Web.">',
     );
     expect(head).toContain('<meta name="twitter:card" id="jx-twitter-card" content="summary_large_image">');
   });
