@@ -67,7 +67,7 @@ describe('recipes/custom-server.md', () => {
     const invoked = await handler(
       new Request('http://localhost/_janux/api/shop.ping', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
         body: JSON.stringify({ name: 'ada' }),
       }),
     );

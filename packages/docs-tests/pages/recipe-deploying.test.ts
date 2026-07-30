@@ -72,7 +72,7 @@ describe('recipes/deploying.md — pending proposals are in-memory and capped', 
         new Request('http://test/_janux/api/shop.pay', {
           method: 'POST',
           body: JSON.stringify({ total }),
-          headers: { 'content-type': 'application/json', 'x-janux-origin': 'agent' },
+          headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', 'x-janux-origin': 'agent' },
         }),
       )
       .then((response) => response.json() as any);
@@ -85,7 +85,7 @@ describe('recipes/deploying.md — pending proposals are in-memory and capped', 
       new Request('http://test/_janux/approve', {
         method: 'POST',
         body: JSON.stringify({ id: first.result.id }),
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       }),
     );
 
@@ -95,7 +95,7 @@ describe('recipes/deploying.md — pending proposals are in-memory and capped', 
       new Request('http://test/_janux/approve', {
         method: 'POST',
         body: JSON.stringify({ id: last.result.id }),
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       }),
     );
 
@@ -110,7 +110,7 @@ describe('recipes/deploying.md — pending proposals are in-memory and capped', 
       new Request('http://test/_janux/approve', {
         method: 'POST',
         body: JSON.stringify({ id: proposal.result.id }),
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       }),
     );
 

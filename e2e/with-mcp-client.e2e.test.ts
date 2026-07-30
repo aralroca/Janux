@@ -29,7 +29,10 @@ const post = (app: Awaited<ReturnType<typeof ssrApp>>, path: string, body: unkno
   app.server.fetch(
     new Request(`http://test${path}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      // Stands in for the app's own page, which is what the CSRF guard on
+      // `/_janux/*` asks about. The OUTBOUND leg to the remote MCP server is a
+      // separate matter and needs nothing: `/_janux/mcp` is not guarded.
+      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       body: JSON.stringify(body),
     }),
   );

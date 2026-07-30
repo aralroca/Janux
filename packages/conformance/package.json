@@ -12,6 +12,7 @@
     "@janux/tailwind": "workspace:*"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^18.0.0"
+    "@happy-dom/global-registrator": "^18.0.0",
+    "web-bot-auth": "^0.1.3"
   }
 }

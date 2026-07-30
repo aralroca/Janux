@@ -21,7 +21,7 @@ const post = (path: string, body: unknown, headers: Record<string, string> = {})
   server.fetch(
     new Request(`http://test${path}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...headers },
+      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', ...headers },
       body: JSON.stringify(body),
     }),
   );

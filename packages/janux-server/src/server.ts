@@ -28,6 +28,7 @@ import { shellEpilogue, shellEpilogueRest, shellInterlude, shellPrelude, type Sh
 import { safeJson } from './html-escape';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
+import { refuseCrossSite } from './csrf';
 
 /**
  * Set by the client runtime on a navigation fetch. What the document already has
@@ -108,6 +109,13 @@ export interface ServerOptions {
   httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
   /** Bearer verification for the hosted MCP endpoint (`/_janux/mcp`). Absent → open. */
   mcpAuth?: McpAuth;
+  /**
+   * Origins allowed to reach the invocation endpoints (`api()`, proposals, the
+   * agent loop) besides the app's own — a partner front-end on another host, say.
+   * Absent ⇒ same-origin only, which is what an app wants unless it deliberately
+   * serves someone else's page. See `csrf.ts`.
+   */
+  allowedOrigins?: string[];
   /** First-class WebSocket endpoint — see `serve()` and the `websocket` handlers on the returned server. */
   websocket?: WebSocketConfig;
   /**
@@ -270,6 +278,15 @@ export function createJanuxServer(options: ServerOptions = {}) {
     locale ? { ...ctx, i18n: i18nFor(locale) } : ctx;
 
   const agentAuth = options.agents ? createAgentAuth(options.agents) : undefined;
+
+  /**
+   * Only consulted once the cheap header checks have already failed, so a normal
+   * same-origin request never pays for a signature verification.
+   */
+  const csrfPolicy = {
+    allowedOrigins: options.allowedOrigins,
+    verifiedAgent: agentAuth && (async (req: Request) => (await agentAuth.identify(req))?.verified === true),
+  };
 
   // Checked once here so a malformed value degrades to "no social URLs, no
   // sitemap" instead of throwing on every render.
@@ -684,6 +701,15 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const intercepted = await options.middleware?.(req);
 
     if (intercepted) return intercepted;
+    /*
+     * Before routing, and once for every invocation endpoint below: api calls,
+     * proposal settlement and the agent loop all reach app code carrying whatever
+     * credentials the caller's browser holds, so the question "who asked?" is
+     * answered in one place rather than in each handler. See csrf.ts.
+     */
+    const forged = await refuseCrossSite(req, pathname, csrfPolicy);
+
+    if (forged) return forged;
     if (pathname === options.websocket?.path) {
       // Reaching the pure fetch means nobody upgraded — see serve().
       return new Response('WebSocket upgrade required', { status: 426, headers: { upgrade: 'websocket' } });
