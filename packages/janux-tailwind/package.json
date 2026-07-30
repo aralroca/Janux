@@ -29,15 +29,28 @@
     }
   },
   "files": [
-    "src",
+    "dist",
     "tailwind.css"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "main": "./dist/src/index.js",
+    "module": "./dist/src/index.js",
+    "types": "./dist/src/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/src/index.d.ts",
+        "style": "./tailwind.css",
+        "default": "./dist/src/index.js"
+      }
+    }
   },
   "dependencies": {
     "tailwindcss": "^4.0.0",
     "@tailwindcss/postcss": "^4.0.0"
   },
-  "style": "./tailwind.css"
+  "style": "./tailwind.css",
+  "scripts": {
+    "prepublishOnly": "bun ../../scripts/prepublish-guard.ts"
+  }
 }

@@ -4,7 +4,12 @@ import { basename, join } from 'node:path';
 
 // Install artifacts from running the template/examples in place (local dev of this package).
 const SKIP = new Set(['node_modules', 'bun.lock', 'dist', '.janux']);
-const VERSION: string = JSON.parse(readFileSync(join(import.meta.dirname, 'package.json'), 'utf-8')).version;
+// Published, this file is `dist/bin.js` and its assets are one level up; in the
+// workspace it is `bin.ts` in the package root. Asked once, so that "where are
+// the assets" and "are we published" cannot answer differently.
+const PUBLISHED = !existsSync(join(import.meta.dirname, 'package.json'));
+const ROOT = PUBLISHED ? join(import.meta.dirname, '..') : import.meta.dirname;
+const VERSION: string = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8')).version;
 
 const [name, flag, exampleName] = process.argv.slice(2);
 
@@ -19,11 +24,9 @@ if (existsSync(target)) {
   process.exit(1);
 }
 
-/** Published packages ship the monorepo examples next to bin.ts; in-repo runs read the workspace. */
+/** Published packages ship the monorepo examples in the package root; in-repo runs read the workspace. */
 function examplesRoot(): string {
-  const published = join(import.meta.dirname, 'examples');
-
-  return existsSync(published) ? published : join(import.meta.dirname, '../../examples');
+  return PUBLISHED ? join(ROOT, 'examples') : join(ROOT, '../../examples');
 }
 
 function exampleDir(example: string | undefined): string {
@@ -49,7 +52,7 @@ function writeAppPackage(): void {
   writeFileSync(path, `${JSON.stringify({ ...pkg, name, dependencies: Object.fromEntries(deps) }, null, 2)}\n`);
 }
 
-const source = flag ? exampleDir(exampleName) : join(import.meta.dirname, 'template');
+const source = flag ? exampleDir(exampleName) : join(ROOT, 'template');
 
 cpSync(source, target, {
   recursive: true,

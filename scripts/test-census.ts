@@ -25,6 +25,10 @@ const TARGETS = [
   'packages/conformance',
   'packages/docs-tests',
   'apps/docs',
+  'scripts',
+  // Only the bin: the `template/` beside it is scaffolding for a generated app,
+  // not a workspace, so its own tests cannot resolve `janux` from here.
+  'packages/create-janux/bin.test.ts',
 ];
 
 const REPORT = '.census-junit.xml';
