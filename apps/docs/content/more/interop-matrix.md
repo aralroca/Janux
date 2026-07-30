@@ -12,6 +12,7 @@ One example per **category**, not per library — the constraint that keeps this
 |---|---|---|---|---|---|
 | Data grid | `@tanstack/react-table` 8.21 | ✅ [`interop-data-grid`](https://github.com/aralroca/Janux/tree/main/examples/interop-data-grid) | ✅ full | `sort`, `filter`, `reset` | 97 kB |
 | Charts | `recharts` 3.10 | ⚠️ [`interop-charts`](https://github.com/aralroca/Janux/tree/main/examples/interop-charts) | ⚠️ sized box, no SVG | `toggleSeries`, `inspect`, `reset` | 188 kB |
+| Virtualization | `@tanstack/react-virtual` 3.14 | ✅ [`interop-virtual-list`](https://github.com/aralroca/Janux/tree/main/examples/interop-virtual-list) | ✅ first window | `select`, `scrollToRow`, `clear` | 91 kB |
 | Hand-written React | — | ✅ [`interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) | ✅ full | `setBand`, `flat` | 83 kB |
 | Graph editor | `@xyflow/react` 12.11 | ⚠️ [`with-web-agent`](https://github.com/aralroca/Janux/tree/main/examples/with-web-agent) | ❌ `hydrate: 'only'` | `addStep` | — |
 
@@ -63,6 +64,10 @@ These are real and currently unfixed. Each is a limit of the boundary, not a bug
 | Reverse interop (a Janux island inside a React app) | Not implemented; on the roadmap. |
 | React Server Components | Not supported. `foreign()` mounts a client root. |
 
+## Watch out: island state is serialized into the HTML
+
+Virtualization is a rendering strategy; it does not make a large state snapshot cheap. 10 000 rows of real data in `state` is a multi-hundred-kilobyte snapshot in **every** response, paid on first paint whether or not the user scrolls. Keep big datasets behind a `source` or an `api()` and let the island hold the window and the cursor — `interop-virtual-list` derives its row labels from the index for exactly this reason.
+
 ## Watch out: controlled state rebuilt per render
 
 The one failure that is *your* code rather than the boundary, and the most expensive to debug, because it wedges the browser's main thread rather than throwing:
@@ -87,6 +92,7 @@ React interop is opt-in and per-island: an app with no foreign island ships none
 | A Janux app with no foreign island (`with-tailwind`) | 69 kB | 24 kB |
 | `interop-react` (React + react-dom) | 259 kB | 83 kB |
 | `interop-data-grid` (+ `@tanstack/react-table`) | 312 kB | 97 kB |
+| `interop-virtual-list` (+ `@tanstack/react-virtual`) | 284 kB | 91 kB |
 | `interop-charts` (+ `recharts`) | 619 kB | 188 kB |
 
 Measured from `dist/client` after `janux build`.

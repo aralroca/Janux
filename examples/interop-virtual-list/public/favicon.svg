@@ -1,0 +1,19 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    svg { color: #000000; }
+    @media (prefers-color-scheme: dark) { svg { color: #ffffff; } }
+  </style>
+
+  <!-- the shared head: one column -->
+  <rect x="112" y="46" width="16" height="148" rx="8" fill="currentColor"/>
+
+  <!-- human face, looking left: curved profile + round eye -->
+  <path d="M112 60 C 66 67, 46 96, 46 120 C 46 144, 66 173, 112 180"
+        stroke="currentColor" stroke-width="16" stroke-linecap="round" fill="none"/>
+  <circle cx="80" cy="110" r="11" fill="currentColor"/>
+
+  <!-- agent face, looking right: angular profile + square eye -->
+  <path d="M128 60 L 176 77 L 193 120 L 176 163 L 128 180"
+        stroke="currentColor" stroke-width="16" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+  <rect x="152" y="99" width="21" height="21" rx="3" fill="currentColor"/>
+</svg>
