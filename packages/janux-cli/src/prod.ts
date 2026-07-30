@@ -3,7 +3,15 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { defineAgent } from '@janux/agent';
 import type { ServerOptions } from '@janux/server';
-import { apiFiles, apiModuleName, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxAppConfig } from '@janux/vite/config';
+import {
+  apiFiles,
+  apiModuleName,
+  mcpAuthOptions,
+  registerInstrumentation,
+  resolveAppConfig,
+  shellOptions,
+  type JanuxAppConfig,
+} from '@janux/vite/config';
 
 /**
  * The production wiring, kept away from the build commands on purpose.
@@ -76,6 +84,10 @@ async function optionalModule(load: Loader, file: string | undefined): Promise<R
 export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): Promise<ServerOptions> {
   const app = prebuilt?.config ?? (await resolveAppConfig(root));
   const load = moduleLoader(prebuilt);
+
+  // First, before any app module is imported: an SDK that patches globals has
+  // to do it before the code it means to observe is loaded.
+  await registerInstrumentation(app.instrumentationModule, load);
   const inlineStyles = await builtStyles(root, app);
   const apiModules = Object.fromEntries(
     await Promise.all(apiFiles(app.serverDir).map(async (file) => [apiModuleName(file), await load(file)])),

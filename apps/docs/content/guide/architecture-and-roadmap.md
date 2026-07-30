@@ -4,7 +4,7 @@
 
 | Package | Responsibility |
 |---|---|
-| `janux` | Core: schema types, signals, reactive state (mutation gate), component/store runtime (intents, guards, effects, sources, events, `settled`), server renderer with islands, manifest builder, client resume runtime + gui-agent bridge |
+| `janux` | Core: schema types, signals, reactive state (mutation gate), component/store runtime (intents, guards, effects, sources, events, `settled`), server renderer with islands, manifest builder, client resume runtime + gui-agent bridge, the observability seam (`janux/observability`) |
 | `@janux/server` | `api()` RPC, file-system router, HTML shell (0-JS guarantee), `/_janux/*` endpoints, proposals, `llms.txt` index, Web Bot Auth agent identity |
 | `@janux/agent` | Model resolution (Anthropic/OpenAI/Google/OpenRouter), the ui/api tool loop, and the embedded harness: memory (in-memory + Postgres), durable workflows, guardrail processors, rate limiting (in-memory + Redis), attachments, outbound MCP client |
 | `@janux/vite` | Vite plugin: JSX config, SSR bridge, api client stubs via **SWC** |
@@ -28,6 +28,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 - **Data & state:** client cache (`useQuery`/`mutation`/`QueryClient`, optimistic rollback, per-request SSR client), persisted stores, typed URL state.
 - **Platform:** arbitrary `src/api/**` HTTP handlers + multipart uploads + `dropzone`.
 - **Agentic surface:** hosted MCP endpoint (`/_janux/mcp`), per-page Markdown projections, proposal visual diffs, `llms.txt`, Web Bot Auth, `janux verify`/`janux eval`.
+- **Observability:** `src/instrumentation.ts` loaded before the server serves, OpenTelemetry spans for the request, the SSR render, each island, the invocation pipeline and the agent loop (`gen_ai.*` semantic conventions, tokens and cost per turn), a global `onError`, and PII redaction on every exported attribute — fail-open throughout, and inert when unconfigured (see [the reference](/docs/reference/observability-api)).
 - **Embedded harness (`@janux/agent`):** memory (in-memory + Postgres adapters), durable suspend/resume workflows, guardrail processors, rate limiting (in-memory + Redis), attachments, outbound MCP client, model routing (Anthropic/OpenAI/Google/OpenRouter).
 
 ## Roadmap
@@ -43,7 +44,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 
 ## Testing
 
-The framework is developed test-first with `bun:test` + happy-dom (3921 tests, the count `bun run test:census` measures and enforces):
+The framework is developed test-first with `bun:test` + happy-dom (4001 tests, the count `bun run test:census` measures and enforces):
 
 - Resume-without-hydration is asserted (zero component code until interaction).
 - Guard semantics (auto/confirm/forbidden × human/agent) are covered at every layer: instance, HTTP, bridge, agent loop.

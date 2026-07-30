@@ -80,7 +80,7 @@ export const SECTIONS: SectionDef[] = [
     section: 'reference',
     label: 'Reference',
     groups: [
-      { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api'] },
+      { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api', 'observability-api'] },
       {
         label: 'Agent harness',
         slugs: ['agent-memory', 'agent-guardrails', 'agent-workflows', 'agent-rate-limit', 'agent-mcp-client', 'agent-attachments'],
@@ -97,7 +97,7 @@ export const SECTIONS: SectionDef[] = [
       { label: 'UI patterns', slugs: ['forms', 'optimistic-ui', 'error-handling', 'cross-island-events'] },
       { label: 'Server & project', slugs: ['auth-and-context', 'custom-server', 'monorepo-setup'] },
       { label: 'Agents & MCP', slugs: ['local-model-copilot', 'external-mcp-clients', 'debugging-webmcp', 'agent-evals-in-ci'] },
-      { label: 'Testing & deployment', slugs: ['testing-components', 'deploying', 'vercel', 'docker'] },
+      { label: 'Testing & deployment', slugs: ['testing-components', 'deploying', 'vercel', 'docker', 'sentry'] },
     ],
   },
   { section: 'more', label: 'More', groups: [{ slugs: ['examples', 'interop-matrix', 'comparison', 'benchmarks', 'faq', 'glossary'] }] },

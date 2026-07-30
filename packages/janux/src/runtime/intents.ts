@@ -1,6 +1,7 @@
 import { coerceForm, validate } from '../schema';
 import { batch } from '../signals';
 import { dryRunDiff } from './dry-run';
+import { isTracing, withSpan, type JanuxSpan, type SpanAttributes } from '../observability/tracing';
 import { withGate, type MutationGate } from '../state/mutation-gate';
 import type { ComponentDef, Ctx, GuardValue, IntentDef, Origin, RunBag } from '../define/types';
 
@@ -94,6 +95,22 @@ function audit(hooks: IntentHooks, entry: Omit<AuditEntry, 'at'>): void {
   hooks.onAudit?.({ ...entry, at: Date.now() });
 }
 
+/** Who is invoking what, under which guard — the three facts every span and every audit entry repeats. */
+interface Invoked {
+  tool: string;
+  guard: GuardValue;
+  origin: Origin;
+}
+
+/**
+ * The attribute set no other framework can emit, because no other framework
+ * knows the answers: which named intent, which guard decided, and whether a
+ * human or an agent asked.
+ */
+function attributesOf({ tool, guard, origin }: Invoked, proposal?: string): SpanAttributes {
+  return { 'janux.intent': tool, 'janux.guard': guard, 'janux.origin': origin, 'janux.proposal.id': proposal };
+}
+
 async function execute(def: IntentDef, bag: RunBag, input: unknown, origin: Origin, gate: MutationGate): Promise<unknown> {
   // One flush per run: the synchronous span of the body batches its state
   // writes (async continuations flush per write, as ever). Derived reads stay
@@ -101,32 +118,46 @@ async function execute(def: IntentDef, bag: RunBag, input: unknown, origin: Orig
   return withGate(gate, () => batch(() => def.run({ ...bag, input, origin })));
 }
 
-function propose(
-  tool: string,
-  input: unknown,
-  run: () => Promise<unknown>,
-  hooks: IntentHooks,
-  diff?: Proposal['diff'],
-) {
-  const proposal: Proposal = { id: nextProposalId(tool), tool, input, diff, execute: run };
+function propose(id: string, invoked: Invoked, input: unknown, run: () => Promise<unknown>, hooks: IntentHooks, diff?: Proposal['diff']) {
+  const proposal: Proposal = { id, tool: invoked.tool, input, diff, execute: run };
 
   hooks.onProposal?.(proposal);
 
-  return { status: 'proposal' as const, id: proposal.id, tool, input, diff };
+  return { status: 'proposal' as const, id, tool: invoked.tool, input, diff };
 }
 
-/** The single invocation pipeline shared by human clicks, agent calls and RPC. */
-export async function invokeIntent(
-  componentName: string,
-  intentName: string,
+/** The approved execution must reach the trail too — `proposed: true` followed by silence would leave approvals unaccounted for. */
+async function runAudited(invoked: Invoked, input: unknown, run: () => Promise<unknown>, hooks: IntentHooks): Promise<unknown> {
+  try {
+    const result = await run();
+
+    audit(hooks, { ...invoked, input, ok: true });
+
+    return result;
+  } catch (error) {
+    audit(hooks, { ...invoked, input, ok: false, error: String(error) });
+    throw error;
+  }
+}
+
+/**
+ * A proposal's execution gets a span of its own: the human approval that
+ * triggers it happens later, and often never. Folded into the proposing span,
+ * a trace could not tell "an agent asked" apart from "a human said yes".
+ */
+function approvedRun(id: string, invoked: Invoked, input: unknown, run: () => Promise<unknown>, hooks: IntentHooks) {
+  return () => withSpan('janux.intent.execute', () => attributesOf(invoked, id), () => runAudited(invoked, input, run, hooks));
+}
+
+async function runInvocation(
+  invoked: Invoked,
   def: IntentDef,
   bag: RunBag,
   input: unknown,
-  origin: Origin,
   hooks: IntentHooks,
+  span?: JanuxSpan,
 ): Promise<unknown> {
-  const tool = `${componentName}.${intentName}`;
-  const guard = resolveGuard(def, bag.ctx, origin);
+  const { tool, guard, origin } = invoked;
 
   try {
     if (origin === 'agent' && guard === 'forbidden') {
@@ -137,31 +168,39 @@ export async function invokeIntent(
     const run = () => hooks.trackPending(execute(def, bag, parsed, origin, hooks.gate));
 
     if (origin === 'agent' && guard === 'confirm') {
-      audit(hooks, { tool, origin, guard, input: parsed, ok: true, proposed: true });
-      // The approved execution must reach the trail too — `proposed: true`
-      // followed by silence would leave approvals unaccounted for.
-      const runAudited = async () => {
-        try {
-          const result = await run();
+      const id = nextProposalId(tool);
 
-          audit(hooks, { tool, origin, guard, input: parsed, ok: true });
+      span?.setAttributes({ 'janux.proposal.id': id });
+      audit(hooks, { ...invoked, input: parsed, ok: true, proposed: true });
 
-          return result;
-        } catch (error) {
-          audit(hooks, { tool, origin, guard, input: parsed, ok: false, error: String(error) });
-          throw error;
-        }
-      };
-
-      return propose(tool, parsed, runAudited, hooks, dryRunDiff(def, bag, parsed));
+      return propose(id, invoked, parsed, approvedRun(id, invoked, parsed, run, hooks), hooks, dryRunDiff(def, bag, parsed));
     }
     const result = await run();
 
-    audit(hooks, { tool, origin, guard, input: parsed, ok: true });
+    audit(hooks, { ...invoked, input: parsed, ok: true });
 
     return result;
   } catch (error) {
-    audit(hooks, { tool, origin, guard, input, ok: false, error: String(error) });
+    audit(hooks, { ...invoked, input, ok: false, error: String(error) });
     throw error;
   }
+}
+
+/** The single invocation pipeline shared by human clicks, agent calls and RPC. */
+export function invokeIntent(
+  componentName: string,
+  intentName: string,
+  def: IntentDef,
+  bag: RunBag,
+  input: unknown,
+  origin: Origin,
+  hooks: IntentHooks,
+): Promise<unknown> {
+  const invoked: Invoked = { tool: `${componentName}.${intentName}`, guard: resolveGuard(def, bag.ctx, origin), origin };
+
+  // Guarded rather than left to `withSpan`: an uninstrumented click must not
+  // allocate the two closures a traced one needs. Same reasoning as renderIsland.
+  if (!isTracing()) return runInvocation(invoked, def, bag, input, hooks);
+
+  return withSpan('janux.intent', () => attributesOf(invoked), (span) => runInvocation(invoked, def, bag, input, hooks, span));
 }
