@@ -1,3 +1,4 @@
+// Derived from octane/benchmarks (MIT) — Copyright (c) 2026 Dominic Gannaway. See benchmarks/LICENSE-OCTANE.
 // ssr-throughput bench harness — Node-only SSR throughput (NO browser, NO
 // ports, NO Playwright). Hand-rolled process.hrtime.bigint timing.
 //

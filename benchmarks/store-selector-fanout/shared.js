@@ -1,3 +1,4 @@
+// Derived from octane/benchmarks (MIT) — Copyright (c) 2026 Dominic Gannaway. See benchmarks/LICENSE-OCTANE.
 // Shared fixture state for the selector-based external-store fan-out suite.
 //
 // The workload this suite exists to observe is an UNRELATED PARENT RE-RENDER

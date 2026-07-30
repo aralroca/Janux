@@ -1,3 +1,4 @@
+// Derived from octane/benchmarks (MIT) — Copyright (c) 2026 Dominic Gannaway. See benchmarks/LICENSE-OCTANE.
 // Local benchmark runner — drives octane (and optionally other targets)
 // via Playwright. Times each js-framework-benchmark operation and prints a
 // table. Uses page.evaluate(() => el.click()) to fire clicks SYNCHRONOUSLY

@@ -1,3 +1,4 @@
+// Derived from octane/benchmarks (MIT) — Copyright (c) 2026 Dominic Gannaway. See benchmarks/LICENSE-OCTANE.
 // Keyed-reorder matrix harness — drives the SECOND jumbotron button row the
 // four js-framework fixtures expose (reverse / shuffle / rotatef / rotateb /
 // prepend100 / append100 / insertmid100 / removefirst / removeevery10 /

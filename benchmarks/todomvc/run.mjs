@@ -1,3 +1,4 @@
+// Derived from octane/benchmarks (MIT) — Copyright (c) 2026 Dominic Gannaway. See benchmarks/LICENSE-OCTANE.
 // TodoMVC benchmark runner — drives all seven framework columns through the
 // SAME Speedometer-style scripted interactions via Playwright and times each
 // op. Unlike the js-framework suite's single-click ops, every TodoMVC op is a

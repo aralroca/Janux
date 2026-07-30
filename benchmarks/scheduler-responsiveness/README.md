@@ -6,3 +6,7 @@ Production Chromium drives controlled typing while 512 external-store subscriber
 node benchmarks/bench.mjs --quick scheduler-responsiveness
 node benchmarks/bench.mjs scheduler-responsiveness
 ```
+
+---
+
+Suite harness and prose derived from [octane](https://github.com/octanejs/octane)`/benchmarks` (MIT — Copyright (c) 2026 Dominic Gannaway). Full licence text: [`../LICENSE-OCTANE`](../LICENSE-OCTANE) · attribution: [`../../CREDITS.md`](../../CREDITS.md).

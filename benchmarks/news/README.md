@@ -134,3 +134,7 @@ _"Invalid DOM property `class`"_ warning. State uses React's own `useState`
 - **`@if`/`@switch` hydration (octane)**: not yet wired (the bench uses `@for`
   - components, which are). Hookless ("lite") nested components also don't hydrate
     yet — give a hydrated component a hook so it uses the full slot.
+
+---
+
+Suite harness and prose derived from [octane](https://github.com/octanejs/octane)`/benchmarks` (MIT — Copyright (c) 2026 Dominic Gannaway). Full licence text: [`../LICENSE-OCTANE`](../LICENSE-OCTANE) · attribution: [`../../CREDITS.md`](../../CREDITS.md). Where the text above names *Octane* as a measured target, read *Janux*: this suite measures Janux against react/preact/solid/svelte/vue-vapor, and the upstream name survives in inherited prose.
