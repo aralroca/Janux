@@ -15,6 +15,6 @@ export default defineConfig({
   llmsTxt: {
     title: 'Janux',
     description:
-      'The agent-native fullstack UI framework. One component, two faces: a live view for humans, typed MCP tools & resources for AI agents.',
+      'The fullstack framework for the Agentic Web. One component, two faces: a live view for humans, typed MCP tools & resources for AI agents.',
   },
 });

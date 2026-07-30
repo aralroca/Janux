@@ -68,7 +68,7 @@ import type { PageMeta } from 'janux';
 export function meta({ params }): PageMeta {
   return {
     title: 'What is Janux? — Janux docs',
-    description: 'The agent-native fullstack UI framework.',
+    description: 'The fullstack framework for the Agentic Web.',
     image: '/og/what-is-janux.png',   // og:image + twitter:image
     canonical: `/docs/${params.section}/${params.slug}`,
     robots: 'index,follow',

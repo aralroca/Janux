@@ -33,7 +33,9 @@ export const SECTIONS: SectionDef[] = [
   {
     section: 'getting-started',
     label: 'Getting started',
-    groups: [{ slugs: ['what-is-janux', 'quick-start', 'project-structure', 'mental-model', 'editor-setup'] }],
+    groups: [
+      { slugs: ['what-is-janux', 'quick-start', 'the-agentic-web', 'project-structure', 'mental-model', 'editor-setup'] },
+    ],
   },
   {
     section: 'guide',
