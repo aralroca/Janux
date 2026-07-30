@@ -199,3 +199,19 @@ describe('resolveAppConfig stylesheet', () => {
     expect((await resolveAppConfig(root)).stylesheet).toBeUndefined();
   });
 });
+
+describe('the app root the framework publishes', () => {
+  /**
+   * An app's own modules locate their data files through `JANUX_APP_ROOT` — the
+   * convention the Vercel adapter established because a bundle's
+   * `import.meta.dirname` is not the app's. Every path that boots an app
+   * resolves the config first, so this is where the promise is kept.
+   */
+  it('is set from the root being resolved', async () => {
+    const root = app({ 'janux.config.ts': 'export default {};' });
+
+    await resolveAppConfig(root);
+
+    expect(process.env.JANUX_APP_ROOT).toBe(root);
+  });
+});

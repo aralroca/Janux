@@ -1,6 +1,6 @@
 import * as runtime from 'janux/jsx-runtime';
 import type { JanuxNode } from 'janux';
-import type { CollectionEntry, ContentFormat } from './collection';
+import type { CollectionDef, CollectionEntry, ContentFormat } from './collection';
 import { collectHeadings, type Heading } from './headings';
 
 export type { Heading } from './headings';
@@ -76,8 +76,8 @@ async function compileBody(body: string, format: ContentFormat, file: string): P
 }
 
 /** Compiles an entry's body. `components` are bound per call; the compilation itself is shared. */
-export async function render<S extends { data: unknown }>(
-  entry: Pick<CollectionEntry<any>, 'body' | 'format' | 'file'> & S,
+export async function render(
+  entry: Pick<CollectionEntry<CollectionDef<any>>, 'body' | 'format' | 'file'>,
   options: RenderOptions = {},
 ): Promise<RenderedEntry> {
   const key = `${entry.format}:${entry.body}`;

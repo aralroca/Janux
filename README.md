@@ -317,6 +317,7 @@ One example per **category**, each verified in CI — the [compatibility matrix]
 | [`with-suspense`](examples/with-suspense) | Streaming SSR: independent `suspense` boundaries that reveal mid-stream, and `error` boundaries that bubble. |
 | [`with-advanced-routing`](examples/with-advanced-routing) | The full router grammar: `[slug]`, `[...path]`, `[[...rest]]`, `[id=integer]`/`[uid=uuid]` matchers, nested `_layout.tsx` chains, `(marketing)` groups and the `_404.tsx`/`_500.tsx` pages, plus SPA navigation with a `persist` island. |
 | [`blog-static`](examples/blog-static) | A markdown blog exported with `output: 'static'` + `staticParams`: zero-JS pages, speculation rules, and the agent face (`llms.txt`, sitemap, `.md` projections) from the same build. |
+| [`with-content`](examples/with-content) | Typed content collections: frontmatter validated by the same `schema()` as component state, and MDX notes that embed a real Janux island and a React component via `foreign()` — compiled on the server, so a note of prose still ships 0 KB. |
 | [`i18n`](examples/i18n) | Internationalization: locale-prefixed routing, language switcher, type-safe `t()` with plurals, and page-scoped client translations. |
 
 ### Styling

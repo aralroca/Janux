@@ -32,23 +32,37 @@ export interface CollectionConfig<S extends JxType<any>> {
 
 export interface CollectionDef<S extends JxType<any>> extends CollectionConfig<S> {
   readonly kind: 'collection';
+  /** `dir`, resolved to an absolute path when the collection was declared. */
+  readonly root: string;
 }
 
-/** A single content file: validated frontmatter, raw body, and where it came from. */
-export interface CollectionEntry<S extends JxType<any>> {
+/**
+ * A single content file: validated frontmatter, raw body, and where it came
+ * from. Parameterised by the collection rather than by its schema, so an app
+ * names the thing it already has: `CollectionEntry<typeof notes>`.
+ */
+export interface CollectionEntry<C extends CollectionDef<any>> {
   /** Path inside the collection with the extension dropped: `guide/schema`. */
   id: string;
   /** Absolute path of the source file. */
   file: string;
   format: ContentFormat;
-  data: Infer<S>;
+  data: Infer<C['schema']>;
   /** The file's content with the frontmatter block removed. */
   body: string;
 }
 
-/** Declares a collection. Pass the result to `getCollection`/`getEntry` — no registry, no codegen. */
+/**
+ * Declares a collection. Pass the result to `getCollection`/`getEntry` — no
+ * registry, no codegen.
+ *
+ * A relative `dir` is resolved **here**, while the module that declares it is
+ * being loaded, because that is when its own app root is the current one. A
+ * process serving two apps — a test run, a monorepo dev server — would
+ * otherwise hand both collections whichever root was published last.
+ */
 export function defineCollection<S extends JxType<any>>(config: CollectionConfig<S>): CollectionDef<S> {
-  return { kind: 'collection', ...config };
+  return { kind: 'collection', ...config, root: collectionDir(config.dir) };
 }
 
 function collectionDir(dir: string): string {
@@ -117,17 +131,19 @@ function cacheFor(def: CollectionDef<any>): Map<string, CacheLine> {
   return created;
 }
 
-function readEntry<S extends JxType<any>>(def: CollectionDef<S>, source: SourceFile): CollectionEntry<S> {
+function readEntry<C extends CollectionDef<any>>(def: C, source: SourceFile): CollectionEntry<C> {
   const { mtimeMs } = statSync(source.file);
   const cache = cacheFor(def);
   const cached = cache.get(source.file);
 
   if (cached?.mtimeMs === mtimeMs) return cached.entry;
   const { data, body } = parseFrontmatter(readFileSync(source.file, 'utf8'));
-  const entry: CollectionEntry<S> = {
+  const entry: CollectionEntry<C> = {
     ...source,
     body,
-    data: validateFrontmatter(def.schema, data, source.file),
+    // The one cast in the module: `C` is the collection, and only its `schema`
+    // field carries the shape `Infer` reads back.
+    data: validateFrontmatter(def.schema, data, source.file) as CollectionEntry<C>['data'],
   };
 
   cache.set(source.file, { mtimeMs, entry });
@@ -136,18 +152,18 @@ function readEntry<S extends JxType<any>>(def: CollectionDef<S>, source: SourceF
 }
 
 /** Every entry in a collection, ordered by id. The optional filter runs on validated data. */
-export function getCollection<S extends JxType<any>>(
-  def: CollectionDef<S>,
-  filter?: (entry: CollectionEntry<S>) => boolean,
-): CollectionEntry<S>[] {
-  const entries = sourceFiles(collectionDir(def.dir)).map((source) => readEntry(def, source));
+export function getCollection<C extends CollectionDef<any>>(
+  def: C,
+  filter?: (entry: CollectionEntry<C>) => boolean,
+): CollectionEntry<C>[] {
+  const entries = sourceFiles(def.root).map((source) => readEntry(def, source));
 
   return filter ? entries.filter(filter) : entries;
 }
 
 /** One entry by id, or `undefined`. Ids come from URLs, so they are matched, never joined. */
-export function getEntry<S extends JxType<any>>(def: CollectionDef<S>, id: string): CollectionEntry<S> | undefined {
-  const source = sourceFiles(collectionDir(def.dir)).find((file) => file.id === id);
+export function getEntry<C extends CollectionDef<any>>(def: C, id: string): CollectionEntry<C> | undefined {
+  const source = sourceFiles(def.root).find((file) => file.id === id);
 
   return source && readEntry(def, source);
 }

@@ -1,0 +1,35 @@
+---
+title: An island written inside a note
+date: 2026-07-06
+summary: MDX embeds a real Janux component — server-rendered, resumable, and on the agent surface like any other island.
+tags: [mdx, islands]
+---
+
+# An island written inside a note
+
+The paragraph you are reading is markdown. The poll below is a `component()` — the same kind of island a route would mount — written straight into this file.
+
+<Poll
+  initial={{
+    question: 'Which part of Janux sold you?',
+    options: [
+      { label: 'Resumability', votes: 0 },
+      { label: 'The agent surface', votes: 0 },
+      { label: 'Typed content', votes: 0 },
+    ],
+  }}
+/>
+
+## It is a real island
+
+It server-renders with the rest of the page, resumes without hydrating anything else, and — because it is an ordinary component — its `vote` intent is on the manifest. An agent reading this page can vote through the tool; a reader clicks. Neither path is a special case for content.
+
+## What MDX changes, and what it does not
+
+Only the reading of the file. `.mdx` lets a body name components; everything else is the same collection, the same validated frontmatter, the same `.md` projection. And the compiler runs on the server: this page ships the island's code, not a markdown parser.
+
+```mdx
+<Poll initial={{ question: 'Which part sold you?', options: [] }} />
+```
+
+Components are passed in explicitly by the page that renders the note, so a content file can only mount what the app has offered it.
