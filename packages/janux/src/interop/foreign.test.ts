@@ -1,6 +1,7 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { createElement, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { component, intent } from '../define/factories';
 import { jsx } from '../jsx-runtime';
 import { bool, int, schema, str } from '../schema';
@@ -66,6 +67,87 @@ const shell = component({
         state.showGauge ? jsx(GaugeIsland as any, { state }) : null,
       ],
     }),
+});
+
+/**
+ * The callback shapes real libraries actually use, which `args[0]` cannot carry:
+ * TanStack Table hands `on[State]Change` an updater FUNCTION (value-or-updater),
+ * and Recharts puts the useful argument second.
+ */
+function Grid({
+  order,
+  cell,
+  onSort,
+  onCell,
+}: {
+  order: string;
+  cell: number;
+  onSort?: (updater: (prev: string) => string) => void;
+  onCell?: (value: string, index: number) => void;
+}) {
+  return createElement(
+    'div',
+    { className: 'grid' },
+    createElement('output', { className: 'grid-order' }, order),
+    createElement('output', { className: 'grid-cell' }, String(cell)),
+    createElement(
+      'button',
+      { className: 'grid-sort', onClick: () => onSort?.((prev) => (prev === 'asc' ? 'desc' : 'asc')) },
+      'sort',
+    ),
+    createElement('button', { className: 'grid-cell-pick', onClick: () => onCell?.('ignored', 7) }, 'cell'),
+  );
+}
+
+const GridIsland = foreign(Grid, {
+  name: 'grid',
+  props: (own: any) => ({ order: own.state.order, cell: own.state.cell }),
+  on: {
+    // Resolving an updater needs the PREVIOUS value, which lives in the island —
+    // hence `own` alongside the callback arguments.
+    onSort: { intent: 'sort', input: ({ args, own }: any) => ({ order: args[0](own.state.order) }) },
+    onCell: { intent: 'pickCell', input: ({ args }: any) => ({ index: args[1] }) },
+  },
+});
+
+const gridShell = component({
+  name: 'grid-shell',
+  state: schema({ order: str().default('asc'), cell: int().default(0) }),
+  intents: {
+    sort: intent({ input: schema({ order: str() }), run: ({ state, input }) => (state.order = input.order) }),
+    pickCell: intent({ input: schema({ index: int() }), run: ({ state, input }) => (state.cell = input.index) }),
+  },
+  view: ({ state }: any) => jsx('section', { children: jsx(GridIsland as any, { state }) }),
+});
+
+/**
+ * Radix, base-ui and every other a11y primitive library render their popups
+ * through a portal into `document.body` — OUTSIDE the `<janux-foreign>` host the
+ * morph treats as opaque.
+ */
+function Sheet({ open }: { open: boolean }) {
+  return createElement(
+    'div',
+    { className: 'sheet' },
+    open && typeof document !== 'undefined'
+      ? createPortal(createElement('div', { className: 'sheet-portal' }, 'portal'), document.body)
+      : null,
+  );
+}
+
+const SheetIsland = foreign(Sheet, {
+  name: 'sheet',
+  // Portals cannot be server-rendered by React at all, so SSR would be a blank
+  // host either way; `only` states that instead of hiding it in a catch.
+  hydrate: 'only',
+  props: (own: any) => ({ open: own.state.open }),
+});
+
+const sheetShell = component({
+  name: 'sheet-shell',
+  state: schema({ open: bool().default(true) }),
+  intents: { close: intent({ run: ({ state }) => (state.open = false) }) },
+  view: ({ state }: any) => jsx('section', { children: jsx(SheetIsland as any, { state }) }),
 });
 
 async function until(check: () => boolean, ms = 1500): Promise<void> {
@@ -204,5 +286,77 @@ describe('foreign React interop', () => {
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+});
+
+/**
+ * `on: { prop: 'intentName' }` forwards the callback's first argument raw, which
+ * is exactly wrong for most of the React ecosystem: a TanStack updater is a
+ * function, a dnd-kit drag event carries live objects, and Recharts' payload is
+ * the second argument. The mapped form names the intent AND maps the arguments.
+ */
+describe('foreign callbacks that do not fit args[0]', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  async function bootGrid(): Promise<JanuxClient> {
+    const { html, snapshots } = await renderToString(jsx(gridShell as any, {}), {});
+
+    document.body.innerHTML =
+      html +
+      snapshots
+        .map(
+          (snap) =>
+            `<script type="application/janux+state" data-uri="${snap.uri}">${JSON.stringify({ state: snap.state, sources: snap.sources ?? {} })}</script>`,
+        )
+        .join('');
+
+    return boot({ defs: [gridShell, GridIsland] });
+  }
+
+  it('resolves an updater-function callback against the island state before the intent sees it', async () => {
+    const client = await bootGrid();
+
+    await until(() => reactMounted() && !!document.querySelector('.grid-sort'));
+    (document.querySelector('.grid-sort') as HTMLElement).click();
+    await client.settled();
+    // 'asc' -> the updater ran against the island's own value -> 'desc'.
+    await until(() => document.querySelector('.grid-order')?.textContent === 'desc');
+  });
+
+  it('survives a navigation that morphs away a portal the foreign root still owns', async () => {
+    const { html } = await renderToString(jsx(sheetShell as any, {}), {});
+
+    document.body.innerHTML = html;
+    const client = boot({ defs: [sheetShell, SheetIsland] });
+
+    await until(() => !!document.querySelector('.sheet-portal'));
+
+    // The portal node is a child of <body>, so the next page's morph removes it
+    // while React still believes it owns it — and the foreign sweep unmounts the
+    // root only AFTER the morph has run.
+    const realFetch = globalThis.fetch;
+
+    globalThis.fetch = (async () =>
+      new Response('<!doctype html><html><head></head><body><main>bye</main></body></html>', {
+        headers: { 'content-type': 'text/html' },
+      })) as unknown as typeof fetch;
+    try {
+      await client.navigate('http://localhost/next');
+      expect(document.querySelector('.sheet-portal')).toBeNull();
+      expect(document.querySelector('janux-foreign')).toBeNull();
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('maps a multi-argument callback onto the intent input', async () => {
+    const client = await bootGrid();
+
+    await until(() => reactMounted() && !!document.querySelector('.grid-cell-pick'));
+    (document.querySelector('.grid-cell-pick') as HTMLElement).click();
+    await client.settled();
+    await until(() => document.querySelector('.grid-cell')?.textContent === '7');
   });
 });
