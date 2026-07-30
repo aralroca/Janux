@@ -40,7 +40,7 @@ my-app/
 | `src/middleware.ts` | A request hook before routing — redirects, auth gates, locale hardening | [Navigation § Middleware](/docs/guide/navigation) |
 | `src/matchers.ts` | Custom param matchers (each export is `(value: string) => boolean`) | [Navigation § The route tree](/docs/guide/navigation) |
 | `src/i18n.ts` | Locale-prefixed routing, typed `t()`, page-scoped client messages | [i18n](/docs/guide/i18n) |
-| `src/styles.css` | Stylesheet link in the HTML shell (Tailwind works here) | [Tailwind recipe](/docs/recipes/tailwind) |
+| `src/styles.css` | Stylesheet link in the HTML shell — `.scss`, `.sass` and `.less` are resolved too, and always emitted as `/styles.css` | [Styles](/docs/styles/overview) |
 | `public/favicon.svg` | Favicon link in the shell | — |
 
 ## What the starter ships

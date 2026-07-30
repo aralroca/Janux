@@ -40,6 +40,18 @@ function optional(path: string): string | undefined {
   return existsSync(path) ? path : undefined;
 }
 
+/**
+ * The app's own stylesheet entry, in precedence order. Vite compiles whichever
+ * one it finds, and the build renames the emitted asset to `/styles.css` — the
+ * single sheet the HTML shell links — so a preprocessor is a file extension,
+ * not a configuration step.
+ */
+const STYLESHEETS = ['styles.css', 'styles.scss', 'styles.sass', 'styles.less'];
+
+function stylesheet(root: string): string | undefined {
+  return STYLESHEETS.map((name) => optional(resolve(root, 'src', name))).find(Boolean);
+}
+
 /** Deprecated fallback: a `"janux"` field in the app's package.json (`janux.config.ts` wins over it). */
 function packageJsonOptions(root: string): JanuxPluginOptions {
   try {
@@ -78,7 +90,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     mcpAuth: options.mcpAuth,
     agents: options.agents,
     httpHandlersDir: optional(resolve(root, 'src/api')),
-    stylesheet: optional(resolve(root, 'src/styles.css')),
+    stylesheet: stylesheet(root),
     favicon: optional(resolve(root, 'public/favicon.svg')) ? '/favicon.svg' : undefined,
     title: options.title,
     lang: options.lang,

@@ -11,4 +11,4 @@ bun add @janux/tailwind
 @import "tailwindcss";
 ```
 
-Done — the Janux CLI detects the package and wires the official `@tailwindcss/vite` plugin into `janux dev` and `janux build`. Docs: the [Tailwind recipe](https://github.com/aralroca/Janux/blob/main/apps/docs/content/recipes/tailwind.md).
+Done — the Janux CLI detects the package and wires the official `@tailwindcss/vite` plugin into `janux dev` and `janux build`. Docs: the [Tailwind recipe](https://github.com/aralroca/Janux/blob/main/apps/docs/content/styles/tailwind.md).

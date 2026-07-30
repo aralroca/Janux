@@ -11,7 +11,7 @@ const CORPUS = [
     text: 'A component is simultaneously a view and a set of tools. Islands resume lazily.',
   },
   {
-    section: 'recipes',
+    section: 'styles',
     slug: 'tailwind',
     title: 'Tailwind',
     headings: [],
@@ -54,12 +54,12 @@ describe('docs copilot tools', () => {
   it('search_docs falls back to the page when no heading matches', async () => {
     const { matches } = await toolText('search_docs', { query: 'tailwind' });
 
-    expect(matches[0].path).toBe('/docs/recipes/tailwind');
+    expect(matches[0].path).toBe('/docs/styles/tailwind');
     expect(matches[0].title).toBe('Tailwind');
   });
 
   it('read_doc returns the page text for a valid path', async () => {
-    const page = await toolText('read_doc', { path: '/docs/recipes/tailwind' });
+    const page = await toolText('read_doc', { path: '/docs/styles/tailwind' });
 
     expect(page.text).toContain('Tailwind');
   });
@@ -75,7 +75,7 @@ describe('docs copilot tools', () => {
     const map = await docsMap();
 
     expect(map).toContain('/docs/guide/components — Components: Islands (#islands)');
-    expect(map).toContain('/docs/recipes/tailwind — Tailwind');
+    expect(map).toContain('/docs/styles/tailwind — Tailwind');
   });
 
   it('search_docs survives question-shaped queries (stopwords + punctuation)', async () => {

@@ -39,7 +39,7 @@ export const SECTIONS: SectionDef[] = [
     section: 'guide',
     label: 'Guide',
     groups: [
-      { slugs: ['getting-started'] },
+      { label: 'Overview', slugs: ['getting-started'] },
       {
         label: 'Components & state',
         slugs: [
@@ -61,6 +61,14 @@ export const SECTIONS: SectionDef[] = [
     ],
   },
   {
+    section: 'styles',
+    label: 'Styles',
+    groups: [
+      { label: 'Basics', slugs: ['overview', 'global-styles', 'inline-and-jsx'] },
+      { label: 'Techniques', slugs: ['css-variables', 'dark-mode', 'sass', 'tailwind'] },
+    ],
+  },
+  {
     section: 'tutorial',
     label: 'Tutorial',
     groups: [{ slugs: ['tasks-app-part-1', 'tasks-app-part-2', 'tasks-app-part-3'] }],
@@ -75,7 +83,7 @@ export const SECTIONS: SectionDef[] = [
         slugs: ['agent-memory', 'agent-guardrails', 'agent-workflows', 'agent-rate-limit', 'agent-mcp-client', 'agent-attachments'],
       },
       { label: 'Reactivity', slugs: ['signal', 'computed', 'watch', 'batch', 'untrack', 'owners'] },
-      { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus', 'i18n-api'] },
+      { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus', 'i18n-api', 'worker'] },
       { label: 'Client & CLI', slugs: ['client-api', 'client-state', 'data-cache-api', 'foreign', 'client-runtime', 'client-tools', 'cli', 'build-internals'] },
     ],
   },
@@ -83,26 +91,10 @@ export const SECTIONS: SectionDef[] = [
     section: 'recipes',
     label: 'Recipes',
     groups: [
-      {
-        slugs: [
-          'testing-components',
-          'forms',
-          'optimistic-ui',
-          'error-handling',
-          'tailwind',
-          'auth-and-context',
-          'cross-island-events',
-          'custom-server',
-          'monorepo-setup',
-          'agent-evals-in-ci',
-          'deploying',
-          'vercel',
-          'docker',
-          'external-mcp-clients',
-          'local-model-copilot',
-          'debugging-webmcp',
-        ],
-      },
+      { label: 'UI patterns', slugs: ['forms', 'optimistic-ui', 'error-handling', 'cross-island-events'] },
+      { label: 'Server & project', slugs: ['auth-and-context', 'custom-server', 'monorepo-setup'] },
+      { label: 'Agents & MCP', slugs: ['local-model-copilot', 'external-mcp-clients', 'debugging-webmcp', 'agent-evals-in-ci'] },
+      { label: 'Testing & deployment', slugs: ['testing-components', 'deploying', 'vercel', 'docker'] },
     ],
   },
   { section: 'more', label: 'More', groups: [{ slugs: ['examples', 'comparison', 'benchmarks', 'faq', 'glossary'] }] },

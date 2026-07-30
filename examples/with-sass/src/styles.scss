@@ -1,0 +1,127 @@
+// The app's stylesheet entry. `janux build` compiles whichever of
+// styles.{css,scss,sass,less} exists and always emits it as /styles.css.
+@use './styles/tokens' as *;
+
+:root {
+  color-scheme: light dark;
+  --bg: #f8fafc;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --card: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #020617;
+    --fg: #f8fafc;
+    --muted: #94a3b8;
+    --line: #1e293b;
+    --card: #0f172a;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: $font;
+}
+
+main {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+
+  // Nesting: the child rules live with the parent they belong to.
+  h1 {
+    margin: 0 0 0.5rem;
+    font-size: 2.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .lede {
+    margin: 0 0 2rem;
+    color: var(--muted);
+  }
+}
+
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: $gap * 1.5;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.swatch {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--fg);
+  }
+}
+
+.card {
+  @include card-surface(var(--line));
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  p {
+    margin: 0;
+    color: var(--muted);
+  }
+}
+
+// One loop, four variant classes — the reason a preprocessor earns its place.
+@each $name, $color in $accents {
+  .accent-#{$name} {
+    border-color: $color;
+
+    h2 {
+      color: $color;
+    }
+
+    .chip {
+      background: $color;
+    }
+  }
+
+  .swatch.accent-#{$name} {
+    border-color: $color;
+    color: $color;
+    font-weight: 700;
+  }
+}
+
+.chip {
+  align-self: flex-start;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.count {
+  color: var(--muted);
+  font-size: 0.9rem;
+}

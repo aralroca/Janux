@@ -1,0 +1,21 @@
+// Design tokens as Sass variables: resolved at build time, so nothing ships to
+// the browser but the values they produced.
+
+$radius: 0.9rem;
+$gap: 1rem;
+$font: 16px/1.6 ui-sans-serif, system-ui, sans-serif;
+
+// The map the variant classes are generated from — one entry per accent.
+$accents: (
+  'ocean': #0062ff,
+  'moss': #12805c,
+  'ember': #d1442f,
+  'plum': #7b3fbf,
+);
+
+@mixin card-surface($border) {
+  padding: 1.25rem;
+  border: 1px solid $border;
+  border-radius: $radius;
+  background: var(--card);
+}

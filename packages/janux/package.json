@@ -20,6 +20,7 @@
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
     "./server": "./src/render/server.ts",
     "./client": "./src/client/index.ts",
+    "./worker": "./src/worker/index.ts",
     "./manifest": "./src/manifest/index.ts",
     "./interop": "./src/interop/index.ts",
     "./query": "./src/query/index.ts"

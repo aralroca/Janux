@@ -158,3 +158,44 @@ describe('mcpAuthOptions', () => {
     expect(() => mcpAuthOptions({ tokenEnv: 'JANUX_TEST_MCP_UNSET' })).toThrow(/JANUX_TEST_MCP_UNSET/);
   });
 });
+
+/**
+ * The stylesheet entry used to be spelled `src/styles.css` and nothing else, so
+ * a Sass app had no way to name its own entry: `janux build` bundled no styles
+ * and the shell linked a sheet that was never emitted.
+ */
+describe('resolveAppConfig stylesheet', () => {
+  function appWithStyles(name: string): string {
+    const root = mkdtempSync(join(tmpdir(), 'janux-styles-'));
+
+    mkdirSync(join(root, 'src'), { recursive: true });
+    writeFileSync(join(root, 'src', name), 'body { color: red; }');
+
+    return root;
+  }
+
+  it('resolves the plain CSS entry', async () => {
+    const root = appWithStyles('styles.css');
+
+    expect((await resolveAppConfig(root)).stylesheet).toBe(join(root, 'src/styles.css'));
+  });
+
+  it.each(['styles.scss', 'styles.sass', 'styles.less'])('resolves the %s entry', async (name) => {
+    const root = appWithStyles(name);
+
+    expect((await resolveAppConfig(root)).stylesheet).toBe(join(root, 'src', name));
+  });
+
+  it('prefers plain CSS when an app happens to have both', async () => {
+    const root = appWithStyles('styles.css');
+
+    writeFileSync(join(root, 'src', 'styles.scss'), '$c: red; body { color: $c; }');
+    expect((await resolveAppConfig(root)).stylesheet).toBe(join(root, 'src/styles.css'));
+  });
+
+  it('leaves the stylesheet undefined when the app has none', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-styles-'));
+
+    expect((await resolveAppConfig(root)).stylesheet).toBeUndefined();
+  });
+});
