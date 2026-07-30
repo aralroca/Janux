@@ -139,12 +139,17 @@ body {
 }
 
 .agent-pane .tool-row .example {
-  display: inline-block;
+  display: block;
   margin-top: 6px;
   padding: 2px 8px;
   border-radius: 6px;
   background: #f1f5f9;
   color: var(--muted);
+  /*
+   * A JSON payload has no spaces to break at, so an inline-block code block
+   * simply hangs out of its card — `signup.submit` overflowed by 78px.
+   */
+  overflow-wrap: anywhere;
 }
 
 .agent-pane .guard {

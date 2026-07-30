@@ -3,7 +3,7 @@
 A signup form mounted **unchanged** through `foreign()` — and the one example in the matrix where the island is *not* the single owner of the truth.
 
 - **Two owners, reconciled explicitly** — react-hook-form keeps its own copy of the form state in uncontrolled inputs; that is exactly why it is fast. An agent calling `signup.fill` writes island state, and RHF would never notice, because its inputs never re-read it. The React file calls `reset(draft)` when the draft identity changes. That seam is visible on purpose rather than hidden.
-- **Validation stays entirely in React** — zod messages are rendered by RHF; Janux is not involved and does not duplicate the rules.
+- **Two doors onto the same state, so both are shut** — zod validates the *human* path, inside React, and its messages are rendered by RHF. An agent calling `signup.submit` never touches zod, so the intent checks the email itself. Skipping that is not a theoretical hole: `signup.submit { email: "example" }` was accepted, and a signup no human could have typed landed in state. The draft is still allowed to be invalid mid-edit — that is what a draft is — but what gets *accepted* is checked on whichever door it came through.
 - **`submit` is guarded** — a human clicking *Create account* executes it (the click is the approval); an agent calling it gets a proposal. Signing someone up is a propose-don't-do action.
 - **Server-rendered** — the whole form is in the HTML.
 

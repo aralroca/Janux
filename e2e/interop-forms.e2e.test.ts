@@ -127,6 +127,75 @@ describe.skipIf(!BUILT)('examples/interop-forms in the browser', () => {
     await page.close();
   }, TIMEOUT);
 
+  it('the longest example payload stays inside its card', async () => {
+    const { page, errors } = await openPage();
+
+    await page.goto(`${BASE}/`);
+    await page.waitForSelector('.tool-row:has-text("signup.submit") code.example');
+
+    // `signup.submit` carries the widest payload in the matrix, so it is the one
+    // that shows an `inline-block` code block refusing to wrap.
+    const overflow = await page.evaluate(() => {
+      const row = [...document.querySelectorAll('.tool-row')].find((node) =>
+        node.textContent?.includes('signup.submit'),
+      )!;
+      const code = row.querySelector('code.example')!;
+
+      return {
+        codeRight: Math.round(code.getBoundingClientRect().right),
+        rowRight: Math.round(row.getBoundingClientRect().right),
+        rowScroll: row.scrollWidth - row.clientWidth,
+      };
+    });
+
+    expect(overflow.codeRight).toBeLessThanOrEqual(overflow.rowRight);
+    expect(overflow.rowScroll).toBeLessThanOrEqual(0);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
+
+  it('the generated submit payload is a real signup, email included', async () => {
+    const { page, errors } = await openPage();
+
+    await page.goto(`${BASE}/`);
+    await page.waitForSelector('.tool-row:has-text("signup.submit") code.example');
+
+    const example = await page.locator('.tool-row:has-text("signup.submit") code.example').textContent();
+    const payload = JSON.parse(example ?? '{}');
+
+    // The panel builds this from the schema. A generic "example" in an email
+    // field makes the demo button submit a signup that could never be real.
+    expect(payload.email).toMatch(/^[^@\s]+@[^@\s]+\.[^@\s]+$/);
+    expect(payload.name).not.toBe('example');
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
+
+  it('refuses an invalid email from the agent, which never went through zod', async () => {
+    const { page, errors } = await openPage();
+
+    await page.goto(`${BASE}/`);
+    await page.waitForSelector('.signup');
+
+    // zod validates the HUMAN path, inside React. An agent calling the intent
+    // is a second door onto the same state, and it has to be shut too.
+    const outcome = await page.evaluate(async () => {
+      const jx: any = (window as any).janux;
+      const proposal: any = await jx.call('signup.submit', { name: 'Ada', email: 'nope', plan: 'free' });
+
+      return await jx
+        .approve(proposal.id)
+        .then(() => 'accepted')
+        .catch((error: unknown) => String(error));
+    });
+
+    expect(outcome).not.toBe('accepted');
+    expect(outcome).toContain('nope');
+    // Nobody was signed up.
+    expect(await status(page)).toContain('draft:');
+    await page.close();
+  }, TIMEOUT);
+
   it('an agent submit parks as a proposal until a human approves it', async () => {
     const { page, errors } = await openPage();
 

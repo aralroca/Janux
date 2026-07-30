@@ -3,6 +3,14 @@ import { foreign } from 'janux/interop';
 import { SignupForm } from './SignupForm';
 
 const PLANS = ['free', 'pro', 'team'];
+
+/**
+ * Deliberately loose — the job is to shut the second door, not to out-parse
+ * zod. zod validates the HUMAN path, inside React; an agent calling the intent
+ * never touches it, so without this `signup.submit { email: "example" }` was
+ * accepted and a signup that could never be real landed in state.
+ */
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const FIELDS = ['name', 'email', 'plan'];
 
 const Form = foreign(SignupForm, {
@@ -37,8 +45,18 @@ export const SignupFormShell = component({
       // Guarded on purpose: signing someone up is the kind of thing an agent
       // should propose rather than do.
       guard: 'confirm',
-      input: schema({ name: str(), email: str(), plan: enums(PLANS) }),
-      run: ({ state, input }: any) => (state.accepted = input),
+      // Defaults describe a real signup: the panel builds its example payload
+      // from the schema, and a generic "example" in an email field makes the
+      // demo button submit something no human could have typed.
+      input: schema({
+        name: str().min(2).default('Ada Lovelace'),
+        email: str().default('ada@example.com'),
+        plan: enums(PLANS).default('free'),
+      }),
+      run: ({ state, input }: any) => {
+        if (!EMAIL.test(input.email)) throw new Error(`signup.submit: "${input.email}" is not an email address`);
+        state.accepted = input;
+      },
     }),
   },
   view: ({ state }: any) => (

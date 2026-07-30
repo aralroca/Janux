@@ -25,6 +25,8 @@ Recharts 3 computes its layout in effects, so its server render is a correctly s
 
 **Forms are ⚠️, not ✅, and everything in them works.** react-hook-form keeps its own copy of the form state in uncontrolled inputs — that is why it is fast — so the island is not the single owner, and an agent writing the draft is invisible to a form that never re-reads it. `interop-forms` reconciles the two explicitly and the seam is visible on purpose. If an agent never needs to *write* your form, let RHF own everything and expose `submit` alone; that is ✅ territory.
 
+It also means **validation has two doors**. zod runs on the human path, inside React; an agent calling the intent never reaches it. `interop-forms` had `signup.submit { email: "example" }` accepted until the intent checked the email itself. Whenever a foreign component owns validation, the intent it is bridged to is a second, unvalidated entrance to the same state.
+
 **The graph editor cannot be server-rendered**, because React Flow measures its viewport on mount. `hydrate: 'only'` states that rather than leaning on the silent fail-soft catch, which looks identical to a broken `props` mapper. Nothing is lost for agents: the graph is typed island state, so `ui://graph` is server-rendered and readable even though the canvas is not.
 
 `examples/with-web-agent` also mounts React Flow, one way only (island state → React, no `on:` bridge). `interop-graph-editor` is the round trip.
