@@ -35,8 +35,27 @@ afterAll(async () => {
 
 const openPage = () => newPage(browser!);
 
-const settled = (page: Page) =>
-  page.waitForFunction(() => !document.querySelector('[data-jx-pending]'), null, { timeout: 10_000 });
+/**
+ * Idle: the navigation itself has finished (the runtime tracks it in `inflight`,
+ * which `janux.settled()` drains) and no suspense boundary is still pending.
+ *
+ * The pending marker alone is not idle. A streamed page arrives head first, so
+ * between its `<title>` landing and its body landing the document holds the new
+ * title and none of the new content — and no pending marker either, because the
+ * skeleton that carries it has not arrived yet. Waiting on the marker alone
+ * returns in that window and asserts against the *outgoing* page.
+ */
+const settled = async (page: Page) => {
+  // The navigation first — the runtime tracks it in `inflight`, which this
+  // drains. Waiting on the pending marker alone returns in the window between a
+  // streamed page's <title> landing and its body: the document then holds the
+  // new title, none of the new content, and no pending marker either, because
+  // the skeleton that carries one has not arrived yet. (`evaluate` awaits the
+  // promise; a `waitForFunction` predicate that returns one does not — it reads
+  // the promise itself as truthy and resolves after a single poll.)
+  await page.evaluate(() => (window as any).janux?.settled?.());
+  await page.waitForFunction(() => !document.querySelector('[data-jx-pending]'), null, { timeout: 10_000 });
+};
 /** Interception and hover-prefetch exist once `boot()` ran (the interlude ships it mid-stream). */
 const booted = (page: Page) =>
   page.waitForFunction(() => Boolean((window as any).janux), null, { timeout: 10_000 });
