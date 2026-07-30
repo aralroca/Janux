@@ -7,9 +7,9 @@
  * step, which means the compiled shape only exists if this script put it there.
  */
 import { $ } from 'bun';
-import { cpSync, existsSync, rmSync } from 'node:fs';
-import { basename } from 'node:path';
+import { existsSync, rmSync } from 'node:fs';
 import { buildPackage } from './packaging/build';
+import { withExamples } from './packaging/examples';
 import { publishManifest, releaseVersions, withManifest } from './packaging/manifest';
 import { PACKED, packageDir, PUBLISH_ORDER, readManifest } from './packaging/packages';
 import { packAndVerify } from './packaging/tarball';
@@ -19,22 +19,6 @@ async function alreadyPublished(name: string, version: string): Promise<boolean>
   const response = await fetch(`https://registry.npmjs.org/${encoded}/${version}`);
 
   return response.status === 200;
-}
-
-// create-janux ships the monorepo examples as scaffolding sources (`--example`).
-const EXAMPLES = 'packages/create-janux/examples';
-const EXAMPLES_SKIP = new Set(['node_modules', 'dist', 'bun.lock', '.env']);
-
-/** Embedded for the length of one publish, like the manifest itself. */
-async function withExamples<T>(dir: string, action: () => Promise<T>): Promise<T> {
-  if (dir !== 'create-janux') return action();
-  rmSync(EXAMPLES, { recursive: true, force: true });
-  cpSync('examples', EXAMPLES, { recursive: true, filter: (source) => !EXAMPLES_SKIP.has(basename(source)) });
-  try {
-    return await action();
-  } finally {
-    rmSync(EXAMPLES, { recursive: true, force: true });
-  }
 }
 
 async function release(dir: string, versions: Map<string, string>): Promise<void> {

@@ -10,6 +10,7 @@
  */
 import { mkdirSync } from 'node:fs';
 import { buildPackages } from './packaging/build';
+import { withExamples } from './packaging/examples';
 import { publishManifest, releaseVersions, withManifest } from './packaging/manifest';
 import { PACKED, packageDir, PUBLISH_ORDER, readManifest } from './packaging/packages';
 import { packAndVerify } from './packaging/tarball';
@@ -25,7 +26,9 @@ const built = await buildPackages(PUBLISH_ORDER.map(packageDir));
 for (const dir of PUBLISH_ORDER) {
   const root = packageDir(dir);
   const published = publishManifest(await readManifest(dir), versions);
-  const tarball = await withManifest(root, published, () => packAndVerify(root, published, `${destination}/${dir}`));
+  const tarball = await withExamples(dir, () =>
+    withManifest(root, published, () => packAndVerify(root, published, `${destination}/${dir}`)),
+  );
 
   console.log(`✔ ${dir} — ${built.get(root)!.length} built, ${tarball}`);
 }

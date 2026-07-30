@@ -72,7 +72,11 @@ async function declarations(root: string, sources: string[]): Promise<void> {
 
   await Bun.write(path, config(sources));
   try {
-    await $`${TSC} -p ${path}`.quiet();
+    // Not `.quiet()`: a `ShellError` says only "Failed with exit code 2", and a
+    // declaration-emit error is unfixable without the diagnostics tsc printed.
+    const emitted = await $`${TSC} -p ${path}`.nothrow().quiet();
+
+    if (emitted.exitCode !== 0) throw new Error(`declarations failed for ${root}\n${emitted.stdout.toString()}${emitted.stderr.toString()}`);
   } finally {
     rmSync(path, { force: true });
   }

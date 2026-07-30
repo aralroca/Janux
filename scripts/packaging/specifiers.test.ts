@@ -77,6 +77,21 @@ describe('rewriteSpecifiers', () => {
     expect(rewrite(code)).toBe(code.replace(`'./sibling'`, `'./sibling.js'`));
   });
 
+  // The specifier's own text, quoted, inside the comment above it: every literal
+  // then sits correctly at the *wrong* base too, so agreeing with itself proves
+  // nothing and the only edit lands in the prose.
+  test('splices past a comment that quotes the specifier itself', () => {
+    const code = `/** Re-exported from './sibling' for convenience. */\nimport a from './sibling';\n`;
+
+    expect(rewrite(code)).toBe(`/** Re-exported from './sibling' for convenience. */\nimport a from './sibling.js';\n`);
+  });
+
+  test('splices past a shebang', () => {
+    const code = `#!/usr/bin/env bun\nimport a from './sibling';\n`;
+
+    expect(rewrite(code)).toBe(`#!/usr/bin/env bun\nimport a from './sibling.js';\n`);
+  });
+
   test('splices past a leading block comment', () => {
     const code = `/**\n * Doc block.\n */\nimport a from './dir';\nimport b from './sibling';\n`;
 

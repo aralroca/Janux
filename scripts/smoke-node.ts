@@ -18,12 +18,17 @@ import { join, resolve } from 'node:path';
 import { Glob } from 'bun';
 import { PACKED, PUBLISH_ORDER, readManifest } from './packaging/packages';
 
-const CONSUMER = `import { component, batch } from 'janux';
-import { api } from '@janux/server';
-import { approxTokens } from '@janux/agent';
+/**
+ * Imports every subpath so `tsc` reaches every `.d.ts` the packages ship: a
+ * consumer file naming three of them leaves the other five packages' types
+ * unread, and a broken specifier inside a declaration is invisible to Node.
+ */
+function consumer(specifiers: string[]): string {
+  return `${specifiers.map((specifier, index) => `import * as m${index} from '${specifier}';`).join('\n')}
 
-export const wired = [component, batch, api, approxTokens].length;
+export const wired = [${specifiers.map((_, index) => `m${index}`).join(', ')}].length;
 `;
+}
 
 /**
  * Derived from the manifests, never listed by hand: a subpath nobody remembered
@@ -35,6 +40,20 @@ async function importable(): Promise<string[]> {
   return manifests.flatMap((pkg) =>
     Object.keys(pkg.publishConfig?.exports ?? {}).map((subpath) => (subpath === '.' ? pkg.name : `${pkg.name}${subpath.slice(1)}`)),
   );
+}
+
+/**
+ * A `bin` is the one thing an import cannot check, and it is where the compiled
+ * layout actually bites: `create-janux` reads its template and version relative
+ * to itself, which moves when `bin.ts` becomes `dist/bin.js`.
+ */
+async function brokenBin(root: string): Promise<string[]> {
+  const scaffolded = await run(['npx', 'create-janux', 'smoke-app'], root);
+  const ok = scaffolded.ok && (await Bun.file(join(root, 'smoke-app/package.json')).exists());
+
+  if (!ok) console.error(`✗ npx create-janux\n${scaffolded.output}`);
+
+  return ok ? [] : ['create-janux bin'];
 }
 
 function tsconfig(strict: boolean): string {
@@ -64,13 +83,17 @@ async function run(command: string[], cwd: string): Promise<Ran> {
   return { ok: (await spawned.exited) === 0, output: `${stdout}${stderr}` };
 }
 
-async function project(tarballs: string[]): Promise<string> {
+async function project(tarballs: string[], specifiers: string[]): Promise<string> {
   const root = mkdtempSync(join(tmpdir(), 'janux-smoke-'));
 
   mkdirSync(join(root, 'src'), { recursive: true });
   await Bun.write(join(root, 'package.json'), '{ "name": "janux-smoke", "private": true, "type": "module" }\n');
-  await Bun.write(join(root, 'src/app.tsx'), CONSUMER);
-  const install = await run(['npm', 'install', '--no-audit', '--no-fund', 'typescript@5.9.3', ...tarballs], root);
+  await Bun.write(join(root, 'src/app.tsx'), consumer(specifiers));
+  // The `@types` a real consumer already has, and needs here because nothing is
+  // skipped: `@janux/vite`'s declarations name `node:http`, and `@ai-sdk/provider`
+  // — reached through `@janux/agent` — names `json-schema` without declaring it.
+  const types = ['typescript@5.9.3', '@types/node@24', '@types/json-schema@7'];
+  const install = await run(['npm', 'install', '--no-audit', '--no-fund', ...types, ...tarballs], root);
 
   if (!install.ok) throw new Error(`npm install failed\n${install.output}`);
 
@@ -116,11 +139,12 @@ const tarballs = (await Array.fromAsync(new Glob('*/*.tgz').scan({ cwd: packed }
 
 if (tarballs.length === 0) throw new Error(`no tarballs in ${packed}/ — run bun scripts/pack.ts first`);
 const specifiers = await importable();
-const root = await project(tarballs);
+const root = await project(tarballs, specifiers);
 
 console.log(`→ ${tarballs.length} tarballs installed in ${root} (node ${(await run(['node', '--version'], root)).output.trim()})`);
 const broken = [
   ...(await brokenImports(root, specifiers)),
+  ...(await brokenBin(root)),
   ...(await Promise.all([typechecked(root, true), typechecked(root, false)])).filter((failure) => failure !== undefined),
 ];
 
@@ -128,4 +152,4 @@ if (broken.length > 0) {
   console.error(`✗ ${broken.length} failed: ${broken.join(', ')}`);
   process.exit(1);
 }
-console.log(`✔ ${specifiers.length} subpaths import under Node, and typecheck strict and loose`);
+console.log(`✔ ${specifiers.length} subpaths import under Node, the bin runs, and it typechecks strict and loose`);

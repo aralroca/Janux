@@ -7,12 +7,13 @@
  * (pnpm is the one that lifts it) — so this is where it gets applied, right
  * before packing.
  */
+import { writeFileSync } from 'node:fs';
 import { PUBLISH_ORDER, readManifest, type Manifest } from './packages';
 
 /** Fields `publishConfig` may override; anything else there is npm's own config. */
 const LIFTED = ['main', 'module', 'types', 'exports', 'bin'] as const;
 
-const TYPESCRIPT = /\.tsx?$/;
+const TYPESCRIPT = /\.([cm]?tsx?)$/;
 
 /** Every string target in an exports subtree, whatever the condition nesting. */
 export function exportTargets(entry: unknown): string[] {
@@ -24,8 +25,10 @@ export function exportTargets(entry: unknown): string[] {
 
 /** Every package-relative path a manifest promises a consumer can reach. */
 export function publishedPaths(pkg: Manifest): string[] {
-  const fields = [pkg.main, pkg.module, pkg.types, ...Object.values(pkg.bin ?? {})] as (string | undefined)[];
-  const advertised = [...fields, ...exportTargets(pkg.exports ?? {})];
+  // `bin` is a string when the package has exactly one, and Object.values would
+  // walk its characters.
+  const bin = typeof pkg.bin === 'string' ? [pkg.bin] : Object.values(pkg.bin ?? {});
+  const advertised = [pkg.main, pkg.module, pkg.types, ...bin, ...exportTargets(pkg.exports ?? {})] as (string | undefined)[];
 
   return advertised.filter((path): path is string => typeof path === 'string').map((path) => path.replace(/^\.\//, ''));
 }
@@ -40,12 +43,12 @@ export function advertisesSource(pkg: Manifest): string[] {
  * exist for consumers, so the two key sets are compared here as well as in the
  * suite — a release must not depend on the tests having been run.
  */
-function assertCompiled(pkg: Manifest, lifted: Manifest): void {
-  const source = advertisesSource(lifted);
+function assertCompiled(pkg: Manifest, merged: Manifest): void {
+  const source = advertisesSource(merged);
   const subpaths = Object.keys(pkg.exports ?? {});
-  const missing = subpaths.filter((subpath) => !(subpath in (lifted.exports ?? {})));
+  const missing = subpaths.filter((subpath) => !(subpath in (merged.exports ?? {})));
 
-  if (pkg.exports && !lifted.exports) throw new Error(`${pkg.name}: publishConfig.exports is missing — the tarball would advertise source`);
+  if (pkg.exports && !merged.exports) throw new Error(`${pkg.name}: publishConfig.exports is missing — the tarball would advertise source`);
   if (missing.length > 0) throw new Error(`${pkg.name}: publishConfig.exports has no entry for ${missing.join(', ')}`);
   if (source.length > 0) throw new Error(`${pkg.name}: publishConfig still points at source: ${source.join(', ')}`);
 }
@@ -76,11 +79,31 @@ export function publishManifest(pkg: Manifest, versions: Map<string, string>): M
     ...pkg,
     ...lifted,
     ...(pkg.dependencies ? { dependencies: pinned(pkg.dependencies, versions) } : {}),
+    ...(pkg.peerDependencies ? { peerDependencies: pinned(pkg.peerDependencies, versions) } : {}),
   };
 
-  assertCompiled(pkg, lifted);
+  // Checked on the merged result, not on the overrides: a field `publishConfig`
+  // does not mention keeps whatever the development manifest said.
+  assertCompiled(pkg, manifest);
 
   return config.length > 0 ? { ...manifest, publishConfig: Object.fromEntries(config) } : manifest;
+}
+
+/**
+ * Ctrl-C during a release is the likely interruption, not an exception: npm hangs
+ * on the upload and someone kills it. Restoring only in a `finally` would leave
+ * the workspace resolving `janux` through a git-ignored `dist/`, so the signals
+ * are handled too — synchronously, because the process is on its way out.
+ */
+function restoringOnSignal(restore: () => void): () => void {
+  const onSignal = (signal: string) => {
+    restore();
+    process.exit(signal === 'SIGINT' ? 130 : 143);
+  };
+
+  process.once('SIGINT', onSignal).once('SIGTERM', onSignal);
+
+  return () => process.off('SIGINT', onSignal).off('SIGTERM', onSignal);
 }
 
 /**
@@ -92,11 +115,14 @@ export function publishManifest(pkg: Manifest, versions: Map<string, string>): M
 export async function withManifest<T>(root: string, published: Manifest, action: () => Promise<T> | T): Promise<T> {
   const path = `${root}/package.json`;
   const original = await Bun.file(path).text();
+  const restore = () => writeFileSync(path, original);
+  const unhandle = restoringOnSignal(restore);
 
-  await Bun.write(path, `${JSON.stringify(published, null, 2)}\n`);
+  writeFileSync(path, `${JSON.stringify(published, null, 2)}\n`);
   try {
     return await action();
   } finally {
-    await Bun.write(path, original);
+    restore();
+    unhandle();
   }
 }

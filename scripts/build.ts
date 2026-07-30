@@ -16,7 +16,9 @@ if (unknown.length > 0) {
   process.exit(1);
 }
 
-const dirs = requested.length > 0 ? requested : [...PUBLISH_ORDER];
+// Deduplicated: the same root twice in one batch means two builds racing to
+// delete and rewrite each other's `dist/`.
+const dirs = [...new Set(requested.length > 0 ? requested : PUBLISH_ORDER)];
 const started = Bun.nanoseconds();
 const built = await buildPackages(dirs.map(packageDir));
 

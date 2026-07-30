@@ -67,45 +67,54 @@ function splice(source: Buffer, edits: Edit[]): Buffer {
     .reduce((bytes, { start, end, text }) => Buffer.concat([bytes.subarray(0, start), Buffer.from(text), bytes.subarray(end)]), source);
 }
 
-function sits(bytes: Buffer, literal: Literal, base: number): boolean {
-  return bytes.subarray(literal.span.start - base, literal.span.end - base).toString() === literal.raw;
+/**
+ * A first statement whose byte position is known, prepended so the span base can
+ * be *read off* it rather than searched for.
+ *
+ * Searching does not work: `Program.span.start` is the first statement, so it is
+ * past any leading comment, and looking for a literal's own bytes is ambiguous
+ * the moment the comment above an import quotes the specifier — every literal
+ * then sits correctly at the wrong base too, and the only edit lands in the
+ * prose. A NUL byte cannot occur in source, so this cannot be confused with
+ * anything in the file.
+ */
+const SENTINEL = 'import "\0janux-span-base";\n';
+const SENTINEL_AT = SENTINEL.indexOf('"');
+
+function sits(bytes: Buffer, literal: Literal, offset: number): boolean {
+  return bytes.subarray(literal.span.start - offset, literal.span.end - offset).toString() === literal.raw;
 }
 
-/**
- * Where the file starts in SWC's numbering.
- *
- * `Program.span.start` is the first *statement*, so it is past any leading
- * comment and cannot be used for this. The base is derived from a literal whose
- * bytes are known instead, and accepted only when it holds for every literal —
- * a wrong base then fails loudly rather than splicing into a comment.
- */
-function spanBase(bytes: Buffer, literals: Literal[]): number {
-  const first = literals[0]!;
-  const needle = Buffer.from(first.raw ?? '');
+/** Byte offset that maps a SWC span onto `body`. */
+function spanOffset(bytes: Buffer, literals: Literal[]): number {
+  const [sentinel, ...rest] = literals;
+  const offset = sentinel!.span.start - SENTINEL_AT + SENTINEL.length;
+  const misplaced = rest.find((literal) => !sits(bytes, literal, offset));
 
-  for (let at = bytes.indexOf(needle); at !== -1; at = bytes.indexOf(needle, at + 1)) {
-    const base = first.span.start - at;
+  if (!sentinel!.value.startsWith('\0')) throw new Error('SWC no longer reports specifiers in source order');
+  if (misplaced) throw new Error(`cannot place ${misplaced.raw} in its own file — SWC span numbering changed`);
 
-    if (literals.every((literal) => sits(bytes, literal, base))) return base;
-  }
-
-  throw new Error(`cannot place ${first.raw} in its own file — SWC span numbering changed`);
+  return offset;
 }
 
 export function rewriteSpecifiers(code: string, { resolve, dts = false }: RewriteOptions): string {
-  const program = parseSync(code, { syntax: 'typescript', tsx: !dts, target: 'esnext', comments: true });
+  const shebang = code.startsWith('#!') ? `${code.slice(0, code.indexOf('\n'))}\n` : '';
+  const body = code.slice(shebang.length);
+  const program = parseSync(SENTINEL + body, { syntax: 'typescript', tsx: !dts, target: 'esnext', comments: true });
   const literals = specifiers(program.body);
-  const resolved = literals.map((literal) => ({ literal, text: replacement(literal, resolve) }));
-  const rewritten = resolved.filter((edit): edit is { literal: Literal; text: string } => edit.text !== undefined);
+  const rewritten = literals
+    .slice(1)
+    .map((literal) => ({ literal, text: replacement(literal, resolve) }))
+    .filter((edit): edit is { literal: Literal; text: string } => edit.text !== undefined);
 
   if (rewritten.length === 0) return code;
-  const bytes = Buffer.from(code);
-  const base = spanBase(bytes, literals);
+  const bytes = Buffer.from(body);
+  const offset = spanOffset(bytes, literals);
   const edits = rewritten.map(({ literal, text }) => ({
-    start: literal.span.start - base,
-    end: literal.span.end - base,
+    start: literal.span.start - offset,
+    end: literal.span.end - offset,
     text: `${literal.raw?.[0] ?? "'"}${text}${literal.raw?.[0] ?? "'"}`,
   }));
 
-  return splice(bytes, edits).toString();
+  return `${shebang}${splice(bytes, edits).toString()}`;
 }
