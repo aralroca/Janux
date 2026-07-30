@@ -10,7 +10,7 @@ import { enableAgentGlow, type GlowOptions } from './glow';
 import { installI18n } from './i18n';
 import type { NavigationConfig } from '../config';
 import { mountEagerIslands, performNavigation } from './navigate';
-import { configurePrefetch, prefetch } from './prefetch';
+import { configurePrefetch, prefetchOnHover } from './prefetch';
 import { rescopeSpeculationRules, shellNavigationConfig } from './speculation';
 import { installWebMCP } from './webmcp';
 
@@ -157,7 +157,7 @@ function installNavigation(mount: MountContext, config: NavigationConfig): void 
   document.addEventListener('mouseover', (event) => {
     const link = (event.target as Element | null)?.closest?.('a[href^="/"]:not([data-native])');
 
-    if (link) prefetch((link as HTMLAnchorElement).href);
+    if (link) prefetchOnHover((link as HTMLAnchorElement).href);
   });
 }
 

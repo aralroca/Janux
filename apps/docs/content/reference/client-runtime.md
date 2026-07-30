@@ -36,7 +36,7 @@ import {
 
 `performNavigation(url, mount, options?): Promise<void>` runs one SPA navigation: fetch, diff, restore persisted islands, re-index snapshots, sweep what left, mount eager islands. Navigations are serialized internally, so a superseded one finishes its cleanup before the next starts. Pass `{ signal }` to abort — an abort before the swap commits leaves the current page fully intact.
 
-`prefetch(url): void` warms a page into a 30-second cache (what link hover uses). The next navigation to that URL consumes the entry, so a prefetch is never used twice or served stale.
+`prefetch(url): void` warms a page — and its route manifest — into a 30-second cache, at low priority. The next navigation to that URL consumes the entry, so a prefetch is never used twice or served stale; it also aborts every warm-up for anywhere else, so the page being opened gets the connection. Link hover goes through `prefetchOnHover(url)`, which waits for the pointer to settle (~60 ms) before calling this, so links merely crossed on the way down a menu are never fetched.
 
 ## The agent bridge
 

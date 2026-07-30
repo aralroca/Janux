@@ -224,7 +224,13 @@ It's a per-link escape hatch, not a workaround — reach for it whenever a diffe
 
 Two mechanisms warm the next page, and which one applies depends on who performs the navigation.
 
-**Janux prefetch — for the links Janux intercepts.** Hovering a same-origin link fetches it and keeps the *stream*, which the diff then consumes directly, so the click usually starts painting immediately. Entries live 30 seconds and are used once. It's skipped when the user has data saver on, and in browsers without the Navigation API (nothing would ever read that cache there).
+**Janux prefetch — for the links Janux intercepts.** Hovering a same-origin link fetches it and keeps the *stream*, which the diff then consumes directly, so the click usually starts painting immediately. The page's [route manifest](/docs/reference/core-api) comes with it, so the agent surface is live the moment the navigation lands instead of one request later. Entries live 30 seconds and are used once. It's skipped when the user has data saver on, and in browsers without the Navigation API (nothing would ever read that cache there).
+
+Three rules keep that head start from turning into congestion, because a pointer travelling down a menu crosses every link above the one it is going to:
+
+- **Intent, not contact.** A link is warmed once the pointer has rested on it for ~60 ms. Links merely crossed on the way cost nothing.
+- **Warmed below the live page.** Prefetches are issued at low priority, so they never outrank what the page you are actually on is still loading.
+- **The click wins.** Starting a navigation aborts every warm-up for anywhere else. The clicked page cannot be promoted — it is being read from a request that began as a low-priority prefetch — so the only way to hand it the connection is to stop the others.
 
 **Speculation rules — for the links the browser navigates itself.** Janux emits a [`<script type="speculationrules">`](https://developer.mozilla.org/en-US/docs/Web/API/Speculation_Rules_API) on every page, prefetching internal URLs with `moderate` eagerness. Its cache only applies to full document navigations, never to a `fetch()`, so once `boot()` installs interception the script is rewritten to cover only `[data-native]` links — otherwise Chrome would speculate documents the SPA path never uses, and hover would fetch the page twice. Pages with no islands keep the document-wide rules: every navigation away from them is a real document load, which is exactly the case the API is for.
 

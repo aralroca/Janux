@@ -1,5 +1,15 @@
-import { afterEach, describe, expect, it, mock } from 'bun:test';
-import { configurePrefetch, consumePrefetched, prefetch } from './prefetch';
+import { GlobalRegistrator } from '@happy-dom/global-registrator';
+import { afterAll, afterEach, beforeAll, describe, expect, it, mock } from 'bun:test';
+import {
+  configurePrefetch,
+  consumePrefetched,
+  consumeWarmManifest,
+  prefetch,
+  prefetchOnHover,
+} from './prefetch';
+
+beforeAll(() => GlobalRegistrator.register({ url: 'http://localhost/' }));
+afterAll(() => GlobalRegistrator.unregister());
 
 const streamOf = (html: string) => new Response(html).body!;
 
@@ -11,7 +21,15 @@ function mockFetch(): ReturnType<typeof mock> {
   return fetched;
 }
 
-afterEach(() => configurePrefetch(undefined));
+/** The shell advertises a route manifest; without the link there is nothing to warm. */
+function withManifestLink(): void {
+  document.head.innerHTML = '<link rel="janux-manifest" id="jx-manifest" href="/_janux/manifest">';
+}
+
+afterEach(() => {
+  document.head.innerHTML = '';
+  configurePrefetch(undefined);
+});
 
 describe('prefetch cache', () => {
   it('serves the warmed stream once, then forgets it', async () => {
@@ -91,7 +109,115 @@ describe('prefetch cache', () => {
     await Bun.sleep(1);
 
     expect(cancelled).toEqual(['/page-0']);
-    expect(consumePrefetched('/page-0')).toBeUndefined();
+    // Newest first: consuming a page also ends every other warm-up.
     expect(await consumePrefetched('/page-8')).toBeDefined();
+    expect(consumePrefetched('/page-0')).toBeUndefined();
+  });
+});
+
+describe('bandwidth for the page being opened', () => {
+  /**
+   * The one the user clicked cannot be promoted — it started life as a
+   * low-priority prefetch — so the pages merely passed over are stopped instead.
+   */
+  it('aborts every warm-up for somewhere else when a navigation starts', async () => {
+    const fetched = mockFetch();
+
+    prefetch('/wanted');
+    prefetch('/passed-over');
+    await Bun.sleep(1);
+    const signals = fetched.mock.calls.map(([, init]: any[]) => init.signal);
+
+    consumePrefetched('/wanted');
+
+    expect(signals[0].aborted).toBe(false);
+    expect(signals[1].aborted).toBe(true);
+    expect(consumePrefetched('/passed-over')).toBeUndefined();
+  });
+
+  it('warms below the page the user is actually on', () => {
+    const fetched = mockFetch();
+
+    prefetch('/a');
+
+    expect(fetched.mock.calls[0][1]).toMatchObject({ priority: 'low' });
+  });
+});
+
+describe('hover intent', () => {
+  /** Ten links crossed on the way down a menu are ten pages fighting over the wire. */
+  it('warms only the link the pointer settles on', async () => {
+    const fetched = mockFetch();
+
+    ['/one', '/two', '/three'].forEach(prefetchOnHover);
+    await Bun.sleep(120);
+
+    expect(fetched.mock.calls.map(([url]: any[]) => url)).toEqual(['/three']);
+  });
+
+  /** A link is one target even when the pointer crosses the icon and the label inside it. */
+  it('keeps counting down when the pointer moves within the same link', async () => {
+    const fetched = mockFetch();
+
+    prefetchOnHover('/same');
+    await Bun.sleep(40);
+    prefetchOnHover('/same');
+    // 80ms in total: only a countdown that never restarted has fired by now.
+    await Bun.sleep(40);
+
+    expect(fetched).toHaveBeenCalledTimes(1);
+  });
+
+  /** Reconfiguring drops warmed pages; a hover still in its delay must go with them. */
+  it('drops a pending hover when prefetching is reconfigured', async () => {
+    const fetched = mockFetch();
+
+    prefetchOnHover('/crossed');
+    await Bun.sleep(10);
+    configurePrefetch(undefined);
+    await Bun.sleep(120);
+
+    expect(fetched).not.toHaveBeenCalled();
+  });
+});
+
+describe('route manifest', () => {
+  it('warms the destination manifest with the page, and serves it once', async () => {
+    const fetched = mockFetch();
+
+    withManifestLink();
+    prefetch('/docs/guide');
+    await Bun.sleep(1);
+
+    expect(fetched.mock.calls.map(([url]: any[]) => url)).toEqual([
+      '/docs/guide',
+      '/_janux/manifest?path=%2Fdocs%2Fguide',
+    ]);
+    expect(await consumeWarmManifest('/docs/guide')).toBeDefined();
+    expect(consumeWarmManifest('/docs/guide')).toBeUndefined();
+  });
+
+  /** The destination's manifest is part of the navigation, not competition for it. */
+  it('keeps the manifest when the navigation it belongs to starts', async () => {
+    mockFetch();
+    withManifestLink();
+    prefetch('/docs/guide');
+    prefetch('/elsewhere');
+    await Bun.sleep(1);
+
+    consumePrefetched('/docs/guide');
+
+    expect(await consumeWarmManifest('/docs/guide')).toBeDefined();
+  });
+
+  /** A static export serves no `/_janux/*`, and says so by omitting the link. */
+  it('asks for nothing when the shell advertises no manifest', async () => {
+    const fetched = mockFetch();
+
+    prefetch('/docs/guide');
+    await Bun.sleep(1);
+
+    expect(fetched.mock.calls.map(([url]: any[]) => url)).toEqual(['/docs/guide']);
+    expect(consumeWarmManifest('/docs/guide')).toBeUndefined();
   });
 });

@@ -1,6 +1,7 @@
 import type { Manifest, ManifestTool } from '../manifest';
 import type { JanuxBridge } from './bridge';
 import { createNavigateTool } from './navigate-tool';
+import { consumeWarmManifest, MANIFEST_HEADERS, routeManifestUrl } from './prefetch';
 
 export interface WebMCPToolDescriptor {
   name: string;
@@ -72,16 +73,24 @@ function resolveModelContext(): ModelContext {
   return (doc.modelContext = createModelContextPolyfill());
 }
 
+/** The copy hover already warmed, or a fresh request when the user got here another way. */
+async function manifestResponse(path: string, url: string): Promise<Response> {
+  const warmed = await consumeWarmManifest(path);
+
+  return warmed ? new Response(warmed) : fetch(url, { headers: MANIFEST_HEADERS });
+}
+
 /**
  * The server knows the whole route (lazy islands, api() tools); unreachable →
- * empty, fail-soft. A static export omits the shell's manifest link precisely
- * because `/_janux/*` isn't there, so absence of the link means: don't ask.
+ * empty, fail-soft.
  */
 async function routeTools(): Promise<ManifestTool[]> {
-  if (!document.getElementById('jx-manifest')) return [];
+  const path = location.pathname;
+  const url = routeManifestUrl(path);
+
+  if (!url) return [];
   try {
-    const url = `/_janux/manifest?path=${encodeURIComponent(location.pathname)}`;
-    const response = await fetch(url, { headers: { accept: 'application/json' } });
+    const response = await manifestResponse(path, url);
 
     if (!response.ok) return [];
 
