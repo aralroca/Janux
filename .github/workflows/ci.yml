@@ -81,6 +81,46 @@ jobs:
       - name: Census and coverage floor
         run: bun run test:census --min-coverage 0.93
 
+  # What npm receives, installed the way a user installs it.
+  #
+  # Every other job here runs on Bun inside the workspace, where `janux` is a
+  # symlink to `packages/janux` and every specifier resolves to TypeScript
+  # source. Node refuses to strip types under `node_modules` by design
+  # (nodejs/node#57215), so none of that says whether the published packages
+  # work at all — this job is the only one that can fail for the reason this
+  # pipeline exists.
+  package-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+
+      # Builds, packs and reads each tarball back: a subpath whose target is
+      # missing installs fine and fails on import, and `bun pm pack` goes by
+      # `files` alone — .gitignore does not keep anything out of an archive.
+      - name: Pack the publishable packages
+        run: bun run pack:packages
+
+      # A bare Node project outside the repository: every subpath the manifests
+      # advertise is imported (the list is derived from them, never written here),
+      # then the same project is type-checked with strict on and strict off. A
+      # consumer's tsconfig must not be able to produce errors inside node_modules.
+      - name: Install the tarballs in a clean Node project and import them
+        run: bun run smoke:node
+
+      - name: Upload the tarballs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarballs
+          path: .packed/
+          if-no-files-found: ignore
+
   # Every example must build, not just boot: the SSR smoke in the e2e suite
   # runs them unbuilt, so a broken client bundle would otherwise ship unnoticed.
   # The list is discovered, never declared — adding a folder adds a job.

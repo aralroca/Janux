@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -61,6 +61,23 @@ describe('create-janux', () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr.toString()).toContain('shop');
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  // Published, the bin is `dist/bin.js` and its assets are one level up. Running
+  // a copy from a subdirectory is what that looks like from the bin's side.
+  test('finds its template and version from a compiled bin one level down', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const compiled = join(import.meta.dirname, 'dist/bin.ts');
+
+    cpSync(join(import.meta.dirname, 'bin.ts'), compiled, { recursive: true });
+    const result = Bun.spawnSync(['bun', compiled, 'my-app'], { cwd });
+
+    rmSync(compiled, { force: true });
+    expect(result.stderr.toString()).toBe('');
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(join(cwd, 'my-app', 'package.json'))).toBe(true);
+    expect(readFileSync(join(cwd, 'my-app', 'package.json'), 'utf-8')).not.toContain('workspace:*');
     rmSync(cwd, { recursive: true, force: true });
   });
 

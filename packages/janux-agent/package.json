@@ -66,9 +66,25 @@
     "copilot"
   ],
   "files": [
-    "src"
+    "dist"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "main": "./dist/src/index.js",
+    "module": "./dist/src/index.js",
+    "types": "./dist/src/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/src/index.d.ts",
+        "default": "./dist/src/index.js"
+      },
+      "./local": {
+        "types": "./dist/src/local/index.d.ts",
+        "default": "./dist/src/local/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "prepublishOnly": "bun ../../scripts/prepublish-guard.ts"
   }
 }

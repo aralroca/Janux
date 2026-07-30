@@ -29,12 +29,22 @@
     "janux-vercel": "./bin.ts"
   },
   "files": [
-    "src",
-    "bin.ts",
-    "!src/__fixtures__"
+    "dist"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "main": "./dist/src/index.js",
+    "module": "./dist/src/index.js",
+    "types": "./dist/src/index.d.ts",
+    "bin": {
+      "janux-vercel": "./dist/bin.js"
+    },
+    "exports": {
+      ".": {
+        "types": "./dist/src/index.d.ts",
+        "default": "./dist/src/index.js"
+      }
+    }
   },
   "dependencies": {
     "@janux/agent": "workspace:*",
@@ -44,5 +54,8 @@
   },
   "devDependencies": {
     "janux": "workspace:*"
+  },
+  "scripts": {
+    "prepublishOnly": "bun ../../scripts/prepublish-guard.ts"
   }
 }

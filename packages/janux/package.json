@@ -61,10 +61,60 @@
     "copilot"
   ],
   "files": [
-    "src"
+    "dist"
   ],
+  "publishConfig": {
+    "main": "./dist/src/index.js",
+    "module": "./dist/src/index.js",
+    "types": "./dist/src/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/src/index.d.ts",
+        "default": "./dist/src/index.js"
+      },
+      "./types": {
+        "types": "./dist/src/schema/index.d.ts",
+        "default": "./dist/src/schema/index.js"
+      },
+      "./jsx-runtime": {
+        "types": "./dist/src/jsx-runtime.d.ts",
+        "default": "./dist/src/jsx-runtime.js"
+      },
+      "./jsx-dev-runtime": {
+        "types": "./dist/src/jsx-dev-runtime.d.ts",
+        "default": "./dist/src/jsx-dev-runtime.js"
+      },
+      "./server": {
+        "types": "./dist/src/render/server.d.ts",
+        "default": "./dist/src/render/server.js"
+      },
+      "./client": {
+        "types": "./dist/src/client/index.d.ts",
+        "default": "./dist/src/client/index.js"
+      },
+      "./worker": {
+        "types": "./dist/src/worker/index.d.ts",
+        "default": "./dist/src/worker/index.js"
+      },
+      "./manifest": {
+        "types": "./dist/src/manifest/index.d.ts",
+        "default": "./dist/src/manifest/index.js"
+      },
+      "./interop": {
+        "types": "./dist/src/interop/index.d.ts",
+        "default": "./dist/src/interop/index.js"
+      },
+      "./query": {
+        "types": "./dist/src/query/index.d.ts",
+        "default": "./dist/src/query/index.js"
+      }
+    }
+  },
   "dependencies": {
     "csstype": "^3.2.3",
     "diff-dom-streaming": "^0.6.8"
+  },
+  "scripts": {
+    "prepublishOnly": "bun ../../scripts/prepublish-guard.ts"
   }
 }

@@ -1,10 +1,18 @@
 #!/usr/bin/env bun
-/** Publishes all packages in dependency order, skipping versions already on npm. */
+/**
+ * Publishes all packages in dependency order, skipping versions already on npm.
+ *
+ * Nothing is uploaded before it has been built and the tarball read back: the
+ * manifests in the repository point at `src/` so the workspace needs no build
+ * step, which means the compiled shape only exists if this script put it there.
+ */
 import { $ } from 'bun';
-import { cpSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, rmSync } from 'node:fs';
 import { basename } from 'node:path';
-
-const ORDER = ['janux', 'janux-server', 'janux-agent', 'janux-vite', 'janux-tailwind', 'janux-cli', 'janux-vercel', 'create-janux'];
+import { buildPackage } from './packaging/build';
+import { publishManifest, releaseVersions, withManifest } from './packaging/manifest';
+import { PACKED, packageDir, PUBLISH_ORDER, readManifest } from './packaging/packages';
+import { packAndVerify } from './packaging/tarball';
 
 async function alreadyPublished(name: string, version: string): Promise<boolean> {
   const encoded = name.replace('/', '%2f');
@@ -13,54 +21,49 @@ async function alreadyPublished(name: string, version: string): Promise<boolean>
   return response.status === 200;
 }
 
-// Pin workspace:* deps to the local versions ourselves: bun publish resolves them against the
-// registry, which mid-release still advertises the PREVIOUS version (0.2.0 shipped 0.1.0 pins).
-const versions = new Map<string, string>();
-
-for (const dir of ORDER) {
-  const pkg = await Bun.file(`packages/${dir}/package.json`).json();
-
-  versions.set(pkg.name, pkg.version);
-}
-
-function pinWorkspaceDeps(pkg: Record<string, any>): Record<string, any> {
-  const deps = Object.fromEntries(
-    Object.entries(pkg.dependencies ?? {}).map(([name, range]) =>
-      range === 'workspace:*' ? [name, versions.get(name) ?? range] : [name, range],
-    ),
-  );
-
-  return { ...pkg, dependencies: deps };
-}
-
 // create-janux ships the monorepo examples as scaffolding sources (`--example`).
+const EXAMPLES = 'packages/create-janux/examples';
 const EXAMPLES_SKIP = new Set(['node_modules', 'dist', 'bun.lock', '.env']);
 
-function embedExamples(): void {
-  rmSync('packages/create-janux/examples', { recursive: true, force: true });
-  cpSync('examples', 'packages/create-janux/examples', {
-    recursive: true,
-    filter: (source) => !EXAMPLES_SKIP.has(basename(source)),
-  });
+/** Embedded for the length of one publish, like the manifest itself. */
+async function withExamples<T>(dir: string, action: () => Promise<T>): Promise<T> {
+  if (dir !== 'create-janux') return action();
+  rmSync(EXAMPLES, { recursive: true, force: true });
+  cpSync('examples', EXAMPLES, { recursive: true, filter: (source) => !EXAMPLES_SKIP.has(basename(source)) });
+  try {
+    return await action();
+  } finally {
+    rmSync(EXAMPLES, { recursive: true, force: true });
+  }
 }
 
-for (const dir of ORDER) {
-  const path = `packages/${dir}/package.json`;
-  const original = await Bun.file(path).text();
-  const pkg = JSON.parse(original);
+async function release(dir: string, versions: Map<string, string>): Promise<void> {
+  const root = packageDir(dir);
+  const outputs = await buildPackage(root);
+
+  if (!existsSync(`${root}/dist`)) throw new Error(`${dir}: nothing was built into ${root}/dist`);
+  console.log(`  built ${outputs.length} files`);
+  const published = publishManifest(await readManifest(dir), versions);
+
+  await withExamples(dir, () =>
+    withManifest(root, published, async () => {
+      await packAndVerify(root, published, `${PACKED}/${dir}`);
+      await $`bun publish --access public`.cwd(root);
+    }),
+  );
+}
+
+const versions = await releaseVersions();
+
+rmSync(PACKED, { recursive: true, force: true });
+for (const dir of PUBLISH_ORDER) {
+  const pkg = await readManifest(dir);
 
   if (await alreadyPublished(pkg.name, pkg.version)) {
     console.log(`↷ ${pkg.name}@${pkg.version} already on npm — skipping`);
     continue;
   }
   console.log(`→ publishing ${pkg.name}@${pkg.version}`);
-  if (dir === 'create-janux') embedExamples();
-  await Bun.write(path, `${JSON.stringify(pinWorkspaceDeps(pkg), null, 2)}\n`);
-  try {
-    await $`bun publish --access public`.cwd(`packages/${dir}`);
-  } finally {
-    await Bun.write(path, original);
-    if (dir === 'create-janux') rmSync('packages/create-janux/examples', { recursive: true, force: true });
-  }
+  await release(dir, versions);
 }
 console.log('✔ release complete');
