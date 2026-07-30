@@ -21,12 +21,12 @@
     "benchmarks/*/*"
   ],
   "scripts": {
-    "test": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts",
+    "test": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts",
     "test:e2e": "bun test e2e",
-    "test:coverage": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts --coverage",
+    "test:coverage": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts --coverage",
     "test:census": "bun scripts/test-census.ts",
     "test:lighthouse": "bun run --cwd apps/docs build && bun scripts/lighthouse.ts",
-    "typecheck": "for p in packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/create-janux packages/conformance scripts examples/*; do bunx tsc --noEmit -p $p || exit 1; done",
+    "typecheck": "for p in packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/create-janux packages/conformance scripts examples/*; do bunx tsc --noEmit -p $p || exit 1; done",
     "dev:shop": "bun run --cwd examples/shop dev",
     "dev:i18n": "bun run --cwd examples/i18n dev",
     "dev:web-agent": "bun run --cwd examples/with-web-agent dev",
