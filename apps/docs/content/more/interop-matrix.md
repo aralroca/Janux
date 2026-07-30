@@ -14,6 +14,7 @@ One example per **category**, not per library — the constraint that keeps this
 | Charts | `recharts` 3.10 | ⚠️ [`interop-charts`](https://github.com/aralroca/Janux/tree/main/examples/interop-charts) | ⚠️ sized box, no SVG | `toggleSeries`, `inspect`, `reset` | 188 kB |
 | Virtualization | `@tanstack/react-virtual` 3.14 | ✅ [`interop-virtual-list`](https://github.com/aralroca/Janux/tree/main/examples/interop-virtual-list) | ✅ first window | `select`, `scrollToRow`, `clear` | 91 kB |
 | Drag & drop | `@dnd-kit` 6.3 / 10.0 | ✅ [`interop-drag-drop`](https://github.com/aralroca/Janux/tree/main/examples/interop-drag-drop) | ✅ full, a11y intact | `move`, `reset` | 98 kB |
+| Command palette | `cmdk` 1.1 | ✅ [`interop-command-palette`](https://github.com/aralroca/Janux/tree/main/examples/interop-command-palette) | ✅ full | `run`, `search`, `clear` | 100 kB |
 | Hand-written React | — | ✅ [`interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) | ✅ full | `setBand`, `flat` | 83 kB |
 | Graph editor | `@xyflow/react` 12.11 | ⚠️ [`with-web-agent`](https://github.com/aralroca/Janux/tree/main/examples/with-web-agent) | ❌ `hydrate: 'only'` | `addStep` | — |
 
@@ -104,6 +105,7 @@ React interop is opt-in and per-island: an app with no foreign island ships none
 | `interop-data-grid` (+ `@tanstack/react-table`) | 312 kB | 97 kB |
 | `interop-virtual-list` (+ `@tanstack/react-virtual`) | 284 kB | 91 kB |
 | `interop-drag-drop` (+ `@dnd-kit`) | 305 kB | 98 kB |
+| `interop-command-palette` (+ `cmdk`) | 308 kB | 100 kB |
 | `interop-charts` (+ `recharts`) | 619 kB | 188 kB |
 
 Measured from `dist/client` after `janux build`.
