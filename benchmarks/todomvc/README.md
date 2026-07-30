@@ -63,3 +63,7 @@ uncontrolled edit fields, keyed todo identity, and DOM-only harness contract.
 node benchmarks/bench.mjs todomvc            # via the suite runner (starts servers)
 node benchmarks/bench.mjs --quick todomvc    # reduced smoke pass
 ```
+
+---
+
+Suite harness and prose derived from [octane](https://github.com/octanejs/octane)`/benchmarks` (MIT — Copyright (c) 2026 Dominic Gannaway). Full licence text: [`../LICENSE-OCTANE`](../LICENSE-OCTANE) · attribution: [`../../CREDITS.md`](../../CREDITS.md). The application shape follows the [TodoMVC](https://todomvc.com) specification (the spec and app design, no TodoMVC code or CSS is vendored here).

@@ -114,3 +114,7 @@ gate failure (and a non-zero exit).
 - **If a run is killed mid-build** (SIGKILL — a thrown error is already
   handled), `benchmarks/news/*/src/data.js` may be left at count 500; run
   `node ../news/gen.mjs 50` to restore the tracked dataset.
+
+---
+
+Suite harness and prose derived from [octane](https://github.com/octanejs/octane)`/benchmarks` (MIT — Copyright (c) 2026 Dominic Gannaway). Full licence text: [`../LICENSE-OCTANE`](../LICENSE-OCTANE) · attribution: [`../../CREDITS.md`](../../CREDITS.md). Where the text above names *Octane* as the framework under test — or references Octane-only packages, fixtures or `pnpm` commands — read it as inherited upstream prose: this suite measures Janux against react/preact/solid/svelte/vue-vapor.

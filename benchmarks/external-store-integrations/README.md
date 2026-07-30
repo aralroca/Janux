@@ -12,3 +12,7 @@ the cached snapshot, notify subscribers, and change the visible UI.
 node benchmarks/bench.mjs --quick external-store-integrations
 node benchmarks/bench.mjs external-store-integrations
 ```
+
+---
+
+Suite harness and prose derived from [octane](https://github.com/octanejs/octane)`/benchmarks` (MIT — Copyright (c) 2026 Dominic Gannaway). Full licence text: [`../LICENSE-OCTANE`](../LICENSE-OCTANE) · attribution: [`../../CREDITS.md`](../../CREDITS.md).

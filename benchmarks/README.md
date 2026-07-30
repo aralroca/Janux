@@ -8,6 +8,29 @@ in the repo-root `CREDITS.md`); the `js-framework` fixtures derive upstream from
 [krausest/js-framework-benchmark](https://github.com/krausest/js-framework-benchmark)
 (Apache-2.0).
 
+## What is borrowed and what is ours
+
+Read this table before citing anything in here. **Most of this directory is
+Octane's work, not Janux's** — 21 of its 22 suite directories exist upstream, and
+the harness is a direct code derivation rather than a reimplementation.
+
+| Path | Origin | Notes |
+|---|---|---|
+| `LICENSE-OCTANE` | **Octane**, verbatim | Upstream MIT licence, byte-identical to `octane/LICENSE` |
+| `lib/*.mjs` | **Octane**, verbatim | stats, DOM census, HTTP timing, stream verification, precise-work probes |
+| `bench.mjs` | **Octane**, adapted | Runner; retrimmed for Bun workspaces and Janux's suite list (~94% of its lines are upstream) |
+| `<suite>/run*.mjs`, `news/*.mjs`, `*/shared.js` | **Octane**, verbatim → lightly adapted | Per-suite harnesses; still carry Octane's `OCTANE_*` env-var names |
+| `<suite>/README.md` | **Octane**, verbatim | Suite prose. Some still name *Octane* as the framework under test — inherited text, not a Janux target |
+| `<suite>/{react,preact,solid,svelte,vue-vapor}/` | **Octane**, verbatim | Rival fixtures. `js-framework` traces upstream to krausest (Apache-2.0), `todomvc` to the [TodoMVC](https://todomvc.com) spec |
+| `<suite>/janux/` | Janux, on Octane's contract | Written against Janux's API, but structurally parallel to the upstream fixtures they replace (~25–45% line overlap) |
+| `baselines/`, `results/` | Janux's measurements, Octane's schema | Numbers are ours; the file shape and ratio-guard format are upstream |
+| `report.mjs`, `report.test.mjs` | **Janux, original** | Results → markdown position report; no upstream counterpart |
+| `BASELINE-2026-07.md` | **Janux, original** | Measured baseline and the optimization log |
+
+Octane keeps **no per-file copyright headers** upstream, so nothing here lost
+one; the `// Derived from octane/benchmarks (MIT) …` lines on the harness files
+were added by Janux, above what MIT requires.
+
 ## Running
 
 ```bash

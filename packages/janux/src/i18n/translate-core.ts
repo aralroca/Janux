@@ -1,3 +1,6 @@
+// Ported from Brisa's `transCore` (MIT — Copyright (c) 2024 Brisa), itself the
+// lineage of next-translate. Reimplemented against Janux's API rather than
+// copied, but the semantics are Brisa's. See CREDITS.md.
 import type { I18nConfig, Translate, TranslateOptions, TranslationQuery } from './types';
 import { formatElements } from './format-elements';
 

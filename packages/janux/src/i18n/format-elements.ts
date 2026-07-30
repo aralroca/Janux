@@ -1,3 +1,5 @@
+// Ported from Brisa's `translate-core/format-elements` (MIT — Copyright (c) 2024
+// Brisa), itself the lineage of next-translate. See CREDITS.md.
 import type { TranslationElement } from './types';
 
 export const tagParsingRegex = /<(\w+) *>(.*?)<\/\1 *>|<(\w+) *\/>/;

@@ -248,3 +248,7 @@ octane's compiler optimizes (both dialects compile to the same output):
   then `pnpm --filter octane-tsrx-jsbench preview` to serve the production output,
   then run the harness against that.
 - Chromium is the default browser; results on Firefox / WebKit differ.
+
+---
+
+Suite harness and prose derived from [octane](https://github.com/octanejs/octane)`/benchmarks` (MIT — Copyright (c) 2026 Dominic Gannaway). Full licence text: [`../LICENSE-OCTANE`](../LICENSE-OCTANE) · attribution: [`../../CREDITS.md`](../../CREDITS.md). Where the text above names *Octane* as the framework under test — or references Octane-only packages, fixtures or `pnpm` commands — read it as inherited upstream prose: this suite measures Janux against react/preact/solid/svelte/vue-vapor. The canonical operation contract and DOM shape come upstream from [krausest/js-framework-benchmark](https://github.com/krausest/js-framework-benchmark) (Apache-2.0), via Octane; the fixtures here are modified relative to both.

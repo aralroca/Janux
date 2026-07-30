@@ -128,3 +128,7 @@ TARGETS=octane,react node benchmarks/streaming-ssr/run.mjs 10 --no-build
 `BENCH_JSON` ops per target: `shell_staggered`, `total_staggered`,
 `shell_allfast`, `total_allfast` (the latter carries `opsPerSec`); chunk
 counts, bytes, skeleton counts and all-fast renders/sec land in `meta`.
+
+---
+
+Suite harness and prose derived from [octane](https://github.com/octanejs/octane)`/benchmarks` (MIT — Copyright (c) 2026 Dominic Gannaway). Full licence text: [`../LICENSE-OCTANE`](../LICENSE-OCTANE) · attribution: [`../../CREDITS.md`](../../CREDITS.md).

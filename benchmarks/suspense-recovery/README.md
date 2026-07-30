@@ -6,3 +6,7 @@ Production browser fixtures independently expose pending, rejected, recovered, a
 node benchmarks/bench.mjs --quick suspense-recovery
 node benchmarks/bench.mjs suspense-recovery
 ```
+
+---
+
+Suite harness and prose derived from [octane](https://github.com/octanejs/octane)`/benchmarks` (MIT — Copyright (c) 2026 Dominic Gannaway). Full licence text: [`../LICENSE-OCTANE`](../LICENSE-OCTANE) · attribution: [`../../CREDITS.md`](../../CREDITS.md).
