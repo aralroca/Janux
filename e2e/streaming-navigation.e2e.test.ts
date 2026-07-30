@@ -208,4 +208,36 @@ describe.skipIf(!BUILT)('navigation in a real browser (apps/docs)', () => {
     expect(await styleCount()).toBe(before);
     await page.close();
   }, TIMEOUT);
+
+  /**
+   * The rule styles/dark-mode.md tells readers to follow. diff-dom-streaming
+   * deliberately never overwrites BODY attributes, and diffs every other
+   * element — so runtime display state (theme, density) survives a navigation
+   * on `<body>` and is silently reset on `<html>`. Documenting that is only
+   * safe while it stays true, which is what this asserts.
+   *
+   * https://github.com/brisa-build/diff-dom-streaming#strong-opinion-on-body-tag-attributes-during-diffing
+   */
+  it('preserves body attributes across a navigation, but not html ones', async () => {
+    const page = await browser!.newPage();
+
+    await page.goto(`${BASE}${FIRST}`, { waitUntil: 'networkidle' });
+    await page.evaluate(() => {
+      document.body.dataset.theme = 'dark';
+      document.body.classList.add('probe-class');
+      document.documentElement.dataset.theme = 'dark';
+    });
+
+    await sidebarLink(page, SECOND).click();
+    await page.waitForFunction((path) => location.pathname === path, SECOND);
+
+    expect(
+      await page.evaluate(() => ({
+        body: document.body.dataset.theme,
+        bodyClass: document.body.classList.contains('probe-class'),
+        html: document.documentElement.dataset.theme ?? null,
+      })),
+    ).toEqual({ body: 'dark', bodyClass: true, html: null });
+    await page.close();
+  }, TIMEOUT);
 });
