@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-3746%20passing-brightgreen" alt="3746 tests passing" />
+  <img src="https://img.shields.io/badge/tests-3747%20passing-brightgreen" alt="3747 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -209,6 +209,9 @@ Full tables, methodology and machine specs:
 - [`examples/interop-virtual-list`](examples/interop-virtual-list) — `@tanstack/react-virtual` unchanged: 10,000 rows server-rendered as a real first window, and an agent that scrolls to a row which isn't in the DOM at all.
 - [`examples/interop-drag-drop`](examples/interop-drag-drop) — `@dnd-kit` unchanged: a drag whose event is an unserializable object graph becomes a typed `move` intent, which the agent calls without dragging anything.
 - [`examples/interop-command-palette`](examples/interop-command-palette) — `cmdk` unchanged: the palette's command list and the agent's tool enum are asserted to be the same list.
+- [`examples/interop-forms`](examples/interop-forms) — `react-hook-form` + `zod` unchanged: the honest two-owner case, where an agent's fill has to be reconciled into uncontrolled inputs.
+- [`examples/interop-graph-editor`](examples/interop-graph-editor) — `@xyflow/react` unchanged, in both directions: a node drag and a drawn edge become `moveNode` / `connect`, the same tools the agent calls.
+- [`examples/interop-a11y-primitives`](examples/interop-a11y-primitives) — `@radix-ui/react-dialog` unchanged: portals escape the host, and a navigation with the dialog open neither throws nor leaves the scroll locked.
 - [`examples/nested-islands`](examples/nested-islands) — stateful islands inside stateful islands, with dispose semantics.
 - [`examples/data-cache`](examples/data-cache) — `useQuery` with a reactive query key, typed URL state (`urlState`) that deep-links and honors Back, and agent parity for the same filter.
 - [`examples/with-suspense`](examples/with-suspense) — streaming SSR: independent `suspense` boundaries that reveal mid-stream, and `error` boundaries that bubble.

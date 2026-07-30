@@ -2,7 +2,7 @@ import { signal, effect as watch, untrack, type Sig } from '../signals';
 import type { ForeignDef, HydrateDirective } from '../interop';
 import type { JanuxInstance } from '../runtime/instance';
 import { KEEP_ATTRIBUTE } from './navigate';
-import { isPlainContainer, plainify } from '../state/plainify';
+import { detachProps } from '../interop/detach';
 
 /** A live foreign (React) root bound to a host element. */
 export interface ForeignHandle {
@@ -60,34 +60,6 @@ function intentBindings(
       ];
     }),
   );
-}
-
-/**
- * Plain data cached by the proxy that produced it. State proxies are stable per
- * (path, version), so an unchanged subtree hands back the very same plain object
- * — structural sharing across the boundary: React keeps its memoization, and a
- * 10 000-row list is not re-cloned because a filter string changed.
- */
-const detached = new WeakMap<object, unknown>();
-
-/**
- * React gets plain data, never the live state proxy. Two reasons, both real:
- * a library that deep-freezes its props (Immer — and so Redux Toolkit, and so
- * Recharts 3) would otherwise freeze the proxy's TARGET, leaving island state
- * permanently unwritable and every later read throwing a Proxy invariant error;
- * and a foreign component could otherwise mutate island state directly, behind
- * the intents that are supposed to be the only way in.
- */
-function detach(value: unknown): unknown {
-  if (!isPlainContainer(value)) return value;
-  const cached = detached.get(value);
-
-  if (cached !== undefined) return cached;
-  const plain = plainify(value);
-
-  detached.set(value, plain);
-
-  return plain;
 }
 
 function reportError(error: unknown): void {
@@ -159,9 +131,7 @@ export function mountForeign(
     const element = () => {
       const own = props.value;
       const mapped = def.options.props ? def.options.props(own) : own;
-      const plain = Object.fromEntries(Object.entries(mapped).map(([key, value]) => [key, detach(value)]));
-
-      return createElement(def.component as any, { ...plain, ...bindings } as any);
+      return createElement(def.component as any, { ...detachProps(mapped), ...bindings } as any);
     };
 
     // Deterministic render-replace over the SSR markup: state may have moved

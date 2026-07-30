@@ -150,6 +150,31 @@ const sheetShell = component({
   view: ({ state }: any) => jsx('section', { children: jsx(SheetIsland as any, { state }) }),
 });
 
+const seenProps: Record<string, unknown> = {};
+
+/** Not everything a mapper hands over is state: a Date or a React element must arrive intact. */
+function PropShapes({ when, node }: { when: unknown; node: unknown }) {
+  seenProps.when = when;
+  seenProps.node = node;
+
+  return createElement('output', { className: 'shapes' }, String(when instanceof Date));
+}
+
+const stamp = new Date('2020-01-02T03:04:05Z');
+const element = createElement('span', null, 'react element');
+
+const ShapesIsland = foreign(PropShapes, {
+  name: 'shapes',
+  props: () => ({ when: stamp, node: element }),
+});
+
+const shapesShell = component({
+  name: 'shapes-shell',
+  state: schema({ tick: int().default(0) }),
+  intents: {},
+  view: ({ state }: any) => jsx('section', { children: jsx(ShapesIsland as any, { state }) }),
+});
+
 const effectRuns: string[] = [];
 
 /**
@@ -457,6 +482,20 @@ describe('foreign callbacks that do not fit args[0]', () => {
     await client.call('freezer-shell.addRow');
     await client.settled();
     await until(() => document.querySelector('.freezer')?.textContent === 'a,b');
+  });
+
+  it('hands non-state props through untouched: a Date is still a Date, an element still an element', async () => {
+    const { html } = await renderToString(jsx(shapesShell as any, {}), {});
+
+    document.body.innerHTML = html;
+    boot({ defs: [shapesShell, ShapesIsland] });
+    await until(() => document.querySelector('.shapes')?.textContent === 'true');
+
+    // Deep-cloning everything would turn the Date into {} and strip the React
+    // element's `$$typeof` symbol, which React renders as a crash.
+    expect(seenProps.when).toBeInstanceOf(Date);
+    expect((seenProps.when as Date).toISOString()).toBe(stamp.toISOString());
+    expect(seenProps.node).toBe(element);
   });
 
   it('maps a multi-argument callback onto the intent input', async () => {

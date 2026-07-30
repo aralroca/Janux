@@ -80,4 +80,4 @@ if (isForeignDef(node.$t)) {
 
 A foreign island projects a **view only** — no resource, no tools. That's deliberate: the framework can't know the semantics of someone else's component. Wrap it in a bifacial shell whose state it renders and whose intents drive it, and the copilot gets full control without DOM inference. The [interop guide](/docs/guide/interop) shows the wrap-once pattern, and [`examples/interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) is a working app.
 
-Related: [Foreign-UI interop](/docs/guide/interop) · [Ownership](/docs/reference/owners) · [Examples](/docs/more/examples)
+Related: [Foreign-UI interop](/docs/guide/interop) · [Interop compatibility matrix](/docs/more/interop-matrix) · [Ownership](/docs/reference/owners) · [Examples](/docs/more/examples)

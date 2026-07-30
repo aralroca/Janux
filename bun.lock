@@ -450,6 +450,23 @@
         "janux": "workspace:*",
       },
     },
+    "examples/interop-a11y-primitives": {
+      "name": "janux-example-interop-a11y-primitives",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "@radix-ui/react-dialog": "^1.1.23",
+        "janux": "workspace:*",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+      },
+      "devDependencies": {
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+      },
+    },
     "examples/interop-charts": {
       "name": "janux-example-interop-charts",
       "version": "0.2.1",
@@ -511,6 +528,42 @@
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+      },
+      "devDependencies": {
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+      },
+    },
+    "examples/interop-forms": {
+      "name": "janux-example-interop-forms",
+      "version": "0.2.1",
+      "dependencies": {
+        "@hookform/resolvers": "^5.5.7",
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+        "react-hook-form": "^7.83.0",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+      },
+    },
+    "examples/interop-graph-editor": {
+      "name": "janux-example-interop-graph-editor",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "@xyflow/react": "^12.11.2",
         "janux": "workspace:*",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
@@ -1036,6 +1089,8 @@
     "@formatjs/intl-localematcher": ["@formatjs/intl-localematcher@0.6.2", "", { "dependencies": { "tslib": "^2.8.0" } }, "sha512-XOMO2Hupl0wdd172Y06h6kLpBz6Dv+J4okPLl4LPtzbr8f66WbIoy4ev98EBuZ6ZK4h5ydTN6XneT4QVpD7cdA=="],
 
     "@happy-dom/global-registrator": ["@happy-dom/global-registrator@18.0.1", "", { "dependencies": { "@types/node": "^20.0.0", "happy-dom": "^18.0.1" } }, "sha512-xCy/cpEP8xyJ6u0eokYgaQxeUmcKqHx/+aC3R0DLa7/S38efhZAVDQqLJ5zzTguLFS0gvAzZHP40NGaLwRyapQ=="],
+
+    "@hookform/resolvers": ["@hookform/resolvers@5.5.7", "", { "dependencies": { "@standard-schema/utils": "^0.3.0" }, "peerDependencies": { "@sinclair/typebox": ">=0.25.24", "@standard-schema/spec": "^1.0.0", "@typeschema/main": ">=0.13.7", "@vinejs/vine": "^2.0.0 || ^3.0.0", "ajv": "^8.12.0", "ajv-errors": "^3.0.0", "ajv-formats": "^2.1.1", "arktype": "^2.0.0", "ata-validator": "^0.7.0", "class-transformer": ">=0.4.0", "class-validator": ">=0.12.0", "computed-types": "^1.0.0", "effect": "^3.10.3", "fluentvalidation-ts": "^3.0.0", "fp-ts": "^2.7.0", "io-ts": "^2.0.0", "joi": "^17.0.0", "nope-validator": ">=0.12.0", "react-hook-form": "^7.55.0", "superstruct": ">=0.12.0", "typanion": "^3.3.2", "valibot": ">=0.31.0 || ^1.0.0-beta.4 || ^1.0.0-rc", "vest": ">=3.0.0", "yup": "^1.0.0", "zod": "^3.25.0 || ^4.0.0" }, "optionalPeers": ["@sinclair/typebox", "@standard-schema/spec", "@typeschema/main", "@vinejs/vine", "ajv", "ajv-errors", "ajv-formats", "arktype", "ata-validator", "class-transformer", "class-validator", "computed-types", "effect", "fluentvalidation-ts", "fp-ts", "io-ts", "joi", "nope-validator", "superstruct", "typanion", "valibot", "vest", "yup", "zod"] }, "sha512-CyPCYV8/KlXfEXLWj8HHHhVsR/IZ6Ckm3b/a4fWtO/lRnRK1huqncb8LlAWrmpPRsse5glF5aVuDRMHEr3UGag=="],
 
     "@huggingface/jinja": ["@huggingface/jinja@0.5.9", "", {}, "sha512-uWTG+l3VJRsl7EXxYizuL3P+cCPoc3cRqbWWRcQN0FhejRfbdq0RNhCmbY/YDtnTcz9icdLYuLDjsnz4d8JMuw=="],
 
@@ -1845,6 +1900,8 @@
 
     "janux-example-i18n": ["janux-example-i18n@workspace:examples/i18n"],
 
+    "janux-example-interop-a11y-primitives": ["janux-example-interop-a11y-primitives@workspace:examples/interop-a11y-primitives"],
+
     "janux-example-interop-charts": ["janux-example-interop-charts@workspace:examples/interop-charts"],
 
     "janux-example-interop-command-palette": ["janux-example-interop-command-palette@workspace:examples/interop-command-palette"],
@@ -1852,6 +1909,10 @@
     "janux-example-interop-data-grid": ["janux-example-interop-data-grid@workspace:examples/interop-data-grid"],
 
     "janux-example-interop-drag-drop": ["janux-example-interop-drag-drop@workspace:examples/interop-drag-drop"],
+
+    "janux-example-interop-forms": ["janux-example-interop-forms@workspace:examples/interop-forms"],
+
+    "janux-example-interop-graph-editor": ["janux-example-interop-graph-editor@workspace:examples/interop-graph-editor"],
 
     "janux-example-interop-react": ["janux-example-interop-react@workspace:examples/interop-react"],
 
@@ -2106,6 +2167,8 @@
     "react": ["react@19.2.8", "", {}, "sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw=="],
 
     "react-dom": ["react-dom@19.2.8", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.8" } }, "sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ=="],
+
+    "react-hook-form": ["react-hook-form@7.83.0", "", { "peerDependencies": { "react": "^16.8.0 || ^17 || ^18 || ^19" } }, "sha512-AXt8cMCmx5a7u4uvpb2uRFVrWQhllI4pV+LSykxIac/hjt44TnQkmX9BKuQi2i+LDC62esmiLpilkav+kjVf/A=="],
 
     "react-is": ["react-is@19.2.8", "", {}, "sha512-s5un28nYxKJw5gvUHyW5PCC28CvBqLu9r3cWgzHT4Vo/5fqqkFcdRYsGcKf50WMPpjjFZS5d76fn3YCo2njKwQ=="],
 

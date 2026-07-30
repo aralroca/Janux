@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
+import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CurveMouseEventHandler } from 'recharts/types/shape/Curve';
 
 export interface Point {
@@ -36,6 +36,9 @@ export function RevenueChart({ points, hidden, selected, onPointClick, onLegendC
       <YAxis />
       <Tooltip />
       <Legend onClick={onLegendClick} />
+      {points[selected] ? (
+        <ReferenceLine x={points[selected].month} stroke="#7c3aed" strokeDasharray="4 4" className="selected-month" />
+      ) : null}
       {SERIES.map((series) => (
         <Line
           key={series.key}
@@ -48,7 +51,6 @@ export function RevenueChart({ points, hidden, selected, onPointClick, onLegendC
           isAnimationActive={false}
           onClick={onPointClick}
           activeDot={{ r: 6 }}
-          dot={{ r: selected >= 0 ? 4 : 3 }}
         />
       ))}
     </LineChart>

@@ -15,12 +15,19 @@ One example per **category**, not per library — the constraint that keeps this
 | Virtualization | `@tanstack/react-virtual` 3.14 | ✅ [`interop-virtual-list`](https://github.com/aralroca/Janux/tree/main/examples/interop-virtual-list) | ✅ first window | `select`, `scrollToRow`, `clear` | 91 kB |
 | Drag & drop | `@dnd-kit` 6.3 / 10.0 | ✅ [`interop-drag-drop`](https://github.com/aralroca/Janux/tree/main/examples/interop-drag-drop) | ✅ full, a11y intact | `move`, `reset` | 98 kB |
 | Command palette | `cmdk` 1.1 | ✅ [`interop-command-palette`](https://github.com/aralroca/Janux/tree/main/examples/interop-command-palette) | ✅ full | `run`, `search`, `clear` | 100 kB |
+| Forms | `react-hook-form` 7.83 + `zod` 4 | ⚠️ [`interop-forms`](https://github.com/aralroca/Janux/tree/main/examples/interop-forms) | ✅ full | `fill`, `submit` | 110 kB |
+| Graph editor | `@xyflow/react` 12.11 | ✅ [`interop-graph-editor`](https://github.com/aralroca/Janux/tree/main/examples/interop-graph-editor) | ❌ `hydrate: 'only'` | `addNode`, `connect`, `moveNode`, `clear` | 141 kB |
+| A11y primitives | `@radix-ui/react-dialog` 1.1 | ✅ [`interop-a11y-primitives`](https://github.com/aralroca/Janux/tree/main/examples/interop-a11y-primitives) | ✅ trigger; portal is client-only | `setOpen`, `remove` | 96 kB |
 | Hand-written React | — | ✅ [`interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) | ✅ full | `setBand`, `flat` | 83 kB |
 | Graph editor | `@xyflow/react` 12.11 | ⚠️ [`with-web-agent`](https://github.com/aralroca/Janux/tree/main/examples/with-web-agent) | ❌ `hydrate: 'only'` | `addStep` | — |
 
 Recharts 3 computes its layout in effects, so its server render is a correctly sized wrapper with **no SVG inside** — the box is reserved (no layout shift) but the data is not in the HTML. That is Recharts' own behavior: `renderToString` of a bare `<LineChart>` outside Janux produces the same empty wrapper, and the example's e2e suite asserts it so the caveat cannot rot into a claim. The numbers are still server-rendered in the island's `ui://chart` resource, which is the argument for keeping state in the shell rather than inside the foreign component.
 
-`with-web-agent` mounts React Flow but drives it one way only (island state → React); it has no `on:` bridge back. A dedicated round-trip example is still to come.
+**Forms are ⚠️, not ✅, and everything in them works.** react-hook-form keeps its own copy of the form state in uncontrolled inputs — that is why it is fast — so the island is not the single owner, and an agent writing the draft is invisible to a form that never re-reads it. `interop-forms` reconciles the two explicitly and the seam is visible on purpose. If an agent never needs to *write* your form, let RHF own everything and expose `submit` alone; that is ✅ territory.
+
+**The graph editor cannot be server-rendered**, because React Flow measures its viewport on mount. `hydrate: 'only'` states that rather than leaning on the silent fail-soft catch, which looks identical to a broken `props` mapper. Nothing is lost for agents: the graph is typed island state, so `ui://graph` is server-rendered and readable even though the canvas is not.
+
+`examples/with-web-agent` also mounts React Flow, one way only (island state → React, no `on:` bridge). `interop-graph-editor` is the round trip.
 
 ## What bit, and what it cost to fix
 
@@ -75,6 +82,19 @@ These are real and currently unfixed. Each is a limit of the boundary, not a bug
 | Reverse interop (a Janux island inside a React app) | Not implemented; on the roadmap. |
 | React Server Components | Not supported. `foreign()` mounts a client root. |
 
+## Watch out: the hosts are unstyled custom elements
+
+`<janux-island>` and `<janux-foreign>` are custom elements with no stylesheet behind them, so they default to `display: inline` and are not boxes until your CSS says so. Any library that **sizes itself to its container** — React Flow, a virtualized scroller, a fluid chart — collapses to zero height inside one, and the failure is silent: the children are in the DOM, positioned, and clipped to nothing.
+
+```css
+/* The host has to be a box, and `height: 100%` will not do it when the parent's
+   height comes from flex layout rather than a specified `height`. */
+.canvas { display: flex; min-height: 420px; }
+.canvas janux-foreign { display: block; flex: 1; min-width: 0; }
+```
+
+This is a papercut rather than a defect — the framework deliberately ships no global stylesheet — but it costs an afternoon the first time, so it is written down here.
+
 ## Watch out: island state is serialized into the HTML
 
 Virtualization is a rendering strategy; it does not make a large state snapshot cheap. 10 000 rows of real data in `state` is a multi-hundred-kilobyte snapshot in **every** response, paid on first paint whether or not the user scrolls. Keep big datasets behind a `source` or an `api()` and let the island hold the window and the cursor — `interop-virtual-list` derives its row labels from the index for exactly this reason.
@@ -106,6 +126,9 @@ React interop is opt-in and per-island: an app with no foreign island ships none
 | `interop-virtual-list` (+ `@tanstack/react-virtual`) | 284 kB | 91 kB |
 | `interop-drag-drop` (+ `@dnd-kit`) | 305 kB | 98 kB |
 | `interop-command-palette` (+ `cmdk`) | 308 kB | 100 kB |
+| `interop-a11y-primitives` (+ `@radix-ui/react-dialog`) | 297 kB | 96 kB |
+| `interop-forms` (+ `react-hook-form`, `zod`) | 350 kB | 110 kB |
+| `interop-graph-editor` (+ `@xyflow/react`) | 435 kB | 141 kB |
 | `interop-charts` (+ `recharts`) | 619 kB | 188 kB |
 
 Measured from `dist/client` after `janux build`.
