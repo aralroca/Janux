@@ -6,7 +6,15 @@ An image is the heaviest thing most pages ship and the easiest one to get wrong:
 import { Image } from 'janux';
 
 export default function HomePage() {
-  return <Image src="/photos/hero.jpg" alt="The view from the pass" width={1200} height={675} priority />;
+  return (
+    <Image
+      src="/photos/hero.jpg"
+      alt="The view from the pass"
+      width={1200}
+      height={675}
+      priority
+    />
+  );
 }
 ```
 
@@ -14,10 +22,22 @@ That renders:
 
 ```html
 <picture>
-  <source type="image/avif" srcSet="/_janux/image/photos/hero.jpg/320.avif 320w, …" sizes="1200px">
-  <source type="image/webp" srcSet="/_janux/image/photos/hero.jpg/320.webp 320w, …" sizes="1200px">
-  <img src="/photos/hero.jpg" alt="The view from the pass" width="1200" height="675"
-       loading="eager" decoding="async" fetchPriority="high">
+  <source
+    type="image/avif"
+    srcSet="/_janux/image/photos/hero.jpg/320.avif 320w, …"
+    sizes="1200px">
+  <source
+    type="image/webp"
+    srcSet="/_janux/image/photos/hero.jpg/320.webp 320w, …"
+    sizes="1200px">
+  <img
+    src="/photos/hero.jpg"
+    alt="The view from the pass"
+    width="1200"
+    height="675"
+    loading="eager"
+    decoding="async"
+    fetchPriority="high">
 </picture>
 ```
 
@@ -48,7 +68,9 @@ import { Image } from 'janux';
 
 export function Hero() {
   // 1200 / (16/9) → height="675", written onto the tag
-  return <Image src="/photos/hero.jpg" alt="Aurora" width={1200} aspectRatio="16/9" />;
+  return (
+    <Image src="/photos/hero.jpg" alt="Aurora" width={1200} aspectRatio="16/9" />
+  );
 }
 ```
 
@@ -122,7 +144,15 @@ Two cases are passed straight through as a plain `<img>`, box and lazy-loading i
 import { Image } from 'janux';
 
 export function Avatar() {
-  return <Image src="https://cdn.example.com/a.jpg" alt="Ana" width={64} height={64} unoptimized />;
+  return (
+    <Image
+      src="https://cdn.example.com/a.jpg"
+      alt="Ana"
+      width={64}
+      height={64}
+      unoptimized
+    />
+  );
 }
 ```
 
