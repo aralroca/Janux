@@ -11,12 +11,21 @@ import { GROWTH_CASES, type GrowthRow } from './growth.cases';
 /**
  * 4× the input. Linear work grows ~4×, quadratic ~16×. The ceiling sits between
  * them, so timing noise cannot trip it and a complexity regression cannot hide.
+ *
+ * The sample is 20k rather than 8k because the ceiling is only meaningful while
+ * the measurement is: at 8k the PII scrub's small run took ~0.6ms, barely over
+ * the floor below, and a single scheduling hiccup on a shared CI runner was
+ * enough to push the ratio past 8 on work that is provably linear. At 20k the
+ * same run takes ~1.8ms, and the two sites this actually asserts (pii-scrub /
+ * separators and escape-attribute / escapable) measure ~3.7× and ~3.9× — half
+ * the ceiling. The whole matrix still costs well under a tenth of a second.
  */
-const SMALL = 8_000;
+const SMALL = 20_000;
 const FACTOR = 4;
 const MAX_GROWTH = 8;
 /** Below this, the small run is too fast to measure and the ratio is pure noise. */
 const MEASURABLE_MS = 0.4;
+const RUNS = 5;
 
 const router = createFsRouter(join(dirname(import.meta.path), '../router-nav/__fixtures__/routes'));
 
@@ -46,24 +55,30 @@ async function exercise(site: GrowthRow['site'], text: string): Promise<void> {
   else hashKey([text]);
 }
 
-/** Median of three, so one scheduling hiccup cannot decide the verdict. */
-async function median(site: GrowthRow['site'], text: string): Promise<number> {
+/**
+ * Fastest of five, not the median: interference only ever ADDS time, so the
+ * quickest run is the closest estimate of what the algorithm actually costs.
+ * It also discards the cold first pass for free. This loses no detection power
+ * — quadratic work is quadratic in its best run too — while making a noisy
+ * neighbour on the runner unable to decide the verdict.
+ */
+async function fastest(site: GrowthRow['site'], text: string): Promise<number> {
   const runs: number[] = [];
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < RUNS; attempt += 1) {
     const started = performance.now();
 
     await exercise(site, text);
     runs.push(performance.now() - started);
   }
 
-  return runs.sort((a, b) => a - b)[1]!;
+  return Math.min(...runs);
 }
 
 describe('complexity growth', () =>
   runCases(GROWTH_CASES, async (row) => {
-    const small = await median(row.site, input(row.shape, SMALL));
-    const large = await median(row.site, input(row.shape, SMALL * FACTOR));
+    const small = await fastest(row.site, input(row.shape, SMALL));
+    const large = await fastest(row.site, input(row.shape, SMALL * FACTOR));
 
     // Too fast to time reliably: the work is trivially linear, nothing to assert.
     if (small < MEASURABLE_MS) return;
