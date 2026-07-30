@@ -131,10 +131,17 @@ function stepRequest(step: EvalStep, outcomes: StepOutcome[]): { path: string; b
 
 async function performStep(step: EvalStep, outcomes: StepOutcome[], baseUrl: string, fetchImpl: typeof fetch): Promise<StepOutcome> {
   const { path, body, headers } = stepRequest(step, outcomes);
+  /*
+   * `Origin` because there is no browser here to send fetch metadata, and the
+   * CSRF guard refuses a call to an invocation endpoint that declares no origin
+   * at all (see janux-server/src/csrf.ts). Declaring the app's own base URL is the
+   * truth: the runner drives that origin's agent surface on the operator's
+   * behalf. It is also all the guard needs — there is no cookie jar to forge.
+   */
   const res = await fetchImpl(`${baseUrl}${path}`, {
     method: 'POST',
     body: JSON.stringify(body),
-    headers: { 'content-type': 'application/json', ...headers },
+    headers: { 'content-type': 'application/json', origin: new URL(baseUrl).origin, ...headers },
   });
   const envelope = (await res.json().catch(() => ({}))) as { ok?: boolean; result?: unknown; error?: string };
 

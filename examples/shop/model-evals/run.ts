@@ -22,7 +22,9 @@ if (!BASE || !KEY) {
 async function ask(prompt: string, path: string): Promise<any> {
   const response = await fetch(`${BASE}/_janux/agent`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    // `origin` is how a non-browser client tells Janux's CSRF guard which origin
+    // it is acting for — see recipes/auth-and-context.md.
+    headers: { 'content-type': 'application/json', origin: new URL(BASE!).origin },
     body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], path }),
   });
 

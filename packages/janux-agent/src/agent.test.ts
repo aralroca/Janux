@@ -70,7 +70,8 @@ const ask = (server: ReturnType<typeof buildServer>, body: unknown) =>
     new Request('http://test/_janux/agent', {
       method: 'POST',
       body: JSON.stringify(body),
-      headers: { 'content-type': 'application/json' },
+      // What the app's own page sends, and what the CSRF guard requires of it.
+      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
     }),
   );
 

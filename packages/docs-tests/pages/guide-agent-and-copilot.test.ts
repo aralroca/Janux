@@ -37,7 +37,7 @@ const ask = (server: { fetch(request: Request): Promise<Response> }, content = '
       new Request('http://test/_janux/agent', {
         method: 'POST',
         body: JSON.stringify({ messages: [{ role: 'user', content }] }),
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       }),
     )
     .then((response) => response.json() as any);

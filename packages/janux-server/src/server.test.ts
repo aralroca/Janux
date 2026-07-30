@@ -51,7 +51,9 @@ const post = (path: string, body: unknown, headers: Record<string, string> = {})
     new Request(`http://test${path}`, {
       method: 'POST',
       body: JSON.stringify(body),
-      headers: { 'content-type': 'application/json', ...headers },
+      // Same-origin, as a browser on the app's own page reports it: the CSRF
+      // guard refuses a mutating `/_janux/*` call that claims no origin at all.
+      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', ...headers },
     }),
   );
 
@@ -134,7 +136,11 @@ describe('api endpoints', () => {
     });
     const call = (path: string, headers: Record<string, string> = {}) =>
       originServer.fetch(
-        new Request(`http://test${path}`, { method: 'POST', body: '{}', headers: { 'content-type': 'application/json', ...headers } }),
+        new Request(`http://test${path}`, {
+          method: 'POST',
+          body: '{}',
+          headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', ...headers },
+        }),
       );
 
     expect((((await (await call('/_janux/api/audit.whoami')).json()) as any).result)).toEqual({ origin: 'human' });
@@ -153,7 +159,7 @@ describe('api endpoints', () => {
       new Request('http://test/_janux/approve', {
         method: 'POST',
         body: JSON.stringify({ id: proposed.id }),
-        headers: { 'content-type': 'application/json', 'x-janux-origin': 'agent' },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', 'x-janux-origin': 'agent' },
       }),
     );
 
@@ -165,7 +171,7 @@ describe('api endpoints', () => {
       new Request('http://test/_janux/approve', {
         method: 'POST',
         body: JSON.stringify({ id: proposed.id }),
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       }),
     );
 
@@ -203,7 +209,9 @@ describe('api endpoints', () => {
       },
     });
     const result: any = await (
-      await loopServer.fetch(new Request('http://test/_janux/agent', { method: 'POST', body: '{}' }))
+      await loopServer.fetch(
+        new Request('http://test/_janux/agent', { method: 'POST', body: '{}', headers: { 'sec-fetch-site': 'same-origin' } }),
+      )
     ).json();
 
     expect(result.status).toBe('proposal');
@@ -215,7 +223,7 @@ describe('api endpoints', () => {
         new Request('http://test/_janux/approve', {
           method: 'POST',
           body: JSON.stringify({ id: result.id }),
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
         }),
       )
     ).json();
