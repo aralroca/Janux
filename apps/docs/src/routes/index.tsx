@@ -3,11 +3,13 @@ import { Layout } from '../components/Layout';
 import { renderMarkdown } from '../server/markdown';
 import { absolute, SOCIAL_IMAGE } from '../site';
 
+/* Kept under ~155 characters: past that, search results truncate the sentence
+   and the category ("Agentic Web") is what must survive the cut. */
 const DESCRIPTION =
-  'One component, two faces: a live view for humans, typed MCP tools & resources for AI agents — generated from the same definition.';
+  'The fullstack framework for the Agentic Web: one definition ships a live view for humans and typed MCP tools & resources for AI agents.';
 
 export const meta: PageMeta = {
-  title: 'Janux — the agent-native fullstack UI framework',
+  title: 'Janux — the fullstack framework for the Agentic Web',
   description: DESCRIPTION,
   canonical: '/',
   image: SOCIAL_IMAGE,
@@ -161,12 +163,14 @@ export default async function Home() {
             width="130"
             height="157"
           />
+          <p class="eyebrow">The fullstack framework for the Agentic Web</p>
           <h1>
             One component. <span class="gradient">Two faces.</span>
           </h1>
           <p class="tagline">
-            The agent-native fullstack UI framework: a live view for humans, typed MCP tools &amp;
-            resources for AI agents — generated from the same definition, so they can never drift.
+            The web has a second audience. Write one definition and ship both: a live view for
+            humans, typed MCP tools &amp; resources for AI agents — generated together, so they can
+            never drift.
           </p>
           <p class="hero-credit">
             From the creator of{' '}
@@ -266,9 +270,10 @@ export default async function Home() {
             <span class="gradient">WebMCP</span> for free.
           </h2>
           <p class="pitch-lede">
-            Two agent surfaces, no integration work: the one every MCP client already speaks comes
-            out of your server functions, the browser one out of your components. You define
-            neither.
+            The Agentic Web has two surfaces, and Janux ships both with no integration work: the one
+            every MCP client already speaks comes out of your server functions, the browser one out
+            of your components. You define neither. <code>llms.txt</code>, Markdown projections of
+            every page and Web Bot Auth identity come along with them.
           </p>
           <p class="pitch-note">
             Pointing Claude, Cursor or any MCP client at your app takes a URL, not an integration
@@ -299,6 +304,7 @@ export default async function Home() {
             </div>
           </div>
           <p class="pitch-links">
+            <a href="/docs/getting-started/the-agentic-web">The Agentic Web →</a>
             <a href="/docs/guide/api-rpc">api() reference →</a>
             <a href="/docs/recipes/external-mcp-clients">External MCP clients →</a>
             <a href="/docs/guide/agent-and-copilot">Agent &amp; copilot →</a>
@@ -307,7 +313,7 @@ export default async function Home() {
         </section>
 
         <section class="mission">
-          <h2>Built for how software gets written now</h2>
+          <h2>Built for the Agentic Web</h2>
           <p class="mission-lede">
             AI agents write the code. Humans review it. Agents operate the result. Janux is the
             first framework designed for that whole loop — not just the rendering.

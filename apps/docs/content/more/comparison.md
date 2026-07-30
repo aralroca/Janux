@@ -1,6 +1,6 @@
 # Comparison
 
-Where Janux sits relative to the tools you already know. Every framework here is excellent at what it optimizes for — none of them optimizes for agents.
+Where Janux sits relative to the tools you already know. Every framework here is excellent at what it optimizes for — none of them optimizes for the [Agentic Web](/docs/getting-started/the-agentic-web). That's the axis this page adds, not a claim that the others render badly.
 
 One framework per row, split into two matrices so neither hides a column. The paragraphs below are the part worth reading.
 
