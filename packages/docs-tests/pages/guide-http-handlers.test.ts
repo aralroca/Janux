@@ -37,6 +37,31 @@ function handlersApp() {
        return Response.json({ name: file.name, size: file.size });
      }`);
   write('files/[...rest].ts', `export function GET({ params }) { return Response.json({ rest: params.rest }); }`);
+  // The tree lives in a temp dir, so the fixture reaches @janux/server by its resolved path.
+  write('spool.ts', `import { rmSync, statSync } from 'node:fs';
+     import { tmpdir } from 'node:os';
+     import { join } from 'node:path';
+     import { acceptsType, spoolMultipart } from ${JSON.stringify(Bun.resolveSync('@janux/server', import.meta.dir))};
+
+     export async function POST({ req }) {
+       const form = await spoolMultipart(req, { maxBytes: 4 * 1024 ** 3 });
+
+       if (form instanceof Response) return form;
+       try {
+         const file = form.file('file');
+         const destination = join(tmpdir(), 'janux-doc-upload.png');
+
+         if (!acceptsType(file.sniffed, ['image/*'])) return Response.json({ error: 'images only' }, { status: 415 });
+         await file.moveTo(destination);
+         const moved = statSync(destination).size;
+
+         rmSync(destination);
+
+         return Response.json({ name: file.name, size: file.size, title: form.fields.title, moved });
+       } finally {
+         await form.cleanup();
+       }
+     }`);
 
   return createJanuxServer({
     httpHandlers: { dir: root, loadModule: (file) => import(file) },
@@ -44,6 +69,9 @@ function handlersApp() {
   });
 }
 
+/** A real 1×1 PNG — the magic bytes `sniffed` reads. */
+const PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+const PNG = Uint8Array.from(atob(PNG_BASE64), (char) => char.charCodeAt(0));
 const app = handlersApp();
 const call = (path: string, init?: RequestInit) => app.fetch(new Request(`http://test${path}`, init));
 
@@ -93,6 +121,31 @@ describe('guide/http-handlers.md', () => {
     const response = await call('/api/upload', { method: 'POST', body: form });
 
     expect(await response.json()).toEqual({ name: 'note.txt', size: 11 });
+  });
+
+  it('spools a multipart upload to disk, validates the real bytes and moves it out', async () => {
+    const form = new FormData();
+
+    form.set('title', 'holiday');
+    form.set('file', new File([PNG], 'pixel.png', { type: 'image/png' }));
+    const response = await call('/api/spool', { method: 'POST', body: form });
+
+    // `moved` is the size at the destination: the bytes survived spool → moveTo → cleanup.
+    expect(await response.json()).toEqual({
+      name: 'pixel.png',
+      size: PNG.byteLength,
+      title: 'holiday',
+      moved: PNG.byteLength,
+    });
+  });
+
+  it('415s an upload whose real bytes are not what it claims', async () => {
+    const form = new FormData();
+
+    form.set('file', new File(['plain text'], 'fake.png', { type: 'image/png' }));
+    const response = await call('/api/spool', { method: 'POST', body: form });
+
+    expect(response.status).toBe(415);
   });
 
   it('404s a path with no handler file', async () => {

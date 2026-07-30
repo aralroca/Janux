@@ -81,7 +81,33 @@ await readBodyWithin(req, maxBytes);     // Uint8Array | 413 Response — chunke
 await formDataWithin(req, maxBytes);     // FormData | 413 Response — multipart under the same protection
 sniffContentType(bytes);                 // 'image/png' | … | undefined, from magic bytes
 await matchesType(file, ['image/*']);    // the file's real bytes against MIME patterns
+acceptsType(type, ['image/*']);          // an already-known type against those patterns — undefined never matches
 ```
+
+## spoolMultipart(req, options)
+
+The streaming sibling of `formDataWithin`: parses `multipart/form-data` as it arrives and spools every file part to a per-request temp directory, so memory stays flat whatever the upload weighs. `SpoolOptions` is `{ maxBytes, dir? }` (`dir` defaults to the OS temp dir).
+
+```ts
+import { spoolMultipart, type SpooledFile, type SpooledForm } from '@janux/server';
+
+// A `Response` instead of the form means 413 (over the limit) or 400 (malformed).
+const result = await spoolMultipart(req, { maxBytes: 4 * 1024 ** 3 });
+const form = result as SpooledForm;
+const file: SpooledFile | undefined = form.file('video');
+
+file?.field; // the multipart field name
+file?.name; // the client-supplied filename — never a safe path
+file?.type; // the declared content-type
+file?.sniffed; // what the first bytes really are, read as they streamed
+file?.size; // bytes on disk
+file?.path; // where they landed, until moveTo() or cleanup()
+await file?.moveTo('/var/uploads/clip.mp4'); // rename, or copy across filesystems
+form.fields.title; // non-file parts, UTF-8, capped at 1 MB each
+await form.cleanup(); // removes whatever moveTo() did not claim
+```
+
+Nothing is spooled when the request is refused: an oversized or malformed body takes the temp directory with it before the `Response` returns. A `SpooledForm` you keep is yours to `cleanup()`.
 
 ## renderNode(node, scope)
 
