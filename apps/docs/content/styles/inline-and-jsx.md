@@ -1,3 +1,8 @@
+---
+title: Inline and JSX styles
+description: The class and style attributes are plain HTML attributes in Janux — there is no className, and no CSS-in-JS runtime. What the framework adds is types.
+---
+
 # Inline and JSX styles
 
 The `class` and `style` attributes are plain HTML attributes in Janux — there is no `className`, and no CSS-in-JS runtime. What the framework adds is types.

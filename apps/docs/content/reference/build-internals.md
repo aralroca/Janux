@@ -1,3 +1,8 @@
+---
+title: Build & CLI internals
+description: The plumbing the CLI and the Vite plugin use. Read this to embed Janux in another build, to write a custom server, or to script the CLI.
+---
+
 # Build & CLI internals
 
 The plumbing the [CLI](/docs/reference/cli) and the [Vite plugin](/docs/guide/cli-and-deployment) use. You need this page to embed Janux in another build, to write a custom server, or to script the CLI — not to build an app.

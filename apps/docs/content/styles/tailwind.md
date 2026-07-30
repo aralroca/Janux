@@ -1,3 +1,8 @@
+---
+title: Tailwind CSS
+description: "First-class Tailwind v4 with zero configuration: installing the package is the setup, because a Janux app has no vite.config to edit."
+---
+
 # Tailwind CSS
 
 First-class Tailwind v4, zero config — installing the package **is** the configuration (Janux apps have no `vite.config` to edit):

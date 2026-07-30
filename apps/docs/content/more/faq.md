@@ -1,3 +1,8 @@
+---
+title: FAQ
+description: No. The framework is a complete SSR/islands framework without any key.
+---
+
 # FAQ
 
 ## Do I need an AI API key to use Janux?

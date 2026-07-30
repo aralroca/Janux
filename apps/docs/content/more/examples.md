@@ -1,3 +1,8 @@
+---
+title: Examples
+description: Every example in the repository, what each one demonstrates, and how to scaffold any of them as your own project straight from the CLI.
+---
+
 # Examples
 
 Every example in [`examples/`](https://github.com/aralroca/Janux/tree/main/examples) is a complete, runnable app. Scaffold any of them as your own project straight from the CLI:

@@ -1,3 +1,8 @@
+---
+title: Auth and request context
+description: "Identity flows through a Janux app in ctx: built once per request, injected everywhere it is needed, and never a global."
+---
+
 # Auth and request context
 
 `ctx` is how identity flows through Janux: built once per request, injected everywhere, never global.

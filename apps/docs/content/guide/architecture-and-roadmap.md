@@ -1,3 +1,8 @@
+---
+title: Architecture and roadmap
+description: "How Janux is put together: the packages, the four design invariants behind them, what ships today and what is still planned."
+---
+
 # Architecture and roadmap
 
 ## Monorepo packages

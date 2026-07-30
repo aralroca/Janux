@@ -1,3 +1,8 @@
+---
+title: Foreign-UI interop (React)
+description: A mature front-end leans on a third-party ecosystem — node-graph editors, animation libraries, data grids, PDF viewers — that doesn't mount on a foreign runtime.
+---
+
 # Foreign-UI interop (React)
 
 A mature front-end leans on a third-party ecosystem — node-graph editors, animation libraries, data grids, PDF viewers — that doesn't mount on a foreign runtime. `janux/interop` lets you **mount them unchanged**, each in a real embedded React root, while everything around them stays bifacial.

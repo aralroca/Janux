@@ -1,3 +1,8 @@
+---
+title: Interop compatibility matrix
+description: Which parts of the React ecosystem actually mount inside a Janux island, verified by an example that builds and passes end-to-end tests in CI — not by assertion.
+---
+
 # Interop compatibility matrix
 
 Which parts of the React ecosystem actually mount inside a Janux island, verified by an example that builds and passes end-to-end tests in CI — not by assertion.

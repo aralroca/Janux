@@ -1,3 +1,8 @@
+---
+title: Deploying to Vercel
+description: Vercel runs functions on Bun, and a Janux server is already the shape that runtime wants — Web Request in, Web Response out.
+---
+
 # Deploying to Vercel
 
 Vercel runs functions on Bun, and a Janux server is already the shape that runtime wants — Web `Request` in, Web `Response` out. `@janux/vercel` is the glue, for both of the framework's outputs: a **Bun server** (SSR, `api()` endpoints, the manifest, MCP, the copilot) or a **static export** (prerendered HTML on the CDN, no runtime).

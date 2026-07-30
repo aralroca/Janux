@@ -1,3 +1,8 @@
+---
+title: Schema types
+description: One small schema system types everything in Janux — component state, intent inputs, api() contracts and events — and validates all of them the same way.
+---
+
 # Schema types
 
 Everything typed in Janux — component state, intent inputs, api() contracts, events — uses one small schema system from `janux`:

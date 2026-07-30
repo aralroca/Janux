@@ -7,6 +7,7 @@
     "janux": "workspace:*",
     "@janux/server": "workspace:*",
     "@janux/agent": "workspace:*",
+    "@janux/content": "workspace:*",
     "@janux/vite": "workspace:*",
     "@janux/cli": "workspace:*",
     "@janux/tailwind": "workspace:*",

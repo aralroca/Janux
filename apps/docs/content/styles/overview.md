@@ -1,3 +1,8 @@
+---
+title: Styling a Janux app
+description: Janux has no opinion about how you write CSS, and no vite.config for you to edit.
+---
+
 # Styling a Janux app
 
 Janux has no opinion about how you write CSS, and no `vite.config` for you to edit. What it does have is a single, predictable contract: **one stylesheet entry, one `<link>` in the HTML shell**. Everything below is a different way of filling that entry.

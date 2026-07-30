@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { defineCollection, getCollection, getEntry, type CollectionEntry } from '@janux/content';
 import { api } from '@janux/server';
 import { schema, str, list } from 'janux';
 import { searchPages, type SearchPage } from '../search/score';
@@ -12,6 +12,20 @@ import { slugify, stripMarkdown } from './markdown';
  * which is why one of them publishes the app root before importing the app.
  */
 const CONTENT_DIR = join(process.env.JANUX_APP_ROOT ?? join(import.meta.dirname, '../..'), 'content');
+
+/**
+ * The docs are a content collection, so a page's metadata is checked by the
+ * same `schema()` that types an island's state. Titles and descriptions used to
+ * be guessed out of the body — an H1 regex and a first-paragraph heuristic —
+ * which meant a page could ship with the wrong title and nothing would notice.
+ * A page missing either field now fails the build, by name.
+ */
+export const docs = defineCollection({
+  dir: CONTENT_DIR,
+  schema: schema({ title: str(), description: str() }),
+});
+
+export type DocEntry = CollectionEntry<typeof docs>;
 
 export interface SectionGroup {
   label?: string;
@@ -107,6 +121,7 @@ export interface DocRef {
   slug: string;
   path: string;
   title: string;
+  description: string;
 }
 
 export function sectionSlugs(section: string): string[] {
@@ -126,31 +141,33 @@ export function groupLabel(section: string, slug: string): string | undefined {
   return def?.groups.find((group) => group.slugs.includes(slug))?.label;
 }
 
-export function docContent(section: string, slug: string): string | undefined {
+/**
+ * One doc, by section and slug. The nav is the allowlist: a file that exists but
+ * is not listed is not a page, and a slug that is not `[a-z0-9-]` never becomes
+ * a lookup at all.
+ */
+export function docEntry(section: string, slug: string): DocEntry | undefined {
   if (!/^[a-z0-9-]+$/.test(section) || !/^[a-z0-9-]+$/.test(slug)) return undefined;
   if (!sectionSlugs(section).includes(slug)) return undefined;
-  try {
-    return readFileSync(join(CONTENT_DIR, section, `${slug}.md`), 'utf-8');
-  } catch {
-    return undefined;
-  }
+
+  return getEntry(docs, `${section}/${slug}`);
 }
 
-function titleOf(section: string, slug: string): string {
-  return docContent(section, slug)?.match(/^# (.+)$/m)?.[1] ?? slug;
+/** A doc's markdown body — the frontmatter block is metadata, not content. */
+export function docContent(section: string, slug: string): string | undefined {
+  return docEntry(section, slug)?.body;
 }
 
 /** Flat ordered index of every existing doc — drives sidebar, prev/next and search. */
 export function docIndex(): DocRef[] {
   return SECTIONS.flatMap(({ section }) =>
-    sectionSlugs(section)
-      .filter((slug) => docContent(section, slug) !== undefined)
-      .map((slug) => ({
-        section,
-        slug,
-        path: `/docs/${section}/${slug}`,
-        title: titleOf(section, slug),
-      })),
+    sectionSlugs(section).flatMap((slug) => {
+      const entry = docEntry(section, slug);
+
+      if (!entry) return [];
+
+      return [{ section, slug, path: `/docs/${section}/${slug}`, title: entry.data.title, description: entry.data.description }];
+    }),
   );
 }
 
@@ -171,9 +188,9 @@ export function searchCorpus(): SearchPage[] {
 }
 
 export const listDocs = api({
-  description: 'List all documentation pages (section, slug, title)',
-  output: schema({ docs: list({ section: str(), slug: str(), title: str() }) }),
-  run: () => ({ docs: docIndex().map(({ section, slug, title }) => ({ section, slug, title })) }),
+  description: 'List all documentation pages (section, slug, title, description)',
+  output: schema({ docs: list({ section: str(), slug: str(), title: str(), description: str() }) }),
+  run: () => ({ docs: docIndex().map(({ section, slug, title, description }) => ({ section, slug, title, description })) }),
 });
 
 export const readDoc = api({

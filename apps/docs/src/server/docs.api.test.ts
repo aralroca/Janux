@@ -34,6 +34,42 @@ describe('SECTIONS integrity', () => {
       expect(title).not.toBe(slug);
     }
   });
+});
+
+describe('the docs collection', () => {
+  /**
+   * Titles and descriptions used to be guessed from the body — an H1 regex and
+   * a first-paragraph heuristic. They are frontmatter now, so the schema is
+   * what fails when a page forgets one, at build time and by name.
+   */
+  test('every page declares a title and a description', () => {
+    const missing = docIndex().filter((doc) => !doc.title.trim() || !doc.description?.trim());
+
+    expect(missing).toEqual([]);
+  });
+
+  /** Two places can say the title; only one can be right, so they must agree. */
+  test('the frontmatter title is the H1 the page renders', () => {
+    const drifted = docIndex()
+      .map((doc) => ({ page: `${doc.section}/${doc.slug}`, ...doc, h1: docContent(doc.section, doc.slug)?.match(/^# (.+)$/m)?.[1] }))
+      .filter((doc) => doc.h1 !== doc.title)
+      .map((doc) => `${doc.page}: "${doc.title}" vs "${doc.h1}"`);
+
+    expect(drifted).toEqual([]);
+  });
+
+  /** The body a page renders, a projection serves and the search corpus indexes. */
+  test('docContent returns the body without the frontmatter block', () => {
+    const body = docContent('guide', 'schema')!;
+
+    expect(body.startsWith('---')).toBe(false);
+    expect(body.startsWith('# ')).toBe(true);
+  });
+
+  test('a section or slug outside the nav is not readable', () => {
+    expect(docContent('guide', 'nope')).toBeUndefined();
+    expect(docContent('../guide', 'schema')).toBeUndefined();
+  });
 
   test('labels resolve', () => {
     expect(sectionLabel('guide')).toBe('Guide');

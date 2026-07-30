@@ -1,3 +1,8 @@
+---
+title: parseDuration
+description: Turns a duration string into milliseconds. It is the parser behind every duration field in Janux, so all of them accept the same spellings.
+---
+
 # parseDuration
 
 ```ts
