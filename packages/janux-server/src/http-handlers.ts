@@ -32,6 +32,9 @@ const startsWith = (bytes: Uint8Array, magic: number[], offset = 0) =>
 const asciiAt = (bytes: Uint8Array, offset: number, text: string) =>
   startsWith(bytes, [...text].map((char) => char.charCodeAt(0)), offset);
 
+/** How many leading bytes `sniffContentType` needs to name a format. */
+export const SNIFF_BYTES = 16;
+
 /** Magic-byte signatures for the formats upload handlers most often validate. */
 const SIGNATURES: Array<{ type: string; matches: (bytes: Uint8Array) => boolean }> = [
   { type: 'image/png', matches: (bytes) => startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]) },
@@ -52,14 +55,11 @@ export function sniffContentType(bytes: Uint8Array): string | undefined {
 }
 
 /**
- * True when the file's real bytes match one of the accepted MIME patterns
- * (`image/png` exact or `image/*` wildcard). A `.txt` renamed to `.png` fails
- * here no matter what `file.type` claims — only the magic bytes are trusted.
+ * True when `type` matches one of the accepted MIME patterns (`image/png`
+ * exact or `image/*` wildcard). An unrecognised type — `undefined`, what
+ * `sniffContentType` returns for bytes it cannot name — never matches.
  */
-export async function matchesType(file: File, accept: string[]): Promise<boolean> {
-  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-  const type = sniffContentType(head);
-
+export function acceptsType(type: string | undefined, accept: string[]): boolean {
   if (!type) return false;
 
   return accept.some((pattern) => {
@@ -69,7 +69,18 @@ export async function matchesType(file: File, accept: string[]): Promise<boolean
   });
 }
 
-const tooLarge = (maxBytes: number) =>
+/**
+ * True when the file's real bytes match one of the accepted MIME patterns.
+ * A `.txt` renamed to `.png` fails here no matter what `file.type` claims —
+ * only the magic bytes are trusted.
+ */
+export async function matchesType(file: File, accept: string[]): Promise<boolean> {
+  const head = new Uint8Array(await file.slice(0, SNIFF_BYTES).arrayBuffer());
+
+  return acceptsType(sniffContentType(head), accept);
+}
+
+export const tooLarge = (maxBytes: number) =>
   Response.json({ error: `request body exceeds the ${maxBytes}-byte limit` }, { status: 413 });
 
 /**
