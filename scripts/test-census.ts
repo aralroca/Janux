@@ -6,9 +6,15 @@
  * count jumps without its branch coverage moving is padding, and this is where
  * you see it.
  *
+ * It is also the one place that knows the real total, so it fails when a
+ * document claims a different one — that is what keeps the number in the README
+ * and in the architecture guide from being written by hand and left to rot.
+ *
  *   bun scripts/test-census.ts            # print the table
  *   bun scripts/test-census.ts --require 10000
  */
+import { testCountClaims } from '../packages/docs-tests/documented-test-count';
+
 const TARGETS = [
   'packages/janux',
   'packages/janux-server',
@@ -126,7 +132,16 @@ await Bun.file(REPORT)
 
 const shortfall = required > 0 && total < required;
 const thin = minCoverage > 0 && (!coverage || coverage.lines < minCoverage || coverage.functions < minCoverage);
+/** A badge states its number twice (src and alt), so report each document once. */
+const stale = [
+  ...new Set(
+    testCountClaims()
+      .filter(({ count }) => count !== total)
+      .map(({ file, count }) => `${file} claims ${count} tests`),
+  ),
+];
 
 if (shortfall) console.error(`census: ${total} tests, ${required} required — ${required - total} short.`);
 if (thin) console.error(`census: coverage below the ${(minCoverage * 100).toFixed(0)}% floor.`);
-if (shortfall || thin) process.exit(1);
+stale.forEach((claim) => console.error(`census: ${claim}, the suite has ${total}.`));
+if (shortfall || thin || stale.length > 0) process.exit(1);

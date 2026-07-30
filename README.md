@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-3641%20passing-brightgreen" alt="3641 tests passing" />
+  <img src="https://img.shields.io/badge/tests-3719%20passing-brightgreen" alt="3719 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -238,8 +238,8 @@ bun run --cwd examples/with-web-agent dev
 
 ```bash
 bun install
-bun test             # 3641 tests: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
-bun run test:census  # per-area counts and the coverage floor
+bun test             # the whole suite: schema, signals, runtime, SSR, resume, morph, interop, router, cache, guards, agent loop, harness, SWC stubs
+bun run test:census  # per-area counts, the coverage floor, and the count the docs claim
 bun run typecheck
 ```
 
