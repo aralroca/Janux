@@ -10,6 +10,21 @@
 
 export type HydrateDirective = 'load' | 'idle' | 'visible' | 'only';
 
+/** What a mapped `on:` entry receives: every callback argument, plus the JSX call-site props. */
+export interface ForeignEvent {
+  args: unknown[];
+  own: Record<string, unknown>;
+}
+
+/**
+ * An `on:` entry. The short form is an intent NAME and forwards the callback's
+ * first argument. The mapped form adds `input`, for the many library callbacks
+ * whose first argument is not the payload: an updater function
+ * (`onSortingChange`), a live object graph (`onDragEnd`), or nothing at all
+ * because the payload is the second argument (Recharts' `onClick`).
+ */
+export type ForeignBinding = string | { intent: string; input?: (event: ForeignEvent) => unknown };
+
 export interface ForeignOptions {
   /** Island name used in ids/markup. Defaults to the component's name. */
   name?: string;
@@ -19,8 +34,8 @@ export interface ForeignOptions {
    * signal reads re-render only the foreign root.
    */
   props?: (own: Record<string, unknown>) => Record<string, unknown>;
-  /** Maps a foreign callback prop to an intent NAME on the enclosing island. */
-  on?: Record<string, string>;
+  /** Maps a foreign callback prop to an intent on the enclosing island. */
+  on?: Record<string, ForeignBinding>;
   /** When the client root mounts. `only` skips SSR entirely. Default: `load`. */
   hydrate?: HydrateDirective;
 }

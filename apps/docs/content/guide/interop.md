@@ -22,7 +22,7 @@ const Flow = foreign(ReactFlow, {
 
 1. **One real root per island.** `react-dom` `createRoot` per foreign leaf — concurrent scheduling, portals, refs and the synthetic-event contract behave exactly as the library authors assume. The root unmounts when its host leaves the view (and cascades when the enclosing island disposes).
 2. **Reactive props bridge.** `options.props(own)` receives the JSX call-site props (typically the enclosing island's `state`) and is **tracked**: signal reads re-render only the foreign root — no Janux DOM diffing crosses the boundary. The host element is an opaque leaf for the morph.
-3. **Events → intents.** `options.on` maps a foreign callback prop to an intent NAME on the enclosing island. A drag in a graph editor lands as a typed intent — auditable, guardable, and invocable by the copilot without dragging anything. The callback's first argument becomes the intent input.
+3. **Events → intents.** `options.on` maps a foreign callback prop to an intent on the enclosing island. A drag in a graph editor lands as a typed intent — auditable, guardable, and invocable by the copilot without dragging anything. `on: { onBand: 'setBand' }` forwards the callback's first argument; for the many library callbacks whose first argument is an updater function, a live object graph or nothing useful at all, the mapped form builds the input from every argument plus the island's own state: `on: { onSortingChange: { intent: 'sort', input: ({ args, own }) => … } }`. See [`foreign()`](/docs/reference/foreign#binding-callbacks-to-intents).
 4. **SSR + client directives.** When `react`/`react-dom` are installed, the component server-renders inside its host (paint before JS); the client root mounts per `hydrate`: `load` (default), `idle`, `visible` (IntersectionObserver) or `only` (skip SSR). The client performs a deterministic render-replace over the SSR markup — interactions can land before a lazy hydration would finish, so replace beats mismatch races.
 
 Writing React components inside a Janux app: give the file its own runtime with a pragma, everything else is plain React:
@@ -83,5 +83,7 @@ That's the whole model: Janux owns the tree, React owns its leaves, and each fil
 - A standalone foreign (outside any island) SSRs and mounts from its serialized call-site props; `on:` requires an enclosing island.
 - `react`/`react-dom` are optional peers — apps without foreign islands pay nothing.
 - Reverse interop (mounting a Janux island inside a React app) is on the roadmap.
+
+> **What actually works**: the [interop compatibility matrix](/docs/more/interop-matrix) has one verified example per category — TanStack Table, TanStack Virtual, Recharts, dnd-kit, React Flow, react-hook-form, cmdk and Radix — with the caveats, the "no"s and the measured bundle cost of each.
 
 > **See it running**: [`examples/interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) — A React component mounted unchanged, with tracked props and callbacks bridged to intents. [`examples/with-web-agent`](https://github.com/aralroca/Janux/tree/main/examples/with-web-agent) goes one step further with `@xyflow/react` (`hydrate: 'only'`, since React Flow measures the viewport on mount) and an agent adding nodes to it. More in [Examples](/docs/more/examples).

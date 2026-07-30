@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-3893%20passing-brightgreen" alt="3893 tests passing" />
+  <img src="https://img.shields.io/badge/tests-3910%20passing-brightgreen" alt="3910 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -224,7 +224,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 84 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 85 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -263,7 +263,7 @@ Full tables, methodology and machine specs:
 
 ## Examples
 
-26 runnable apps, each a real Janux project — `bun run --cwd examples/<name> dev`.
+34 runnable apps, each a real Janux project — `bun run --cwd examples/<name> dev`.
 
 ### Start here
 
@@ -293,7 +293,22 @@ Full tables, methodology and machine specs:
 | [`with-forms`](examples/with-forms) | One `schema()` as the contract for three surfaces: the form UI (per-field errors, no reload), the `api()` endpoint, and the typed agent tool. |
 | [`with-optimistic-ui`](examples/with-optimistic-ui) | `mutation()` with optimistic writes and real rollback: the server rejects every third save and `onError` restores the snapshot with a visible notice. |
 | [`data-cache`](examples/data-cache) | `useQuery` with a reactive query key, typed URL state (`urlState`) that deep-links and honors Back, and agent parity for the same filter. |
+
+### React interop
+
+One example per **category**, each verified in CI — the [compatibility matrix](apps/docs/content/more/interop-matrix.md) states what works, what works with caveats, and what does not.
+
+| Example | What it shows |
+|---|---|
 | [`interop-react`](examples/interop-react) | A React component (unchanged) mounted with `foreign()`: tracked props, callbacks→intents. |
+| [`interop-data-grid`](examples/interop-data-grid) | `@tanstack/react-table` fully controlled from island state, with its **updater-function** callbacks mapped onto intents — the case `on: { prop: 'intent' }` cannot express. |
+| [`interop-virtual-list`](examples/interop-virtual-list) | `@tanstack/react-virtual` over 10,000 rows, server-rendered as a real first window, and `scrollToRow` reaching a row no DOM-scraping agent could click. |
+| [`interop-charts`](examples/interop-charts) | `recharts`, whose `onClick(data, **index**, event)` payload is the second argument — and an e2e that asserts what Recharts does *not* server-render. |
+| [`interop-drag-drop`](examples/interop-drag-drop) | `@dnd-kit` with its a11y wiring server-rendered, and an **unserializable** drag event mapped onto `move { id, toIndex }` — the tool an agent calls to reorder without dragging. |
+| [`interop-graph-editor`](examples/interop-graph-editor) | `@xyflow/react` driven both ways: a node drag and a drawn edge become `moveNode` / `connect`. `hydrate: 'only'`, because React Flow measures its viewport on mount. |
+| [`interop-forms`](examples/interop-forms) | The honest caveat: `react-hook-form` + `zod` own the inputs, so an agent's `fill` has to be reconciled into them explicitly. |
+| [`interop-command-palette`](examples/interop-command-palette) | `cmdk`, with an e2e assertion that the rendered command ids and `palette.run`'s enum are the same list. |
+| [`interop-a11y-primitives`](examples/interop-a11y-primitives) | `@radix-ui/react-dialog` with its focus trap and scroll lock intact, portalling out of the foreign host — and a navigation with the dialog open that neither throws nor leaves `<body>` unscrollable. |
 
 ### Rendering & routing
 

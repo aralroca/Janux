@@ -1,0 +1,58 @@
+/** @jsxImportSource react */
+import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts';
+import type { CurveMouseEventHandler } from 'recharts/types/shape/Curve';
+
+export interface Point {
+  month: string;
+  revenue: number;
+  users: number;
+}
+
+export interface RevenueChartProps {
+  points: Point[];
+  hidden: string[];
+  selected: number;
+  /** Recharts' own handler type — its second argument is the payload an intent wants. */
+  onPointClick?: CurveMouseEventHandler;
+  onLegendClick?: (entry: { dataKey?: unknown }) => void;
+}
+
+const SERIES = [
+  { key: 'revenue', color: '#7c3aed' },
+  { key: 'users', color: '#0ea5e9' },
+];
+
+/**
+ * A plain Recharts chart. Fixed pixel dimensions rather than
+ * `<ResponsiveContainer width="100%">`: a percentage container has to measure
+ * the DOM, which the server does not have — with numbers the whole SVG renders
+ * server-side.
+ */
+export function RevenueChart({ points, hidden, selected, onPointClick, onLegendClick }: RevenueChartProps) {
+  return (
+    <LineChart width={520} height={260} data={points} className="revenue-chart">
+      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+      <XAxis dataKey="month" />
+      <YAxis />
+      <Tooltip />
+      <Legend onClick={onLegendClick} />
+      {points[selected] ? (
+        <ReferenceLine x={points[selected].month} stroke="#7c3aed" strokeDasharray="4 4" className="selected-month" />
+      ) : null}
+      {SERIES.map((series) => (
+        <Line
+          key={series.key}
+          type="monotone"
+          dataKey={series.key}
+          stroke={series.color}
+          hide={hidden.includes(series.key)}
+          // Off on purpose: an animating chart has no stable DOM to click, and
+          // the point of this example is that the click lands as an intent.
+          isAnimationActive={false}
+          onClick={onPointClick}
+          activeDot={{ r: 6 }}
+        />
+      ))}
+    </LineChart>
+  );
+}

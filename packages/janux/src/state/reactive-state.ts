@@ -1,4 +1,4 @@
-import { batch, signal, type Sig } from '../signals';
+import { batch, signal, untrack, type Sig } from '../signals';
 import { assertMutable, createGate, type MutationGate } from './mutation-gate';
 import { ancestorsOf, childPath, parentOf } from './path';
 import { isPlainContainer, plainify } from './plainify';
@@ -33,6 +33,7 @@ export function createReactiveState<T extends object>(
   // Direct-children index: descendant notification walks the subtree instead
   // of scanning every tracked path (the documented O(paths)-per-write limit).
   const children = new Map<string, Set<string>>();
+  const proxies = new Map<string, { version: number; raw: object; proxy: object }>();
   let writesSincePrune = 0;
   let data = structuredClone(initial);
 
@@ -92,6 +93,7 @@ export function createReactiveState<T extends object>(
         if (path === '' || sig.readers() > 0 || (kids && kids.size > 0)) return;
         versions.delete(path);
         children.delete(path);
+        proxies.delete(path);
         children.get(parentOf(path))?.delete(path);
         removed = true;
       });
@@ -122,12 +124,37 @@ export function createReactiveState<T extends object>(
     };
   };
 
+  /**
+   * One proxy per (path, version) — referential identity is part of the
+   * contract, not an implementation detail. `foreign()` hands this proxy
+   * straight to React, whose ecosystem memoizes on identity (`useMemo` deps,
+   * `React.memo`, and every data library's internal memo cache). A fresh object
+   * per read makes "the data changed" true on every single render, which is an
+   * infinite render loop in anything that recomputes on new data — TanStack
+   * Table wedged the main thread on the first sort. Keying the cache on the
+   * version signal gives structural sharing instead: `touch` bumps the written
+   * path AND its ancestors, so a changed subtree gets a new identity all the way
+   * up, while untouched siblings keep theirs.
+   */
   const proxyFor = (target: object, path: string): object => {
-    return new Proxy(target, {
+    // Read, never create: `versionOf` here would register a tracked path for
+    // every path merely proxied, and paths must grow only for paths actually
+    // read. Untracked too — `readTrap` already subscribed the caller, and the
+    // root accessor must not subscribe anyone to every write in the tree.
+    const version = untrack(() => versions.get(path)?.value) ?? 0;
+    const cached = proxies.get(path);
+
+    if (cached && cached.version === version && cached.raw === target) return cached.proxy;
+
+    const proxy = new Proxy(target, {
       get: (raw, key) => readTrap(raw, path, key),
       set: (raw, key, value) => writeTrap(raw, path, key, value),
       deleteProperty: (raw, key) => deleteTrap(raw, path, key),
     });
+
+    proxies.set(path, { version, raw: target, proxy });
+
+    return proxy;
   };
 
   const readTrap = (raw: object, path: string, key: string | symbol): unknown => {

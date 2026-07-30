@@ -1,0 +1,289 @@
+:root {
+  --ink: #0f172a;
+  --violet: #7c3aed;
+  --border: #e2e8f0;
+  --muted: #64748b;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+  background: #fff;
+  color: var(--ink);
+}
+
+.bar {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.bar-hint {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  height: calc(100vh - 46px);
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  border-right: 1px solid var(--border);
+}
+
+/* ── Grid ───────────────────────────────────────────────────────── */
+.grid-shell {
+  width: 100%;
+  max-width: 560px;
+}
+
+.grid-summary {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.grid-filter {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+}
+
+.grid-filter:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 1px;
+}
+
+.grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.grid-table th {
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.grid-sort {
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.grid-sort:hover {
+  color: var(--violet);
+}
+
+.grid-row td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.grid-row td:last-child {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Agent pane ─────────────────────────────────────────────────── */
+.agent-pane {
+  overflow-y: auto;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.agent-pane h2 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.agent-pane .tool-row {
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.agent-pane .tool-row code {
+  font-size: 12px;
+  font-family: var(--mono);
+}
+
+.agent-pane .tool-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.agent-pane .tool-row .example {
+  display: block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: var(--muted);
+  /*
+   * A JSON payload has no spaces to break at, so an inline-block code block
+   * simply hangs out of its card — `signup.submit` overflowed by 78px.
+   */
+  overflow-wrap: anywhere;
+}
+
+.agent-pane .guard {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.agent-pane .guard.auto {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.agent-pane .guard.confirm {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.agent-pane .tool-row button {
+  display: block;
+  margin-top: 8px;
+  padding: 5px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.agent-pane .resource-block {
+  margin-top: 14px;
+}
+
+.agent-pane .resource {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  max-height: 220px;
+  overflow: auto;
+  background: #16143a;
+  color: #a5f3fc;
+  font-size: 12px;
+  font-family: var(--mono);
+}
+
+/* ── Proposal (guard: confirm) ──────────────────────────────────── */
+.proposal-card {
+  margin-top: 12px;
+  padding: 14px;
+  border: 2px solid #dc2626;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+  animation: proposal-pulse 1.2s ease-in-out 2;
+}
+
+.proposal-card p {
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+
+.proposal-card .proposal-title {
+  font-weight: 800;
+  font-size: 13.5px;
+  color: #b91c1c;
+}
+
+.proposal-card .proposal-why {
+  color: #b45309;
+}
+
+.proposal-card code {
+  background: #fee2e2;
+  color: #991b1b;
+  font-family: var(--mono);
+}
+
+.proposal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.proposal-actions .approve {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.proposal-actions .reject {
+  padding: 8px 18px;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  background: #fff;
+  color: #b91c1c;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@keyframes proposal-pulse {
+  50% {
+    box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.25);
+  }
+}
+
+@media (max-width: 800px) {
+  .split {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .preview {
+    min-height: 60vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}

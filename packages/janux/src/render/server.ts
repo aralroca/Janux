@@ -3,6 +3,7 @@ import { createInstance, type JanuxInstance } from '../runtime/instance';
 import type { EventBus } from '../runtime/bus';
 import type { ComponentDef, Ctx } from '../define/types';
 import { isForeignDef, type ForeignDef } from '../interop';
+import { detachProps } from '../interop/detach';
 import { dedupeKey, escapeHtml, renderAttrs, safeJson, safeKey, VOID_ELEMENTS } from './html';
 import { UNSUSPENSE_RUNTIME } from './unsuspense';
 
@@ -326,7 +327,9 @@ async function foreignInner(def: ForeignDef, props: Record<string, unknown>, sco
 
   try {
     const [react, reactServer] = await Promise.all([load('react'), load('react-dom/server')]);
-    const reactProps = def.options.props ? def.options.props(props) : props;
+    const mapped = def.options.props ? def.options.props(props) : props;
+    // The same props boundary as on the client — see interop/detach.
+    const reactProps = detachProps(mapped);
     const element = interopDefault(react).createElement(def.component as any, reactProps as any);
 
     return interopDefault(reactServer).renderToString(element);

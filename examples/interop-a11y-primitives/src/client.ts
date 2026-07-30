@@ -1,0 +1,5 @@
+import { boot } from 'janux/client';
+import { AgentPanel } from './components/AgentPanel';
+import { ConfirmDialogShell } from './components/ConfirmDialogShell';
+
+boot({ defs: [AgentPanel, ConfirmDialogShell], glow: true });

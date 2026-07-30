@@ -99,7 +99,7 @@ export const SECTIONS: SectionDef[] = [
       { label: 'Testing & deployment', slugs: ['testing-components', 'deploying', 'vercel', 'docker'] },
     ],
   },
-  { section: 'more', label: 'More', groups: [{ slugs: ['examples', 'comparison', 'benchmarks', 'faq', 'glossary'] }] },
+  { section: 'more', label: 'More', groups: [{ slugs: ['examples', 'interop-matrix', 'comparison', 'benchmarks', 'faq', 'glossary'] }] },
 ];
 
 export interface DocRef {
