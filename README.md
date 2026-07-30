@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-3933%20passing-brightgreen" alt="3933 tests passing" />
+  <img src="https://img.shields.io/badge/tests-3944%20passing-brightgreen" alt="3944 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -65,6 +65,7 @@ Named after **Janus**, the two-faced Roman god of doorways: one face toward the 
 - [Examples](#examples)
 - [Develop](#develop)
 - [Contributing](#contributing)
+- [Releases](#releases)
 - [License](#license)
 
 ## Install
@@ -224,7 +225,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 85 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 86 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|

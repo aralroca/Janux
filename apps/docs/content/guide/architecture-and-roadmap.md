@@ -37,9 +37,13 @@ Everything the two core app archetypes (a content site and a full console) need 
 - **Interop:** Vue/other runtimes and reverse interop (Janux inside a foreign tree).
 - **Query hydration:** full streaming dehydrate/hydrate of in-flight queries into the SSR payload (today SSR uses a fresh per-request client and the client re-fetches on mount).
 
+## Deliberately out of scope
+
+**A UI component library.** Janux ships no design system and no headless primitives, and none are planned: the maintained surface is `foreign()`, which mounts the React ecosystem unchanged. The reasoning and the recipe are on the [design system page](/docs/guide/design-system).
+
 ## Testing
 
-The framework is developed test-first with `bun:test` + happy-dom (3933 tests, the count `bun run test:census` measures and enforces):
+The framework is developed test-first with `bun:test` + happy-dom (3944 tests, the count `bun run test:census` measures and enforces):
 
 - Resume-without-hydration is asserted (zero component code until interaction).
 - Guard semantics (auto/confirm/forbidden × human/agent) are covered at every layer: instance, HTTP, bridge, agent loop.
