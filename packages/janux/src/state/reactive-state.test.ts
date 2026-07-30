@@ -76,6 +76,52 @@ describe('reactive state', () => {
     expect(runs).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * Referential identity is a contract, not an implementation detail: React
+   * memoization (`useMemo` deps, `React.memo`, and every library's internal memo
+   * cache) is keyed on it, and `foreign()` hands this proxy straight to React.
+   * A fresh identity per read makes "the data changed" true on every render,
+   * which is an infinite render loop in any library that reacts to it. A
+   * permanently stable one is the opposite bug — React never sees the change.
+   * The contract is structural sharing: identity changes iff the subtree did.
+   */
+  describe('referential identity (structural sharing)', () => {
+    it('returns the same object for repeated reads of the same path', () => {
+      const gate = createGate();
+      const state = createReactiveState(initial(), gate);
+
+      expect(state.proxy).toBe(state.proxy);
+      expect(state.proxy.items).toBe(state.proxy.items);
+      expect(state.proxy.items[0]).toBe(state.proxy.items[0]);
+    });
+
+    it('gives a changed subtree a new identity', () => {
+      const gate = createGate();
+      const state = createReactiveState(initial(), gate);
+      const before = state.proxy.items;
+      const beforeRow = state.proxy.items[0];
+
+      withGate(gate, () => {
+        state.proxy.items[0]!.qty = 9;
+      });
+      expect(state.proxy.items[0]).not.toBe(beforeRow);
+      // The ancestor changed too — a React consumer of `items` must re-render.
+      expect(state.proxy.items).not.toBe(before);
+    });
+
+    it('leaves untouched siblings with their identity intact', () => {
+      const gate = createGate();
+      const state = createReactiveState(initial(), gate);
+      const items = state.proxy.items;
+
+      withGate(gate, () => {
+        state.proxy.coupon = 'SAVE10';
+      });
+      // This is what stops a filter keystroke from invalidating 10 000 rows.
+      expect(state.proxy.items).toBe(items);
+    });
+  });
+
   it('snapshot is plain data detached from the proxy', () => {
     const gate = createGate();
     const state = createReactiveState(initial(), gate);

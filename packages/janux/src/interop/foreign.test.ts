@@ -4,7 +4,7 @@ import { createElement, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { component, intent } from '../define/factories';
 import { jsx } from '../jsx-runtime';
-import { bool, int, schema, str } from '../schema';
+import { bool, int, list, obj, schema, str } from '../schema';
 import { renderToString } from '../render/server';
 import { boot, type JanuxClient } from '../client/boot';
 import { foreign } from './index';
@@ -148,6 +148,39 @@ const sheetShell = component({
   state: schema({ open: bool().default(true) }),
   intents: { close: intent({ run: ({ state }) => (state.open = false) }) },
   view: ({ state }: any) => jsx('section', { children: jsx(SheetIsland as any, { state }) }),
+});
+
+const effectRuns: string[] = [];
+
+/**
+ * The whole React ecosystem memoizes on referential identity: `useMemo`/
+ * `useEffect` deps, `React.memo`, and every data library's internal cache. A
+ * foreign island hands island state straight to React as props, so if a read of
+ * `state.rows` returned a fresh object each time, "the data changed" would be
+ * true on every render — the recompute-on-new-data path of any such library,
+ * every frame, forever.
+ */
+function Memoized({ rows, label }: { rows: { id: string }[]; label: string }) {
+  useEffect(() => {
+    effectRuns.push(rows.map((row) => row.id).join(','));
+  }, [rows]);
+
+  return createElement('output', { className: 'memo-label' }, label);
+}
+
+const MemoIsland = foreign(Memoized, {
+  name: 'memo',
+  props: (own: any) => ({ rows: own.state.rows, label: own.state.label }),
+});
+
+const memoShell = component({
+  name: 'memo-shell',
+  state: schema({ rows: list(obj({ id: str() })).default([{ id: 'a' }]), label: str().default('one') }),
+  intents: {
+    relabel: intent({ run: ({ state }) => (state.label = 'two') }),
+    addRow: intent({ run: ({ state }) => state.rows.push({ id: 'b' }) }),
+  },
+  view: ({ state }: any) => jsx('section', { children: jsx(MemoIsland as any, { state }) }),
 });
 
 async function until(check: () => boolean, ms = 1500): Promise<void> {
@@ -349,6 +382,35 @@ describe('foreign callbacks that do not fit args[0]', () => {
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+
+  it('keeps React memoization honest: an unrelated write does not invalidate a props array', async () => {
+    const { html, snapshots } = await renderToString(jsx(memoShell as any, {}), {});
+
+    document.body.innerHTML =
+      html +
+      snapshots
+        .map(
+          (snap) =>
+            `<script type="application/janux+state" data-uri="${snap.uri}">${JSON.stringify({ state: snap.state, sources: snap.sources ?? {} })}</script>`,
+        )
+        .join('');
+    effectRuns.length = 0;
+    const client = boot({ defs: [memoShell, MemoIsland] });
+
+    await until(() => effectRuns.length === 1);
+
+    // Writing `label` must not hand React a new `rows` array…
+    await client.call('memo-shell.relabel');
+    await client.settled();
+    await until(() => document.querySelector('.memo-label')?.textContent === 'two');
+    expect(effectRuns).toEqual(['a']);
+
+    // …but writing `rows` must, or React would never see the change.
+    await client.call('memo-shell.addRow');
+    await client.settled();
+    await until(() => effectRuns.length === 2);
+    expect(effectRuns).toEqual(['a', 'a,b']);
   });
 
   it('maps a multi-argument callback onto the intent input', async () => {

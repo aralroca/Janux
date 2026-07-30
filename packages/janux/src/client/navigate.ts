@@ -240,17 +240,6 @@ function keepModalsHonest(): () => void {
 /** Marks a runtime-injected body node the whole-document diff must not own. */
 export const KEEP_ATTRIBUTE = 'data-janux-keep';
 
-let morphing = false;
-
-/**
- * True only while the whole-document diff is rewriting the DOM. Nodes appearing
- * in that window belong to the incoming route; nodes appearing outside it were
- * injected by something live in the session (see `keepRuntimeNodes`).
- */
-export function isMorphing(): boolean {
-  return morphing;
-}
-
 /**
  * Snapshots where `nodes` live and, once the diff has run, puts back whatever it
  * removed — in place, since a node the app positioned inside its own layout must
@@ -389,7 +378,6 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
   try {
     throwIfAborted(signal);
     // The Navigation API drives the transition; diff directly (its own would be skipped).
-    morphing = true;
     await diff(document, page);
     /*
      * A superseded navigation must not report success: the diff can finish
@@ -411,7 +399,6 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
     });
     throw error;
   } finally {
-    morphing = false;
     stopRunningScripts();
     stopRestoring();
     stopInstallingListeners();

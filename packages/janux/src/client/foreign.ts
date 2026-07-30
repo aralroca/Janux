@@ -1,7 +1,7 @@
 import { signal, effect as watch, untrack, type Sig } from '../signals';
 import type { ForeignDef, HydrateDirective } from '../interop';
 import type { JanuxInstance } from '../runtime/instance';
-import { isMorphing, KEEP_ATTRIBUTE } from './navigate';
+import { KEEP_ATTRIBUTE } from './navigate';
 
 /** A live foreign (React) root bound to a host element. */
 export interface ForeignHandle {
@@ -66,6 +66,19 @@ function reportError(error: unknown): void {
 }
 
 /**
+ * React tags every host node it creates with an internal fiber key, and it does
+ * so before inserting it — so at mutation time this tells a React-owned node
+ * from one the morph, the app or another library put there. Narrow on purpose:
+ * tagging every body insertion would make an app's own nodes survive
+ * navigations they should not.
+ */
+const REACT_KEY = /^__react(Fiber|Container)\$/;
+
+function reactOwned(node: Element): boolean {
+  return Object.keys(node).some((key) => REACT_KEY.test(key));
+}
+
+/**
  * A11y primitives (Radix, base-ui) portal their popups into `<body>` — OUTSIDE
  * the `<janux-foreign>` host the morph treats as an opaque leaf. Left alone, a
  * navigation removes nodes this root still owns and React throws
@@ -73,20 +86,19 @@ function reportError(error: unknown): void {
  * midway: every effect cleanup after the portal is skipped, so a dialog's
  * scroll-lock never releases and `<body>` stays unscrollable on the next page.
  *
- * Anything a live foreign root adds directly to `<body>` is runtime-injected,
- * which is exactly what `data-janux-keep` marks. The morph is excluded because
- * the nodes IT adds are the incoming route's own, and tagging those would make
- * them survive the *next* navigation.
+ * A React-owned node added directly to `<body>` is runtime-injected, which is
+ * exactly what `data-janux-keep` marks: it belongs to the session, not to the
+ * route. The morph then leaves it alone, React unmounts cleanly, and its own
+ * teardown removes it.
  */
 function keepPortalsAcrossNavigation(): () => void {
-  const observer = new MutationObserver((records) => {
-    if (isMorphing()) return;
+  const observer = new MutationObserver((records) =>
     records.forEach(({ addedNodes }) =>
       addedNodes.forEach((node) => {
-        if (node instanceof Element) node.setAttribute(KEEP_ATTRIBUTE, '');
+        if (node instanceof Element && reactOwned(node)) node.setAttribute(KEEP_ATTRIBUTE, '');
       }),
-    );
-  });
+    ),
+  );
 
   observer.observe(document.body, { childList: true });
 

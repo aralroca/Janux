@@ -450,6 +450,23 @@
         "janux": "workspace:*",
       },
     },
+    "examples/interop-data-grid": {
+      "name": "janux-example-interop-data-grid",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "@tanstack/react-table": "^8.21.3",
+        "janux": "workspace:*",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+      },
+      "devDependencies": {
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+      },
+    },
     "examples/interop-react": {
       "name": "janux-example-interop-react",
       "version": "0.2.1",
@@ -1300,6 +1317,10 @@
 
     "@tanstack/query-core": ["@tanstack/query-core@5.101.4", "", {}, "sha512-gNwcvOJcRbLWPOLG/2OBm+zM+Yv+MKsXKEOWC57USuZDEsI71hEErQsiEGx5wX9rzWWkfwM0fVSPoiIFSsxfiw=="],
 
+    "@tanstack/react-table": ["@tanstack/react-table@8.21.3", "", { "dependencies": { "@tanstack/table-core": "8.21.3" }, "peerDependencies": { "react": ">=16.8", "react-dom": ">=16.8" } }, "sha512-5nNMTSETP4ykGegmVkhjcS8tTLW6Vl4axfEGQN3v0zdHYbK4UfoqfPChclTrJ4EoK9QynqAu9oUf8VEmrpZ5Ww=="],
+
+    "@tanstack/table-core": ["@tanstack/table-core@8.21.3", "", {}, "sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg=="],
+
     "@tsrx/core": ["@tsrx/core@0.1.54", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5", "@noble/hashes": "^2.2.0", "@sveltejs/acorn-typescript": "^1.0.11", "@types/estree": "^1.0.8", "@types/estree-jsx": "^1.0.5", "acorn": "^8.17.0", "esrap": "^2.3.0", "is-reference": "^3.0.3", "magic-string": "^0.30.18", "zimmerframe": "^1.1.2" } }, "sha512-DbPskFFyJyako9pIRZDwipM/zIKDrfUcsHsGP8KHK5+Z2yY+tR2PUki+ThgnUA3+LqZo4Khc+07S62tFRX3TeQ=="],
 
     "@tsrx/react": ["@tsrx/react@0.2.54", "", { "dependencies": { "@tsrx/core": "0.1.54", "esrap": "^2.3.0", "zimmerframe": "^1.1.2" }, "peerDependencies": { "react": ">=18" } }, "sha512-+BIg13Vw9vy4AQH+dWdrXiHs2W5F+zRPGn0uwF7ZYHsMpl7i+cHe1bhsM+vwjWBTvdsVvxHMzvCLNlYP8s+I8w=="],
@@ -1657,6 +1678,8 @@
     "janux-example-human-in-the-loop": ["janux-example-human-in-the-loop@workspace:examples/human-in-the-loop"],
 
     "janux-example-i18n": ["janux-example-i18n@workspace:examples/i18n"],
+
+    "janux-example-interop-data-grid": ["janux-example-interop-data-grid@workspace:examples/interop-data-grid"],
 
     "janux-example-interop-react": ["janux-example-interop-react@workspace:examples/interop-react"],
 
