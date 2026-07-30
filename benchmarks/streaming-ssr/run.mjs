@@ -1,3 +1,4 @@
+// Derived from octane/benchmarks (MIT) — Copyright (c) 2026 Dominic Gannaway. See benchmarks/LICENSE-OCTANE.
 // streaming-ssr bench harness — Node-only streaming SSR (NO browser, NO ports,
 // NO Playwright). Times the BUILT production SSR bundles of five targets —
 // octane renderToPipeableStream ('octane/server'), React 19 Fizz

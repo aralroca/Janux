@@ -1,3 +1,4 @@
+// Derived from octane/benchmarks (MIT) — Copyright (c) 2026 Dominic Gannaway. See benchmarks/LICENSE-OCTANE.
 // Generates a deterministic lorem-ipsum article dataset shared by the bench
 // app(s). Run `node gen.mjs [count]` (default 50). Writes the SAME dataset into
 // every target app's src/data.js (octane, solid, …) so each framework

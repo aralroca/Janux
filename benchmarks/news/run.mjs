@@ -1,3 +1,4 @@
+// Derived from octane/benchmarks (MIT) — Copyright (c) 2026 Dominic Gannaway. See benchmarks/LICENSE-OCTANE.
 // News-site SSR + hydration benchmark harness — PRODUCTION builds only.
 //
 // Benches must reflect production, never dev: dev mode ships unminified code and

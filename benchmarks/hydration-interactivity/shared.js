@@ -1,3 +1,4 @@
+// Derived from octane/benchmarks (MIT) — Copyright (c) 2026 Dominic Gannaway. See benchmarks/LICENSE-OCTANE.
 export const INITIAL_VALUE = '';
 export const PRE_HYDRATION_TEXT = 'typed before hydration';
 export const POST_HYDRATION_TEXT = ' and still responsive';

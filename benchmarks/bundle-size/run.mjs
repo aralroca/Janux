@@ -1,3 +1,4 @@
+// Derived from octane/benchmarks (MIT) — Copyright (c) 2026 Dominic Gannaway. See benchmarks/LICENSE-OCTANE.
 // Bundle-size benchmark — PRODUCTION `vite build` of each comparative app,
 // reporting the built client JS bytes (raw / gzip / brotli) per framework. This
 // is the cross-framework shipped-bytes comparison the perf suites can't see
