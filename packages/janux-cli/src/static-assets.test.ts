@@ -4,7 +4,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { brotliDecompressSync, gunzipSync } from 'node:zlib';
-import { cacheControl, staticResponse } from './static-assets';
+import { cacheControl, contentType, staticResponse } from './static-assets';
 
 const dir = mkdtempSync(join(tmpdir(), 'janux-static-'));
 const SCRIPT = `export const app = ${JSON.stringify('x'.repeat(4000))};\n`;
@@ -32,6 +32,36 @@ describe('cacheControl', () => {
   it('makes an unhashed file revalidate, since the same URL will serve new bytes', () => {
     expect(cacheControl('/sw.js')).toBe('public, max-age=0, must-revalidate');
     expect(cacheControl('/favicon.svg')).toBe('public, max-age=0, must-revalidate');
+  });
+});
+
+/**
+ * `Bun.file().type` used to answer this, and dropping it must not change a
+ * single header a browser sees — so Bun itself is the oracle. A new extension
+ * added to the map is checked against Bun rather than against someone's memory
+ * of what the MIME type is.
+ */
+describe('contentType', () => {
+  const EXTENSIONS = [
+    'js', 'mjs', 'css', 'html', 'json', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif',
+    'ico', 'woff', 'woff2', 'ttf', 'otf', 'wasm', 'xml', 'txt', 'md', 'map', 'webmanifest',
+  ];
+
+  it.each(EXTENSIONS)('agrees with Bun.file().type for .%s', (extension) => {
+    expect(contentType(`/assets/thing.${extension}`)).toBe(Bun.file(`thing.${extension}`).type);
+  });
+
+  it('falls back to octet-stream for an extension nobody has a type for', () => {
+    expect(contentType('/downloads/archive.wat')).toBe('application/octet-stream');
+    expect(contentType('/LICENSE')).toBe('application/octet-stream');
+  });
+
+  it('covers every text format the compressor is meant to reach', () => {
+    // The COMPRESSIBLE gate keys off the type, so a wrong type silently stops
+    // compressing a 3 MB bundle — the exact bug this map could introduce.
+    ['js', 'mjs', 'css', 'html', 'json', 'map', 'svg', 'wasm', 'xml', 'txt'].forEach((extension) => {
+      expect(contentType(`x.${extension}`)).toMatch(/^(?:text\/|image\/svg|application\/(?:javascript|json|wasm|xml|manifest))/);
+    });
   });
 });
 

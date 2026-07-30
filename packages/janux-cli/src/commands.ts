@@ -1,4 +1,5 @@
 import { cpSync, existsSync, mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { createJanuxServer } from '@janux/server';
 import { janux, resolveAppConfig } from '@janux/vite';
@@ -9,7 +10,7 @@ import type { CliCommand } from './args';
 /** Zero-config integrations: installing @janux/tailwind IS the configuration. */
 export async function loadTailwindPlugin(root: string): Promise<any | undefined> {
   try {
-    const mod = await import(Bun.resolveSync('@janux/tailwind', root));
+    const mod = await import(createRequire(join(root, 'package.json')).resolve('@janux/tailwind'));
 
     return mod.default();
   } catch {

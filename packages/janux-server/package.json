@@ -14,7 +14,8 @@
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./platform": "./src/platform.ts"
   },
   "dependencies": {
     "janux": "workspace:*",
@@ -47,6 +48,10 @@
       ".": {
         "types": "./dist/src/index.d.ts",
         "default": "./dist/src/index.js"
+      },
+      "./platform": {
+        "types": "./dist/src/platform.d.ts",
+        "default": "./dist/src/platform.js"
       }
     }
   },

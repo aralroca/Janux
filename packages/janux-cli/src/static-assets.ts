@@ -15,9 +15,47 @@
  */
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 import { join } from 'node:path';
+import { platform } from '@janux/server/platform';
 
 /** Vite's content hash: `index-a1b2c3d4.js`. */
 const HASHED = /-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/;
+/**
+ * What `Bun.file().type` used to answer, as data — because a Node deployment
+ * has no `Bun.file` to ask, and the two must not disagree by a byte. Kept
+ * honest by a test that compares every entry against Bun itself.
+ */
+const TYPES: Record<string, string> = {
+  js: 'text/javascript;charset=utf-8',
+  mjs: 'text/javascript;charset=utf-8',
+  css: 'text/css;charset=utf-8',
+  html: 'text/html;charset=utf-8',
+  json: 'application/json;charset=utf-8',
+  map: 'application/json;charset=utf-8',
+  txt: 'text/plain;charset=utf-8',
+  md: 'text/markdown',
+  xml: 'application/xml',
+  wasm: 'application/wasm',
+  webmanifest: 'application/manifest+json',
+  svg: 'image/svg+xml',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  avif: 'image/avif',
+  ico: 'image/x-icon',
+  woff: 'font/woff',
+  woff2: 'font/woff2',
+  ttf: 'font/ttf',
+  otf: 'font/otf',
+};
+
+/** The `content-type` for a built asset, by extension. */
+export function contentType(pathname: string): string {
+  const extension = pathname.slice(pathname.lastIndexOf('.') + 1).toLowerCase();
+
+  return TYPES[extension] ?? 'application/octet-stream';
+}
 /** Anything whose bytes are already a compressed format compresses to nothing. */
 const COMPRESSIBLE = /^(?:text\/|image\/svg|application\/(?:javascript|json|wasm|xml|manifest))/;
 /**
@@ -63,14 +101,19 @@ function compress(path: string, encoding: string, bytes: Uint8Array): Body {
 export async function staticResponse(dir: string, req: Request): Promise<Response | undefined> {
   const { pathname } = new URL(req.url);
   const path = join(dir, pathname.slice(1));
-  const file = Bun.file(path);
 
-  if (pathname === '/' || !(await file.exists())) return undefined;
+  if (pathname === '/') return undefined;
+  const file = await platform.openFile(path);
 
-  const headers = { 'cache-control': cacheControl(pathname), 'content-type': file.type };
-  const encoding = pickEncoding(req.headers.get('accept-encoding') ?? '', file.type);
+  if (!file) return undefined;
 
-  if (!encoding) return new Response(file, { headers });
+  const type = contentType(pathname);
+  const headers = { 'cache-control': cacheControl(pathname), 'content-type': type };
+  const encoding = pickEncoding(req.headers.get('accept-encoding') ?? '', type);
+
+  // Uncompressed bodies stream from disk: under Bun that is still the same
+  // `BunFile`, so the zero-copy send a large font or image takes is unchanged.
+  if (!encoding) return new Response(file.stream(), { headers });
 
   return new Response(compress(path, encoding, await file.bytes()), {
     headers: { ...headers, 'content-encoding': encoding, vary: 'Accept-Encoding' },
