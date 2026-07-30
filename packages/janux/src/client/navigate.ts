@@ -3,6 +3,7 @@ import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { scanMarkers, scanTree } from './events';
 import { consumePrefetched, navigableBody, NAVIGATION_HEADERS } from './prefetch';
+import { saveWidgetFocus, settleRouteA11y } from './route-a11y';
 import { runScriptsWhileStreaming } from './scripts';
 import { rescopeSpeculationRules } from './speculation';
 
@@ -435,6 +436,10 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
   // Everything mounted before this line belongs to the page being left.
   mount.epoch = (mount.epoch ?? 0) + 1;
   emitNavigate('before', from, url);
+  // Read while the widget is still in the document: applying the page lifts
+  // persisted islands out of it, and removing a node blurs whatever it held.
+  const widgetFocus = saveWidgetFocus();
+
   try {
     throwIfAborted(options.signal);
     const page = await fetchPage(url, options.signal);
@@ -452,6 +457,13 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
   }
   try {
     await wireUpPage(mount);
+    /*
+     * Last, so `after` means "settled": the page is on screen, its islands are
+     * wired, and only then is the change announced and focus moved. A view
+     * transition wrapping the diff must resolve before this line for the same
+     * reason — a transition is not a moment to speak into or to focus during.
+     */
+    settleRouteA11y(widgetFocus);
     emitNavigate('after', from, url);
   } catch (error) {
     /*
