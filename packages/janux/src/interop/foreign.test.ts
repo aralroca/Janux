@@ -183,6 +183,30 @@ const memoShell = component({
   view: ({ state }: any) => jsx('section', { children: jsx(MemoIsland as any, { state }) }),
 });
 
+/**
+ * Immer freezes whatever it is handed, and Immer is inside Redux Toolkit, which
+ * is inside Recharts 3 — so "a library deep-freezes your props" is ordinary, not
+ * exotic. Freezing a Proxy freezes its TARGET, which would make island state
+ * permanently unwritable and make every later read throw a Proxy invariant
+ * error ("the proxy did not return its actual value"). The boundary hands React
+ * plain data for exactly this reason.
+ */
+function Freezer({ rows }: { rows: { id: string }[] }) {
+  Object.freeze(rows);
+  rows.forEach((row) => Object.freeze(row));
+
+  return createElement('output', { className: 'freezer' }, rows.map((row) => row.id).join(','));
+}
+
+const FreezerIsland = foreign(Freezer, { name: 'freezer', props: (own: any) => ({ rows: own.state.rows }) });
+
+const freezerShell = component({
+  name: 'freezer-shell',
+  state: schema({ rows: list(obj({ id: str() })).default([{ id: 'a' }]) }),
+  intents: { addRow: intent({ run: ({ state }) => state.rows.push({ id: 'b' }) }) },
+  view: ({ state }: any) => jsx('section', { children: jsx(FreezerIsland as any, { state }) }),
+});
+
 async function until(check: () => boolean, ms = 1500): Promise<void> {
   const start = Date.now();
 
@@ -411,6 +435,28 @@ describe('foreign callbacks that do not fit args[0]', () => {
     await client.settled();
     await until(() => effectRuns.length === 2);
     expect(effectRuns).toEqual(['a', 'a,b']);
+  });
+
+  it('survives a foreign component that deep-freezes its props (Immer, and so Redux Toolkit)', async () => {
+    const { html, snapshots } = await renderToString(jsx(freezerShell as any, {}), {});
+
+    document.body.innerHTML =
+      html +
+      snapshots
+        .map(
+          (snap) =>
+            `<script type="application/janux+state" data-uri="${snap.uri}">${JSON.stringify({ state: snap.state, sources: snap.sources ?? {} })}</script>`,
+        )
+        .join('');
+    const client = boot({ defs: [freezerShell, FreezerIsland] });
+
+    await until(() => document.querySelector('.freezer')?.textContent === 'a');
+
+    // The island's own state must still be writable — if React froze the proxy
+    // target, this push throws and the app is dead from here on.
+    await client.call('freezer-shell.addRow');
+    await client.settled();
+    await until(() => document.querySelector('.freezer')?.textContent === 'a,b');
   });
 
   it('maps a multi-argument callback onto the intent input', async () => {

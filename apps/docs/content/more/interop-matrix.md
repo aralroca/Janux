@@ -11,14 +11,17 @@ One example per **category**, not per library — the constraint that keeps this
 | Category | Library | Status | SSR | Agent surface | Client JS (gzip) |
 |---|---|---|---|---|---|
 | Data grid | `@tanstack/react-table` 8.21 | ✅ [`interop-data-grid`](https://github.com/aralroca/Janux/tree/main/examples/interop-data-grid) | ✅ full | `sort`, `filter`, `reset` | 97 kB |
+| Charts | `recharts` 3.10 | ⚠️ [`interop-charts`](https://github.com/aralroca/Janux/tree/main/examples/interop-charts) | ⚠️ sized box, no SVG | `toggleSeries`, `inspect`, `reset` | 188 kB |
 | Hand-written React | — | ✅ [`interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) | ✅ full | `setBand`, `flat` | 83 kB |
 | Graph editor | `@xyflow/react` 12.11 | ⚠️ [`with-web-agent`](https://github.com/aralroca/Janux/tree/main/examples/with-web-agent) | ❌ `hydrate: 'only'` | `addStep` | — |
+
+Recharts 3 computes its layout in effects, so its server render is a correctly sized wrapper with **no SVG inside** — the box is reserved (no layout shift) but the data is not in the HTML. That is Recharts' own behavior: `renderToString` of a bare `<LineChart>` outside Janux produces the same empty wrapper, and the example's e2e suite asserts it so the caveat cannot rot into a claim. The numbers are still server-rendered in the island's `ui://chart` resource, which is the argument for keeping state in the shell rather than inside the foreign component.
 
 `with-web-agent` mounts React Flow but drives it one way only (island state → React); it has no `on:` bridge back. A dedicated round-trip example is still to come.
 
 ## What bit, and what it cost to fix
 
-Two things in `foreign()` were genuinely broken for real libraries. Both were found by writing the failing test first, and both are fixed in the framework rather than worked around in the examples.
+Four things in `foreign()` were genuinely broken for real libraries. Each was found by writing the failing test first, and each is fixed in the framework rather than worked around in the examples.
 
 ### Callbacks whose first argument is not the payload
 
@@ -35,6 +38,12 @@ A function is not a valid intent input, and neither is a live DOM object. The [m
 ### Portals escape the foreign host
 
 Every a11y-primitive library renders popups into `document.body`, outside the `<janux-foreign>` host the morph treats as an opaque leaf. A navigation removed nodes the React root still owned, and React threw `removeChild: the node to be removed is not a child of this node` on unmount — aborting the teardown midway, so effect cleanups after the portal never ran and a dialog's scroll-lock outlived the page that opened it. React-owned nodes added to `<body>` are now marked runtime-injected, so the morph leaves them alone and React tears down cleanly.
+
+### Libraries that freeze your props
+
+Immer freezes whatever it is handed; Immer is inside Redux Toolkit, and Redux Toolkit is inside Recharts 3 — so "a library deep-freezes your props" is ordinary, not exotic. Freezing a Proxy freezes its *target*, which meant island state became permanently unwritable and every later read threw `'get' on proxy: … the proxy did not return its actual value`.
+
+A foreign component now receives **plain data**, never the live state proxy — on the server and on the client. That also closes the back door where a third-party component could mutate island state directly, behind the intents that are supposed to be the only way in. It is not a copy per render: plain data is cached by the proxy that produced it, and proxies are stable per subtree, so an unchanged 10 000-row list is never re-cloned because a filter string changed.
 
 ### Referential identity
 
@@ -78,6 +87,7 @@ React interop is opt-in and per-island: an app with no foreign island ships none
 | A Janux app with no foreign island (`with-tailwind`) | 69 kB | 24 kB |
 | `interop-react` (React + react-dom) | 259 kB | 83 kB |
 | `interop-data-grid` (+ `@tanstack/react-table`) | 312 kB | 97 kB |
+| `interop-charts` (+ `recharts`) | 619 kB | 188 kB |
 
 Measured from `dist/client` after `janux build`.
 
