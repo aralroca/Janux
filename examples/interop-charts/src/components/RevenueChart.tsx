@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import { CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
+import type { CurveMouseEventHandler } from 'recharts/types/shape/Curve';
 
 export interface Point {
   month: string;
@@ -11,7 +12,8 @@ export interface RevenueChartProps {
   points: Point[];
   hidden: string[];
   selected: number;
-  onPointClick?: (data: unknown, index: number, event: unknown) => void;
+  /** Recharts' own handler type — its second argument is the payload an intent wants. */
+  onPointClick?: CurveMouseEventHandler;
   onLegendClick?: (entry: { dataKey?: unknown }) => void;
 }
 

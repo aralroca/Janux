@@ -207,6 +207,7 @@ Full tables, methodology and machine specs:
 - [`examples/interop-data-grid`](examples/interop-data-grid) — `@tanstack/react-table` unchanged: a fully controlled grid whose sort, filter and rows are island state, with TanStack's updater-function callbacks mapped onto intents.
 - [`examples/interop-charts`](examples/interop-charts) — `recharts` unchanged: legend clicks and point clicks become typed intents (its payload is the *second* callback argument), and the SSR limit is asserted rather than glossed over.
 - [`examples/interop-virtual-list`](examples/interop-virtual-list) — `@tanstack/react-virtual` unchanged: 10,000 rows server-rendered as a real first window, and an agent that scrolls to a row which isn't in the DOM at all.
+- [`examples/interop-drag-drop`](examples/interop-drag-drop) — `@dnd-kit` unchanged: a drag whose event is an unserializable object graph becomes a typed `move` intent, which the agent calls without dragging anything.
 - [`examples/nested-islands`](examples/nested-islands) — stateful islands inside stateful islands, with dispose semantics.
 - [`examples/data-cache`](examples/data-cache) — `useQuery` with a reactive query key, typed URL state (`urlState`) that deep-links and honors Back, and agent parity for the same filter.
 - [`examples/with-suspense`](examples/with-suspense) — streaming SSR: independent `suspense` boundaries that reveal mid-stream, and `error` boundaries that bubble.

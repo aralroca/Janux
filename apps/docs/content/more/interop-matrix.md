@@ -13,6 +13,7 @@ One example per **category**, not per library — the constraint that keeps this
 | Data grid | `@tanstack/react-table` 8.21 | ✅ [`interop-data-grid`](https://github.com/aralroca/Janux/tree/main/examples/interop-data-grid) | ✅ full | `sort`, `filter`, `reset` | 97 kB |
 | Charts | `recharts` 3.10 | ⚠️ [`interop-charts`](https://github.com/aralroca/Janux/tree/main/examples/interop-charts) | ⚠️ sized box, no SVG | `toggleSeries`, `inspect`, `reset` | 188 kB |
 | Virtualization | `@tanstack/react-virtual` 3.14 | ✅ [`interop-virtual-list`](https://github.com/aralroca/Janux/tree/main/examples/interop-virtual-list) | ✅ first window | `select`, `scrollToRow`, `clear` | 91 kB |
+| Drag & drop | `@dnd-kit` 6.3 / 10.0 | ✅ [`interop-drag-drop`](https://github.com/aralroca/Janux/tree/main/examples/interop-drag-drop) | ✅ full, a11y intact | `move`, `reset` | 98 kB |
 | Hand-written React | — | ✅ [`interop-react`](https://github.com/aralroca/Janux/tree/main/examples/interop-react) | ✅ full | `setBand`, `flat` | 83 kB |
 | Graph editor | `@xyflow/react` 12.11 | ⚠️ [`with-web-agent`](https://github.com/aralroca/Janux/tree/main/examples/with-web-agent) | ❌ `hydrate: 'only'` | `addStep` | — |
 
@@ -49,6 +50,15 @@ A foreign component now receives **plain data**, never the live state proxy — 
 ### Referential identity
 
 Reading `state.rows` twice used to return two different objects. React's entire ecosystem memoizes on identity — `useMemo`/`useEffect` deps, `React.memo`, and every data library's internal cache — so "the data changed" was true on every render. State now gives **structural sharing**: a changed subtree gets a new identity all the way up its ancestors, and untouched siblings keep theirs.
+
+## Verified by hand, not gated in CI
+
+Stated separately because a matrix that quietly counts manual checks as CI coverage is the exact dishonesty this page exists to avoid.
+
+| Thing | Status |
+|---|---|
+| dnd-kit's **keyboard sensor** (Space / arrows / Space) | Works, and produces the same `move` intent as a pointer drag. Not asserted in CI: the drag commits in stages and moves focus during pickup, and every signal we tried for "the arrow move landed" was itself racy. A flaky gate is worse than an honest gap. |
+| `@base-ui-components/react` for a11y primitives | Not verified. It is `1.0.0-rc.0`; pinning CI to a release candidate buys instability rather than coverage. Radix is the library the a11y row actually mounts. |
 
 ## Known limits
 
@@ -93,6 +103,7 @@ React interop is opt-in and per-island: an app with no foreign island ships none
 | `interop-react` (React + react-dom) | 259 kB | 83 kB |
 | `interop-data-grid` (+ `@tanstack/react-table`) | 312 kB | 97 kB |
 | `interop-virtual-list` (+ `@tanstack/react-virtual`) | 284 kB | 91 kB |
+| `interop-drag-drop` (+ `@dnd-kit`) | 305 kB | 98 kB |
 | `interop-charts` (+ `recharts`) | 619 kB | 188 kB |
 
 Measured from `dist/client` after `janux build`.
