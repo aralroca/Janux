@@ -20,6 +20,14 @@ import { createJanuxServer } from '@janux/server';
 import { prodServerOptions, type PrebuiltApp } from './prod';
 
 /**
+ * Serving the built client is the same job on every target that serves it at
+ * all (a CDN-backed one does not), so it is part of the adapter surface rather
+ * than something each adapter reimplements: compression, caching headers and
+ * content types included.
+ */
+export { staticResponse, cacheControl, contentType } from './static-assets';
+
+/**
  * An app whose modules were resolved at build time, plus the root the *running*
  * deployment sees — `/var/task/...`, not the build machine's directory.
  */
@@ -77,6 +85,15 @@ export interface AdapterBuilder {
   bundle(outfile: string, target: 'node' | 'bun'): Promise<number>;
   /** Copies `dist/client` to `to` (relative to `root`), creating it if needed. */
   copyClient(to: string): void;
+  /**
+   * Copies a directory the app reads at runtime, and reports whether it was
+   * there. `src/` is the one every deployment needs: the bundle inlines the
+   * route *modules*, but the router still reads the directory to learn which
+   * URLs exist. App data (`content/`, `data/`) is the other case.
+   */
+  copyDir(from: string, to: string): boolean;
+  /** Writes a file the platform expects — a launcher, a manifest, a `package.json`. Parent directories are created. */
+  write(path: string, contents: string): Promise<void>;
   log(message: string): void;
 }
 

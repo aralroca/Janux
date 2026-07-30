@@ -1,0 +1,66 @@
+{
+  "name": "@janux/node",
+  "version": "0.5.0",
+  "description": "Deploy a Janux app to any Node 24+ host — a self-contained build/ directory, no Bun in production.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aralroca/Janux.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Aral Roca Gomez",
+    "email": "contact@aralroca.com"
+  },
+  "homepage": "https://github.com/aralroca/Janux#readme",
+  "bugs": "https://github.com/aralroca/Janux/issues",
+  "keywords": [
+    "janux",
+    "node",
+    "adapter",
+    "deploy",
+    "ssr"
+  ],
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "janux-node": "./bin.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/src/index.js",
+    "module": "./dist/src/index.js",
+    "types": "./dist/src/index.d.ts",
+    "bin": {
+      "janux-node": "./dist/bin.js"
+    },
+    "exports": {
+      ".": {
+        "types": "./dist/src/index.d.ts",
+        "default": "./dist/src/index.js"
+      }
+    }
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/vite": "workspace:*",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "janux": "workspace:*"
+  },
+  "scripts": {
+    "prepublishOnly": "bun ../../scripts/prepublish-guard.ts"
+  }
+}

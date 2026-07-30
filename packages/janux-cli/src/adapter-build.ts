@@ -77,6 +77,16 @@ export function createAdapterBuilder(root: string, config: JanuxAppConfig, name:
       return Bun.file(join(root, outfile)).size;
     },
 
+    write: (path, contents) => write(join(root, path), contents),
+
+    copyDir: (from, to) => {
+      if (!existsSync(join(root, from))) return false;
+      mkdirSync(join(root, to), { recursive: true });
+      cpSync(join(root, from), join(root, to), { recursive: true });
+
+      return true;
+    },
+
     copyClient: (to) => {
       const from = join(root, 'dist/client');
 
