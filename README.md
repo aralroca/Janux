@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-3910%20passing-brightgreen" alt="3910 tests passing" />
+  <img src="https://img.shields.io/badge/tests-3982%20passing-brightgreen" alt="3982 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -224,7 +224,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 85 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 86 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -317,6 +317,7 @@ One example per **category**, each verified in CI — the [compatibility matrix]
 | [`with-suspense`](examples/with-suspense) | Streaming SSR: independent `suspense` boundaries that reveal mid-stream, and `error` boundaries that bubble. |
 | [`with-advanced-routing`](examples/with-advanced-routing) | The full router grammar: `[slug]`, `[...path]`, `[[...rest]]`, `[id=integer]`/`[uid=uuid]` matchers, nested `_layout.tsx` chains, `(marketing)` groups and the `_404.tsx`/`_500.tsx` pages, plus SPA navigation with a `persist` island. |
 | [`blog-static`](examples/blog-static) | A markdown blog exported with `output: 'static'` + `staticParams`: zero-JS pages, speculation rules, and the agent face (`llms.txt`, sitemap, `.md` projections) from the same build. |
+| [`with-images`](examples/with-images) | The image primitive: one `<Image>` renders AVIF/WebP candidates written by `janux build`, a `srcset` derived from the layout width, and `width`/`height` on every tag — CLS 0 with `output: 'static'` and 0 KB of JS. |
 | [`i18n`](examples/i18n) | Internationalization: locale-prefixed routing, language switcher, type-safe `t()` with plurals, and page-scoped client translations. |
 
 ### Styling

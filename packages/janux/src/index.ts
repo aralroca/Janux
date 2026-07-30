@@ -62,6 +62,16 @@ export {
   type NavigationConfig,
   type SpeculationRulesConfig,
 } from './config';
+export { Image, type ImageProps } from './image/image';
+export {
+  IMAGE_FORMATS,
+  IMAGE_WIDTHS,
+  isOptimizable,
+  parseVariantUrl,
+  variantUrl,
+  type ImageFormat,
+  type ImageVariant,
+} from './image/urls';
 export type { PageMeta, HeadTag } from './meta';
 export { isNotFoundError, notFound } from './not-found';
 export {

@@ -56,6 +56,17 @@ A `*.api.ts` module runs on the server; the client gets a tiny typed stub instea
 
 The parse-don't-execute step is the important one: server-only imports (a database driver, secrets) never reach the client graph, because the plugin never runs the module to learn its exports.
 
+## The image optimizer
+
+One optimizer, used from both ends of an app's life — the build-time half of the [images guide](/docs/guide/images):
+
+| Function | Does |
+|---|---|
+| `writeImageVariants(root, outDir)` | Walks `<root>/public`, encodes every ladder width in AVIF and WebP, and writes them under `outDir/_janux/image/`. Returns how many sources it processed. Called by `janux build`, whatever the `output` |
+| `imageResponse(root, pathname)` | Encodes one variant on demand for `janux dev`, or `undefined` when the path is not one `<Image>` would have emitted |
+
+Neither asks the other what exists: both derive URLs from `janux`'s pure `variantUrl` / `parseVariantUrl`, which is what keeps `janux dev`, `janux start` and `output: 'static'` picking from the same candidates.
+
 ## Node ⇄ Web request adapters
 
 ```ts

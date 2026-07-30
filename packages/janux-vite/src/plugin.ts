@@ -7,6 +7,7 @@ import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
 import { packageDir, runtimeIncludes } from './deps';
 import { mimeFor, resolvePublicFile } from './static-files';
+import { imageResponse } from './image-optimizer';
 import { apiFiles, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { collectIslands, islandCatalogFromDir } from './islands';
@@ -115,6 +116,20 @@ export function foreignExternals(root: string): string[] {
 
 const FOREIGN_PACKAGES = ['react', 'react-dom', 'react-dom/client'];
 
+/**
+ * What dev answers before the app does: a file the app put in `public/`, or an
+ * image variant derived from one. The variants are the same URLs `janux build`
+ * writes to disk, encoded on demand here — so the page you are writing and the
+ * page you ship pick from the same candidates.
+ */
+export async function devAsset(root: string, path: string): Promise<Response | undefined> {
+  const publicFile = resolvePublicFile(root, path);
+
+  if (!publicFile) return imageResponse(root, path);
+
+  return new Response(readFileSync(publicFile), { headers: { 'content-type': mimeFor(publicFile) } });
+}
+
 /** The Janux Vite plugin: JSX runtime config, api() client stubs (SWC) and the SSR dev bridge. */
 export function janux(options: JanuxPluginOptions = {}): Plugin {
   /** Where the app keeps its `*.api.ts` modules, learned in `config`. */
@@ -203,14 +218,9 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       return () => {
         vite.middlewares.use((req, res, next) => {
           const handle = async () => {
-            const publicFile = resolvePublicFile(vite.config.root, req.url?.split('?')[0] ?? '/');
+            const asset = await devAsset(vite.config.root, req.url?.split('?')[0] ?? '/');
 
-            if (publicFile) {
-              res.writeHead(200, { 'content-type': mimeFor(publicFile) });
-              res.end(readFileSync(publicFile));
-
-              return;
-            }
+            if (asset) return sendFetchResponse(res, asset);
             const server = await januxServer();
             const response = await server.fetch(await toFetchRequest(req));
 

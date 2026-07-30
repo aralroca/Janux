@@ -1,7 +1,7 @@
 import { cpSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createJanuxServer } from '@janux/server';
-import { janux, resolveAppConfig } from '@janux/vite';
+import { janux, resolveAppConfig, writeImageVariants } from '@janux/vite';
 import { prodServerOptions } from './prod';
 import { staticResponse } from './static-assets';
 import type { CliCommand } from './args';
@@ -109,7 +109,7 @@ export async function build({ root }: CliCommand): Promise<void> {
 
   if (Object.keys(input).length > 0) await bundleClient(root, input, app.stylesheet);
   else console.log('janux build: nothing to bundle — fully static app (0 KB JS).');
-  copyPublicDir(root);
+  await emitAssets(root);
   if (app.output === 'static') await prerenderStatic(root);
 }
 
@@ -208,6 +208,19 @@ function copyPublicDir(root: string): void {
 
   if (!existsSync(publicDir)) return;
   cpSync(publicDir, join(root, 'dist/client'), { recursive: true });
+}
+
+/**
+ * The client assets that are not the bundle: `public/` verbatim, plus every
+ * `<Image>` variant derived from it. Both outputs get them at build time —
+ * `output: "static"` has no server left to encode anything, and `janux start`
+ * should serve bytes rather than make them.
+ */
+export async function emitAssets(root: string): Promise<void> {
+  copyPublicDir(root);
+  const sources = await writeImageVariants(root, join(root, 'dist/client'));
+
+  if (sources > 0) console.log(`janux build: optimized ${sources} image${sources === 1 ? '' : 's'} (avif + webp).`);
 }
 
 export async function start({ root, port }: CliCommand): Promise<void> {

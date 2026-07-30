@@ -8,4 +8,5 @@ export {
   type JanuxOutput,
 } from './app-config';
 export { apiStubModule, exportedApiNames, apiModuleName } from './api-stubs';
+export { imageResponse, writeImageVariants } from './image-optimizer';
 export { toFetchRequest, sendFetchResponse } from './request-adapter';
