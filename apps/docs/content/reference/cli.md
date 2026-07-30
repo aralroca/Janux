@@ -8,11 +8,94 @@ janux build                  # client bundle + styles + public/ → dist/client 
 janux start [--port 3000]    # production server on Bun (no Vite at runtime)
 janux verify                 # agent-surface contract checks (CI-friendly)
 janux eval [files...]        # scripted agent-task scenarios against a live app
+janux info                   # versions, resolved config and routes — paste into an issue
 ```
 
 `PORT` env is honored when `--port` is absent.
 
 `janux start` serves `dist/client` before falling back to the app: compressed with brotli (or gzip, whichever the request accepts), each file compressed once and kept in memory, and cached `immutable` for a year when its name carries a content hash. Behind a CDN that already does this, it costs nothing; on a box without one, it is the difference between shipping a bundle and shipping four of them.
+
+## janux dev
+
+### The error overlay
+
+Every framework can show you the stack of a `throw`. Janux can show you *why the
+invocation was there at all* — because every call, from a click or from an
+agent, goes through one pipeline that knows who asked and what the guard
+decided. When something throws inside an `intent()`, `effect()` or `source()`,
+`janux dev` puts that whole sentence on screen:
+
+| row | what it answers |
+|---|---|
+| `route` | the URL, the pattern it matched, and the route module that answered |
+| `layouts` | the `_layout` chain that wrapped it, outermost first |
+| `island` | the island instance it landed in (`ui://cart#default`) |
+| `intent` / `effect` / `source` | the declared behavior that ran, as the agent surface names it |
+| `guard` | what the guard resolved to **for this caller** — `auto`, `confirm`, `forbidden` |
+| `origin` | `human` for a DOM interaction, `agent` for a call through the agent surface |
+| `input` | the validated input the invocation carried |
+
+Under it, the full JS stack. Sourcemaps are on in dev (the framework's own
+frames included, so the trace does not stop at your app's edge), so DevTools
+resolves every frame back to your source.
+
+The overlay never swallows anything: the original error object is logged to the
+console as well, exactly as thrown. Press `Esc` to dismiss it.
+
+An error that did not come through the pipeline — a plain uncaught `TypeError` —
+still gets a panel with its route and stack, and says so instead of inventing a
+chain it does not have.
+
+> **Dev only, and measurably so.** The overlay is behind `import.meta.env.DEV`,
+> which `janux build` eliminates: not one byte of it reaches a production
+> bundle, and `packages/janux-cli/src/bundle-size.test.ts` proves it by building
+> the same app twice — once normally, once with the dev guards forced on.
+
+Production builds emit `hidden` sourcemaps: `.map` files are written next to the
+bundle for an error tracker to consume, with no `sourceMappingURL` appended, so
+the browser never downloads them.
+
+## janux info
+
+Everything a bug report needs, as markdown you can paste into an issue
+unedited — versions, the resolved config, which adapters and zero-config
+integrations are actually installed, and every route the file-system router
+found:
+
+```bash
+janux info
+```
+
+```markdown
+### janux info
+
+| | |
+|---|---|
+| janux | 0.5.0 |
+| @janux/cli | 0.5.0 |
+| bun | 1.3.14 |
+| os | darwin 25.5.0 (arm64) |
+| app | janux-example-shop 0.2.1 |
+
+**Resolved config** (paths relative to the app root)
+…
+**Integrations**
+
+| | |
+|---|---|
+| @janux/tailwind | not installed |
+
+**Routes** (3)
+
+| route | module | layouts |
+|---|---|---|
+| `/shop` | src/routes/shop.tsx | — |
+```
+
+Installed-but-invisible is the reason it exists: zero-config integrations are
+configured *by being installed*, so nothing in your own source says whether
+Tailwind is on. Paths are reported relative to the app root and the root itself
+is never printed — there is nothing to redact before posting.
 
 ## janux verify
 

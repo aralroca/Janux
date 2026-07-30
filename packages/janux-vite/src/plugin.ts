@@ -11,6 +11,7 @@ import { apiFiles, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxPlu
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { collectIslands, islandCatalogFromDir } from './islands';
 import { attachDevWebSocket } from './dev-websocket';
+import { DEV_ROUTE_PATH, devRouteResponse } from './dev-route-info';
 import { sendFetchResponse, toFetchRequest } from './request-adapter';
 
 const SSR_PACKAGES = ['janux', '@janux/server', '@janux/agent'];
@@ -210,6 +211,15 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
               res.end(readFileSync(publicFile));
 
               return;
+            }
+            // The dev overlay asking which route file and `_layout` chain
+            // answered a URL. Resolved before the app sees it, and only for
+            // that exact path — a built app has no Vite and no such endpoint.
+            if (req.url?.startsWith(DEV_ROUTE_PATH)) {
+              const app = await resolveAppConfig(vite.config.root, options);
+              const devRoute = devRouteResponse(vite.config.root, app.routesDir, req.url);
+
+              if (devRoute) return sendFetchResponse(res, devRoute);
             }
             const server = await januxServer();
             const response = await server.fetch(await toFetchRequest(req));

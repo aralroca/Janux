@@ -219,6 +219,14 @@ export function boot(options: BootOptions = {}): JanuxClient {
     },
   };
 
+  // Dev only, and eliminated from production builds: a failure inside an
+  // intent, effect or source is shown with the Janux chain that explains it —
+  // route, layouts, island, behavior, guard, origin — instead of a bare stack.
+  if (import.meta.env?.DEV) {
+    import('../dev/overlay')
+      .then((dev) => dev.installDevOverlay())
+      .catch((error) => console.error('[janux dev] the error overlay failed to load', error));
+  }
   if (typeof window !== 'undefined') (window as any).janux = client;
   if (options.webmcp !== false) installWebMCP(bridge);
   mountEagerIslands(mount).catch(reportIntentError);

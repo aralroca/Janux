@@ -9,7 +9,7 @@ export {
   type WebSocketConfig,
   type WebSocketUpgrader,
 } from './server';
-export { createFsRouter, type RouteMatch } from './router';
+export { createFsRouter, type Matcher, type RouteMatch } from './router';
 export {
   acceptsType,
   createHttpHandlers,

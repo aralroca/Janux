@@ -1,5 +1,5 @@
 export interface CliCommand {
-  command: 'dev' | 'build' | 'start' | 'verify' | 'eval' | 'help';
+  command: 'dev' | 'build' | 'start' | 'verify' | 'eval' | 'info' | 'help';
   port: number;
   root: string;
   files: string[];
@@ -8,7 +8,7 @@ export interface CliCommand {
   json: boolean;
 }
 
-const COMMANDS = new Set(['dev', 'build', 'start', 'verify', 'eval', 'help']);
+const COMMANDS = new Set(['dev', 'build', 'start', 'verify', 'eval', 'info', 'help']);
 const VALUE_FLAGS = new Set(['--port', '--url', '--start']);
 
 export const HELP_TEXT = `janux — the fullstack framework for the Agentic Web
@@ -20,6 +20,7 @@ Usage:
   janux verify                 Check the agent surface (tool contracts)
   janux eval   [files...]      Run agent-task scenarios (evals/**/*.eval.json)
                [--url http://localhost:3000] [--start "janux start"] [--json]
+  janux info                   Versions, resolved config and routes, as markdown to paste into an issue
 `;
 
 function flagValue(argv: string[], flag: string): string | undefined {

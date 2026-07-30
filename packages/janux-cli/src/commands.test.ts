@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
 import { createJanuxServer } from '@janux/server';
 import { jsx } from 'janux';
-import { bundleInputs, cssAssetName, devBanner, localeRedirectStub, prerenderPages } from './commands';
+import { bundleInputs, cssAssetName, devBanner, localeRedirectStub, pinProductionEnv, prerenderPages, viteOptions } from './commands';
 import { prodServerOptions } from './prod';
 
 /** Runs the stub's inline script with a fake navigator/location and returns the redirect target. */
@@ -181,6 +181,51 @@ describe('devBanner', () => {
     const columns = devBanner(80).split('\n').map((line) => line.indexOf('http'));
 
     expect(new Set(columns).size).toBe(1);
+  });
+});
+
+/**
+ * A stack trace is only worth reading when it points at source. Dev gets full
+ * maps — the framework's own frames included, which is exactly where an intent
+ * failure lands — and production gets `hidden`: the `.map` files are emitted for
+ * an error tracker to consume, with no `sourceMappingURL` appended to the
+ * bundle, so shipping them costs the client nothing.
+ */
+describe('viteOptions sourcemaps', () => {
+  it('gives dev full sourcemaps, framework frames included', async () => {
+    const options = (await viteOptions('/app', 'dev')) as any;
+
+    expect(options.css.devSourcemap).toBe(true);
+    // Vite hides node_modules frames by default; the framework lives there
+    // through the workspace link, so the chain would stop at the app's edge.
+    expect(options.server.sourcemapIgnoreList()).toBe(false);
+    expect(options.build).toBeUndefined();
+  });
+
+  it('emits production maps without pointing the bundle at them', async () => {
+    const options = (await viteOptions('/app', 'build')) as any;
+
+    expect(options.build.sourcemap).toBe('hidden');
+    expect(options.css?.devSourcemap).toBeUndefined();
+  });
+});
+
+/**
+ * Vite decides `import.meta.env.DEV` from the mode but reads `NODE_ENV` ahead
+ * of it, so a shell exporting `NODE_ENV=development` had `janux build` ship
+ * every dev-only branch — the error overlay included. Declaring the mode is not
+ * enough on its own.
+ */
+describe('pinProductionEnv', () => {
+  it('makes NODE_ENV say production, whatever it said before', () => {
+    const unset: Record<string, string | undefined> = {};
+    const development = { NODE_ENV: 'development' };
+
+    pinProductionEnv(unset);
+    pinProductionEnv(development);
+
+    expect(unset.NODE_ENV).toBe('production');
+    expect(development.NODE_ENV).toBe('production');
   });
 });
 
