@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { JanuxAppConfig } from '@janux/vite/config';
 import { generateApp } from './generate';
@@ -33,12 +34,24 @@ export default createHandler(app);
 /** The bundle sits one level under the app root, like `api/` — see generate.ts. */
 export const BUNDLE_PATH = `${GENERATED_DIR}/server.js`;
 
+/**
+ * The bundler runs as its own process, so it is found by name — and the name
+ * depends on where this package is running from: source in the workspace,
+ * compiled `dist/` once it is published.
+ */
+export function bundlerPath(exists: (path: string) => boolean = existsSync): string {
+  const found = ['bundler.ts', 'bundler.js'].map((name) => join(import.meta.dirname, name)).find(exists);
+
+  if (!found) throw new Error('janux-vercel: the bundler is missing next to this module');
+
+  return found;
+}
+
 /** Bundles the app into `.janux/server.js` and returns its size in bytes. */
 export async function buildFunction(root: string, app: JanuxAppConfig): Promise<number> {
   await Bun.write(join(root, GENERATED_DIR, 'app.ts'), generateApp(root, app));
   await Bun.write(join(root, GENERATED_DIR, 'entry.ts'), ENTRY);
-  const bundler = join(import.meta.dirname, 'bundler.ts');
-  const built = Bun.spawnSync(['bun', bundler, `${GENERATED_DIR}/entry.ts`, BUNDLE_PATH], { cwd: root });
+  const built = Bun.spawnSync(['bun', bundlerPath(), `${GENERATED_DIR}/entry.ts`, BUNDLE_PATH], { cwd: root });
 
   if (!built.success) throw new Error(`janux-vercel: could not bundle the app\n${built.stderr.toString()}`);
 

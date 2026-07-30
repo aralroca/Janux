@@ -20,7 +20,7 @@ describe('recipes/error-handling.md — the api() envelope', () => {
     createJanuxServer({ apis: { payments: { charge: declining, wipe: locked } } }).fetch(
       new Request(`http://x/_janux/api/${name}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', ...headers },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', ...headers },
         body: JSON.stringify(body),
       }),
     );

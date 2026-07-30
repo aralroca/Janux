@@ -14,6 +14,8 @@ import tailwindcss from '@tailwindcss/postcss';
  * There is no vite.config in a Janux app: installing the package IS
  * the configuration.
  */
-export default function janusTailwind() {
+// Annotated, not inferred: a declaration file cannot name postcss's `Plugin`
+// without depending on postcss, and the inferred type is that.
+export default function janusTailwind(): ReturnType<typeof tailwindcss> {
   return tailwindcss();
 }

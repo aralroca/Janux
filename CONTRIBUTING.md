@@ -29,6 +29,21 @@ bun run typecheck                 # tsc over all packages
 bun run --cwd examples/shop dev   # manual testing against the example
 ```
 
+## How the packages are published
+
+A package has two shapes, and only one of them is in the file you edit:
+
+- **In the repository**, `main` and `exports` point at `src/*.ts`. That is what makes `workspace:*` work with no build step — `bun test`, `tsc` and every Vite example read your edit directly.
+- **In the tarball**, `publishConfig` replaces `main`, `module`, `types`, `exports` and `bin` with compiled paths under `dist/`, because Node refuses to strip types inside `node_modules` and a consumer's `tsconfig` must never type-check our source. `scripts/release.ts` lifts those fields onto the manifest just before packing — npm and Bun do not do it themselves, pnpm does.
+
+So **a new subpath has to be added twice**: to `exports` and to `publishConfig.exports`, with `types` first in the entry. `scripts/packaging/manifest.test.ts` fails if the two disagree, and `bun run smoke:node` installs the real tarballs into a bare Node project and imports every subpath.
+
+```bash
+bun run build:packages            # compile to dist/ (SWC per file + tsc declarations)
+bun run pack:packages             # build, pack, and read each tarball back
+bun run smoke:node                # install the tarballs in a clean Node project
+```
+
 ## Rules of the codebase
 
 These are enforced in review:

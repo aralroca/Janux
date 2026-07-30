@@ -40,13 +40,15 @@ function acceptsGzip(request: Request): boolean {
  * bytes it already has, and re-gzipping on a single-threaded server would add
  * latency to the very measurement this exists to make.
  */
-const compressed = new Map<string, Uint8Array>();
+// Backed by a plain ArrayBuffer, not `ArrayBufferLike`: only the narrow one is a
+// `BodyInit`, and this file is typechecked now that `scripts` is in the loop.
+const compressed = new Map<string, Uint8Array<ArrayBuffer>>();
 
-async function gzipped(file: string): Promise<Uint8Array> {
+async function gzipped(file: string): Promise<Uint8Array<ArrayBuffer>> {
   const cached = compressed.get(file);
 
   if (cached) return cached;
-  const fresh = Bun.gzipSync(new Uint8Array(await Bun.file(file).arrayBuffer()));
+  const fresh = new Uint8Array(Bun.gzipSync(new Uint8Array(await Bun.file(file).arrayBuffer())));
 
   compressed.set(file, fresh);
 

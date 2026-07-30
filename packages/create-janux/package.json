@@ -16,10 +16,16 @@
     "create-janux": "./bin.ts"
   },
   "files": [
-    "bin.ts",
+    "dist",
     "template",
     "examples"
   ],
+  "publishConfig": {
+    "access": "public",
+    "bin": {
+      "create-janux": "./dist/bin.js"
+    }
+  },
   "homepage": "https://github.com/aralroca/Janux#readme",
   "bugs": "https://github.com/aralroca/Janux/issues",
   "keywords": [
@@ -37,5 +43,8 @@
   ],
   "engines": {
     "bun": ">=1.3.0"
+  },
+  "scripts": {
+    "prepublishOnly": "bun ../../scripts/prepublish-guard.ts"
   }
 }

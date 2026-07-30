@@ -17,7 +17,7 @@ const request = (method: string, path: string, body?: unknown, headers: Record<s
   server.fetch(
     new Request(`http://test${path}`, {
       method,
-      headers: { 'content-type': 'application/json', ...headers },
+      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', ...headers },
       body: body === undefined ? undefined : JSON.stringify(body),
     }),
   );

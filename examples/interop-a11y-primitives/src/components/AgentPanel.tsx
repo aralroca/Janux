@@ -40,7 +40,19 @@ async function refresh(state: any): Promise<void> {
   const target = manifest.resources.find((entry: any) => !entry.uri.includes('agent-panel'));
 
   if (!target) return;
-  const resource: any = await bridge().read(target.uri);
+  /*
+   * This example has two routes, and a click schedules its resync 60ms later —
+   * so a click that navigates lands here after the island it was reading has
+   * been disposed. A surface that went away mid-navigation is expected, not an
+   * error; the panel already treats failed tool calls as data, and this is the
+   * same thing one line earlier. (The other examples are single-route, so their
+   * copy of this file cannot reach the case.)
+   */
+  const resource: any = await bridge()
+    .read(target.uri)
+    .catch(() => null);
+
+  if (!resource) return;
   const snapshot = JSON.stringify({ state: resource.state, derived: resource.derived }, null, 2);
 
   state.uri = target.uri;

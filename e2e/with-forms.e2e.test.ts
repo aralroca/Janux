@@ -25,14 +25,18 @@ const post = (path: string, body: unknown) =>
   server.fetch(
     new Request(`http://test${path}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       body: JSON.stringify(body),
     }),
   );
 
 const storedNames = async (base?: string) => {
   const url = `${base ?? 'http://test'}/_janux/api/registrations.listRegistrations`;
-  const request = new Request(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+  const request = new Request(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
+    body: '{}',
+  });
   const body: any = await (base ? await fetch(request) : await server.fetch(request)).json();
 
   return body.result.registrations;
