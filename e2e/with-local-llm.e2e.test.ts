@@ -133,7 +133,8 @@ describe('examples/with-local-llm server side', () => {
     const response = await server.fetch(
       new Request('http://test/_janux/llm', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        // The browser-side agent loop calls this from the app's own page.
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
         body: JSON.stringify({ messages: [] }),
       }),
     );

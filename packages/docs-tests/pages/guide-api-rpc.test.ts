@@ -31,7 +31,7 @@ const post = (name: string, body: unknown, headers: Record<string, string> = {})
     new Request(`http://test/_janux/api/${name}`, {
       method: 'POST',
       body: JSON.stringify(body),
-      headers: { 'content-type': 'application/json', ...headers },
+      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', ...headers },
     }),
   );
 
@@ -93,7 +93,7 @@ describe('guide/api-rpc.md — projection 3: the agent tool', () => {
           new Request('http://test/_janux/api/shop.pay', {
             method: 'POST',
             body: JSON.stringify({ total: 2500 }),
-            headers: { 'content-type': 'application/json', 'x-janux-origin': 'agent' },
+            headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', 'x-janux-origin': 'agent' },
           }),
         )
       ).json()) as any;
@@ -102,7 +102,7 @@ describe('guide/api-rpc.md — projection 3: the agent tool', () => {
         new Request('http://test/_janux/approve', {
           method: 'POST',
           body: JSON.stringify({ id }),
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
         }),
       );
     const { result } = await propose();

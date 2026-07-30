@@ -81,7 +81,9 @@ const agentPost = (server: ReturnType<typeof createJanuxServer>, path: string, b
     new Request(`http://test${path}`, {
       method: 'POST',
       body: JSON.stringify(body),
-      headers: { 'content-type': 'application/json', 'x-janux-origin': 'agent' },
+      // An UNSIGNED agent call is the app's own copilot bridge: same-origin, and
+      // identified by nothing. A signed one needs no such header — see sign().
+      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', 'x-janux-origin': 'agent' },
     }),
   );
 
@@ -100,7 +102,7 @@ describe('web bot auth', () => {
       new Request('http://test/_janux/api/shop.echoAgent', {
         method: 'POST',
         body: '{}',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       }),
     );
 
@@ -119,13 +121,22 @@ describe('web bot auth', () => {
     expect(typeof body.result.agent.keyId).toBe('string');
   });
 
+  /**
+   * Two layers refuse these, and the outer one answers first. A signature that
+   * does not verify is not an agent, so what is left is a mutating call from
+   * nowhere — forgery, refused with 403 before agent policy is consulted. The
+   * 401 `agent_required` path is the one above: same-origin, `x-janux-origin:
+   * agent`, no signature at all. Which is the point of the split — an unverified
+   * signature buys exactly nothing, so a bad key cannot be used to skip the
+   * CSRF guard (see conformance/security/csrf.cases.ts).
+   */
   it('fails closed on unknown keys and expired signatures', async () => {
     const server = makeServer({ agents: { webBotAuth: { keys: [goodJwk] }, policy: 'require' } });
     const stranger = await server.fetch(await signedRequest('/_janux/api/shop.echoAgent', {}, strangerPrivate));
     const expired = await server.fetch(await signedRequest('/_janux/api/shop.echoAgent', {}, goodPrivate, -1000));
 
-    expect(stranger.status).toBe(401);
-    expect(expired.status).toBe(401);
+    expect(stranger.status).toBe(403);
+    expect(expired.status).toBe(403);
   });
 });
 
@@ -138,7 +149,7 @@ describe('api audit trail', () => {
       new Request('http://test/_janux/api/shop.echoAgent', {
         method: 'POST',
         body: '{}',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       }),
     );
     await agentPost(server, '/_janux/api/shop.search', { q: 42 });
@@ -158,7 +169,7 @@ describe('api audit trail', () => {
       new Request('http://test/_janux/approve', {
         method: 'POST',
         body: JSON.stringify({ id: proposal.id }),
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       }),
     );
 

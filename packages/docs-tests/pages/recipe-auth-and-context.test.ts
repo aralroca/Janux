@@ -64,7 +64,7 @@ describe('recipes/auth-and-context.md — the src/ctx.ts convention', () => {
         new Request('http://test/_janux/api/me.role', {
           method: 'POST',
           body: '{}',
-          headers: { 'content-type': 'application/json', 'x-role': 'admin' },
+          headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', 'x-role': 'admin' },
         }),
       )
     ).json();
@@ -72,6 +72,51 @@ describe('recipes/auth-and-context.md — the src/ctx.ts convention', () => {
     expect(html).toContain('<h1>role:admin</h1>');
     expect(rpc.result).toBe('admin');
     expect(await (await server.fetch(new Request('http://test/'))).text()).toContain('role:guest');
+  });
+});
+
+/**
+ * The page tells the reader `SameSite` is not enough and that the pipeline
+ * refuses a forged call with a specific envelope. Both halves are asserted, the
+ * envelope included: it is the string an app's error handling keys off, so it
+ * cannot drift out of the docs quietly.
+ */
+describe('recipes/auth-and-context.md — a cross-site call cannot reach an api()', () => {
+  const withSession = () =>
+    createJanuxServer({
+      // The exact situation the page describes: identity from a cookie, so the
+      // browser is authenticated and the calling page is not.
+      ctxFor: (req) => ({ userId: req.headers.get('cookie') ? 'u1' : undefined }),
+      apis: { orders: { reconcile: api({ description: 'Reconcile', run: () => reconciled.push('ran') }) } },
+      allowedOrigins: ['https://console.example.com'],
+    });
+  const reconciled: string[] = [];
+  const call = (headers: Record<string, string>) =>
+    withSession().fetch(
+      new Request('http://test/_janux/api/orders.reconcile', {
+        method: 'POST',
+        body: '{}',
+        headers: { 'content-type': 'application/json', cookie: 'session=abc', ...headers },
+      }),
+    );
+
+  it('refuses it with the documented envelope, before run()', async () => {
+    const forged = await call({ 'sec-fetch-site': 'cross-site', origin: 'https://evil.example' });
+
+    expect(forged.status).toBe(403);
+    expect(await forged.json()).toEqual({ ok: false, error: 'cross_site_denied' });
+    expect(reconciled).toEqual([]);
+  });
+
+  it('refuses a mutating call that declares no origin at all', async () => {
+    expect((await call({})).status).toBe(403);
+    expect(reconciled).toEqual([]);
+  });
+
+  it('serves the app itself, and any origin the app listed', async () => {
+    expect((await call({ 'sec-fetch-site': 'same-origin' })).status).toBe(200);
+    expect((await call({ origin: 'https://console.example.com' })).status).toBe(200);
+    expect(reconciled).toEqual(['ran', 'ran']);
   });
 });
 
