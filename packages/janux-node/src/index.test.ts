@@ -70,7 +70,7 @@ describe('node().adapt', () => {
   it('writes a self-contained build: launcher, bundle, client and an ESM marker', async () => {
     expect(existsSync(join(BUILD, 'index.js'))).toBe(true);
     expect(existsSync(join(BUILD, '.janux/index.js'))).toBe(true);
-    expect(existsSync(join(BUILD, 'client/client.js'))).toBe(true);
+    expect(existsSync(join(BUILD, 'dist/client/client.js'))).toBe(true);
     expect(JSON.parse(await readFile(join(BUILD, 'package.json'), 'utf8'))).toEqual({ type: 'module' });
   });
 
@@ -91,6 +91,18 @@ describe('the built app under node', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('text/html');
     expect(await response.text()).toContain('Served by Node');
+  });
+
+  /**
+   * The failure this guards against renders perfectly and is invisible in the
+   * HTML: the server only emits the runtime script when it finds
+   * `dist/client/client.js` under the app root, so a deployment that puts the
+   * client anywhere else serves pages that never hydrate.
+   */
+  it('emits the client runtime script, so the page can hydrate at all', async () => {
+    const html = await (await fetch(`${BASE}/`)).text();
+
+    expect(html).toContain('/client.js');
   });
 
   it('reports the node version it is running on, so nobody has to guess', () => {

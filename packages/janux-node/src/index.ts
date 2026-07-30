@@ -48,7 +48,11 @@ export const capabilities: AdapterCapabilities = { websocket: true, streaming: t
  * a second listener) can call it directly instead of forking the entry.
  */
 export async function serve(app: JanuxApp, options: { port?: number; hostname?: string } = {}): Promise<NodeServer> {
-  const clientDir = join(app.root, 'client');
+  // `dist/client` inside the deployment, not `client`: the server decides
+  // whether to emit the runtime script by looking for `dist/client/client.js`
+  // under the app root, so a deployment that renames it serves pages that never
+  // hydrate — silently, because the HTML is otherwise perfect.
+  const clientDir = join(app.root, 'dist/client');
   const server = await createNodeServer({
     handler: createRequestHandler(app),
     staticResponse: (request) => staticResponse(clientDir, request),
@@ -84,7 +88,7 @@ export function node({ include = [] }: NodeAdapterOptions = {}): JanuxAdapter {
       });
       const bytes = await builder.bundle(BUNDLE_PATH, 'node');
 
-      builder.copyClient(`${BUILD_DIR}/client`);
+      builder.copyClient(`${BUILD_DIR}/dist/client`);
       // The bundle inlines every route *module*, but the router still reads the
       // routes directory to learn which URLs the app answers — so the source
       // tree travels with the deployment, as it does on every Janux target.

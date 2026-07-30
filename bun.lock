@@ -700,6 +700,17 @@
         "janux": "workspace:*",
       },
     },
+    "examples/with-node-adapter": {
+      "name": "janux-example-with-node-adapter",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/node": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/with-optimistic-ui": {
       "name": "janux-example-with-optimistic-ui",
       "version": "0.2.1",
@@ -1958,6 +1969,8 @@
     "janux-example-with-mcp-client": ["janux-example-with-mcp-client@workspace:examples/with-mcp-client"],
 
     "janux-example-with-mcp-url": ["janux-example-with-mcp-url@workspace:examples/with-mcp-url"],
+
+    "janux-example-with-node-adapter": ["janux-example-with-node-adapter@workspace:examples/with-node-adapter"],
 
     "janux-example-with-optimistic-ui": ["janux-example-with-optimistic-ui@workspace:examples/with-optimistic-ui"],
 

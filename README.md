@@ -335,6 +335,7 @@ One example per **category**, each verified in CI — the [compatibility matrix]
 | [`with-uploads`](examples/with-uploads) | End-to-end file uploads: `dropzone()` feeding a validating multipart handler (type + size), server-rendered gallery, previews without a reload. |
 | [`realtime-chat`](examples/realtime-chat) | A custom server composing `createJanuxServer` with Bun's native WebSockets: optimistic delivery, cursor-based replay on reconnect, live presence. |
 | [`with-worker`](examples/with-worker) | `worker()`: the same prime-counting function on a Web Worker and on the main thread, with a ticker that proves which one froze the page. |
+| [`with-node-adapter`](examples/with-node-adapter) | The same app deployed to Node with `@janux/node`: one `build/` directory, no Bun on the box, and a click counter that only moves if the island hydrated from the bundle Node served. |
 
 ## Develop
 

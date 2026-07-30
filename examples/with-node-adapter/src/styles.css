@@ -1,0 +1,133 @@
+:root {
+  --brand: #0062ff;
+  --ink: #10131a;
+  --muted: #5b6472;
+  --surface: #fff;
+  --line: #e3e7ee;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #eef1f6;
+    --muted: #9aa4b2;
+    --surface: #171b23;
+    --line: #2a303b;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 3rem 1.5rem;
+  background: light-dark(#f7f8fb, #0e1116);
+  color: var(--ink);
+  font: 16px/1.65 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+main {
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  margin: 2.5rem 0 0.75rem;
+  font-size: 1.2rem;
+}
+
+.lede {
+  margin: 0 0 2rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.card {
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.runtime {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.runtime strong {
+  color: var(--brand);
+}
+
+.version {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+.counter {
+  margin: 0 0 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+output {
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+button {
+  padding: 0.55rem 1.1rem;
+  border-radius: 0.6rem;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cta {
+  background: var(--brand);
+  color: #fff;
+}
+
+.ghost {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.hint,
+.note {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.hint {
+  margin: 1rem 0 0;
+}
+
+.commands {
+  margin: 0;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--surface);
+  overflow-x: auto;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
