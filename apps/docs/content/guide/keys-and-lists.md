@@ -1,3 +1,8 @@
+---
+title: Keys and lists
+description: Keys do two different jobs in Janux, and mixing them up is the source of most "why did my state jump to the wrong row" bugs. This page separates them.
+---
+
 # Keys and lists
 
 Keys do two different jobs in Janux, and mixing them up is the source of most "why did my state jump to the wrong row" bugs. This page separates them.

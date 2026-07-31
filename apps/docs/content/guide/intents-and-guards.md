@@ -1,3 +1,8 @@
+---
+title: Intents and guards
+description: An intent is a named, schema-typed action on a component.
+---
+
 # Intents and guards
 
 An **intent** is a named, schema-typed action on a component. It is the unit of interactivity: a human click and an agent tool call execute the exact same pipeline — guard check, input validation, `run()`, audit.

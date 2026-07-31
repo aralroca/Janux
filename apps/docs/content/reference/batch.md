@@ -1,3 +1,8 @@
+---
+title: batch()
+description: "Groups writes so every affected effect runs once, after the function returns. batch<T>(fn: () => T): T — returns whatever fn returns."
+---
+
 # batch()
 
 ```ts

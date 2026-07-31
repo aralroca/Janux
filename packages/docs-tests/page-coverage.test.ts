@@ -30,11 +30,12 @@ function hasRunnableExample(page: string): boolean {
   );
 }
 
+/** `.tsx` too: a page whose examples are JSX needs a test that can write JSX. */
 function testSources(): string {
   const dir = join(import.meta.dir, 'pages');
 
   return readdirSync(dir)
-    .filter((name) => name.endsWith('.test.ts'))
+    .filter((name) => /\.test\.tsx?$/.test(name))
     .map((name) => readFileSync(join(dir, name), 'utf8'))
     .join('\n');
 }

@@ -31,7 +31,31 @@ export interface JxExtra {
 
 const BOUNDED_KINDS = new Set<JxKind>(['string', 'int', 'number', 'money']);
 
-export class JxType {
+/**
+ * The value a schema describes, read back as a type: `Infer<typeof post>`.
+ *
+ * A schema is already the only description of a shape Janux has — it validates
+ * component state, intent input and content frontmatter — so the value side of
+ * that shape should be readable without restating it as an interface. `JxType`
+ * carries it in a phantom parameter, which is why `str()` and `int()` are
+ * different types even though the class is one.
+ */
+export type Infer<S> = S extends JxType<infer T> ? T : never;
+
+/** Every field of a shape, inferred. */
+export type InferShape<S> = { [K in keyof S]: Infer<S[K]> };
+
+/**
+ * `out` because a schema only ever *produces* its value: `JxType<string>` has
+ * to stay usable everywhere a plain `JxType` is annotated, which is what keeps
+ * the parameter additive for code written before it existed.
+ */
+export class JxType<out T = unknown> {
+  /**
+   * Phantom carrier for `Infer`. Declared, never assigned — it exists so the
+   * parameter is used, which is what makes the class generic in practice.
+   */
+  declare readonly __value?: T;
   readonly kind: JxKind;
   readonly flags: JxFlags;
   readonly values?: readonly string[];
@@ -48,7 +72,7 @@ export class JxType {
     this.optionsOf = extra.optionsOf;
   }
 
-  private with(patch: JxFlags, extra: JxExtra = {}): JxType {
+  private with(patch: JxFlags, extra: JxExtra = {}): JxType<any> {
     const carried = { values: this.values, item: this.item, shape: this.shape, optionsOf: this.optionsOf };
 
     return new JxType(this.kind, { ...carried, ...extra }, { ...this.flags, ...patch });
@@ -59,29 +83,36 @@ export class JxType {
    * manifest is built — the value-level twin of an intent's `ready`. Advisory:
    * validation is unchanged, so a list that goes stale never rejects a caller.
    */
-  options(resolve: OptionsResolver): JxType {
+  options(resolve: OptionsResolver): JxType<T> {
     return this.with({}, { optionsOf: resolve });
   }
 
-  optional(): JxType {
+  optional(): JxType<T | undefined> {
     return this.with({ optional: true });
   }
 
-  nullable(): JxType {
+  nullable(): JxType<T | null> {
     return this.with({ nullable: true });
   }
 
-  default(value: unknown): JxType {
+  /**
+   * Untyped on purpose. A default is validated at runtime like any other value
+   * (see `validate`), and that guard is the contract — the conformance corpus
+   * exists to state what a wrong default does. Narrowing this to `T` would make
+   * those cases unwritable without casts, trading a real, tested rule for a
+   * compile-time one.
+   */
+  default(value: unknown): JxType<T> {
     return this.with({ defaultValue: value });
   }
 
-  min(value: number): JxType {
+  min(value: number): JxType<T> {
     this.assertBounded('min');
 
     return this.with({ min: value });
   }
 
-  max(value: number): JxType {
+  max(value: number): JxType<T> {
     this.assertBounded('max');
 
     return this.with({ max: value });

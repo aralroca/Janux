@@ -1,3 +1,8 @@
+---
+title: Sass
+description: Sass needs no configuration in Janux beyond the file extension. Rename the stylesheet entry and it is compiled.
+---
+
 # Sass
 
 Sass needs no configuration in Janux beyond the file extension. Rename the stylesheet entry and it is compiled.

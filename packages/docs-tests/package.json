@@ -4,13 +4,15 @@
   "version": "0.0.0",
   "description": "Every code example in the docs is exercised by this suite.",
   "dependencies": {
-    "janux": "workspace:*",
-    "@janux/server": "workspace:*",
     "@janux/agent": "workspace:*",
-    "@janux/vite": "workspace:*",
     "@janux/cli": "workspace:*",
+    "@janux/content": "workspace:*",
+    "@janux/server": "workspace:*",
     "@janux/tailwind": "workspace:*",
-    "@janux/vercel": "workspace:*"
+    "@janux/vercel": "workspace:*",
+    "@janux/vite": "workspace:*",
+    "@mdx-js/mdx": "^3.1.0",
+    "janux": "workspace:*"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^18.0.0",

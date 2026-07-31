@@ -19,6 +19,7 @@ const TARGETS = [
   'packages/janux',
   'packages/janux-server',
   'packages/janux-agent',
+  'packages/janux-content',
   'packages/janux-vite',
   'packages/janux-cli',
   'packages/janux-tailwind',

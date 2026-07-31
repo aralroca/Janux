@@ -1,7 +1,7 @@
 import { cpSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createJanuxServer } from '@janux/server';
-import { janux, resolveAppConfig } from '@janux/vite';
+import { janux, publishAppRoot, resolveAppConfig } from '@janux/vite';
 import { prodServerOptions } from './prod';
 import { staticResponse } from './static-assets';
 import type { CliCommand } from './args';
@@ -173,6 +173,7 @@ async function writeNotFound(server: PageServer, outDir: string): Promise<void> 
 
 /** `output: "static"`: prerenders every concrete page into dist/client. */
 async function prerenderStatic(root: string): Promise<void> {
+  publishAppRoot(root);
   const options = await prodServerOptions(root);
   const server = createJanuxServer({ ...options, staticExport: true });
   const outDir = join(root, 'dist/client');
@@ -211,6 +212,7 @@ function copyPublicDir(root: string): void {
 }
 
 export async function start({ root, port }: CliCommand): Promise<void> {
+  publishAppRoot(root);
   const options = await prodServerOptions(root);
   const server = createJanuxServer(options);
   const staticDir = join(root, 'dist/client');

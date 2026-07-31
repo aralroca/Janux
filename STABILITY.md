@@ -81,6 +81,12 @@ Type-only exports are outside this contract. They are documented, and they move,
 - **Experimental** — `connectMcp`, `createMcpPool`
 - **Internal** — _none_
 
+### `@janux/content`
+
+- **Stable** — _none_
+- **Experimental** — `defineCollection`, `getCollection`, `getEntry`, `parseFrontmatter`, `render`, `slugify`, `splitFrontmatter`, `validateFrontmatter`
+- **Internal** — _none_
+
 ### `@janux/agent/local`
 
 - **Stable** — _none_
@@ -91,7 +97,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 - **Stable** — `janux`
 - **Experimental** — _none_
-- **Internal** — `apiFiles`, `apiModuleName`, `apiStubModule`, `exportedApiNames`, `resolveAppConfig`, `sendFetchResponse`, `shellOptions`, `toFetchRequest`
+- **Internal** — `apiFiles`, `apiModuleName`, `apiStubModule`, `exportedApiNames`, `publishAppRoot`, `resolveAppConfig`, `sendFetchResponse`, `shellOptions`, `toFetchRequest`
 
 ### `@janux/cli`
 
@@ -106,6 +112,8 @@ Type-only exports are outside this contract. They are documented, and they move,
 **`janux/worker`** — Workers are emitted by a source transform because Vite cannot emit a worker chunk from a plugin. The API is small and the emit strategy is expected to change under it.
 
 **`@janux/agent/local`** — In-browser inference: the default model, the download strategy and the tool protocol are all still settling, and none of them is a decision a 0.x should freeze.
+
+**`@janux/content`** — New in this release. Frontmatter validation is settled — it is the core schema — but the MDX surface is not: the components map, the heading shape and whether an app supplies its own renderer are all decisions a 0.x should not freeze.
 
 **`connectMcp()`, `createMcpPool()`** — Tracks the Model Context Protocol, which is itself versioned. Janux speaks two eras today and will stop speaking the older one, which is a breaking change this surface has to absorb.
 

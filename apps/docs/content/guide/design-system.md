@@ -1,3 +1,8 @@
+---
+title: Design system
+description: "Janux ships no UI components and is not going to. This is where that decision is written down, and how foreign() gives you an ecosystem instead."
+---
+
 # Design system
 
 **Janux ships no UI components, and is not going to.** There is no `<Button>`, no `@janux/ui`, no theme provider, no icon set. That is a decision rather than a gap, and this page is where it is written down so you do not have to infer it.

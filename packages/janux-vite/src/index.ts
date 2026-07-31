@@ -1,5 +1,6 @@
 export { janux } from './plugin';
 export {
+  publishAppRoot,
   resolveAppConfig,
   apiFiles,
   shellOptions,

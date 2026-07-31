@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
 import { createServer } from 'vite';
 import { janux } from './plugin';
 
@@ -10,6 +10,19 @@ import { janux } from './plugin';
  * from the upgrade request, text frames as strings — and a plain GET on the
  * path must get the framework's 426, not a page-router 404.
  */
+/**
+ * This suite boots a real dev server, which publishes the fixture as the app
+ * root (see `publishAppRoot`). Putting the previous value back is part of
+ * shutting it down: an app whose modules load later would otherwise look for
+ * its own files inside this fixture.
+ */
+const appRootBefore = process.env.JANUX_APP_ROOT;
+
+afterAll(() => {
+  if (appRootBefore === undefined) delete process.env.JANUX_APP_ROOT;
+  else process.env.JANUX_APP_ROOT = appRootBefore;
+});
+
 describe('janux dev first-class websockets', () => {
   it('upgrades src/ws.ts on the dev port and 426s a plain GET', async () => {
     const root = join(import.meta.dirname, '__fixtures__/ws-app');

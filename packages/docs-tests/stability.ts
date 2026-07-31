@@ -44,6 +44,11 @@ export const EXPERIMENTAL: readonly Moving[] = [
   },
   {
     reason:
+      'New in this release. Frontmatter validation is settled — it is the core schema — but the MDX surface is not: the components map, the heading shape and whether an app supplies its own renderer are all decisions a 0.x should not freeze.',
+    entries: ['@janux/content'],
+  },
+  {
+    reason:
       'Tracks the Model Context Protocol, which is itself versioned. Janux speaks two eras today and will stop speaking the older one, which is a breaking change this surface has to absorb.',
     names: ['connectMcp', 'createMcpPool'],
   },
