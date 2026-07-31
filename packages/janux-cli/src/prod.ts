@@ -3,7 +3,15 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { defineAgent } from '@janux/agent';
 import type { ServerOptions } from '@janux/server';
-import { apiFiles, apiModuleName, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxAppConfig } from '@janux/vite/config';
+import {
+  apiFiles,
+  apiModuleName,
+  builtFontAssets,
+  mcpAuthOptions,
+  resolveAppConfig,
+  shellOptions,
+  type JanuxAppConfig,
+} from '@janux/vite/config';
 
 /**
  * The production wiring, kept away from the build commands on purpose.
@@ -96,7 +104,9 @@ export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): P
     storeDefs: storesModule ?? {},
     runtimeUrl: existsSync(join(root, 'dist/client/client.js')) ? '/client.js' : undefined,
     islandModules: await builtIslandModules(root),
-    ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : []),
+    // Read back from the build, never resolved here: a production server (and a
+    // static export, which has none) must not depend on the network to answer.
+    ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : [], builtFontAssets(join(root, 'dist/client'))),
     inlineStyles,
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default,

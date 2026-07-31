@@ -56,6 +56,7 @@ export {
   SPECULATION_SCRIPT_ID,
   speculationRules,
   type AgentsAuthConfig,
+  type FontConfig,
   type JanuxConfig,
   type JanuxOutput,
   type McpAuthConfig,
@@ -72,6 +73,17 @@ export {
   type ImageFormat,
   type ImageVariant,
 } from './image/urls';
+export {
+  fallbackOverrides,
+  FONT_ROUTE,
+  fontFaceCss,
+  fontPreloadHrefs,
+  type FontMetrics,
+  type FontOverrides,
+  type GenericFamily,
+  type ResolvedFont,
+  type ResolvedFontFace,
+} from './font/css';
 export type { PageMeta, HeadTag } from './meta';
 export { isNotFoundError, notFound } from './not-found';
 export {

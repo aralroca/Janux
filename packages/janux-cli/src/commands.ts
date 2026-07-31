@@ -1,9 +1,10 @@
 import { cpSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createJanuxServer } from '@janux/server';
-import { janux, resolveAppConfig, writeImageVariants } from '@janux/vite';
+import { janux, resolveAppConfig, writeFontAssets, writeImageVariants } from '@janux/vite';
 import { prodServerOptions } from './prod';
 import { staticResponse } from './static-assets';
+import type { FontConfig } from 'janux';
 import type { CliCommand } from './args';
 
 /** Zero-config integrations: installing @janux/tailwind IS the configuration. */
@@ -109,7 +110,7 @@ export async function build({ root }: CliCommand): Promise<void> {
 
   if (Object.keys(input).length > 0) await bundleClient(root, input, app.stylesheet);
   else console.log('janux build: nothing to bundle — fully static app (0 KB JS).');
-  await emitAssets(root);
+  await emitAssets(root, app);
   if (app.output === 'static') await prerenderStatic(root);
 }
 
@@ -211,16 +212,19 @@ function copyPublicDir(root: string): void {
 }
 
 /**
- * The client assets that are not the bundle: `public/` verbatim, plus every
- * `<Image>` variant derived from it. Both outputs get them at build time —
- * `output: "static"` has no server left to encode anything, and `janux start`
- * should serve bytes rather than make them.
+ * The client assets that are not the bundle: `public/` verbatim, every
+ * `<Image>` variant derived from it, and the self-hosted fonts the app
+ * declared. Both outputs get them at build time — `output: "static"` has no
+ * server left to produce anything, and `janux start` should serve bytes rather
+ * than make them.
  */
-export async function emitAssets(root: string): Promise<void> {
+export async function emitAssets(root: string, app: { fonts: FontConfig[] }): Promise<void> {
   copyPublicDir(root);
-  const sources = await writeImageVariants(root, join(root, 'dist/client'));
+  const outDir = join(root, 'dist/client');
+  const [images, fonts] = await Promise.all([writeImageVariants(root, outDir), writeFontAssets(root, app.fonts, outDir)]);
 
-  if (sources > 0) console.log(`janux build: optimized ${sources} image${sources === 1 ? '' : 's'} (avif + webp).`);
+  if (images > 0) console.log(`janux build: optimized ${images} image${images === 1 ? '' : 's'} (avif + webp).`);
+  if (fonts > 0) console.log(`janux build: self-hosted ${fonts} font${fonts === 1 ? '' : 's'} (subset + adjusted fallback).`);
 }
 
 export async function start({ root, port }: CliCommand): Promise<void> {

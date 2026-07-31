@@ -4,10 +4,12 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
+import { fontFaceCss, fontPreloadHrefs } from 'janux';
 import { defineAgent } from '@janux/agent';
 import { packageDir, runtimeIncludes } from './deps';
 import { mimeFor, resolvePublicFile } from './static-files';
 import { imageResponse } from './image-optimizer';
+import { fontResponse, resolveFonts } from './fonts';
 import { apiFiles, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { collectIslands, islandCatalogFromDir } from './islands';
@@ -18,6 +20,9 @@ const SSR_PACKAGES = ['janux', '@janux/server', '@janux/agent'];
 
 async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOptions): Promise<ServerOptions> {
   const app = await resolveAppConfig(vite.config.root, options);
+  // Resolved here rather than per request: the first `janux dev` downloads, every
+  // one after it reads the cache, and the page sees what the build will ship.
+  const fonts = await resolveFonts(vite.config.root, app.fonts);
   const apiModules = Object.fromEntries(
     await Promise.all(
       apiFiles(app.serverDir).map(async (file) => [
@@ -44,7 +49,10 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     // Dev bundles nothing, so the build's islands.json is derived from source:
     // without it a suspense-only page ships no runtime under `janux dev`.
     islandModules: islandCatalogFromDir(join(vite.config.root, 'src')),
-    ...shellOptions(app, devStylesheets(vite.config.root, app.stylesheet)),
+    ...shellOptions(app, devStylesheets(vite.config.root, app.stylesheet), {
+      fontFaces: fontFaceCss(fonts) || undefined,
+      fontPreloads: fontPreloadHrefs(fonts),
+    }),
     llmsTxt: app.llmsTxt,
     websocket: websocketModule?.default as ServerOptions['websocket'],
     mcpAuth: mcpAuthOptions(app.mcpAuth),
@@ -117,15 +125,16 @@ export function foreignExternals(root: string): string[] {
 const FOREIGN_PACKAGES = ['react', 'react-dom', 'react-dom/client'];
 
 /**
- * What dev answers before the app does: a file the app put in `public/`, or an
- * image variant derived from one. The variants are the same URLs `janux build`
- * writes to disk, encoded on demand here — so the page you are writing and the
- * page you ship pick from the same candidates.
+ * What dev answers before the app does: a file the app put in `public/`, a
+ * self-hosted font out of the resolver's cache, or an image variant derived
+ * from a public file. All three are the URLs `janux build` writes to disk,
+ * produced on demand here — so the page you are writing and the page you ship
+ * pick from the same files.
  */
 export async function devAsset(root: string, path: string): Promise<Response | undefined> {
   const publicFile = resolvePublicFile(root, path);
 
-  if (!publicFile) return imageResponse(root, path);
+  if (!publicFile) return fontResponse(root, path) ?? imageResponse(root, path);
 
   return new Response(readFileSync(publicFile), { headers: { 'content-type': mimeFor(publicFile) } });
 }

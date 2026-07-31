@@ -33,6 +33,10 @@ export interface ShellOptions {
   stylesheets?: string[];
   /** CSS inlined as `<style>` instead of linked: one less render-blocking round trip. */
   inlineStyles?: string[];
+  /** Self-hosted woff2 files worth fetching before anything else on the page. */
+  fontPreloads?: string[];
+  /** `@font-face` rules — the real faces and their metric-adjusted fallbacks. */
+  fontFaces?: string;
   favicon?: string;
   i18n?: ShellI18n;
   /** `navigation` from the app config: reaches the client through the shell. */
@@ -130,6 +134,18 @@ export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
         `<style id="jx-style-${links.length + index}">${css.replace(/<\/(?=style)/gi, '<\\/')}</style>`,
     ),
   ].join('');
+  // Fonts come first in the head, ahead of the stylesheet: the preload is only
+  // worth having if it starts before the CSS does, and an `@font-face` the
+  // browser meets after it has already painted arrives too late to stop the
+  // shift the adjusted fallback exists to prevent. `crossorigin` is not optional
+  // — a font is fetched anonymously, so a preload without it fetches twice.
+  const fontHead = [
+    ...(options.fontPreloads ?? []).map(
+      (href, index) =>
+        `<link rel="preload" id="jx-font-${index}" href="${safeAttr(href)}" as="font" type="font/woff2" crossorigin>`,
+    ),
+    ...(options.fontFaces ? [`<style id="jx-fonts">${options.fontFaces.replace(/<\/(?=style)/gi, '<\\/')}</style>`] : []),
+  ].join('');
   const description = options.description
     ? `<meta name="description" id="jx-description" content="${safeAttr(options.description)}">`
     : '';
@@ -156,7 +172,7 @@ export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
     // links (favicon, stylesheets) sit before the conditional description meta,
     // so a page that omits the description never shifts the stylesheet's
     // position — it stays put across the diff instead of being moved/re-resolved.
-    `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${favicon}${manifestLink}${styleLinks}${description}${social}</head>`,
+    `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${fontHead}${favicon}${manifestLink}${styleLinks}${description}${social}</head>`,
     '<body>',
   ].join('\n');
 }

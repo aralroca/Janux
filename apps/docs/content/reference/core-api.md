@@ -240,6 +240,19 @@ The contract `<Image>` and the build-time optimizer share. An app rarely calls t
 | `variantUrl(src, width, format)` | `/photos/hero.jpg` + `640` + `avif` → `/_janux/image/photos/hero.jpg/640.avif` |
 | `parseVariantUrl(pathname)` | The inverse, and the trust boundary with it: `undefined` for anything Janux would not itself have emitted |
 
+### Font CSS helpers
+
+The pure half of the [font pipeline](/docs/guide/fonts) — the part that reaches the browser. An app declares fonts in `janux.config.ts` and never calls these; a custom pipeline that wants the same output does.
+
+| Export | What it is |
+|---|---|
+| `FONT_ROUTE` | Where self-hosted files live: `/_janux/font` |
+| `fallbackOverrides(font, fallback)` | The `size-adjust` / `ascent-override` / `descent-override` / `line-gap-override` that make a system font occupy a webfont's space, from both fonts' real metrics |
+| `fontFaceCss(fonts)` | The `@font-face` rules — real faces, the adjusted fallback, and the `--var` naming the stack |
+| `fontPreloadHrefs(fonts)` | The files worth a `<link rel=preload>`, deduped |
+
+`FontMetrics`, `FontOverrides`, `ResolvedFont` and `ResolvedFontFace` are the shapes they pass between them; `GenericFamily` is the `sans-serif | serif | monospace` a fallback is measured against.
+
 ### JSX runtime
 
 `Fragment`, `jsx`, `jsxs` and the `JanuxNode` type are the automatic-runtime targets your `.tsx` compiles to (`jsxImportSource: 'janux'`). You import them only if you emit JSX calls by hand; normal components never touch them.

@@ -67,6 +67,17 @@ One optimizer, used from both ends of an app's life — the build-time half of t
 
 Neither asks the other what exists: both derive URLs from `janux`'s pure `variantUrl` / `parseVariantUrl`, which is what keeps `janux dev`, `janux start` and `output: 'static'` picking from the same candidates.
 
+## The font resolver
+
+The build-time half of the [font pipeline](/docs/guide/fonts). Everything is cached under `node_modules/.janux/fonts`, so the network is touched once per font and never again.
+
+| Function | Does |
+|---|---|
+| `resolveFonts(root, configs)` | Fetches the Google stylesheet, keeps the declared subsets/weights, self-hosts each `woff2` and measures the real file — returns the `ResolvedFont[]` the CSS layer formats |
+| `writeFontAssets(root, configs, outDir)` | The build's output: the files, the finished CSS and the preload list, written under `outDir/_janux/font/` |
+| `builtFontAssets(outDir)` | Reads those back for `janux start` and `output: 'static'` — neither resolves anything |
+| `fontResponse(root, path)` | Serves one file out of the cache under `janux dev`, where there is no build output yet |
+
 ## Node ⇄ Web request adapters
 
 ```ts

@@ -1,3 +1,5 @@
+import type { GenericFamily } from './font/css';
+
 export type JanuxOutput = 'bun' | 'static';
 
 /**
@@ -46,6 +48,31 @@ export interface AgentsAuthConfig {
   policy?: 'observe' | 'require';
 }
 
+/**
+ * A font the app wants self-hosted. Declaring it is the whole API: the build
+ * downloads it once, ships the subsets asked for, preloads the critical file
+ * and generates a fallback face measured from the real font — see the
+ * fonts guide. Nothing of this reaches the browser as JavaScript.
+ */
+export interface FontConfig {
+  /** Google Fonts family name, e.g. `Inter`. */
+  family: string;
+  /** Weights to ship. Default: `[400]`. */
+  weights?: number[];
+  /** Default: `['normal']`. */
+  styles?: ('normal' | 'italic')[];
+  /** Unicode subsets to ship — the rest are never downloaded. Default: `['latin']`. */
+  subsets?: string[];
+  /** `font-display`. Default: `swap`, which is what the adjusted fallback makes safe. */
+  display?: 'auto' | 'block' | 'swap' | 'fallback' | 'optional';
+  /** Preload the primary subset's files. Default: true. */
+  preload?: boolean;
+  /** Generic family the fallback metrics are computed against. Default: `sans-serif`. */
+  fallback?: GenericFamily;
+  /** CSS custom property carrying the whole stack, e.g. `--font-sans`. */
+  variable?: string;
+}
+
 export interface JanuxConfig {
   routesDir?: string;
   serverDir?: string;
@@ -75,6 +102,8 @@ export interface JanuxConfig {
   inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
   output?: JanuxOutput;
+  /** Fonts to self-host, subset, preload and give an adjusted fallback. */
+  fonts?: FontConfig[];
   /** SPA navigation, prefetching and speculation rules. */
   navigation?: NavigationConfig;
 }

@@ -21,7 +21,8 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Set by the @font-face block the build inlined; the stack after the comma is the no-fonts fallback. */
+  font: 16px/1.6 var(--font-sans, ui-sans-serif, system-ui, sans-serif);
 }
 
 img {

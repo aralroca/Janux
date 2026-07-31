@@ -18,6 +18,8 @@
     "./config": "./src/app-config.ts"
   },
   "dependencies": {
+    "@capsizecss/metrics": "^3",
+    "@capsizecss/unpack": "^2",
     "@janux/agent": "workspace:*",
     "@janux/server": "workspace:*",
     "@swc/core": "^1.9.0",

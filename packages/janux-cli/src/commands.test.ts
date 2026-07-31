@@ -216,7 +216,7 @@ describe('emitAssets', () => {
   it('copies public/ verbatim and writes the variants <Image> links to', async () => {
     const root = appWithImage();
 
-    await emitAssets(root);
+    await emitAssets(root, { fonts: [] });
 
     expect(existsSync(join(root, 'dist/client/hero.jpg'))).toBe(true);
     expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/640.avif'))).toBe(true);
@@ -226,7 +226,7 @@ describe('emitAssets', () => {
   it('is a no-op for an app with nothing to serve', async () => {
     const root = mkdtempSync(join(tmpdir(), 'janux-build-'));
 
-    await emitAssets(root);
+    await emitAssets(root, { fonts: [] });
 
     expect(existsSync(join(root, 'dist/client/_janux'))).toBe(false);
   });

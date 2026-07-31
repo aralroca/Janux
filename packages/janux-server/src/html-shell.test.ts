@@ -172,3 +172,47 @@ describe('htmlDocument document language', () => {
     expect(html).toContain('<html lang="ar" dir="rtl">');
   });
 });
+
+/**
+ * A webfont shifts the layout twice unless the browser is told about it before
+ * anything else: the preload starts the fetch at the top of the head, and the
+ * inlined `@font-face` (with its adjusted fallback) is what stops the swap from
+ * moving text. Both must precede the stylesheet — a font discovered after the
+ * CSS has already painted is a font that arrives too late to matter.
+ */
+describe('font head', () => {
+  const fonts: ShellOptions = {
+    ...base,
+    stylesheets: ['/styles.css'],
+    fontPreloads: ['/_janux/font/inter-400-normal-latin.woff2'],
+    fontFaces: "@font-face{font-family:'Inter'}",
+  };
+
+  it('preloads the critical woff2 as a font, crossorigin, before the stylesheet', () => {
+    const html = htmlDocument(fonts);
+    const preload = html.indexOf('rel="preload"');
+
+    expect(html).toContain(
+      '<link rel="preload" id="jx-font-0" href="/_janux/font/inter-400-normal-latin.woff2" as="font" type="font/woff2" crossorigin>',
+    );
+    expect(preload).toBeLessThan(html.indexOf('id="jx-style-0"'));
+  });
+
+  it('inlines the @font-face rules before the stylesheet, so nothing paints unadjusted', () => {
+    const html = htmlDocument(fonts);
+
+    expect(html).toContain('<style id="jx-fonts">@font-face{font-family:\'Inter\'}</style>');
+    expect(html.indexOf('id="jx-fonts"')).toBeLessThan(html.indexOf('id="jx-style-0"'));
+  });
+
+  it('cannot be broken out of by a family name that closes the element', () => {
+    const html = htmlDocument({ ...fonts, fontFaces: "@font-face{font-family:'</style><script>x'}" });
+
+    expect(html).not.toContain('</style><script>');
+  });
+
+  it('leaves the head alone for an app with no fonts', () => {
+    expect(htmlDocument(base)).not.toContain('jx-font');
+    expect(htmlDocument(base)).not.toContain('jx-fonts');
+  });
+});
