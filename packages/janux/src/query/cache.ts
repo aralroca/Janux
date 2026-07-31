@@ -76,6 +76,8 @@ const DEFAULT_STALE = 0;
 /** How long SSR waits for the queries a render started, before giving up on them. */
 const SETTLE_TIMEOUT_MS = 5_000;
 const SETTLE_ROUNDS = 10;
+/** Stands in until the first observer brings the real one — see `placeholder`. */
+const NOT_OBSERVED = async () => undefined;
 
 export interface SettleOptions {
   /** Deadline for the whole wait. Default 5s. */
@@ -346,7 +348,10 @@ export class QueryClient {
       // entry matchable by `invalidateQueries` now that matching is segment-wise.
       const queryKey = parseHash(hash);
       const existing = this.queries.get(hash);
-      const query = existing ?? new Query(hash, { queryKey, queryFn: async () => state.data } as any, (key) => this.queries.delete(key), this.now);
+      // Its `queryFn` answers with the hydrated data on purpose: an entry that
+      // nobody has observed yet is still matched by `invalidateQueries`, and
+      // refetching it must not blank what the payload just delivered.
+      const query = existing ?? this.placeholder(hash, queryKey, async () => state.data);
 
       query.awaiting = false;
       // A payload chunk describes a read the server made. If the client has
@@ -365,11 +370,20 @@ export class QueryClient {
   expect(hashes: string[]): void {
     hashes.forEach((hash) => {
       const existing = this.queries.get(hash);
-      const query = existing ?? new Query(hash, { queryKey: parseHash(hash), queryFn: async () => undefined } as any, (key) => this.queries.delete(key), this.now);
+      const query = existing ?? this.placeholder(hash, parseHash(hash));
 
       query.awaiting = true;
       this.queries.set(hash, query);
     });
+  }
+
+  /**
+   * An entry that exists before anyone observed it — hydrated from the payload,
+   * or expected from the stream. Its `queryFn` is never the one that runs: the
+   * first real observer replaces it through `getQuery` → `setOptions`.
+   */
+  private placeholder<T>(hash: string, queryKey: QueryKey, queryFn: () => Promise<any> = NOT_OBSERVED): Query<T> {
+    return new Query<T>(hash, { queryKey, queryFn } as QueryOptions<T>, (key) => this.queries.delete(key), this.now);
   }
 
   /** Hashes of the queries fetching right now — what a streamed chunk announces as coming. */

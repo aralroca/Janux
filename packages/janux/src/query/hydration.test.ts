@@ -91,6 +91,25 @@ describe('dehydrate()', () => {
     expect(Object.keys(payload).sort()).toEqual(['["plain"]']);
   });
 
+  it('carries the primitives that survive JSON, and drops the ones that do not', async () => {
+    const client = new QueryClient();
+    const seed = async (key: string, data: unknown) => client.getQuery({ queryKey: [key], queryFn: async () => data }).fetch();
+
+    await seed('null', { deletedAt: null });
+    // `undefined` in a property is what an optional field looks like, and the
+    // schema model reads an absent key and an undefined one the same way.
+    await seed('optional', { id: 'p1', nickname: undefined });
+    // In an array it is NOT the same: JSON turns the hole into `null`.
+    await seed('hole', ['a', undefined]);
+    // These two do not survive at all: bigint throws, symbol vanishes.
+    await seed('bigint', { total: 10n });
+    await seed('symbol', { tag: Symbol('x') });
+    // And a non-finite number quietly becomes `null` — the same class of bug.
+    await seed('nan', { score: Number.NaN });
+
+    expect(Object.keys(client.dehydrate()).sort()).toEqual(['["null"]', '["optional"]']);
+  });
+
   it('is empty for a client nobody queried — a page without data costs no payload', () => {
     expect(new QueryClient().dehydrate()).toEqual({});
   });

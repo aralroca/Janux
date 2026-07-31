@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
-import { cacheHeaders, cachePolicy } from 'janux';
+import { cacheHeaders, cachePolicy, jsx, renderToString } from 'janux';
 import { QueryClient } from 'janux/query';
 import { docExample } from '../doc-example';
 
@@ -12,9 +12,10 @@ import { docExample } from '../doc-example';
 
 let productPolicy: any;
 let accountPolicy: any;
+let ProductPage: any;
 
 beforeAll(async () => {
-  ({ cache: productPolicy } = await docExample('apps/docs/content/guide/http-cache.md', 0));
+  ({ cache: productPolicy, default: ProductPage } = await docExample('apps/docs/content/guide/http-cache.md', 0));
   // A one-line fence shows the opt-out without repeating the import above it.
   ({ cache: accountPolicy } = await docExample('apps/docs/content/guide/http-cache.md', 1, {
     'export const cache =': "import { cachePolicy } from 'janux';\nexport const cache =",
@@ -28,6 +29,14 @@ describe('guide/http-cache.md', () => {
     expect(headers['cache-control']).toBe('public, max-age=0, s-maxage=300, stale-while-revalidate=3600');
     expect(headers['cache-tag']).toBe('catalog, product:42');
     expect(headers.vary).toBe('x-janux-navigation');
+  });
+
+  it('renders the route the page shows, not just its policy', async () => {
+    const { html } = await renderToString(jsx(ProductPage, { params: { id: '42' } }));
+
+    // The snippet is a whole route module: if the policy compiled but the page
+    // beside it did not render, the documented example would be half true.
+    expect(html).toContain('<article>');
   });
 
   it('answers the fail-safe for a route that declares nothing', () => {

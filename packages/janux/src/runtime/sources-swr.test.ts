@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { source } from '../define/factories';
+import { every, source } from '../define/factories';
 import { createBus } from './bus';
 import { createPendingTracker } from './settled';
 import { createSources } from './sources';
@@ -89,6 +89,26 @@ describe('source staleTime + swr', () => {
 
     expect(reader.value).toBe('rows');
     expect(reader.pending).toBe(false);
+    runtime.dispose();
+  });
+
+  it('skips an interval tick while the value is still fresh', async () => {
+    let clock = 0;
+    let calls = 0;
+    const { runtime } = wire(source({ query: () => ++calls, staleTime: '1m', refresh: every('20ms') }), () => clock);
+
+    runtime.start();
+    await settle();
+    expect(calls).toBe(1);
+
+    // Real timer, frozen clock: the ticks fire and every one of them is
+    // declined, which is the whole point of declaring freshness on a poller.
+    await new Promise((resolve) => setTimeout(resolve, 70));
+    expect(calls).toBe(1);
+
+    clock = 61_000;
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(calls).toBeGreaterThan(1);
     runtime.dispose();
   });
 

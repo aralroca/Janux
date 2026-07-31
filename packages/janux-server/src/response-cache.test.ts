@@ -250,6 +250,23 @@ describe('shared response cache', () => {
     expect((await fetchThrough(store, req('/c'), app.run)).state).toBe('HIT');
   });
 
+  it('over-purges rather than forgetting when the tag ledger overflows', async () => {
+    const store = cache();
+    const app = origin();
+
+    await fetchThrough(store, req(), app.run);
+    expect((await fetchThrough(store, req(), app.run)).state).toBe('HIT');
+
+    // The ledger is bounded. Losing it must drop everything cached before that
+    // moment, not silently stop purging: over-purging costs a render, and
+    // under-purging serves stale data forever.
+    for (let index = 0; index < 10_000; index += 1) revalidateTag(`tag-${index}`);
+
+    expect((await fetchThrough(store, req(), app.run)).state).toBe('MISS');
+    // And it keeps working afterwards.
+    expect((await fetchThrough(store, req(), app.run)).state).toBe('HIT');
+  });
+
   it('skips a body too large to be worth holding', async () => {
     const store = cache({ maxBytes: 8 });
     const app = origin(() => publicRes('far too long to keep'));

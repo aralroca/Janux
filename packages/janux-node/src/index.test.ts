@@ -119,6 +119,63 @@ describe('the built app under node', () => {
     expect(html).toContain('/client.js');
   });
 
+  /**
+   * The cache model is written against web primitives — `ReadableStream.tee`,
+   * `Response`, `Headers` — so it *should* be runtime-agnostic. "Should" is
+   * what this suite exists to replace: these run under a real node process.
+   */
+  it('emits the declared cache headers, under node', async () => {
+    const response = await fetch(`${BASE}/catalog`);
+
+    expect(response.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+    expect(response.headers.get('cache-tag')).toBe('catalog');
+    expect(response.headers.get('vary')?.toLowerCase()).toContain('x-janux-navigation');
+    await response.text();
+  });
+
+  it('keeps a route with no policy off every shared cache, under node', async () => {
+    const response = await fetch(`${BASE}/`);
+
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    await response.text();
+  });
+
+  /** Teeing a streamed body and committing it only on a clean end is the part most likely to differ per runtime. */
+  it('serves the second request from the shared copy, under node', async () => {
+    const first = await fetch(`${BASE}/catalog`);
+    const firstBody = await first.text();
+    const second = await fetch(`${BASE}/catalog`);
+
+    expect(second.headers.get('x-janux-cache')).toBe('HIT');
+    // The same bytes, not a re-render that happens to match.
+    expect(await second.text()).toBe(firstBody);
+  });
+
+  it('revalidates by tag, under node', async () => {
+    await (await fetch(`${BASE}/catalog`)).text();
+    expect((await fetch(`${BASE}/catalog`)).headers.get('x-janux-cache')).toBe('HIT');
+
+    const revalidated = await fetch(`${BASE}/_janux/api/catalog.revalidateCatalog`, {
+      method: 'POST',
+      body: '{}',
+      headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
+    });
+
+    expect(await revalidated.json()).toMatchObject({ ok: true });
+    const after = await fetch(`${BASE}/catalog`);
+
+    expect(after.headers.get('x-janux-cache')).toBe('MISS');
+    await after.text();
+  });
+
+  /** The payload only exists if SSR awaited the query and dehydrated it — all of it on node. */
+  it('ships the SSR query payload, under node', async () => {
+    const html = await (await fetch(`${BASE}/`)).text();
+
+    expect(html).toContain('__JANUX_QUERY__');
+    expect(html).toContain('"n1"');
+  });
+
   it('reports the node version it is running on, so nobody has to guess', () => {
     expect(output).toContain('janux-node: serving on');
     expect(output).toMatch(/\(node \d+\.\d+\.\d+\)/);
@@ -139,7 +196,7 @@ describe('the built app under node', () => {
     expect(response.status).toBe(200);
     // The route list is the part that proves the deployment kept its shape: it
     // comes from the routes directory the adapter copied, not from the bundle.
-    expect(await response.json()).toMatchObject({ janux: '0.1', routes: ['/'] });
+    expect(await response.json()).toMatchObject({ janux: '0.1', routes: ['/', '/catalog'] });
   });
 
   it('404s a path no route matches, rather than falling through to the static handler', async () => {

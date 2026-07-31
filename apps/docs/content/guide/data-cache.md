@@ -169,12 +169,29 @@ useQuery(bag, 'products', () => ({
 ```
 
 **Only plain data travels.** The state invariant is schema-typed plain data, and
-the payload holds to it: objects, arrays, strings, numbers, booleans and `null`.
-A `Map`, a `Set`, a `Date`, a class instance or an object holding a function is
-**not serialized** — that entry is simply left out of the payload and the client
-fetches it normally. Nothing is silently mangled into `{}` on the way over. If
-you want such a value hydrated, return it in a schema-expressible shape (an
-array of pairs instead of a `Map`, an ISO string instead of a `Date`).
+the payload holds to it: objects, arrays, strings, finite numbers, booleans and
+`null`. An entry holding anything else is **not serialized** — it is left out of
+the payload and the client fetches it normally. Nothing is silently mangled on
+the way over.
+
+What is left out, and why:
+
+| Value | What JSON would do to it |
+|---|---|
+| `Map`, `Set` | becomes `{}` — the data replaced by nothing |
+| `Date`, class instance | becomes a string / a bare object, never itself again |
+| function | dropped from an object, `null` inside an array |
+| `Symbol` | same: dropped, or `null` |
+| `BigInt` | **throws** — it cannot travel at all |
+| `NaN`, `Infinity` | becomes `null` — a different number |
+| `undefined` **in an array** | becomes `null` — a different value |
+
+`undefined` as an object *property* is fine: JSON drops the key, and a schema
+reads an absent key and an undefined one the same way — so `{ id, nickname:
+undefined }` hydrates as `{ id }`.
+
+If you want one of the others hydrated, return it in a schema-expressible shape:
+an array of pairs instead of a `Map`, an ISO string instead of a `Date`.
 
 Queries are also left out when they failed, or when they are still running at
 the moment the response ends.

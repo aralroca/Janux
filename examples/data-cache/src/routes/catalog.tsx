@@ -24,10 +24,20 @@ export const cache = cachePolicy({
 
 export default function CatalogPage() {
   return (
-    <main class="app">
-      <header class="bar">
-        <span class="brand">Catalog</span>
-        <span class="bar-hint">public · s-maxage=60 · tag: catalog</span>
+    <main class="page">
+      <header class="page-head">
+        <ul class="policy">
+          <li class="badge public">public</li>
+          <li class="badge">s-maxage=60</li>
+          <li class="badge">stale-while-revalidate=300</li>
+          <li class="badge">tag: catalog</li>
+        </ul>
+        <h1>Catalog</h1>
+        <p>
+          Nothing on this page depends on who is asking, so it declares itself public and a CDN may keep it. Reload:
+          the timestamp below stays put while the cached copy is served, and only changes when the entry is
+          revalidated.
+        </p>
       </header>
       <ul class="items" id="catalog-items">
         {PRODUCTS.map((product) => (
@@ -36,10 +46,10 @@ export default function CatalogPage() {
           </li>
         ))}
       </ul>
-      <p class="count">rendered:{new Date().toISOString()}</p>
-      <p>
-        <a href="/">← back to the demo</a>
-      </p>
+      <p class="rendered">rendered:{new Date().toISOString()}</p>
+      <a class="back" href="/">
+        ← back to the demo
+      </a>
     </main>
   );
 }

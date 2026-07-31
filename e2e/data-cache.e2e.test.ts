@@ -115,9 +115,9 @@ describe('examples/data-cache HTTP cache', () => {
     expect(account.control).toBe('private, no-store');
     expect(account.control).not.toContain('public');
     expect(account.tag).toBeNull();
-    expect(account.body).toContain('signed in as: ada');
+    expect(account.body).toContain('>ada</small>');
     // And it is never kept: a second request renders again.
-    expect((await fetchPage(get, '/account', { cookie: 'session=grace' })).body).toContain('signed in as: grace');
+    expect((await fetchPage(get, '/account', { cookie: 'session=grace' })).body).toContain('>grace</small>');
   });
 
   it('keeps the SPA navigation body out of the entry a cold load would get', async () => {
