@@ -63,6 +63,12 @@ Type-only exports are outside this contract. They are documented, and they move,
 - **Experimental** — _none_
 - **Internal** — _none_
 
+### `janux/observability`
+
+- **Stable** — `defaultPiiFilter`, `isTracing`, `otelTracer`, `reportError`, `reportWarning`, `setOnError`, `setPiiFilter`, `setTracer`, `withSpan`
+- **Experimental** — _none_
+- **Internal** — _none_
+
 ### `janux/worker`
 
 - **Stable** — _none_

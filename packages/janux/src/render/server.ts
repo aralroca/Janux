@@ -3,6 +3,7 @@ import { createInstance, type JanuxInstance } from '../runtime/instance';
 import type { EventBus } from '../runtime/bus';
 import type { ComponentDef, Ctx } from '../define/types';
 import { isForeignDef, type ForeignDef } from '../interop';
+import { isTracing, withSpan } from '../observability/tracing';
 import { detachProps } from '../interop/detach';
 import { dedupeKey, escapeHtml, nonceAttr, renderAttrs, safeJson, safeKey, VOID_ELEMENTS } from './html';
 import { UNSUSPENSE_RUNTIME } from './unsuspense';
@@ -258,7 +259,23 @@ function emitBoundaryInline(result: BoundaryResult, emit: Emit, id: string, open
   if (result.failed !== undefined) emit(failSoftScript(id, result.failed, nonce));
 }
 
-async function renderIsland(def: ComponentDef, props: any, scope: RenderScope, emit: Emit): Promise<void> {
+/**
+ * One span per island — the unit an operator actually tunes, since an island is
+ * what re-renders and what ships JS. A suspended island's span covers what it
+ * contributed to *this* flush (its fallback); the deferred content arrives on
+ * its own chunk, after the span closed.
+ */
+function renderIsland(def: ComponentDef, props: any, scope: RenderScope, emit: Emit): Promise<void> {
+  // The guard is not redundant with the one inside `withSpan`: reaching it at
+  // all means allocating the two closures below, per island, on every render.
+  // That was measurable on the SSR benchmark — and "no instrumentation, no
+  // cost" is the promise this feature is allowed to exist under.
+  if (!isTracing()) return renderIslandInto(def, props, scope, emit);
+
+  return withSpan('janux.island', () => ({ 'janux.island': def.name }), () => renderIslandInto(def, props, scope, emit));
+}
+
+async function renderIslandInto(def: ComponentDef, props: any, scope: RenderScope, emit: Emit): Promise<void> {
   const key = nextKey(scope, def, props.key ?? props.id);
   const stores = storeInstances(scope);
   const missing = Object.keys(def.use ?? {}).filter((alias) => !stores[alias]);

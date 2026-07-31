@@ -13,6 +13,7 @@ import type {
 } from 'janux';
 
 export type { JanuxOutput } from 'janux';
+export { registerInstrumentation, type InstrumentationModule } from './instrumentation';
 
 export type JanuxPluginOptions = JanuxConfig;
 
@@ -28,6 +29,8 @@ export interface JanuxAppConfig {
   ctxModule?: string;
   matchersModule?: string;
   websocketModule?: string;
+  /** `src/instrumentation.ts`, loaded and `register()`ed before the server serves. */
+  instrumentationModule?: string;
   mcpAuth?: McpAuthConfig;
   agents?: AgentsAuthConfig;
   httpHandlersDir?: string;
@@ -114,6 +117,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     ctxModule: optional(resolve(root, 'src/ctx.ts')),
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
     websocketModule: options.websocket ? resolve(root, options.websocket) : optional(resolve(root, 'src/ws.ts')),
+    instrumentationModule: optional(resolve(root, 'src/instrumentation.ts')),
     mcpAuth: options.mcpAuth,
     agents: options.agents,
     httpHandlersDir: optional(resolve(root, 'src/api')),

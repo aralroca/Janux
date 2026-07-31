@@ -19,9 +19,25 @@ export interface ToolCall {
   input: unknown;
 }
 
+/** What the turn cost, as the provider reported it. Absent when it reported nothing. */
+export interface TokenUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
 export interface ProviderReply {
   text: string;
   toolCalls: ToolCall[];
+  usage?: TokenUsage;
+  /** The exact model that answered — providers resolve aliases to date-stamped builds. */
+  model?: string;
+}
+
+/** Anthropic and the OpenAI-compatible providers name the same two numbers differently. */
+function tokenUsage(usage: any): TokenUsage | undefined {
+  if (!usage) return undefined;
+
+  return { inputTokens: usage.input_tokens ?? usage.prompt_tokens, outputTokens: usage.output_tokens ?? usage.completion_tokens };
 }
 
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
@@ -104,6 +120,8 @@ async function callAnthropic(
     toolCalls: blocks
       .filter((block) => block.type === 'tool_use')
       .map((block) => ({ id: block.id, name: block.name.replace(/__/g, '.'), input: block.input })),
+    usage: tokenUsage(body.usage),
+    model: body.model,
   };
 }
 
@@ -168,6 +186,8 @@ async function callOpenAi(
       name: call.function.name.replace(/__/g, '.'),
       input: JSON.parse(call.function.arguments || '{}'),
     })),
+    usage: tokenUsage(body.usage),
+    model: body.model,
   };
 }
 

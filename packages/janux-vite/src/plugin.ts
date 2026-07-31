@@ -7,7 +7,15 @@ import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
 import { packageDir, runtimeIncludes } from './deps';
 import { mimeFor, resolvePublicFile } from './static-files';
-import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
+import {
+  apiFiles,
+  mcpAuthOptions,
+  publishAppRoot,
+  registerInstrumentation,
+  resolveAppConfig,
+  shellOptions,
+  type JanuxPluginOptions,
+} from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { collectIslands, islandCatalogFromDir } from './islands';
 import { attachDevWebSocket } from './dev-websocket';
@@ -22,6 +30,9 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
   // app root means nothing.
   publishAppRoot(vite.config.root);
   const app = await resolveAppConfig(vite.config.root, options);
+
+  // Same ordering guarantee dev owes prod: instrumented before anything serves.
+  await registerInstrumentation(app.instrumentationModule, (file) => vite.ssrLoadModule(file));
   const apiModules = Object.fromEntries(
     await Promise.all(
       apiFiles(app.serverDir).map(async (file) => [

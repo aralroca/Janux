@@ -27,14 +27,17 @@ describe.each([...PUBLISH_ORDER])('%s: published shape', (dir) => {
     expect(pkg.files.filter((entry: string) => entry.replace(/^!/, '').startsWith('src'))).toEqual([]);
   });
 
-  test.if(Boolean(pkg.main))('main and types resolve into dist', () => {
+  // Registered conditionally rather than via `test.if`: a package without the
+  // field has nothing to assert, and a permanent skip in every summary reads
+  // as unfinished work instead of by-design absence.
+  if (pkg.main) test('main and types resolve into dist', () => {
     expect(published.main).toStartWith('./dist/');
     expect(published.types).toStartWith('./dist/');
   });
 
   // `@janux/tailwind` resolves its `style` condition to a stylesheet at the
   // package root, so the rule is "a file the tarball ships", not "under dist".
-  test.if(Boolean(pkg.exports))('every export target is a file the tarball ships', () => {
+  if (pkg.exports) test('every export target is a file the tarball ships', () => {
     const compiled = exportTargets(published.exports);
     const shipped = (target: string) => target.startsWith('./dist/') || pkg.files.includes(target.replace('./', ''));
 
@@ -42,17 +45,17 @@ describe.each([...PUBLISH_ORDER])('%s: published shape', (dir) => {
     compiled.forEach((target) => expect(shipped(target), `${dir} → ${target}`).toBe(true));
   });
 
-  test.if(Boolean(pkg.exports))('types is the first condition of every export entry', () => {
+  if (pkg.exports) test('types is the first condition of every export entry', () => {
     Object.entries(published.exports as Record<string, unknown>).forEach(([subpath, entry]) => {
       expect(Object.keys(entry as object)[0], `${dir} ${subpath}`).toBe('types');
     });
   });
 
-  test.if(Boolean(pkg.exports))('keeps every subpath the monorepo already exposes', () => {
+  if (pkg.exports) test('keeps every subpath the monorepo already exposes', () => {
     expect(Object.keys(published.exports).sort()).toEqual(Object.keys(pkg.exports).sort());
   });
 
-  test.if(Boolean(pkg.bin))('bin points into dist', () => {
+  if (pkg.bin) test('bin points into dist', () => {
     expect(Object.keys(published.bin ?? {})).toEqual(Object.keys(pkg.bin));
     Object.values(published.bin as Record<string, string>).forEach((target) => expect(target).toStartWith('./dist/'));
   });

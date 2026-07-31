@@ -16,6 +16,7 @@ import {
   type RenderResult,
 } from 'janux';
 import { QueryClient } from 'janux/query';
+import { isTracing, reportError, withSpan, type JanuxSpan } from 'janux/observability';
 import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from './cache';
 import { createResponseCache } from './response-cache';
 import { createHttpHandlers, type HandlerModule } from './http-handlers';
@@ -24,7 +25,7 @@ import { pageMarkdown } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
 import type { ShellI18n } from './html-shell';
 import { assertValidInput, errorStatus, evictOldestProposal, json, proposalId, type PendingApiProposal } from './http';
-import { apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
+import { apiAttributes, apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 import { createFsRouter, type Route } from './router';
 import {
@@ -201,9 +202,14 @@ const ERROR_PAGE_STATUS: Record<ErrorPageKind, number> = { notFound: 404, server
 /** The body an app with no `_404`/`_500` page answers with — the status line, in words. */
 const STATUS_TEXT: Record<number, string> = { 404: 'Not found', 500: 'Internal Server Error' };
 
-/** A page that threw is the app's bug, not the visitor's: it reaches the log even when `_500` swallows it. */
-function reportRenderFailure(error: unknown): void {
-  console.error('Janux: page render failed —', error);
+/**
+ * A page that threw is the app's bug, not the visitor's: it reaches the app's
+ * global `onError` even when `_500` swallows it for the visitor. The two are
+ * halves of the same answer — `_500.tsx` is what the person sees, this is what
+ * the operator sees.
+ */
+function reportRenderFailure(error: unknown, route?: string): void {
+  reportError(error, { phase: 'ssr', route });
 }
 
 /**
@@ -363,12 +369,19 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const findRoute = (pathname: string) => {
     if (options.routes?.[pathname]) {
-      return { render: options.routes[pathname]!, params: {} as Record<string, string>, layouts: [] as string[] };
+      return { render: options.routes[pathname]!, params: {} as Record<string, string>, layouts: [] as string[], pattern: pathname };
     }
     const match = router?.match(pathname);
 
-    return match ? { load: match.filePath, params: match.params, layouts: match.layouts } : undefined;
+    return match ? { load: match.filePath, params: match.params, layouts: match.layouts, pattern: match.pattern } : undefined;
   };
+
+  /**
+   * What `janux.route` reports: the route PATTERN, not the URL. A span per
+   * order id is a cardinality bomb in any backend, and `/orders/[id]` is the
+   * thing an operator actually wants a latency distribution for.
+   */
+  const routePattern = (pathname: string): string => findRoute(pathname)?.pattern ?? pathname;
 
   /** Layouts compose top-down: each `_layout` default export wraps its subtree. */
   const applyLayouts = async (vnode: unknown, layouts: string[], ctx: Ctx, params: Record<string, string>) => {
@@ -421,7 +434,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     if (!filePath) return { status: ERROR_PAGE_STATUS[kind] };
 
     return renderErrorPage(filePath, kind, ctx, error).catch((failure) => {
-      console.error(`Janux: ${filePath} failed to render —`, failure);
+      reportRenderFailure(failure, filePath);
 
       return { status: ERROR_PAGE_STATUS[kind] };
     });
@@ -435,7 +448,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return page ? { status: 200, page, cache: page.cache } : await resolveErrorPage('notFound', ctx);
     } catch (error) {
       if (isNotFoundError(error)) return resolveErrorPage('notFound', ctx);
-      reportRenderFailure(error);
+      reportRenderFailure(error, pathname);
 
       return resolveErrorPage('serverError', ctx, error);
     }
@@ -458,11 +471,21 @@ export function createJanuxServer(options: ServerOptions = {}) {
     }
   };
 
-  /** Buffered render for consumers that need the whole page at once (manifest, markdown projections). */
+  /**
+   * Buffered render for consumers that need the whole page at once (manifest,
+   * markdown projections). Traced like any other render: an agent turn renders
+   * the page to know which tools exist, and that cost belongs in the trace —
+   * otherwise its island spans hang off nothing.
+   */
   const renderPage = async (pathname: string, ctx: Ctx) => {
     const page = await resolvePageOrNone(pathname, ctx);
 
-    return page && { ...(await renderToString(page.vnode, renderOptions(ctx))), meta: page.meta };
+    if (!page) return undefined;
+    const rendered = await withSpan('janux.render', () => ({ 'janux.route': routePattern(pathname) }), () =>
+      renderToString(page.vnode, renderOptions(ctx)),
+    );
+
+    return { ...rendered, meta: page.meta };
   };
 
   type PageRender = Awaited<ReturnType<typeof renderPage>>;
@@ -492,20 +515,36 @@ export function createJanuxServer(options: ServerOptions = {}) {
   };
 
   /** Agent + `confirm`: register a pending proposal for a human instead of running the tool. */
-  const proposeApi = (tool: ApiTool, input: unknown, ctx: Ctx) => {
+  const registerProposal = (tool: ApiTool, input: unknown, ctx: Ctx, id: string) => {
     const parsed = tool.input ? assertValidInput(tool, input) : input;
-    const id = proposalId('api');
 
     evictOldestProposal(proposals);
     // The approved call still CAME through the agent surface — a human only
     // authorized it. Executing as 'agent' keeps run()/guards/audit consistent
     // with the client-side approval path and with the documented origin rules.
-    proposals.set(id, { id, tool: tool.name, input: parsed, execute: () => invokeApi(tool, parsed, ctx, 'agent', options.onAudit) });
+    const execute = () => invokeApi(tool, parsed, ctx, 'agent', options.onAudit, { span: 'janux.api.execute', proposal: id });
+
+    proposals.set(id, { id, tool: tool.name, input: parsed, execute });
     // `proposed`, not `ok` — nothing ran yet, and an audit trail that records an
     // unapproved proposal as a success is worse than no trail at all.
     options.onAudit?.(apiAuditEntry(tool, 'agent', 'confirm', ctx, { input: parsed, ok: true, proposed: true }));
 
     return { status: 'proposal' as const, id, tool: tool.name, input: parsed };
+  };
+
+  /**
+   * The proposal gets its own span even though nothing ran: an agent asking is
+   * the event a reviewer wants to see, and the approval — if it ever comes —
+   * arrives in a different request, on a different trace, linked by this id.
+   */
+  const proposeApi = (tool: ApiTool, input: unknown, ctx: Ctx) => {
+    const id = proposalId('api');
+
+    return withSpan(
+      'janux.api',
+      () => apiAttributes(tool, 'confirm', 'agent', id),
+      async () => registerProposal(tool, input, ctx, id),
+    );
   };
 
   /**
@@ -536,7 +575,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
     try {
       if (origin === 'agent' && resolveApiGuard(tool, ctx, origin) === 'confirm') {
-        return json({ ok: true, result: proposeApi(tool, input, ctx) });
+        return json({ ok: true, result: await proposeApi(tool, input, ctx) });
       }
 
       return json({ ok: true, result: await invokeApi(tool, input, ctx, origin, options.onAudit) });
@@ -566,8 +605,15 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
     if (!proposal) return json({ ok: false, error: 'unknown proposal' }, 404);
     proposals.delete(proposal.id);
+    // The approval is the human act this whole feature exists to make visible:
+    // its own span, `origin: human`, wrapping the agent-origin execution.
+    const result = await withSpan(
+      'janux.proposal.approve',
+      () => ({ 'janux.proposal.id': proposal.id, 'janux.intent': `api.${proposal.tool}`, 'janux.origin': 'human' }),
+      () => proposal.execute(),
+    );
 
-    return json({ ok: true, result: await proposal.execute() });
+    return json({ ok: true, result });
   };
 
   /**
@@ -612,7 +658,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const { locale, pathname: page } = localize(pathname);
     const ctx = localeCtx(baseCtx, locale ?? options.i18n?.defaultLocale);
     const result = await renderPage(page, ctx).catch((error) => {
-      reportRenderFailure(error);
+      reportRenderFailure(error, pathname);
 
       return undefined;
     });
@@ -631,7 +677,21 @@ export function createJanuxServer(options: ServerOptions = {}) {
     auth: options.mcpAuth,
   });
 
-  const handlePage = async (req: Request, pathname: string, kind?: ErrorPageKind): Promise<Response> => {
+  const handlePage = (req: Request, pathname: string, kind?: ErrorPageKind, span?: JanuxSpan): Promise<Response> => {
+    const render = () => renderDocument(req, pathname, kind);
+
+    // Resolving the pattern costs a route match. An uninstrumented app never
+    // pays for it, and the request span — opened before routing knew anything
+    // — learns the route here.
+    if (!isTracing()) return render();
+    const route = routePattern(localize(pathname).pathname);
+
+    span?.setAttributes({ 'janux.route': route });
+
+    return withSpan('janux.render', () => ({ 'janux.route': route }), render);
+  };
+
+  const renderDocument = async (req: Request, pathname: string, kind?: ErrorPageKind): Promise<Response> => {
     const { locale, pathname: page } = localize(pathname);
     /*
      * A client navigation is being diffed into a document that already has the
@@ -760,7 +820,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return handlePage(new Request(`http://localhost${base}`), base, 'notFound');
   };
 
-  const fetch = async (req: Request): Promise<Response> => {
+  const handleRequest = async (req: Request, span: JanuxSpan): Promise<Response> => {
     const url = new URL(req.url);
     const { pathname } = url;
     const intercepted = await options.middleware?.(req);
@@ -816,7 +876,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       // and an escaping error would take the response down with it.
       return json(
         await manifestFor(url.searchParams.get('path') ?? '/', ctx).catch((error) => {
-          reportRenderFailure(error);
+          reportRenderFailure(error, url.searchParams.get('path') ?? '/');
 
           return manifestOf(undefined, ctx);
         }),
@@ -843,8 +903,31 @@ export function createJanuxServer(options: ServerOptions = {}) {
       });
     }
 
-    return cached(req, () => handlePage(req, pathname));
+    return cached(req, () => handlePage(req, pathname, undefined, span));
   };
+
+  /**
+   * The last net. `_500.tsx` catches what a page render throws; this catches
+   * what escapes everything else — middleware, `ctxFor`, an endpoint — so the
+   * operator hears about it instead of the process printing an unattributed
+   * stack. Fail-open all the way: the visitor still gets a status line.
+   */
+  const dispatch = async (req: Request, span: JanuxSpan): Promise<Response> => {
+    try {
+      return await handleRequest(req, span);
+    } catch (error) {
+      reportError(error, { phase: 'invocation', route: new URL(req.url).pathname });
+
+      return new Response(STATUS_TEXT[500], { status: 500 });
+    }
+  };
+
+  const fetch = (req: Request): Promise<Response> =>
+    withSpan(
+      'janux.request',
+      () => ({ 'http.request.method': req.method, 'janux.route': new URL(req.url).pathname }),
+      (span) => dispatch(req, span),
+    );
 
   /**
    * Drop-in `Bun.serve` fetch for the owner of the listening socket: a request
