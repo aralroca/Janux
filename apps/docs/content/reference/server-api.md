@@ -1,3 +1,8 @@
+---
+title: Server API
+description: "Everything importable from the server package: the server factory, api() RPC, the file-system router and the framework endpoints it serves."
+---
+
 # Server API
 
 Everything importable from `@janux/server`.

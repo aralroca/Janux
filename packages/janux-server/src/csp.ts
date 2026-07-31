@@ -12,6 +12,21 @@
 
 import type { CspConfig } from 'janux';
 
+/**
+ * This response's CSP nonce, stated where page markup cannot reach.
+ *
+ * The client re-runs the scripts a navigation brings, which needs the LIVE
+ * document's nonce rather than the incoming one — and doing that to every
+ * incoming script would hand an injected `<script>` a valid nonce, i.e. hand
+ * XSS the very thing the policy exists to withhold. So the client re-stamps
+ * only scripts already bearing the nonce THIS response was served with, which
+ * an injection cannot guess. A header is the channel because injected markup
+ * can forge anything in the body and nothing in the headers.
+ *
+ * It is also how the shared response cache recognises a body it must not keep.
+ */
+export const NONCE_HEADER = 'x-janux-nonce';
+
 /** This request's nonce, and the policy naming it — absent when the app sends its own header. */
 export type ResolvedCsp = (req: Request) => { nonce: string; policy?: string };
 

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'bun:test';
-import { htmlDocument, shellEpilogue, shellInterlude, shellParts, shellPrelude, type ShellOptions } from './html-shell';
+import {
+  htmlDocument,
+  queryPayloadScript,
+  shellEpilogue,
+  shellInterlude,
+  shellParts,
+  shellPrelude,
+  type ShellOptions,
+} from './html-shell';
 
 const base: ShellOptions = {
   html: '<main>hi</main>',
@@ -203,6 +211,23 @@ describe('htmlDocument CSP nonce', () => {
   // byte-identical document it got before the option existed.
   it('emits no nonce attribute at all when none is configured', () => {
     expect(htmlDocument(everything)).not.toContain('nonce');
+  });
+});
+
+/**
+ * The query hydration payload is built by the server, not spliced by the shell,
+ * so it is nonced where it is built — and it is executable, which makes it the
+ * one shell script a strict policy would actually refuse.
+ */
+describe('queryPayloadScript CSP nonce', () => {
+  const client = { dehydrate: () => ({ q1: { data: 1 } }), inFlightHashes: () => [] } as never;
+
+  it('carries the nonce it is given', () => {
+    expect(queryPayloadScript(client, new Set(), 'r4nd0m')).toContain('nonce="r4nd0m"');
+  });
+
+  it('carries none when the app does not use CSP', () => {
+    expect(queryPayloadScript(client, new Set())).not.toContain('nonce');
   });
 });
 

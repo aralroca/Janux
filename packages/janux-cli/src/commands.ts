@@ -1,7 +1,8 @@
 import { cpSync, existsSync, mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { createJanuxServer } from '@janux/server';
-import { janux, resolveAppConfig } from '@janux/vite';
+import { janux, publishAppRoot, resolveAppConfig } from '@janux/vite';
 import { prodServerOptions } from './prod';
 import { staticResponse } from './static-assets';
 import type { CliCommand } from './args';
@@ -9,7 +10,7 @@ import type { CliCommand } from './args';
 /** Zero-config integrations: installing @janux/tailwind IS the configuration. */
 export async function loadTailwindPlugin(root: string): Promise<any | undefined> {
   try {
-    const mod = await import(Bun.resolveSync('@janux/tailwind', root));
+    const mod = await import(createRequire(join(root, 'package.json')).resolve('@janux/tailwind'));
 
     return mod.default();
   } catch {
@@ -17,15 +18,31 @@ export async function loadTailwindPlugin(root: string): Promise<any | undefined>
   }
 }
 
-/** Shared vite options: janux plugin + the tailwind postcss pipeline when installed. */
-async function viteOptions(root: string): Promise<Record<string, unknown>> {
-  const tailwind = await loadTailwindPlugin(root);
+type ViteMode = 'dev' | 'build';
 
-  return {
-    root,
-    plugins: [janux()],
-    css: tailwind ? { postcss: { plugins: [tailwind] } } : undefined,
+/**
+ * Sourcemaps, per mode. Dev maps everything, the framework's own frames
+ * included: Vite's default `sourcemapIgnoreList` hides `node_modules`, and the
+ * runtime that raised an intent failure lives there through the workspace link,
+ * so the trace would stop at the app's edge. Production emits `hidden` maps —
+ * `.map` files for an error tracker, with no `sourceMappingURL` appended to the
+ * bundle, so the client downloads exactly what it downloaded before.
+ */
+function sourcemapOptions(mode: ViteMode): Record<string, unknown> {
+  if (mode === 'build') return { build: { sourcemap: 'hidden' } };
+
+  return { server: { sourcemapIgnoreList: () => false } };
+}
+
+/** Shared vite options: janux plugin, the tailwind postcss pipeline when installed, and sourcemaps. */
+export async function viteOptions(root: string, mode: ViteMode): Promise<Record<string, unknown>> {
+  const tailwind = await loadTailwindPlugin(root);
+  const css = {
+    ...(mode === 'dev' && { devSourcemap: true }),
+    ...(tailwind && { postcss: { plugins: [tailwind] } }),
   };
+
+  return { root, plugins: [janux()], css: Object.keys(css).length > 0 ? css : undefined, ...sourcemapOptions(mode) };
 }
 
 /**
@@ -49,7 +66,8 @@ export function devBanner(port: number): string {
 
 export async function dev({ root, port }: CliCommand): Promise<void> {
   const { createServer } = await import('vite');
-  const server = await createServer({ ...(await viteOptions(root)), server: { port } });
+  const options = await viteOptions(root, 'dev');
+  const server = await createServer({ ...options, server: { ...(options.server as object), port } });
 
   await server.listen();
   console.log(`\n  janux dev ready\n${devBanner(port)}\n`);
@@ -87,10 +105,12 @@ export function cssAssetName(root: string, stylesheet: string | undefined) {
 
 async function bundleClient(root: string, input: Record<string, string>, stylesheet?: string): Promise<void> {
   const { build: viteBuild } = await import('vite');
+  const options = await viteOptions(root, 'build');
 
   await viteBuild({
-    ...(await viteOptions(root)),
+    ...options,
     build: {
+      ...(options.build as object),
       outDir: 'dist/client',
       rollupOptions: {
         input,
@@ -173,6 +193,7 @@ async function writeNotFound(server: PageServer, outDir: string): Promise<void> 
 
 /** `output: "static"`: prerenders every concrete page into dist/client. */
 async function prerenderStatic(root: string): Promise<void> {
+  publishAppRoot(root);
   const options = await prodServerOptions(root);
   const server = createJanuxServer({ ...options, staticExport: true });
   const outDir = join(root, 'dist/client');
@@ -211,6 +232,7 @@ function copyPublicDir(root: string): void {
 }
 
 export async function start({ root, port }: CliCommand): Promise<void> {
+  publishAppRoot(root);
   const options = await prodServerOptions(root);
   const server = createJanuxServer(options);
   const staticDir = join(root, 'dist/client');

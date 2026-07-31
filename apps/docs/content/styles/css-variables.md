@@ -1,3 +1,8 @@
+---
+title: CSS variables
+description: Custom properties are the only styling mechanism whose values can still change once the page is live, which is what makes themes and densities possible.
+---
+
 # CSS variables
 
 Sass resolves at build time. Tailwind ships utilities. Custom properties are the third option, and the only one whose values can still change once the page is live — which makes them the mechanism for themes, densities and anything else a user picks.

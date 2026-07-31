@@ -1,3 +1,8 @@
+---
+title: What is Janux?
+description: Janux is a fullstack framework for the Agentic Web — the web that both people and AI agents operate.
+---
+
 # What is Janux?
 
 Janux is a fullstack framework for the **[Agentic Web](/docs/getting-started/the-agentic-web)** — the web that both people and AI agents operate. It has **two first-class audiences**: the humans who use your app and the agents that drive it. You write one component definition; Janux projects it three ways — a view for people, a typed resource agents can read, and typed tools both can invoke. They can't drift, because they're generated from the same source.

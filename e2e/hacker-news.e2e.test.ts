@@ -126,6 +126,44 @@ describe('examples/hacker-news server side', () => {
 });
 
 describe.skipIf(!BUILT)('examples/hacker-news in the browser', () => {
+  it('an item page mounts without re-requesting the score SSR already fetched', async () => {
+    const { page, errors } = await openPage();
+    const apiCalls: string[] = [];
+
+    page.on('request', (request) => {
+      if (request.url().includes('/_janux/api/')) apiCalls.push(request.url());
+    });
+
+    await page.goto(`${BASE}/item/1`);
+    await settled(page);
+    await booted(page);
+
+    // The score is on screen and no request was made for it: the SSR payload
+    // carried the entry the island resumes on top of.
+    expect(await page.locator('.points').first().textContent()).not.toBe('');
+    expect(apiCalls).toEqual([]);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
+
+  it('a re-check rotates the key, so it is a real request again', async () => {
+    const { page } = await openPage();
+    const apiCalls: string[] = [];
+
+    page.on('request', (request) => {
+      if (request.url().includes('/_janux/api/')) apiCalls.push(request.url());
+    });
+
+    await page.goto(`${BASE}/item/1`);
+    await settled(page);
+    await booted(page);
+    await page.click('.refresh');
+    await page.waitForSelector('.checked', { timeout: 10_000 });
+
+    expect(apiCalls.length).toBe(1);
+    await page.close();
+  }, TIMEOUT);
+
   it('first load: the skeleton paints mid-stream, then the ranked list swaps in', async () => {
     const { page, errors } = await openPage();
     const navigation = page.goto(`${BASE}/`, { waitUntil: 'commit' });

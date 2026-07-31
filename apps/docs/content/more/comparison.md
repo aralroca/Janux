@@ -1,3 +1,8 @@
+---
+title: Comparison
+description: Where Janux sits relative to the tools you already know. Every framework here is excellent at what it optimizes for — none of them optimizes for the Agentic Web.
+---
+
 # Comparison
 
 Where Janux sits relative to the tools you already know. Every framework here is excellent at what it optimizes for — none of them optimizes for the [Agentic Web](/docs/getting-started/the-agentic-web). That's the axis this page adds, not a claim that the others render badly.

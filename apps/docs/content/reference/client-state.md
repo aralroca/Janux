@@ -1,3 +1,8 @@
+---
+title: Client state — persistStore, urlState, dropzone
+description: "Three browser-side helpers from janux/client: state that survives a reload, state that lives in the URL, and files coming in from the user."
+---
+
 # Client state — persistStore, urlState, dropzone
 
 Three browser-side helpers from `janux/client`: state that survives a reload, state that lives in the URL, and files coming in from the user.

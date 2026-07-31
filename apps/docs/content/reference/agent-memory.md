@@ -1,3 +1,8 @@
+---
+title: Agent memory & storage
+description: "Conversation state for the built-in copilot: threads, messages and a history window, on a storage adapter you choose. Guide: The agent and your copilot."
+---
+
 # Agent memory & storage
 
 Conversation state for the built-in copilot: threads, messages and a history window, on a storage adapter you choose. Guide: [The agent and your copilot](/docs/guide/agent-and-copilot).

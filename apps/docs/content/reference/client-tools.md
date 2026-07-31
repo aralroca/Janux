@@ -1,3 +1,8 @@
+---
+title: Built-in client tools & the local model
+description: "Two things that come with every Janux app: a set of browser tools the copilot always has, and the option to run the whole loop on the user's machine."
+---
+
 # Built-in client tools & the local model
 
 Two things that come with every Janux app: a set of browser tools the copilot always has, and the option to run the whole loop on the user's machine.

@@ -26,10 +26,14 @@ const clientOnlyAssets: BunPlugin = {
   },
 };
 
-const [entry, outfile] = process.argv.slice(2);
+const [entry, outfile, target] = process.argv.slice(2);
 // Written here rather than through `outdir`: the output path is the caller's
 // business, and Bun's naming templates only get in the way of one file.
-const built = await Bun.build({ entrypoints: [entry!], target: 'bun', plugins: [clientOnlyAssets] });
+const built = await Bun.build({
+  entrypoints: [entry!],
+  target: (target as 'node' | 'bun') ?? 'bun',
+  plugins: [clientOnlyAssets],
+});
 
 if (!built.success) {
   console.error(built.logs.map(String).join('\n'));

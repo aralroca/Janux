@@ -1,3 +1,8 @@
+---
+title: signal()
+description: "The reactive primitive everything else is built on: a mutable cell that tracks who reads it. signal<T>(initial: T): Sig<T>."
+---
+
 # signal()
 
 ```ts

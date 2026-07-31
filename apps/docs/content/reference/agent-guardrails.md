@@ -1,3 +1,8 @@
+---
+title: Agent guardrails — input processors
+description: "Every turn's messages pass through a processor chain before they reach the model. Each processor can rewrite the turn or abort it. Guide: The agent and your copilot."
+---
+
 # Agent guardrails — input processors
 
 Every turn's messages pass through a processor chain before they reach the model. Each processor can rewrite the turn or abort it. Guide: [The agent and your copilot](/docs/guide/agent-and-copilot).

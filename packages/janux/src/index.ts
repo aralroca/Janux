@@ -39,6 +39,8 @@ export {
   list,
   obj,
   JxType,
+  type Infer,
+  type InferShape,
   validate,
   coerceForm,
   buildDefault,
@@ -56,6 +58,7 @@ export {
   SPECULATION_SCRIPT_ID,
   speculationRules,
   type AgentsAuthConfig,
+  type CacheConfig,
   type JanuxConfig,
   type JanuxOutput,
   type McpAuthConfig,
@@ -63,6 +66,14 @@ export {
   type NavigationConfig,
   type SpeculationRulesConfig,
 } from './config';
+export {
+  cacheHeaders,
+  cachePolicy,
+  type CacheHeadersOptions,
+  type CachePolicy,
+  type CachePolicyDef,
+  type CacheScope,
+} from './cache/policy';
 export type { PageMeta, HeadTag } from './meta';
 export { isNotFoundError, notFound } from './not-found';
 export {

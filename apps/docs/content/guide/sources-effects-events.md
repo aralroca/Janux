@@ -1,3 +1,8 @@
+---
+title: Sources, effects and events
+description: Janux separates data-in, side-effects-out and communication into declared, named sections that agents can see and the runtime can await.
+---
+
 # Sources, effects and events
 
 React puts all of this in `useEffect`, opaquely. Janux separates data-in, side-effects-out and communication — as declared, named sections that agents can see and the runtime can await.

@@ -2,7 +2,15 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ServerOptions } from '@janux/server';
-import type { AgentsAuthConfig, CspConfig, JanuxConfig, JanuxOutput, McpAuthConfig, NavigationConfig } from 'janux';
+import type {
+  AgentsAuthConfig,
+  CacheConfig,
+  CspConfig,
+  JanuxConfig,
+  JanuxOutput,
+  McpAuthConfig,
+  NavigationConfig,
+} from 'janux';
 
 export type { JanuxOutput } from 'janux';
 
@@ -33,6 +41,7 @@ export interface JanuxAppConfig {
   output: JanuxOutput;
   navigation?: NavigationConfig;
   csp?: boolean | CspConfig;
+  cache?: CacheConfig;
 }
 
 const CONFIG_FILES = ['janux.config.ts', 'janux.config.js'];
@@ -72,6 +81,23 @@ async function configFileOptions(root: string): Promise<JanuxConfig> {
   return (await import(/* @vite-ignore */ url)).default ?? {};
 }
 
+/**
+ * The app root, published for the app's own modules to read.
+ *
+ * A module that finds its data files with `import.meta.dirname` gets the
+ * *bundle's* directory once bundled, which is why the Vercel adapter has always
+ * set this before importing the app. Every path that boots an app publishes it
+ * too, so `dir: 'content/notes'` is not secretly a promise about the working
+ * directory.
+ *
+ * Called when an app is *served*, never merely when its config is read: tooling
+ * resolves the config of apps it will not run, and a stale root is worse than
+ * no root — it points a running app's modules at someone else's files.
+ */
+export function publishAppRoot(root: string): void {
+  process.env.JANUX_APP_ROOT = root;
+}
+
 /** Resolves the conventional app layout: src/routes, src/server, src/client.ts, src/agent.ts, src/stores.ts. */
 export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginOptions = {}): Promise<JanuxAppConfig> {
   const options = { ...packageJsonOptions(root), ...(await configFileOptions(root)), ...pluginOptions };
@@ -101,6 +127,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     output: options.output ?? 'bun',
     navigation: options.navigation,
     csp: options.csp,
+    cache: options.cache,
   };
 }
 
@@ -115,7 +142,10 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
 export function shellOptions(
   app: JanuxAppConfig,
   stylesheets: string[],
-): Pick<ServerOptions, 'title' | 'lang' | 'siteUrl' | 'favicon' | 'stylesheets' | 'navigation' | 'csp'> {
+): Pick<
+  ServerOptions,
+  'title' | 'lang' | 'siteUrl' | 'favicon' | 'stylesheets' | 'navigation' | 'csp' | 'cache'
+> {
   return {
     title: app.title,
     lang: app.lang,
@@ -124,6 +154,7 @@ export function shellOptions(
     stylesheets,
     navigation: app.navigation,
     csp: app.csp,
+    cache: app.cache,
   };
 }
 

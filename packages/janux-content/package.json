@@ -1,0 +1,64 @@
+{
+  "name": "@janux/content",
+  "version": "0.5.0",
+  "description": "Typed content collections for Janux: frontmatter validated by the framework's own schema, with Markdown and MDX bodies.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aralroca/Janux.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Aral Roca Gomez",
+    "email": "contact@aralroca.com"
+  },
+  "homepage": "https://github.com/aralroca/Janux#readme",
+  "bugs": "https://github.com/aralroca/Janux/issues",
+  "keywords": [
+    "janux",
+    "content",
+    "collections",
+    "markdown",
+    "mdx",
+    "frontmatter"
+  ],
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/src/index.js",
+    "module": "./dist/src/index.js",
+    "types": "./dist/src/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/src/index.d.ts",
+        "default": "./dist/src/index.js"
+      }
+    }
+  },
+  "dependencies": {
+    "rehype-raw": "^7.0.0",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@mdx-js/mdx": "^3.1.0",
+    "janux": "workspace:*"
+  },
+  "peerDependencies": {
+    "@mdx-js/mdx": ">=3",
+    "janux": ">=0.5.0"
+  },
+  "scripts": {
+    "prepublishOnly": "bun ../../scripts/prepublish-guard.ts"
+  },
+  "peerDependenciesMeta": {
+    "@mdx-js/mdx": {
+      "optional": true
+    }
+  }
+}

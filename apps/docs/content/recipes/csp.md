@@ -1,3 +1,8 @@
+---
+title: Content Security Policy
+description: "Deploy without 'unsafe-inline'. `csp: true` mints a nonce per request and stamps it on every inline script and style Janux emits — shell, renderer, suspense boundaries and SPA navigations included."
+---
+
 # Content Security Policy
 
 A strict CSP is the one mitigation that turns "we found an XSS" into "we found a bug". It works by refusing every inline script the page did not vouch for — which is exactly why frameworks that ship inline bootstrap code usually make you keep `'unsafe-inline'`, and a policy with `'unsafe-inline'` in `script-src` stops any XSS at all.
@@ -39,11 +44,14 @@ All of it — this is a framework guarantee, tested by sweeping the emitted docu
 | `<script type="speculationrules">` | Prefetch rules, and the narrowed copy the client swaps in after boot |
 | `<script type="application/janux+config">`, `+i18n` | Navigation config and the i18n payload |
 | `<style id="jx-style-N">` | Your inlined stylesheet (`inlineStyles`) |
+| `<script key="jx-query:N">` | The [query hydration](/docs/guide/data-cache) payload, one per streamed chunk |
 | `self.jx$u=…`, `jx$u(…)` | The [suspense](/docs/guide/ssr-and-resumability) unsuspense runtime and each boundary's swap call |
 | `<script type="application/ld+json">`, `meta.head` script/style | JSON-LD and a route's own head tags |
 | `<script>` / `<style>` written in your JSX | Your own tags — a theme-init snippet, a critical-CSS block. Declare `nonce` yourself and yours wins |
 
 Nothing runs `eval` or `new Function`, so you never need `'unsafe-eval'`.
+
+This is a property of the framework, not of a runtime: the nonce is minted and stamped inside `createJanuxServer`, so it behaves identically on Bun, on [Node 24+](/docs/recipes/deploying) via `@janux/node`, and on Vercel. An adapter only copies the response's headers across.
 
 ### Client-side navigation
 
@@ -74,7 +82,7 @@ Omit `header` entirely and Janux nonces the document but sends no header — the
 Two things to get right if you read the nonce off a request header:
 
 - **The proxy must overwrite it, never merely add it.** A client-supplied `x-nonce` that reaches the app is attacker-controlled. Janux refuses any nonce outside the CSP `base64-value` grammar and generates one instead — so directive injection is not possible either way — but a forwarded header still means the attacker chooses your nonce.
-- **Do not cache nonced HTML.** A cached page hands every later visitor a nonce the policy no longer names (or, worse, one an attacker has already seen). Pages served with `csp` should be `Cache-Control: no-store`, or cached only where the nonce is rewritten per hit.
+- **Do not cache nonced HTML.** A cached page hands every later visitor a nonce the policy no longer names (or, worse, one an attacker has already seen). Janux enforces this for its own [shared response cache](/docs/guide/http-cache) — a nonced document is never stored, whatever the route's `cache` policy says, and it says so once at startup. A CDN in front is yours to configure: send `Cache-Control: no-store` for nonced pages, or cache only where the edge rewrites the nonce per hit.
 
 ## Locking down styles too
 

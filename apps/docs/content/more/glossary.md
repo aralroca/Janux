@@ -1,3 +1,8 @@
+---
+title: Glossary
+description: "The vocabulary this documentation uses: bifacial component, island, intent, guard, resumability, and the rest of the Agentic Web stack."
+---
+
 # Glossary
 
 **Agentic Web** — the web as both people and AI agents operate it: pages that are simultaneously a human interface and a discoverable, callable, permissioned tool surface. Its stack is MCP (tools over HTTP), WebMCP (tools in the browser), `llms.txt` (discovery) and Web Bot Auth (identity). See [The Agentic Web](/docs/getting-started/the-agentic-web).

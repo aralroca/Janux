@@ -5,6 +5,7 @@ import {
   type NavigationConfig,
   type PageMeta,
 } from 'janux';
+import type { QueryClient } from 'janux/query';
 import { headTags } from './head-tags';
 import { nonceAttr, safeAttr, safeJson } from './html-escape';
 
@@ -37,6 +38,8 @@ export interface ShellOptions {
   i18n?: ShellI18n;
   /** `navigation` from the app config: reaches the client through the shell. */
   navigation?: NavigationConfig;
+  /** Query hydration payload for this chunk — see `queryPayloadScript`. Absent when the page ran no queries. */
+  queryScript?: string;
   /**
    * The response answers a client navigation (`x-janux-navigation`), so the
    * speculation rules ship already narrowed to `[data-native]` links — the
@@ -69,6 +72,35 @@ function stateScripts(snapshots: ShellOptions['snapshots'], nonce?: string): str
       return `<script type="application/janux+state" key="state:${uri}" data-uri="${uri}"${cspAttr}>${payload}</script>`;
     })
     .join('\n');
+}
+
+/**
+ * What SSR already knows about the page's queries, as a script the client
+ * drains. Two things travel: `entries`, the data SSR resolved (so the client
+ * renders it without asking for it again), and `expect`, the hashes of queries
+ * still in flight when this chunk went out (so an observer of one of them waits
+ * for the stream instead of starting the same request).
+ *
+ * `sent` is filled as entries are emitted, so a later chunk only carries what
+ * the earlier ones could not — the same bookkeeping `shellEpilogueRest` does
+ * for snapshots.
+ *
+ * Returns `''` when there is nothing to say, which is every page that runs no
+ * queries: the mechanism costs those pages not one byte.
+ */
+export function queryPayloadScript(client: QueryClient | undefined, sent: Set<string>, nonce?: string): string {
+  if (!client) return '';
+  const entries = Object.entries(client.dehydrate()).filter(([hash]) => !sent.has(hash));
+  const expected = client.inFlightHashes().filter((hash) => !sent.has(hash));
+
+  if (entries.length === 0 && expected.length === 0) return '';
+  entries.forEach(([hash]) => sent.add(hash));
+  const payload = safeJson({ entries: Object.fromEntries(entries), expect: expected });
+
+  // Self-removing so the navigation diff re-executes it on the next page
+  // instead of morphing the JSON of one payload into another — the same reason
+  // the suspense call scripts remove themselves.
+  return `<script key="jx-query:${sent.size}"${nonceAttr(nonce)}>(window.__JANUX_QUERY__=window.__JANUX_QUERY__||[]).push(${payload});document.currentScript.remove()</script>`;
 }
 
 /**
@@ -188,6 +220,7 @@ export function shellEpilogue(options: Omit<ShellOptions, 'html'>): string {
   return [
     i18nScript(options),
     options.islandNames.length > 0 ? stateScripts(options.snapshots, options.nonce) : '',
+    options.queryScript ?? '',
     navigationScripts(options),
     runtimeScripts(options),
     '</body>',
@@ -213,6 +246,7 @@ export function shellInterlude(options: Omit<ShellOptions, 'html'>): string {
 
   return [
     options.islandNames.length > 0 ? stateScripts(options.snapshots, options.nonce) : '',
+    options.queryScript ?? '',
     navigationScripts(options),
     runtimeScripts(options),
     kick,
@@ -232,6 +266,7 @@ export function shellEpilogueRest(options: Omit<ShellOptions, 'html'>, emittedUr
   return [
     i18nScript(options),
     options.islandNames.length > 0 ? stateScripts(rest, options.nonce) : '',
+    options.queryScript ?? '',
     '</body>',
     '</html>',
   ]

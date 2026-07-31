@@ -2,6 +2,7 @@ import { HELP_TEXT, parseArgs } from './args';
 import { build, dev, start } from './commands';
 import { verify } from './verify';
 import { evalCommand } from './eval';
+import { info } from './info';
 
 export { parseArgs, HELP_TEXT } from './args';
 /** The ServerOptions `janux start` builds from an app's conventions — for custom servers. */
@@ -15,5 +16,6 @@ export async function runCli(argv: string[]): Promise<void> {
   if (parsed.command === 'start') return start(parsed);
   if (parsed.command === 'verify') return verify(parsed);
   if (parsed.command === 'eval') return evalCommand(parsed);
+  if (parsed.command === 'info') return info(parsed);
   console.log(HELP_TEXT);
 }

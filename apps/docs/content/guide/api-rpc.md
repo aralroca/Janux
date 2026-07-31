@@ -1,3 +1,8 @@
+---
+title: api() — server functions as agent tools
+description: "A server function defined once becomes three things: a validated HTTP endpoint, a typed client stub, and a registered agent tool."
+---
+
 # api() — server functions as agent tools
 
 A server function defined once becomes three things: a validated HTTP endpoint, a typed client stub, and a registered agent tool.

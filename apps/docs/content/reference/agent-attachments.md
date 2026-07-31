@@ -1,3 +1,8 @@
+---
+title: Agent attachments
+description: Validating files a user sends to the copilot before they reach the model, and giving each one a stable reference the agent can talk about.
+---
+
 # Agent attachments
 
 Validating files a user sends to the copilot before they reach the model, and giving each one a stable reference the agent can talk about.
