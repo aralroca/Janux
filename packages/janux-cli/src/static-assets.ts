@@ -48,6 +48,16 @@ const TYPES: Record<string, string> = {
   woff2: 'font/woff2',
   ttf: 'font/ttf',
   otf: 'font/otf',
+  // Media is not decoration: the docs home page opens with a `<video>`, and a
+  // browser handed `application/octet-stream` will not play it.
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  ogg: 'audio/ogg',
+  mp3: 'audio/mpeg',
+  wav: 'audio/x-wav',
+  pdf: 'application/pdf',
+  csv: 'text/csv',
+  zip: 'application/zip',
 };
 
 /** The `content-type` for a built asset, by extension. */

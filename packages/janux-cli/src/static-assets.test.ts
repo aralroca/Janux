@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'bun:test';
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -45,10 +45,41 @@ describe('contentType', () => {
   const EXTENSIONS = [
     'js', 'mjs', 'css', 'html', 'json', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif',
     'ico', 'woff', 'woff2', 'ttf', 'otf', 'wasm', 'xml', 'txt', 'md', 'map', 'webmanifest',
+    'mp4', 'webm', 'ogg', 'mp3', 'wav', 'pdf', 'csv', 'zip',
   ];
 
   it.each(EXTENSIONS)('agrees with Bun.file().type for .%s', (extension) => {
     expect(contentType(`/assets/thing.${extension}`)).toBe(Bun.file(`thing.${extension}`).type);
+  });
+
+  /**
+   * The list above is hand-written, which makes it self-fulfilling: the first
+   * version omitted `.mp4`/`.webm`, so the docs home served its video as
+   * `application/octet-stream` and lost 17 Lighthouse points before anything
+   * failed. This derives the list from what the repo actually ships instead, so
+   * a new kind of asset in any app has to be mapped or this goes red.
+   */
+  it('maps every asset extension the repo actually ships', () => {
+    const roots = ['apps', 'examples'].map((dir) => join(import.meta.dirname, '../../..', dir));
+    const shipped = new Set<string>();
+
+    roots.filter((root) => existsSync(root)).forEach((root) => {
+      readdirSync(root, { withFileTypes: true })
+        .map((entry) => join(root, entry.name, 'public'))
+        .filter(existsSync)
+        .forEach((publicDir) => {
+          readdirSync(publicDir, { recursive: true }).map(String).forEach((file) => {
+            const extension = file.includes('.') ? file.slice(file.lastIndexOf('.') + 1).toLowerCase() : '';
+
+            if (extension) shipped.add(extension);
+          });
+        });
+    });
+
+    expect(shipped.size).toBeGreaterThan(2);
+    [...shipped].forEach((extension) => {
+      expect(contentType(`/x.${extension}`)).toBe(Bun.file(`x.${extension}`).type);
+    });
   });
 
   it('falls back to octet-stream for an extension nobody has a type for', () => {
