@@ -75,30 +75,31 @@ async function compileBody(body: string, format: ContentFormat, file: string): P
   return { content: module.default as MdxContent, headings };
 }
 
+function compileOnce(entry: Pick<CollectionEntry<CollectionDef<any>>, 'body' | 'format' | 'file'>): Promise<Compiled> {
+  const key = `${entry.format}:${entry.body}`;
+  const cached = compiled.get(key);
+
+  if (cached) return cached;
+  const pending = compileBody(entry.body, entry.format, entry.file).catch((error: unknown) => {
+    throw new Error(`Janux content: ${entry.file} failed to compile\n${(error as Error).message}`, { cause: error });
+  });
+
+  compiled.set(key, pending);
+  // A failed compile is not remembered: the next edit is usually the fix.
+  pending.catch(() => compiled.delete(key));
+
+  return pending;
+}
+
 /** Compiles an entry's body. `components` are bound per call; the compilation itself is shared. */
 export async function render(
   entry: Pick<CollectionEntry<CollectionDef<any>>, 'body' | 'format' | 'file'>,
   options: RenderOptions = {},
 ): Promise<RenderedEntry> {
-  const key = `${entry.format}:${entry.body}`;
-  const pending = compiled.get(key) ?? compileBody(entry.body, entry.format, entry.file).catch(rethrowWithFile(entry.file));
-
-  compiled.set(key, pending);
-  const { content, headings } = await pending.catch((error) => {
-    // A failed compile must not be remembered: the next edit is usually the fix.
-    compiled.delete(key);
-
-    throw error;
-  });
+  const { content, headings } = await compileOnce(entry);
 
   return {
     Content: (props = {}) => content({ ...props, components: options.components ?? {} }),
     headings,
-  };
-}
-
-function rethrowWithFile(file: string) {
-  return (error: unknown): never => {
-    throw new Error(`Janux content: ${file} failed to compile\n${(error as Error).message}`, { cause: error });
   };
 }

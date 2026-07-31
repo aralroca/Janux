@@ -159,11 +159,17 @@ export function docContent(section: string, slug: string): string | undefined {
   return docEntry(section, slug)?.body;
 }
 
-/** Flat ordered index of every existing doc — drives sidebar, prev/next and search. */
+/**
+ * Flat ordered index of every existing doc — drives sidebar, prev/next and
+ * search. One pass over the collection, not one lookup per slug: every page
+ * render builds this for its prev/next links.
+ */
 export function docIndex(): DocRef[] {
+  const entries = new Map(getCollection(docs).map((entry) => [entry.id, entry]));
+
   return SECTIONS.flatMap(({ section }) =>
     sectionSlugs(section).flatMap((slug) => {
-      const entry = docEntry(section, slug);
+      const entry = entries.get(`${section}/${slug}`);
 
       if (!entry) return [];
 
