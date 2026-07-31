@@ -1,3 +1,8 @@
+---
+title: foreign() — mount a React component unchanged
+description: Wraps a component from another runtime, React today, so a Janux view can mount it unchanged and drive it from island state.
+---
+
 # foreign() — mount a React component unchanged
 
 ```ts

@@ -1,3 +1,8 @@
+---
+title: Driving a Janux app from an external MCP client
+description: Every Janux app is an MCP-style surface over HTTP. Your copilot uses it — but so can Claude Code, a CI script, or any agent you run elsewhere.
+---
+
 # Driving a Janux app from an external MCP client
 
 Every Janux app is an MCP-style surface over HTTP. Your copilot uses it — but so can Claude Code, a CI script, or any agent you run elsewhere.

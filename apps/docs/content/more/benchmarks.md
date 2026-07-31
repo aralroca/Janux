@@ -1,3 +1,8 @@
+---
+title: Benchmarks
+description: "Janux measured against React, Preact, Solid, Svelte and Vue Vapor across 19 multi-framework suites: client runtime, hydration, SSR and memory."
+---
+
 # Benchmarks
 
 Janux measured against react 19.2, preact 10.29, solid 2.0-beta, svelte 5.56

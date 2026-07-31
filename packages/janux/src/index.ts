@@ -39,6 +39,8 @@ export {
   list,
   obj,
   JxType,
+  type Infer,
+  type InferShape,
   validate,
   coerceForm,
   buildDefault,

@@ -15,6 +15,7 @@
     "@aralroca/gui-agent": "^0.5.0",
     "@janux/agent": "workspace:*",
     "@janux/cli": "workspace:*",
+    "@janux/content": "workspace:*",
     "@janux/server": "workspace:*",
     "@janux/vercel": "workspace:*",
     "@shikijs/langs": "^3",

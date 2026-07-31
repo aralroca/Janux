@@ -1,5 +1,5 @@
 import type { PageMeta } from 'janux';
-import { formatDate, posts, readingMinutes, type Post } from '../content';
+import { allPosts, formatDate, readingMinutes, type Post } from '../content';
 
 export const meta: PageMeta = {
   title: 'Janux Static Blog',
@@ -11,19 +11,19 @@ function PostCard({ post }: { post: Post }) {
   return (
     <article class="post-card">
       <p class="meta">
-        <time dateTime={post.date}>{formatDate(post.date)}</time>
+        <time dateTime={post.data.date}>{formatDate(post.data.date)}</time>
         <span class="sep">·</span>
         <span>{readingMinutes(post)} min read</span>
       </p>
       <h2>
-        <a href={`/posts/${post.slug}`}>{post.title}</a>
+        <a href={`/posts/${post.id}`}>{post.data.title}</a>
       </h2>
-      <p class="excerpt">{post.description}</p>
+      <p class="excerpt">{post.data.description}</p>
       <p class="card-foot">
-        <a class="read-link" href={`/posts/${post.slug}`}>
+        <a class="read-link" href={`/posts/${post.id}`}>
           Read post <span aria-hidden="true">→</span>
         </a>
-        <a class="md-link" href={`/posts/${post.slug}.md`}>
+        <a class="md-link" href={`/posts/${post.id}.md`}>
           .md
         </a>
       </p>
@@ -42,8 +42,8 @@ export default function HomePage() {
         </p>
       </header>
       <section class="post-list">
-        {posts().map((post) => (
-          <PostCard key={post.slug} post={post} />
+        {allPosts().map((post) => (
+          <PostCard key={post.id} post={post} />
         ))}
       </section>
     </>

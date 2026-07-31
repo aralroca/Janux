@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { defineAgent } from '@janux/agent';
@@ -37,9 +38,9 @@ export interface PrebuiltApp {
  */
 async function builtStyles(root: string, app: { inlineStyles?: boolean }): Promise<string[] | undefined> {
   if (!app.inlineStyles) return undefined;
-  const sheet = Bun.file(join(root, 'dist/client/styles.css'));
+  const sheet = join(root, 'dist/client/styles.css');
 
-  return (await sheet.exists()) ? [await sheet.text()] : undefined;
+  return existsSync(sheet) ? [await readFile(sheet, 'utf8')] : undefined;
 }
 
 /**
@@ -49,9 +50,9 @@ async function builtStyles(root: string, app: { inlineStyles?: boolean }): Promi
  * gates the runtime on that registry and the page never boots.
  */
 async function builtIslandModules(root: string): Promise<Record<string, string> | undefined> {
-  const catalog = Bun.file(join(root, 'dist/client/islands.json'));
+  const catalog = join(root, 'dist/client/islands.json');
 
-  return (await catalog.exists()) ? await catalog.json() : undefined;
+  return existsSync(catalog) ? JSON.parse(await readFile(catalog, 'utf8')) : undefined;
 }
 
 type Loader = (file: string) => Promise<Record<string, unknown>>;

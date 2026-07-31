@@ -1,3 +1,8 @@
+---
+title: HTTP cache & revalidation
+description: "Cacheability as a named declaration per route: max-age, s-maxage and stale-while-revalidate, private by default, with on-demand revalidation by tag or by path."
+---
+
 # HTTP cache & revalidation
 
 A page that renders in 3 ms on your laptop and takes 300 ms from Sydney is not a
@@ -228,11 +233,19 @@ bun run dev:data-cache
 
 ```bash
 curl -sI localhost:4321/catalog | grep -i 'cache\|vary'
-# cache-control: public, max-age=0, s-maxage=60, stale-while-revalidate=300
-# cache-tag: catalog
-# vary: x-janux-navigation
-# x-janux-cache: HIT
+```
 
+```
+cache-control: public, max-age=0, s-maxage=60, stale-while-revalidate=300
+cache-tag: catalog
+vary: x-janux-navigation
+x-janux-cache: HIT
+```
+
+```bash
 curl -sI localhost:4321/account | grep -i cache-control
-# cache-control: private, no-store
+```
+
+```
+cache-control: private, no-store
 ```

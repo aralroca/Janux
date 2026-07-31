@@ -2,6 +2,7 @@ import { coerceForm, validate } from '../schema';
 import { batch } from '../signals';
 import { dryRunDiff } from './dry-run';
 import { withGate, type MutationGate } from '../state/mutation-gate';
+import { publishJanuxError } from '../dev/error-channel';
 import type { ComponentDef, Ctx, GuardValue, IntentDef, Origin, RunBag } from '../define/types';
 
 export interface AuditEntry {
@@ -36,6 +37,8 @@ export interface IntentHooks {
   onAudit?: (entry: AuditEntry) => void;
   onProposal?: (proposal: Proposal) => void;
   trackPending: <T>(work: Promise<T>) => Promise<T>;
+  /** Dev only: the island this pipeline belongs to, for the error overlay's chain. */
+  devUri?: string;
 }
 
 export class JanuxIntentError extends Error {
@@ -128,6 +131,15 @@ export async function invokeIntent(
   const tool = `${componentName}.${intentName}`;
   const guard = resolveGuard(def, bag.ctx, origin);
 
+  /*
+   * The two `import.meta.env?.DEV` publishes below hand the dev overlay the whole
+   * sentence, not just the stack: this pipeline is the one place that knows who
+   * asked and what the guard decided for them (design invariant 4). They are
+   * written out twice rather than hoisted into a shared `chain` const because a
+   * const the branches share survives constant-folding as 9 bytes of residue,
+   * and this must cost the production bundle exactly nothing — see
+   * `bundle-size.test.ts`, which measures it.
+   */
   try {
     if (origin === 'agent' && guard === 'forbidden') {
       throw new JanuxIntentError('forbidden', `Intent "${tool}" is not available`);
@@ -149,6 +161,17 @@ export async function invokeIntent(
           return result;
         } catch (error) {
           audit(hooks, { tool, origin, guard, input: parsed, ok: false, error: String(error) });
+          if (import.meta.env?.DEV) {
+            publishJanuxError(error, {
+              kind: 'intent',
+              component: componentName,
+              name: intentName,
+              island: hooks.devUri,
+              origin,
+              guard,
+              input,
+            });
+          }
           throw error;
         }
       };
@@ -162,6 +185,17 @@ export async function invokeIntent(
     return result;
   } catch (error) {
     audit(hooks, { tool, origin, guard, input, ok: false, error: String(error) });
+    if (import.meta.env?.DEV) {
+      publishJanuxError(error, {
+        kind: 'intent',
+        component: componentName,
+        name: intentName,
+        island: hooks.devUri,
+        origin,
+        guard,
+        input,
+      });
+    }
     throw error;
   }
 }

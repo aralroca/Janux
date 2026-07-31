@@ -1,3 +1,8 @@
+---
+title: Ownership — createRoot, onCleanup, getOwner, runWithOwner
+description: "The disposal tree behind islands, stores and foreign roots: effects created inside a scope are torn down with it, so nothing leaks when a component leaves the page."
+---
+
 # Ownership — createRoot, onCleanup, getOwner, runWithOwner
 
 The disposal tree behind islands, stores and foreign roots: effects created inside a scope are torn down with it, so nothing leaks when a component leaves the page.

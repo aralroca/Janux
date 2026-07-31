@@ -1,3 +1,8 @@
+---
+title: Components
+description: Janux has exactly two component kinds. The framework infers which one you wrote.
+---
+
 # Components
 
 Janux has exactly two component kinds. The framework infers which one you wrote.

@@ -1,3 +1,8 @@
+---
+title: Tutorial 3/3 — The copilot, proposals and tests
+description: The board works and persists. Time to let an agent drive it — safely.
+---
+
 # Tutorial 3/3 — The copilot, proposals and tests
 
 The board works and persists. Time to let an agent drive it — safely.

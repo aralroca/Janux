@@ -1,3 +1,8 @@
+---
+title: Data cache API — useQuery, mutation, QueryClient
+description: "The client cache from janux/query (re-exported by janux/client). Server state lives here; component state stays in schema. Guide: Data cache & URL state."
+---
+
 # Data cache API — useQuery, mutation, QueryClient
 
 The client cache from `janux/query` (re-exported by `janux/client`), plus the route cache policy that gives the server half the same vocabulary. Server state lives here; component state stays in `schema`. Guides: [Data cache & URL state](/docs/guide/data-cache) · [HTTP cache & revalidation](/docs/guide/http-cache).

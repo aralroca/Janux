@@ -1,37 +1,54 @@
-import { prodServerOptions, type PrebuiltApp } from '@janux/cli/prod';
-import { createJanuxServer } from '@janux/server';
+import {
+  createRequestHandler,
+  type AdapterCapabilities,
+  type JanuxAdapter,
+  type JanuxApp,
+  type JanuxRequestHandler,
+} from '@janux/cli/adapter';
+import type { OutputOptions } from './output';
 
-export interface VercelApp extends PrebuiltApp {
-  /** The app root, as the *running* function sees it — `/var/task/...`, not the build machine's. */
-  root: string;
-}
+/** The app root a running function sees is `/var/task/...`, not the build machine's — hence `root`. */
+export type VercelApp = JanuxApp;
+
+/**
+ * A Vercel function is a serverless invocation: it can stream a response and it
+ * can write to `/tmp`, but it does not outlive the request, so there is nothing
+ * to hold a WebSocket open. An app with `src/ws.ts` is told at build time
+ * rather than in production.
+ */
+export const capabilities: AdapterCapabilities = { websocket: false, streaming: true, filesystem: true };
 
 /**
  * Vercel's Bun runtime takes a function that default-exports `{ fetch }` — the
- * same shape `Bun.serve` takes, which is the shape a Janux server already is.
- * Static assets never reach here: Vercel's CDN answers them from the build's
- * output directory before the function is invoked.
+ * same shape `Bun.serve` takes, which is the shape a Janux server already is,
+ * and the shape every Janux adapter produces. Static assets never reach here:
+ * Vercel's CDN answers them from the build's output directory before the
+ * function is invoked.
  *
  * `app` is the module `janux-vercel` generates: the app's own modules, imported
  * statically so the bundler inlines them. Without it the handler resolves the
  * app from disk the way `janux start` does — which is what a local run wants,
  * and what a bundled function cannot do.
  */
-export function createHandler(app?: VercelApp): { fetch(request: Request): Promise<Response> } {
-  let booted: Promise<{ fetch(request: Request): Promise<Response> }> | undefined;
-
-  return {
-    fetch(request) {
-      booted ??= boot(app);
-
-      return booted.then((server) => server.fetch(request));
-    },
-  };
+export function createHandler(app?: VercelApp): JanuxRequestHandler {
+  return createRequestHandler(app);
 }
 
-/** Once per instance, not once per request — a cold start pays for the whole app. */
-async function boot(app: VercelApp | undefined): Promise<{ fetch(request: Request): Promise<Response> }> {
-  return createJanuxServer(await prodServerOptions(app?.root ?? process.cwd(), app));
+/**
+ * The adapter face. `janux-vercel` also writes `vercel.json`, which no build
+ * hook could do — Vercel reads it *before* the build — so the CLI does that
+ * first and then runs this.
+ */
+export function vercel(options: OutputOptions = {}): JanuxAdapter {
+  return {
+    name: 'janux-vercel',
+    capabilities,
+    adapt: async (builder) => {
+      const { writeVercelOutput } = await import('./output');
+
+      await writeVercelOutput(builder.root, builder.config, options);
+    },
+  };
 }
 
 export interface VercelConfigOptions {

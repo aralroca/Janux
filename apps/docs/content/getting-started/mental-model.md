@@ -1,3 +1,8 @@
+---
+title: Mental model
+description: Four ideas carry the whole framework. Learn these and the rest of the docs is detail.
+---
+
 # Mental model
 
 Four ideas carry the whole framework. Learn these and the rest of the docs is detail.

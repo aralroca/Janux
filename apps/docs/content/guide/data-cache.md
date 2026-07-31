@@ -1,3 +1,8 @@
+---
+title: Data cache & URL state
+description: "The client cache a console leans on: cached reads keyed by reactive values, background revalidation, and mutations with optimistic writes and real rollback."
+---
+
 # Data cache & URL state
 
 For the server-state a console leans on — cached reads, background revalidation, mutations with rollback — Janux ships a small client cache (`janux/client`), a signal adapter, persisted stores and typed URL state. It's built on a framework-agnostic core so the same cache works on the server (per-request) and in the browser.

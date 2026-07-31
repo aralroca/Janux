@@ -18,7 +18,9 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./prod": "./src/prod.ts"
+    "./prod": "./src/prod.ts",
+    "./adapter": "./src/adapter.ts",
+    "./adapter/build": "./src/adapter-build.ts"
   },
   "dependencies": {
     "janux": "workspace:*",
@@ -61,6 +63,14 @@
       "./prod": {
         "types": "./dist/src/prod.d.ts",
         "default": "./dist/src/prod.js"
+      },
+      "./adapter": {
+        "types": "./dist/src/adapter.d.ts",
+        "default": "./dist/src/adapter.js"
+      },
+      "./adapter/build": {
+        "types": "./dist/src/adapter-build.d.ts",
+        "default": "./dist/src/adapter-build.js"
       }
     }
   },

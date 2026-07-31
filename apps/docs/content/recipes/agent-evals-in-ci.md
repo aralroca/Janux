@@ -1,3 +1,8 @@
+---
+title: Agent evals in CI
+description: '"Can an agent actually complete this task through my tools?" splits into three questions with three different costs.'
+---
+
 # Agent evals in CI
 
 "Can an agent actually complete this task through my tools?" splits into three questions with three different costs. Only the last one needs an API key, and it's the only one that shouldn't gate a merge.
