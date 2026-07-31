@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import * as runtime from 'janux/jsx-runtime';
 import type { JanuxNode } from 'janux';
 import type { CollectionDef, CollectionEntry, ContentFormat } from './collection';
@@ -70,7 +71,7 @@ async function compileBody(body: string, format: ContentFormat, file: string): P
       rehypePlugins: format === 'md' ? [rehypeRaw, collectHeadings(headings)] : [collectHeadings(headings)],
     },
   );
-  const module = await run(String(source), { ...runtime, baseUrl: `file://${file}` } as any);
+  const module = await run(String(source), { ...runtime, baseUrl: pathToFileURL(file).href } as any);
 
   return { content: module.default as MdxContent, headings };
 }
