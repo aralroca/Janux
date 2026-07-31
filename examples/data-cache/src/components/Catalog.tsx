@@ -59,6 +59,12 @@ export const Catalog = component({
     const q = useQuery(bag, 'products', () => ({
       queryKey: ['products', state.tag],
       queryFn: () => listProducts({ tag: state.tag }),
+      // The client half of the same model the `/catalog` route declares to a
+      // CDN: fresh for 30s, shown-while-revalidating for 5m, and dropped by the
+      // same tag word `revalidateTag('catalog')` uses on the server.
+      staleTime: 30_000,
+      swr: 300_000,
+      tags: ['catalog'],
     }));
     const items = (q.data.value ?? []) as any[];
 

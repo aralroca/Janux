@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'bun:test';
-import { htmlDocument, shellParts, type ShellOptions } from './html-shell';
+import {
+  htmlDocument,
+  queryPayloadScript,
+  shellEpilogue,
+  shellInterlude,
+  shellParts,
+  shellPrelude,
+  type ShellOptions,
+} from './html-shell';
 
 const base: ShellOptions = {
   html: '<main>hi</main>',
@@ -151,6 +159,77 @@ describe('htmlDocument navigation and speculation rules', () => {
     expect(configured).toContain('type="application/janux+config" key="jx-config"');
     expect(configured).toContain('"prefetch":false');
     expect(htmlDocument(base)).not.toContain('janux+config');
+  });
+});
+
+/**
+ * Strict CSP: the whole point is that `script-src` names a nonce and nothing
+ * else, so ONE unnonced tag the shell emits is a blank page. These sweep the
+ * document rather than listing the tags we remember writing — a new inline
+ * script added later fails here instead of in a customer's browser.
+ */
+describe('htmlDocument CSP nonce', () => {
+  const NONCE = 'r4nd0m';
+  /** Every `<script>`/`<style>` open tag, whatever its type or position. */
+  const tags = (html: string): string[] => [...html.matchAll(/<(?:script|style)\b[^>]*>/g)].map(([tag]) => tag);
+
+  // Load-bearing: the sweep is only as wide as this fixture, so a shell option
+  // that emits a new tag has to be added here or it passes untested.
+  const everything: ShellOptions = {
+    ...base,
+    snapshots: [{ uri: 'ui://cart#default', state: { items: [] } }],
+    islandNames: ['cart'],
+    islandModules: { cart: '/cart.js' },
+    runtimeUrl: '/client.js',
+    inlineStyles: ['body{color:red}'],
+    fontFaces: "@font-face{font-family:'Inter'}",
+    fontPreloads: ['/_janux/font/inter.woff2'],
+    navigation: { prefetch: false },
+    i18n: { locale: 'es', dir: 'ltr', payload: { locale: 'es', messages: { hi: 'x' } } },
+    // A route's own head tags count too: the app cannot write a per-request
+    // nonce itself, so an unnonced one would simply never run.
+    meta: { jsonLd: [{ '@type': 'WebSite' }], head: [{ tag: 'script', text: 'a=1' }, { tag: 'style', text: 'b{}' }] },
+  };
+
+  it('nonces every script and style the document emits, with no exception', () => {
+    const emitted = tags(htmlDocument({ ...everything, nonce: NONCE }));
+
+    expect(emitted.length).toBeGreaterThan(5);
+    expect(emitted.filter((tag) => !tag.includes(`nonce="${NONCE}"`))).toEqual([]);
+  });
+
+  it('nonces the streaming shell too — prelude, interlude and epilogue', () => {
+    const options = { ...everything, nonce: NONCE };
+    const parts = [shellPrelude(options), shellInterlude(options), shellEpilogue(options)];
+
+    expect(parts.flatMap(tags).filter((tag) => !tag.includes(`nonce="${NONCE}"`))).toEqual([]);
+  });
+
+  it('escapes the nonce so it can never break out of the attribute', () => {
+    expect(htmlDocument({ ...everything, nonce: '"><script>alert(1)</script>' })).not.toContain('<script>alert(1)');
+  });
+
+  // The zero-regression contract: an app that never configures CSP gets the
+  // byte-identical document it got before the option existed.
+  it('emits no nonce attribute at all when none is configured', () => {
+    expect(htmlDocument(everything)).not.toContain('nonce');
+  });
+});
+
+/**
+ * The query hydration payload is built by the server, not spliced by the shell,
+ * so it is nonced where it is built — and it is executable, which makes it the
+ * one shell script a strict policy would actually refuse.
+ */
+describe('queryPayloadScript CSP nonce', () => {
+  const client = { dehydrate: () => ({ q1: { data: 1 } }), inFlightHashes: () => [] } as never;
+
+  it('carries the nonce it is given', () => {
+    expect(queryPayloadScript(client, new Set(), 'r4nd0m')).toContain('nonce="r4nd0m"');
+  });
+
+  it('carries none when the app does not use CSP', () => {
+    expect(queryPayloadScript(client, new Set())).not.toContain('nonce');
   });
 });
 

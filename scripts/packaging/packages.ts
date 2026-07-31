@@ -3,10 +3,12 @@ export const PUBLISH_ORDER = [
   'janux',
   'janux-server',
   'janux-agent',
+  'janux-content',
   'janux-vite',
   'janux-tailwind',
   'janux-cli',
   'janux-vercel',
+  'janux-node',
   'create-janux',
 ] as const;
 

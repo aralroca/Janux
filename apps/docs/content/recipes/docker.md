@@ -1,3 +1,8 @@
+---
+title: Docker
+description: A Janux app in a container is Bun + your source + dist/client.
+---
+
 # Docker
 
 A Janux app in a container is **Bun + your source + `dist/client`**. There is no server bundle to produce, so there is nothing to copy between stages: one stage installs, builds the client assets and runs `janux start`.

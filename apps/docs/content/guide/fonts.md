@@ -1,3 +1,8 @@
+---
+title: Fonts
+description: Self-hosted, subset and preloaded, with a fallback face measured from the real font so the swap moves nothing.
+---
+
 # Fonts
 
 A webfont shifts the layout twice: once when the fallback paints, once when the real file swaps in. The second one is the shift Lighthouse counts, and it is why so many sites either hide their text for three seconds or give up and ship the system stack. Neither is necessary. Declare the font and Janux does the rest — at build time, with nothing left to run in the browser.

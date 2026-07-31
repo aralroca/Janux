@@ -7,6 +7,7 @@ import { createRateLimiter, type RateLimitConfig, type RateLimiter } from './har
 import { createLlmHandler } from './llm-endpoint';
 import { createRemoteToolbox, type McpAgentConnection, type RemoteToolbox } from './mcp-tools';
 import { resolveModel, setupCard, type ModelEnv } from './model';
+import { tracedAgentTurn, tracedRound, type ModelCost } from './tracing';
 import { allowsTool, type ToolFilter } from './tool-filter';
 import { callProvider, type AgentTool, type ChatMessage, type FetchLike, type ToolCall } from './providers';
 
@@ -32,6 +33,12 @@ export interface AgentConfig {
    */
   modelOptions?: Record<string, unknown>;
   maxTurns?: number;
+  /**
+   * What this model costs, in USD per million tokens. Declaring it is what puts
+   * `janux.cost.usd` on every turn's span — Janux ships no price table, because
+   * a bundled one is wrong the week after it is written.
+   */
+  cost?: ModelCost;
   /** Which mounted tools reach the model. Same semantics as `createCopilot({ tools })`. */
   tools?: ToolFilter;
   /** Remote MCP server(s) whose tools join the agent's tool list. */
@@ -228,39 +235,47 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       }
       const messages = guarded.messages.filter((message) => message.role !== 'system') as ChatMessage[];
 
-      for (let round = 0; round < maxTurns; round += 1) {
-        const reply = await callProvider(model, system, messages, tools, fetchImpl).catch((error) => ({
-          text: '',
-          toolCalls: [],
-          providerError: String(error),
-        }));
+      const runLoop = async (): Promise<Response> => {
+        for (let round = 0; round < maxTurns; round += 1) {
+          const reply = await tracedRound(model, config.cost, () =>
+            callProvider(model, system, messages, tools, fetchImpl).catch((error) => ({
+              text: '',
+              toolCalls: [],
+              providerError: String(error),
+            })),
+          );
 
-        if ('providerError' in reply) {
-          return json({ type: 'error', error: 'provider_error', detail: reply.providerError, threadId: turn.threadId }, 502);
+          if ('providerError' in reply) {
+            return json({ type: 'error', error: 'provider_error', detail: reply.providerError, threadId: turn.threadId }, 502);
+          }
+
+          messages.push({ role: 'assistant', content: reply.text, toolCalls: reply.toolCalls });
+          if (reply.toolCalls.length === 0) {
+            await turn.rememberReply?.(reply.text);
+
+            return json({
+              type: 'text',
+              text: reply.text,
+              messages,
+              threadId: turn.threadId,
+              model: `${model.provider}/${model.model}`,
+            });
+          }
+          const serverCalls = reply.toolCalls.filter((call) => call.name.startsWith('api.'));
+          const remoteCalls = reply.toolCalls.filter((call) => toolbox?.owns(call.name));
+          const uiCalls = reply.toolCalls.filter((call) => !serverCalls.includes(call) && !remoteCalls.includes(call));
+
+          messages.push(...(await toolResults(serverCalls, (call) => deps.invoke(call.name, call.input))));
+          messages.push(...(await toolResults(remoteCalls, (call) => toolbox!.call(call.name, call.input))));
+          if (uiCalls.length > 0) return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId });
         }
 
-        messages.push({ role: 'assistant', content: reply.text, toolCalls: reply.toolCalls });
-        if (reply.toolCalls.length === 0) {
-          await turn.rememberReply?.(reply.text);
+        return json({ type: 'text', text: 'I could not finish within the turn limit.', messages, threadId: turn.threadId });
+      };
 
-          return json({
-            type: 'text',
-            text: reply.text,
-            messages,
-            threadId: turn.threadId,
-            model: `${model.provider}/${model.model}`,
-          });
-        }
-        const serverCalls = reply.toolCalls.filter((call) => call.name.startsWith('api.'));
-        const remoteCalls = reply.toolCalls.filter((call) => toolbox?.owns(call.name));
-        const uiCalls = reply.toolCalls.filter((call) => !serverCalls.includes(call) && !remoteCalls.includes(call));
-
-        messages.push(...(await toolResults(serverCalls, (call) => deps.invoke(call.name, call.input))));
-        messages.push(...(await toolResults(remoteCalls, (call) => toolbox!.call(call.name, call.input))));
-        if (uiCalls.length > 0) return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId });
-      }
-
-      return json({ type: 'text', text: 'I could not finish within the turn limit.', messages, threadId: turn.threadId });
+      // The whole turn is one span: every round and every tool the model
+      // reached for hangs off it, so a trace reads as one conversation.
+      return tracedAgentTurn(model, runLoop);
     },
   };
 }

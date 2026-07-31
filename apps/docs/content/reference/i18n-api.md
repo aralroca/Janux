@@ -1,3 +1,8 @@
+---
+title: i18n API
+description: "The runtime behind internationalization: the functions the framework calls for you, and the ones to import when translating outside a component."
+---
+
 # i18n API
 
 The runtime behind [internationalization](/docs/guide/i18n). Configure `src/i18n.ts` and the framework calls these for you; import them when you need translation outside a component or you're building tooling.

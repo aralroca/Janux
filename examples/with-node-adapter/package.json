@@ -1,0 +1,20 @@
+{
+  "name": "janux-example-with-node-adapter",
+  "private": true,
+  "version": "0.2.1",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev --port 4321",
+    "build": "janux build",
+    "start": "janux start --port 4321",
+    "build:node": "janux build && janux-node",
+    "start:node": "node build/index.js"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*",
+    "@janux/node": "workspace:*"
+  }
+}

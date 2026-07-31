@@ -1,3 +1,8 @@
+---
+title: worker()
+description: Runs a function on a Web Worker thread, so expensive work stops blocking clicks, typing, scrolling and animation.
+---
+
 # worker()
 
 Runs a function on a Web Worker thread, so expensive work stops blocking clicks, typing, scrolling and animation.

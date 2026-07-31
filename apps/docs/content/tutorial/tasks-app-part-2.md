@@ -1,3 +1,8 @@
+---
+title: Tutorial 2/3 — Persistence, effects and a shared store
+description: Part 1 gave us a working board that forgets everything on reload.
+---
+
 # Tutorial 2/3 — Persistence, effects and a shared store
 
 Part 1 gave us a working board that forgets everything on reload. Let's fix that with an api(), a debounced effect, SSR-loaded data and a theme store shared across islands.

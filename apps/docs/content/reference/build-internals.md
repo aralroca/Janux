@@ -1,9 +1,14 @@
+---
+title: Build & CLI internals
+description: The plumbing the CLI and the Vite plugin use. Read this to embed Janux in another build, to write a custom server, or to script the CLI.
+---
+
 # Build & CLI internals
 
 The plumbing the [CLI](/docs/reference/cli) and the [Vite plugin](/docs/guide/cli-and-deployment) use. You need this page to embed Janux in another build, to write a custom server, or to script the CLI — not to build an app.
 
 ```ts
-import { resolveAppConfig, shellOptions, apiFiles, apiStubModule, exportedApiNames, apiModuleName, toFetchRequest, sendFetchResponse } from '@janux/vite';
+import { resolveAppConfig, shellOptions, apiFiles, apiStubModule, exportedApiNames, apiModuleName, packageDir, toFetchRequest, sendFetchResponse } from '@janux/vite';
 import { runCli, parseArgs, HELP_TEXT } from '@janux/cli';
 import { createHttpHandlers } from '@janux/server';
 import { renderNode } from 'janux/server';
@@ -18,6 +23,8 @@ import { renderNode } from 'janux/server';
 3. options passed to the plugin.
 
 Config files are imported with an **mtime cache-buster**, which is why editing `janux.config.ts` takes effect in dev without restarting. Discovery is by existence: `src/middleware.ts`, `src/matchers.ts`, `src/i18n.ts` (or `src/i18n/index.ts`), `src/api/`, `src/stores.ts`, `src/agent.ts`, `src/styles.css`, `public/favicon.svg`.
+
+`publishAppRoot(root)`, from the same entry, sets `JANUX_APP_ROOT` — the app root an app's own modules read to find their data files, since a bundle's `import.meta.dirname` is not the app's. Every path that *serves* an app publishes it (the dev plugin, `prodServerOptions`, a deployment adapter); merely resolving a config does not, because tooling resolves the config of apps it will never run.
 
 ## shellOptions(app, stylesheets)
 
@@ -77,6 +84,16 @@ The build-time half of the [font pipeline](/docs/guide/fonts). Everything is cac
 | `writeFontAssets(root, configs, outDir)` | The build's output: the files, the finished CSS and the preload list, written under `outDir/_janux/font/` |
 | `builtFontAssets(outDir)` | Reads those back for `janux start` and `output: 'static'` — neither resolves anything |
 | `fontResponse(root, path)` | Serves one file out of the cache under `janux dev`, where there is no build output yet |
+
+## packageDir(specifier, from)
+
+`packageDir(specifier: string, from: string): string | undefined` — where a package is installed, resolved the way Node does it: the nearest `node_modules` up the *real* path, symlinks followed. `Bun.resolveSync` answers from Bun's global install cache too, which reports packages the app never installed; this does not.
+
+It is how zero-config integrations are detected — installing `@janux/tailwind` **is** the configuration — and how [`janux info`](/docs/reference/cli#janux-info) reports the versions an app actually resolves.
+
+```ts
+packageDir('@janux/tailwind', root); // → '/app/node_modules/@janux/tailwind' | undefined
+```
 
 ## Node ⇄ Web request adapters
 

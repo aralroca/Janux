@@ -1,4 +1,5 @@
 import { CONFIG_SCRIPT_ID, SPECULATION_SCRIPT_ID, speculationRules, type NavigationConfig } from '../config';
+import { applyNonce } from './nonce';
 
 /** `janux.config.ts`'s navigation section, shipped by the shell as a keyed script. */
 export function shellNavigationConfig(): NavigationConfig {
@@ -36,6 +37,9 @@ export function rescopeSpeculationRules(): void {
   if (!rules) return;
   script.type = 'speculationrules';
   script.id = SPECULATION_SCRIPT_ID;
+  // Speculation rules are script-src material: unnonced, a strict policy drops
+  // them and the narrowing silently costs the page its prefetches.
+  applyNonce(script);
   script.textContent = JSON.stringify(rules);
   document.head.appendChild(script);
 }

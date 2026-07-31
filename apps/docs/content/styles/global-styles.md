@@ -1,3 +1,8 @@
+---
+title: Global styles
+description: "The baseline, and the one every other approach sits on top of: a plain CSS file at src/styles.css."
+---
+
 # Global styles
 
 The baseline, and the one every other approach sits on top of: a plain CSS file at `src/styles.css`.

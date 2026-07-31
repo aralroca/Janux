@@ -1,3 +1,8 @@
+---
+title: every / onEvent — refresh policies
+description: Declare when a source re-queries. Both builders return a RefreshPolicy ({ everyMs?, events }) for a source's refresh field.
+---
+
 # every / onEvent — refresh policies
 
 Declare *when* a [`source`](/docs/guide/sources-effects-events) re-queries. Both builders return a `RefreshPolicy` (`{ everyMs?, events }`) for a source's `refresh` field.

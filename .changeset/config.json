@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.4/schema.json",
+  "changelog": "./changelog.cjs",
+  "commit": false,
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "bumpVersionsWithWorkspaceProtocolOnly": true,
+  "privatePackages": { "version": false, "tag": false },
+  "fixed": [["janux", "@janux/server", "@janux/agent", "@janux/vite", "@janux/tailwind", "@janux/cli", "@janux/vercel", "create-janux"]],
+  "linked": [],
+  "ignore": []
+}

@@ -7,6 +7,7 @@ import {
   translateCore,
   type AuditEntry,
   type ComponentDef,
+  type CspConfig,
   type Ctx,
   type I18n,
   type I18nConfig,
@@ -15,26 +16,39 @@ import {
   type RenderResult,
 } from 'janux';
 import { QueryClient } from 'janux/query';
+import { isTracing, reportError, withSpan, type JanuxSpan } from 'janux/observability';
+import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from './cache';
+import { createResponseCache } from './response-cache';
 import { createHttpHandlers, type HandlerModule } from './http-handlers';
 import { createMcpEndpoint, type McpAuth } from './mcp';
 import { pageMarkdown } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
 import type { ShellI18n } from './html-shell';
 import { assertValidInput, errorStatus, evictOldestProposal, json, proposalId, type PendingApiProposal } from './http';
-import { apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
+import { apiAttributes, apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 import { createFsRouter, type Route } from './router';
-import { shellEpilogue, shellEpilogueRest, shellInterlude, shellPrelude, type ShellOptions } from './html-shell';
-import { safeJson } from './html-escape';
+import {
+  queryPayloadScript,
+  shellEpilogue,
+  shellEpilogueRest,
+  shellInterlude,
+  shellPrelude,
+  type ShellOptions,
+} from './html-shell';
+import { nonceAttr, safeJson } from './html-escape';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
 import { refuseCrossSite } from './csrf';
+import { NONCE_HEADER, resolveCsp } from './csp';
 
 /**
  * Set by the client runtime on a navigation fetch. What the document already has
  * (the app's CSS) does not need to travel again — see handlePage.
  */
 export const NAVIGATION_HEADER = 'x-janux-navigation';
+
+
 
 export interface AgentMount {
   handle(req: Request, deps: AgentDeps): Promise<Response>;
@@ -129,6 +143,14 @@ export interface ServerOptions {
   staticExport?: boolean;
   /** SPA navigation, prefetching and speculation rules (`navigation` in the app config). */
   navigation?: NavigationConfig;
+  /**
+   * Strict CSP. `true` is the whole setup: a fresh nonce per request on every
+   * inline script and style the framework emits, plus the recommended
+   * `Content-Security-Policy` header. See `csp.ts`.
+   */
+  csp?: boolean | CspConfig;
+  /** How route cache policies reach the CDN in front (`cache` in the app config). */
+  cache?: CacheConfig;
 }
 
 async function resolveMeta(
@@ -170,6 +192,12 @@ interface RenderablePage {
 interface ResolvedDocument {
   status: number;
   page?: RenderablePage;
+  /**
+   * The matched route's declared policy. Only a 200 carries one: an error page
+   * is not the page the policy described, and caching a miss under a cached
+   * pattern outlives whatever caused it.
+   */
+  cache?: CacheDecision;
 }
 
 type ErrorPageKind = 'notFound' | 'serverError';
@@ -178,9 +206,14 @@ const ERROR_PAGE_STATUS: Record<ErrorPageKind, number> = { notFound: 404, server
 /** The body an app with no `_404`/`_500` page answers with — the status line, in words. */
 const STATUS_TEXT: Record<number, string> = { 404: 'Not found', 500: 'Internal Server Error' };
 
-/** A page that threw is the app's bug, not the visitor's: it reaches the log even when `_500` swallows it. */
-function reportRenderFailure(error: unknown): void {
-  console.error('Janux: page render failed —', error);
+/**
+ * A page that threw is the app's bug, not the visitor's: it reaches the app's
+ * global `onError` even when `_500` swallows it for the visitor. The two are
+ * halves of the same answer — `_500.tsx` is what the person sees, this is what
+ * the operator sees.
+ */
+function reportRenderFailure(error: unknown, route?: string): void {
+  reportError(error, { phase: 'ssr', route });
 }
 
 /**
@@ -190,10 +223,10 @@ function reportRenderFailure(error: unknown): void {
  * the document is closed so the parser is never left mid-tag. No auto-reload:
  * a deterministic render error would just fail the same way again.
  */
-function streamErrorScript(error: unknown): string {
+function streamErrorScript(error: unknown, nonce?: string): string {
   const detail = safeJson(String(error));
 
-  return `\n<script key="jx-stream-error">document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: render failed mid-stream",${detail})</script>\n</body>\n</html>`;
+  return `\n<script key="jx-stream-error"${nonceAttr(nonce)}>document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: render failed mid-stream",${detail})</script>\n</body>\n</html>`;
 }
 
 /**
@@ -206,6 +239,7 @@ function documentStream(
   body: AsyncGenerator<string>,
   epilogue: () => Promise<string>,
   onCancel: () => void,
+  nonce?: string,
 ): ReadableStream<Uint8Array> {
   async function* document(): AsyncGenerator<string> {
     let sentBody = false;
@@ -220,7 +254,7 @@ function documentStream(
       }
       yield `${sentBody ? '\n' : ''}${await epilogue()}`;
     } catch (error) {
-      yield streamErrorScript(error);
+      yield streamErrorScript(error, nonce);
     }
   }
 
@@ -246,12 +280,21 @@ function documentStream(
 
 /** The Janux fullstack server: pages, api() endpoints, manifest, proposals and the agent mount. */
 export function createJanuxServer(options: ServerOptions = {}) {
+  const csp = resolveCsp(options.csp, options.staticExport);
   const apiTools = collectApis(options.apis ?? {});
   const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
   const httpHandlers = options.httpHandlers
-    ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers })
+    ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers, cache: options.cache })
     : undefined;
   const loadRoute = options.loadRoute ?? ((filePath: string) => import(/* @vite-ignore */ filePath));
+  /**
+   * Inert until a route declares `scope: 'public'` — it only ever holds what a
+   * response told a shared cache it could hold, which is why it is on by
+   * default without changing any existing app's behaviour.
+   */
+  const responseCache = options.cache?.shared === false ? undefined : createResponseCache(options.cache);
+  const cached = (req: Request, produce: () => Promise<Response>): Promise<Response> =>
+    responseCache ? responseCache.handle(req, produce) : produce();
   // Absent for an app with no routes dir (inline `routes`), which then has no
   // error pages either and degrades to the bare status line.
   const errorPages: Partial<Record<ErrorPageKind, string>> = router?.errorPages ?? {};
@@ -330,12 +373,19 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const findRoute = (pathname: string) => {
     if (options.routes?.[pathname]) {
-      return { render: options.routes[pathname]!, params: {} as Record<string, string>, layouts: [] as string[] };
+      return { render: options.routes[pathname]!, params: {} as Record<string, string>, layouts: [] as string[], pattern: pathname };
     }
     const match = router?.match(pathname);
 
-    return match ? { load: match.filePath, params: match.params, layouts: match.layouts } : undefined;
+    return match ? { load: match.filePath, params: match.params, layouts: match.layouts, pattern: match.pattern } : undefined;
   };
+
+  /**
+   * What `janux.route` reports: the route PATTERN, not the URL. A span per
+   * order id is a cardinality bomb in any backend, and `/orders/[id]` is the
+   * thing an operator actually wants a latency distribution for.
+   */
+  const routePattern = (pathname: string): string => findRoute(pathname)?.pattern ?? pathname;
 
   /** Layouts compose top-down: each `_layout` default export wraps its subtree. */
   const applyLayouts = async (vnode: unknown, layouts: string[], ctx: Ctx, params: Record<string, string>) => {
@@ -362,7 +412,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const meta = await resolveMeta(module?.meta, ctx, route.params);
     const vnode = await applyLayouts(await render({ ctx, params: route.params }), route.layouts, ctx, route.params);
 
-    return { vnode, meta };
+    return { vnode, meta, cache: { policy: policyOf(module), params: route.params, vary: [NAVIGATION_HEADER] } };
   };
 
   /**
@@ -388,7 +438,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     if (!filePath) return { status: ERROR_PAGE_STATUS[kind] };
 
     return renderErrorPage(filePath, kind, ctx, error).catch((failure) => {
-      console.error(`Janux: ${filePath} failed to render —`, failure);
+      reportRenderFailure(failure, filePath);
 
       return { status: ERROR_PAGE_STATUS[kind] };
     });
@@ -399,10 +449,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
     try {
       const page = await resolvePage(pathname, ctx);
 
-      return page ? { status: 200, page } : await resolveErrorPage('notFound', ctx);
+      return page ? { status: 200, page, cache: page.cache } : await resolveErrorPage('notFound', ctx);
     } catch (error) {
       if (isNotFoundError(error)) return resolveErrorPage('notFound', ctx);
-      reportRenderFailure(error);
+      reportRenderFailure(error, pathname);
 
       return resolveErrorPage('serverError', ctx, error);
     }
@@ -425,11 +475,21 @@ export function createJanuxServer(options: ServerOptions = {}) {
     }
   };
 
-  /** Buffered render for consumers that need the whole page at once (manifest, markdown projections). */
+  /**
+   * Buffered render for consumers that need the whole page at once (manifest,
+   * markdown projections). Traced like any other render: an agent turn renders
+   * the page to know which tools exist, and that cost belongs in the trace —
+   * otherwise its island spans hang off nothing.
+   */
   const renderPage = async (pathname: string, ctx: Ctx) => {
     const page = await resolvePageOrNone(pathname, ctx);
 
-    return page && { ...(await renderToString(page.vnode, renderOptions(ctx))), meta: page.meta };
+    if (!page) return undefined;
+    const rendered = await withSpan('janux.render', () => ({ 'janux.route': routePattern(pathname) }), () =>
+      renderToString(page.vnode, renderOptions(ctx)),
+    );
+
+    return { ...rendered, meta: page.meta };
   };
 
   type PageRender = Awaited<ReturnType<typeof renderPage>>;
@@ -459,20 +519,36 @@ export function createJanuxServer(options: ServerOptions = {}) {
   };
 
   /** Agent + `confirm`: register a pending proposal for a human instead of running the tool. */
-  const proposeApi = (tool: ApiTool, input: unknown, ctx: Ctx) => {
+  const registerProposal = (tool: ApiTool, input: unknown, ctx: Ctx, id: string) => {
     const parsed = tool.input ? assertValidInput(tool, input) : input;
-    const id = proposalId('api');
 
     evictOldestProposal(proposals);
     // The approved call still CAME through the agent surface — a human only
     // authorized it. Executing as 'agent' keeps run()/guards/audit consistent
     // with the client-side approval path and with the documented origin rules.
-    proposals.set(id, { id, tool: tool.name, input: parsed, execute: () => invokeApi(tool, parsed, ctx, 'agent', options.onAudit) });
+    const execute = () => invokeApi(tool, parsed, ctx, 'agent', options.onAudit, { span: 'janux.api.execute', proposal: id });
+
+    proposals.set(id, { id, tool: tool.name, input: parsed, execute });
     // `proposed`, not `ok` — nothing ran yet, and an audit trail that records an
     // unapproved proposal as a success is worse than no trail at all.
     options.onAudit?.(apiAuditEntry(tool, 'agent', 'confirm', ctx, { input: parsed, ok: true, proposed: true }));
 
     return { status: 'proposal' as const, id, tool: tool.name, input: parsed };
+  };
+
+  /**
+   * The proposal gets its own span even though nothing ran: an agent asking is
+   * the event a reviewer wants to see, and the approval — if it ever comes —
+   * arrives in a different request, on a different trace, linked by this id.
+   */
+  const proposeApi = (tool: ApiTool, input: unknown, ctx: Ctx) => {
+    const id = proposalId('api');
+
+    return withSpan(
+      'janux.api',
+      () => apiAttributes(tool, 'confirm', 'agent', id),
+      async () => registerProposal(tool, input, ctx, id),
+    );
   };
 
   /**
@@ -503,7 +579,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
     try {
       if (origin === 'agent' && resolveApiGuard(tool, ctx, origin) === 'confirm') {
-        return json({ ok: true, result: proposeApi(tool, input, ctx) });
+        return json({ ok: true, result: await proposeApi(tool, input, ctx) });
       }
 
       return json({ ok: true, result: await invokeApi(tool, input, ctx, origin, options.onAudit) });
@@ -533,8 +609,15 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
     if (!proposal) return json({ ok: false, error: 'unknown proposal' }, 404);
     proposals.delete(proposal.id);
+    // The approval is the human act this whole feature exists to make visible:
+    // its own span, `origin: human`, wrapping the agent-origin execution.
+    const result = await withSpan(
+      'janux.proposal.approve',
+      () => ({ 'janux.proposal.id': proposal.id, 'janux.intent': `api.${proposal.tool}`, 'janux.origin': 'human' }),
+      () => proposal.execute(),
+    );
 
-    return json({ ok: true, result: await proposal.execute() });
+    return json({ ok: true, result });
   };
 
   /**
@@ -579,7 +662,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const { locale, pathname: page } = localize(pathname);
     const ctx = localeCtx(baseCtx, locale ?? options.i18n?.defaultLocale);
     const result = await renderPage(page, ctx).catch((error) => {
-      reportRenderFailure(error);
+      reportRenderFailure(error, pathname);
 
       return undefined;
     });
@@ -598,7 +681,21 @@ export function createJanuxServer(options: ServerOptions = {}) {
     auth: options.mcpAuth,
   });
 
-  const handlePage = async (req: Request, pathname: string, kind?: ErrorPageKind): Promise<Response> => {
+  const handlePage = (req: Request, pathname: string, kind?: ErrorPageKind, span?: JanuxSpan): Promise<Response> => {
+    const render = () => renderDocument(req, pathname, kind);
+
+    // Resolving the pattern costs a route match. An uninstrumented app never
+    // pays for it, and the request span — opened before routing knew anything
+    // — learns the route here.
+    if (!isTracing()) return render();
+    const route = routePattern(localize(pathname).pathname);
+
+    span?.setAttributes({ 'janux.route': route });
+
+    return withSpan('janux.render', () => ({ 'janux.route': route }), render);
+  };
+
+  const renderDocument = async (req: Request, pathname: string, kind?: ErrorPageKind): Promise<Response> => {
     const { locale, pathname: page } = localize(pathname);
     /*
      * A client navigation is being diffed into a document that already has the
@@ -608,6 +705,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
      * streaming diff then spends its first chunks on.
      */
     const navigating = req.headers.get(NAVIGATION_HEADER) === '1';
+    // Minted once per request: the header names this nonce and so does every
+    // inline tag below, which is the only way the two can agree.
+    const { nonce, policy } = csp?.(req) ?? {};
 
     if (options.i18n && !locale) {
       const { search } = new URL(req.url);
@@ -624,11 +724,19 @@ export function createJanuxServer(options: ServerOptions = {}) {
      * interlude could not know (i18n keys and boundary snapshots).
      */
     const interludeUris = new Set<string>();
+    /** Query entries already sent, so each chunk only carries what the last could not. */
+    const sentQueries = new Set<string>();
     let interludeSent = false;
     const document = kind ? await resolveErrorPage(kind, ctx) : await resolveDocument(page, ctx);
 
-    if (!document.page) return new Response(STATUS_TEXT[document.status], { status: document.status });
+    if (!document.page) {
+      return new Response(STATUS_TEXT[document.status], {
+        status: document.status,
+        headers: cacheHeadersFor({}, options.cache),
+      });
+    }
     const rendered = renderPageStream(document.page, ctx, {
+      nonce,
       onBeforeBoundaries: (summary) => {
         const shell = shellFor(summary);
 
@@ -674,6 +782,8 @@ export function createJanuxServer(options: ServerOptions = {}) {
         i18n: shellI18n(locale, result),
         navigation: options.navigation,
         navigating,
+        nonce,
+        queryScript: queryPayloadScript((ctx as any).queryClient, sentQueries, nonce),
       };
     };
     const prelude = shellPrelude(shellFor());
@@ -681,14 +791,29 @@ export function createJanuxServer(options: ServerOptions = {}) {
       prelude,
       rendered.chunks,
       async () => {
-        const shell = shellFor(await rendered.done);
+        const summary = await rendered.done;
+
+        // The HTML already flushed; only the tail waits. A query the render
+        // kicked off resolves into this payload instead of into a second
+        // request from the browser.
+        await (ctx as any).queryClient?.settle();
+        const shell = shellFor(summary);
 
         return interludeSent ? shellEpilogueRest(shell, interludeUris) : shellEpilogue(shell);
       },
       rendered.cancel,
+      nonce,
     );
 
-    return new Response(body, { status: document.status, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    return new Response(body, {
+      status: document.status,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        ...(nonce ? { [NONCE_HEADER]: nonce } : {}),
+        ...(policy ? { 'content-security-policy': policy } : {}),
+        ...cacheHeadersFor(document.cache ?? {}, options.cache),
+      },
+    });
   };
 
   /**
@@ -703,7 +828,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return handlePage(new Request(`http://localhost${base}`), base, 'notFound');
   };
 
-  const fetch = async (req: Request): Promise<Response> => {
+  const handleRequest = async (req: Request, span: JanuxSpan): Promise<Response> => {
     const url = new URL(req.url);
     const { pathname } = url;
     const intercepted = await options.middleware?.(req);
@@ -722,7 +847,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
       // Reaching the pure fetch means nobody upgraded — see serve().
       return new Response('WebSocket upgrade required', { status: 426, headers: { upgrade: 'websocket' } });
     }
-    if (httpHandlers?.handles(pathname)) return httpHandlers.dispatch(req, await ctxWithAgent(req));
+    if (httpHandlers?.handles(pathname)) {
+      return cached(req, async () => httpHandlers.dispatch(req, await ctxWithAgent(req)));
+    }
     if (pathname.startsWith('/_janux/api/')) return handleApi(req, pathname.slice('/_janux/api/'.length));
     if (pathname === '/_janux/approve') return handleApprove(req);
     if (pathname === '/_janux/reject') {
@@ -757,7 +884,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       // and an escaping error would take the response down with it.
       return json(
         await manifestFor(url.searchParams.get('path') ?? '/', ctx).catch((error) => {
-          reportRenderFailure(error);
+          reportRenderFailure(error, url.searchParams.get('path') ?? '/');
 
           return manifestOf(undefined, ctx);
         }),
@@ -784,8 +911,31 @@ export function createJanuxServer(options: ServerOptions = {}) {
       });
     }
 
-    return handlePage(req, pathname);
+    return cached(req, () => handlePage(req, pathname, undefined, span));
   };
+
+  /**
+   * The last net. `_500.tsx` catches what a page render throws; this catches
+   * what escapes everything else — middleware, `ctxFor`, an endpoint — so the
+   * operator hears about it instead of the process printing an unattributed
+   * stack. Fail-open all the way: the visitor still gets a status line.
+   */
+  const dispatch = async (req: Request, span: JanuxSpan): Promise<Response> => {
+    try {
+      return await handleRequest(req, span);
+    } catch (error) {
+      reportError(error, { phase: 'invocation', route: new URL(req.url).pathname });
+
+      return new Response(STATUS_TEXT[500], { status: 500 });
+    }
+  };
+
+  const fetch = (req: Request): Promise<Response> =>
+    withSpan(
+      'janux.request',
+      () => ({ 'http.request.method': req.method, 'janux.route': new URL(req.url).pathname }),
+      (span) => dispatch(req, span),
+    );
 
   /**
    * Drop-in `Bun.serve` fetch for the owner of the listening socket: a request

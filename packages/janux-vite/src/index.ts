@@ -1,5 +1,6 @@
 export { janux } from './plugin';
 export {
+  publishAppRoot,
   resolveAppConfig,
   apiFiles,
   shellOptions,
@@ -8,6 +9,7 @@ export {
   type JanuxOutput,
 } from './app-config';
 export { apiStubModule, exportedApiNames, apiModuleName } from './api-stubs';
+export { packageDir } from './deps';
 export { imageResponse, writeImageVariants } from './image-optimizer';
 export { builtFontAssets, fontResponse, resolveFonts, writeFontAssets } from './fonts';
 export { toFetchRequest, sendFetchResponse } from './request-adapter';

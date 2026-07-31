@@ -1,7 +1,9 @@
 import { coerceForm, validate } from '../schema';
 import { batch } from '../signals';
 import { dryRunDiff } from './dry-run';
+import { isTracing, withSpan, type JanuxSpan, type SpanAttributes } from '../observability/tracing';
 import { withGate, type MutationGate } from '../state/mutation-gate';
+import { publishJanuxError } from '../dev/error-channel';
 import type { ComponentDef, Ctx, GuardValue, IntentDef, Origin, RunBag } from '../define/types';
 
 export interface AuditEntry {
@@ -36,6 +38,8 @@ export interface IntentHooks {
   onAudit?: (entry: AuditEntry) => void;
   onProposal?: (proposal: Proposal) => void;
   trackPending: <T>(work: Promise<T>) => Promise<T>;
+  /** Dev only: the island this pipeline belongs to, for the error overlay's chain. */
+  devUri?: string;
 }
 
 export class JanuxIntentError extends Error {
@@ -94,6 +98,28 @@ function audit(hooks: IntentHooks, entry: Omit<AuditEntry, 'at'>): void {
   hooks.onAudit?.({ ...entry, at: Date.now() });
 }
 
+/** Who is invoking what, under which guard — the three facts every span and every audit entry repeats. */
+interface Invoked {
+  tool: string;
+  guard: GuardValue;
+  origin: Origin;
+}
+
+/** The two halves of `tool`, kept apart for the dev overlay's error chain. */
+interface IntentId {
+  component: string;
+  name: string;
+}
+
+/**
+ * The attribute set no other framework can emit, because no other framework
+ * knows the answers: which named intent, which guard decided, and whether a
+ * human or an agent asked.
+ */
+function attributesOf({ tool, guard, origin }: Invoked, proposal?: string): SpanAttributes {
+  return { 'janux.intent': tool, 'janux.guard': guard, 'janux.origin': origin, 'janux.proposal.id': proposal };
+}
+
 async function execute(def: IntentDef, bag: RunBag, input: unknown, origin: Origin, gate: MutationGate): Promise<unknown> {
   // One flush per run: the synchronous span of the body batches its state
   // writes (async continuations flush per write, as ever). Derived reads stay
@@ -101,33 +127,69 @@ async function execute(def: IntentDef, bag: RunBag, input: unknown, origin: Orig
   return withGate(gate, () => batch(() => def.run({ ...bag, input, origin })));
 }
 
-function propose(
-  tool: string,
-  input: unknown,
-  run: () => Promise<unknown>,
-  hooks: IntentHooks,
-  diff?: Proposal['diff'],
-) {
-  const proposal: Proposal = { id: nextProposalId(tool), tool, input, diff, execute: run };
+function propose(id: string, invoked: Invoked, input: unknown, run: () => Promise<unknown>, hooks: IntentHooks, diff?: Proposal['diff']) {
+  const proposal: Proposal = { id, tool: invoked.tool, input, diff, execute: run };
 
   hooks.onProposal?.(proposal);
 
-  return { status: 'proposal' as const, id: proposal.id, tool, input, diff };
+  return { status: 'proposal' as const, id, tool: invoked.tool, input, diff };
 }
 
-/** The single invocation pipeline shared by human clicks, agent calls and RPC. */
-export async function invokeIntent(
-  componentName: string,
-  intentName: string,
+/** The approved execution must reach the trail too — `proposed: true` followed by silence would leave approvals unaccounted for. */
+async function runAudited(invoked: Invoked, id: IntentId, input: unknown, run: () => Promise<unknown>, hooks: IntentHooks): Promise<unknown> {
+  try {
+    const result = await run();
+
+    audit(hooks, { ...invoked, input, ok: true });
+
+    return result;
+  } catch (error) {
+    audit(hooks, { ...invoked, input, ok: false, error: String(error) });
+    if (import.meta.env?.DEV) {
+      publishJanuxError(error, {
+        kind: 'intent',
+        component: id.component,
+        name: id.name,
+        island: hooks.devUri,
+        origin: invoked.origin,
+        guard: invoked.guard,
+        input,
+      });
+    }
+    throw error;
+  }
+}
+
+/**
+ * A proposal's execution gets a span of its own: the human approval that
+ * triggers it happens later, and often never. Folded into the proposing span,
+ * a trace could not tell "an agent asked" apart from "a human said yes".
+ */
+function approvedRun(proposalId: string, invoked: Invoked, id: IntentId, input: unknown, run: () => Promise<unknown>, hooks: IntentHooks) {
+  return () =>
+    withSpan('janux.intent.execute', () => attributesOf(invoked, proposalId), () => runAudited(invoked, id, input, run, hooks));
+}
+
+async function runInvocation(
+  invoked: Invoked,
+  id: IntentId,
   def: IntentDef,
   bag: RunBag,
   input: unknown,
-  origin: Origin,
   hooks: IntentHooks,
+  span?: JanuxSpan,
 ): Promise<unknown> {
-  const tool = `${componentName}.${intentName}`;
-  const guard = resolveGuard(def, bag.ctx, origin);
+  const { tool, guard, origin } = invoked;
 
+  /*
+   * The `import.meta.env?.DEV` publishes (here and in runAudited) hand the dev
+   * overlay the whole sentence, not just the stack: this pipeline is the one
+   * place that knows who asked and what the guard decided for them (design
+   * invariant 4). They are written out twice rather than hoisted into a shared
+   * `chain` const because a const the branches share survives constant-folding
+   * as 9 bytes of residue, and this must cost the production bundle exactly
+   * nothing — see `bundle-size.test.ts`, which measures it.
+   */
   try {
     if (origin === 'agent' && guard === 'forbidden') {
       throw new JanuxIntentError('forbidden', `Intent "${tool}" is not available`);
@@ -137,31 +199,51 @@ export async function invokeIntent(
     const run = () => hooks.trackPending(execute(def, bag, parsed, origin, hooks.gate));
 
     if (origin === 'agent' && guard === 'confirm') {
-      audit(hooks, { tool, origin, guard, input: parsed, ok: true, proposed: true });
-      // The approved execution must reach the trail too — `proposed: true`
-      // followed by silence would leave approvals unaccounted for.
-      const runAudited = async () => {
-        try {
-          const result = await run();
+      const proposalId = nextProposalId(tool);
 
-          audit(hooks, { tool, origin, guard, input: parsed, ok: true });
+      span?.setAttributes({ 'janux.proposal.id': proposalId });
+      audit(hooks, { ...invoked, input: parsed, ok: true, proposed: true });
 
-          return result;
-        } catch (error) {
-          audit(hooks, { tool, origin, guard, input: parsed, ok: false, error: String(error) });
-          throw error;
-        }
-      };
-
-      return propose(tool, parsed, runAudited, hooks, dryRunDiff(def, bag, parsed));
+      return propose(proposalId, invoked, parsed, approvedRun(proposalId, invoked, id, parsed, run, hooks), hooks, dryRunDiff(def, bag, parsed));
     }
     const result = await run();
 
-    audit(hooks, { tool, origin, guard, input: parsed, ok: true });
+    audit(hooks, { ...invoked, input: parsed, ok: true });
 
     return result;
   } catch (error) {
-    audit(hooks, { tool, origin, guard, input, ok: false, error: String(error) });
+    audit(hooks, { ...invoked, input, ok: false, error: String(error) });
+    if (import.meta.env?.DEV) {
+      publishJanuxError(error, {
+        kind: 'intent',
+        component: id.component,
+        name: id.name,
+        island: hooks.devUri,
+        origin,
+        guard,
+        input,
+      });
+    }
     throw error;
   }
+}
+
+/** The single invocation pipeline shared by human clicks, agent calls and RPC. */
+export function invokeIntent(
+  componentName: string,
+  intentName: string,
+  def: IntentDef,
+  bag: RunBag,
+  input: unknown,
+  origin: Origin,
+  hooks: IntentHooks,
+): Promise<unknown> {
+  const invoked: Invoked = { tool: `${componentName}.${intentName}`, guard: resolveGuard(def, bag.ctx, origin), origin };
+  const id: IntentId = { component: componentName, name: intentName };
+
+  // Guarded rather than left to `withSpan`: an uninstrumented click must not
+  // allocate the two closures a traced one needs. Same reasoning as renderIsland.
+  if (!isTracing()) return runInvocation(invoked, id, def, bag, input, hooks);
+
+  return withSpan('janux.intent', () => attributesOf(invoked), (span) => runInvocation(invoked, id, def, bag, input, hooks, span));
 }

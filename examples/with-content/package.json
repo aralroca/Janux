@@ -1,0 +1,25 @@
+{
+  "name": "janux-example-with-content",
+  "private": true,
+  "version": "0.2.1",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev --port 4321",
+    "build": "janux build",
+    "start": "janux start --port 4321"
+  },
+  "dependencies": {
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*",
+    "@janux/content": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@mdx-js/mdx": "^3.1.0",
+    "janux": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0"
+  }
+}

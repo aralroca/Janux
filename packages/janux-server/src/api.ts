@@ -1,4 +1,5 @@
 import { JxType, validate, toJsonSchema, JanuxIntentError } from 'janux';
+import { isTracing, reportError, withSpan, type SpanAttributes } from 'janux/observability';
 import type { AuditEntry, Ctx, Guard, GuardValue, Origin } from 'janux';
 
 export interface ApiDef {
@@ -106,15 +107,39 @@ export function apiAuditEntry(
   return { tool: `api.${tool.name}`, origin, guard, at: Date.now(), agent: agentKeyId(ctx), ...extra };
 }
 
-/** Single invocation pipeline for api() tools: guard → validate → run → validate output. */
-export async function invokeApi(
+/**
+ * The same six attributes the component-side pipeline emits, so one query
+ * spans both halves of the agent surface: `api.` tools and mounted intents
+ * share the audit trail's `tool` naming, and now its trace naming too.
+ */
+export function apiAttributes(tool: ApiTool, guard: GuardValue, origin: Origin, proposal?: string): SpanAttributes {
+  return { 'janux.intent': `api.${tool.name}`, 'janux.guard': guard, 'janux.origin': origin, 'janux.proposal.id': proposal };
+}
+
+/** How a traced api call names itself: the approved run of a proposal is a different span from the request that proposed it. */
+export interface ApiTrace {
+  span?: string;
+  proposal?: string;
+}
+
+/**
+ * A refusal is the pipeline working. Only a tool that actually broke reaches
+ * the app's `onError` — routing `invalid_input` there would drown the signal
+ * in every mistyped agent call.
+ */
+function reportUnexpected(tool: ApiTool, origin: Origin, error: unknown): void {
+  if (error instanceof JanuxIntentError) return;
+  reportError(error, { phase: 'invocation', intent: `api.${tool.name}`, origin });
+}
+
+async function runApi(
   tool: ApiTool,
+  guard: GuardValue,
   input: unknown,
   ctx: Ctx,
   origin: Origin,
   onAudit?: ApiAudit,
 ): Promise<unknown> {
-  const guard = resolveApiGuard(tool, ctx, origin);
   const audit = (extra: { input: unknown; ok: boolean; error?: string }) =>
     onAudit?.(apiAuditEntry(tool, origin, guard, ctx, extra));
 
@@ -130,8 +155,30 @@ export async function invokeApi(
     return result;
   } catch (error) {
     audit({ input, ok: false, error: String(error) });
+    reportUnexpected(tool, origin, error);
     throw error;
   }
+}
+
+/** Single invocation pipeline for api() tools: guard → validate → run → validate output. */
+export function invokeApi(
+  tool: ApiTool,
+  input: unknown,
+  ctx: Ctx,
+  origin: Origin,
+  onAudit?: ApiAudit,
+  trace: ApiTrace = {},
+): Promise<unknown> {
+  const guard = resolveApiGuard(tool, ctx, origin);
+
+  // See renderIsland: reaching `withSpan` at all costs the closures below.
+  if (!isTracing()) return runApi(tool, guard, input, ctx, origin, onAudit);
+
+  return withSpan(
+    trace.span ?? 'janux.api',
+    () => apiAttributes(tool, guard, origin, trace.proposal),
+    () => runApi(tool, guard, input, ctx, origin, onAudit),
+  );
 }
 
 export function apiManifestTools(tools: ApiTool[], ctx: Ctx) {

@@ -39,6 +39,8 @@ export {
   list,
   obj,
   JxType,
+  type Infer,
+  type InferShape,
   validate,
   coerceForm,
   buildDefault,
@@ -56,10 +58,12 @@ export {
   SPECULATION_SCRIPT_ID,
   speculationRules,
   type AgentsAuthConfig,
+  type CacheConfig,
   type FontConfig,
   type JanuxConfig,
   type JanuxOutput,
   type McpAuthConfig,
+  type CspConfig,
   type NavigationConfig,
   type SpeculationRulesConfig,
 } from './config';
@@ -84,6 +88,14 @@ export {
   type ResolvedFont,
   type ResolvedFontFace,
 } from './font/css';
+export {
+  cacheHeaders,
+  cachePolicy,
+  type CacheHeadersOptions,
+  type CachePolicy,
+  type CachePolicyDef,
+  type CacheScope,
+} from './cache/policy';
 export type { PageMeta, HeadTag } from './meta';
 export { isNotFoundError, notFound } from './not-found';
 export {

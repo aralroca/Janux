@@ -1,3 +1,8 @@
+---
+title: Interop compatibility matrix
+description: Which parts of the React ecosystem actually mount inside a Janux island, verified by an example that builds and passes end-to-end tests in CI — not by assertion.
+---
+
 # Interop compatibility matrix
 
 Which parts of the React ecosystem actually mount inside a Janux island, verified by an example that builds and passes end-to-end tests in CI — not by assertion.
@@ -135,4 +140,4 @@ React interop is opt-in and per-island: an app with no foreign island ships none
 
 Measured from `dist/client` after `janux build`.
 
-Related: [Foreign-UI interop](/docs/guide/interop) · [`foreign()`](/docs/reference/foreign) · [Examples](/docs/more/examples)
+Related: [Foreign-UI interop](/docs/guide/interop) · [`foreign()`](/docs/reference/foreign) · [Design system](/docs/guide/design-system) · [Examples](/docs/more/examples)

@@ -1,3 +1,8 @@
+---
+title: Images
+description: One `<Image>` renders AVIF and WebP variants written at build time, a derived `srcset`, and a box reserved before the bytes arrive.
+---
+
 # Images
 
 An image is the heaviest thing most pages ship and the easiest one to get wrong: the wrong format, one size for every screen, and no reserved box, so the layout jumps when the bytes land. `<Image>` is the framework's answer to all three, and it costs nothing at runtime — an image has nothing to hydrate, so it doesn't.

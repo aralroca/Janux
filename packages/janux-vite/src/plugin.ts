@@ -10,19 +10,35 @@ import { packageDir, runtimeIncludes } from './deps';
 import { mimeFor, resolvePublicFile } from './static-files';
 import { imageResponse } from './image-optimizer';
 import { fontResponse, resolveFonts } from './fonts';
-import { apiFiles, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
+import {
+  apiFiles,
+  mcpAuthOptions,
+  publishAppRoot,
+  registerInstrumentation,
+  resolveAppConfig,
+  shellOptions,
+  type JanuxPluginOptions,
+} from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { collectIslands, islandCatalogFromDir } from './islands';
 import { attachDevWebSocket } from './dev-websocket';
+import { DEV_ROUTE_PATH, devRouteHandler } from './dev-route-info';
 import { sendFetchResponse, toFetchRequest } from './request-adapter';
 
 const SSR_PACKAGES = ['janux', '@janux/server', '@janux/agent'];
 
 async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOptions): Promise<ServerOptions> {
+  // Here rather than in `config()`: this is the moment the app's own modules
+  // are loaded, and `config()` also runs for `janux build`, where publishing an
+  // app root means nothing.
+  publishAppRoot(vite.config.root);
   const app = await resolveAppConfig(vite.config.root, options);
   // Resolved here rather than per request: the first `janux dev` downloads, every
   // one after it reads the cache, and the page sees what the build will ship.
   const fonts = await resolveFonts(vite.config.root, app.fonts);
+
+  // Same ordering guarantee dev owes prod: instrumented before anything serves.
+  await registerInstrumentation(app.instrumentationModule, (file) => vite.ssrLoadModule(file));
   const apiModules = Object.fromEntries(
     await Promise.all(
       apiFiles(app.serverDir).map(async (file) => [
@@ -230,6 +246,16 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
             const asset = await devAsset(vite.config.root, req.url?.split('?')[0] ?? '/');
 
             if (asset) return sendFetchResponse(res, asset);
+            // The dev overlay asking which route file and `_layout` chain
+            // answered a URL. Resolved before the app sees it, and only for
+            // that exact path — a built app has no Vite and no such endpoint.
+            // It routes with the app's own matchers, like the dev server does.
+            if (req.url?.startsWith(DEV_ROUTE_PATH)) {
+              const app = await resolveAppConfig(vite.config.root, options);
+              const devRoute = await devRouteHandler(vite.config.root, app, vite.ssrLoadModule, req.url);
+
+              if (devRoute) return sendFetchResponse(res, devRoute);
+            }
             const server = await januxServer();
             const response = await server.fetch(await toFetchRequest(req));
 

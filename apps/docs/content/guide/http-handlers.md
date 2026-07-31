@@ -1,3 +1,8 @@
+---
+title: HTTP handlers & uploads
+description: Arbitrary HTTP endpoints beside your pages and RPC — REST routes, webhooks, well-known documents, uploads — as files under src/api.
+---
+
 # HTTP handlers & uploads
 
 Beyond pages and `api()` RPC, a real app needs arbitrary HTTP endpoints: REST routes, webhooks, OAuth authorization-server endpoints, `.well-known` documents, SSO callbacks, file downloads. Janux serves these from a `src/api/**` tree.

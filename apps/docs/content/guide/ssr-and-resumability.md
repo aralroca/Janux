@@ -1,3 +1,8 @@
+---
+title: SSR and resumability
+description: Janux server-renders every route. Static components become plain HTML; bifacial components become islands that resume — they do not hydrate.
+---
+
 # SSR and resumability
 
 Janux server-renders every route. Static components become plain HTML; bifacial components become **islands** that resume — they do not hydrate.

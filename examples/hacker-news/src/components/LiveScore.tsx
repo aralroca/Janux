@@ -22,6 +22,10 @@ export const LiveScore = component({
     const q = useQuery(bag, 'score', () => ({
       queryKey: ['item', state.id, state.checks],
       queryFn: () => getItem({ id: state.id }),
+      // SSR already fetched this key and shipped it in the payload; declaring
+      // it fresh for a minute is what turns that into zero requests on mount.
+      // A `refresh` rotates the key, so a re-check is still a real request.
+      staleTime: 60_000,
     }));
     const points = (q.data.value as any)?.points ?? state.points;
     // Only a user-triggered re-check shows progress: during SSR the query is

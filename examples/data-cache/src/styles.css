@@ -45,8 +45,10 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 28px;
+  justify-content: flex-start;
+  gap: 20px;
+  padding: 32px 0;
+  overflow-y: auto;
   border-right: 1px solid var(--border);
 }
 
@@ -129,6 +131,153 @@ body {
   color: var(--muted);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Standalone pages (/catalog, /account) ──────────────────────── */
+/* The demo's own pages are read as documents, not as the app shell: one
+   centred column so the cache headers they exist to show stay the subject. */
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 20px 64px;
+}
+
+.page-head {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-head h1 {
+  margin: 0 0 10px;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.page-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.policy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--mono);
+}
+
+.badge.public {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.badge.private {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.page .items {
+  min-height: 0;
+}
+
+.page .item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.page .item small {
+  color: var(--muted);
+  font-weight: 500;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.rendered {
+  margin: 20px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: var(--mono);
+}
+
+.back {
+  display: inline-block;
+  margin-top: 24px;
+  color: var(--violet);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+/* ── Home intro ─────────────────────────────────────────────────── */
+/* The preview column scrolls now that it carries prose above the card. */
+.intro {
+  width: min(520px, 90%);
+}
+
+.intro h1 {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+}
+
+.intro > p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.intro ol {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.intro li + li {
+  margin-top: 6px;
+}
+
+.intro li b {
+  font-weight: 700;
+}
+
+.intro code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: #f1f5f9;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.probe-title {
+  width: min(520px, 90%);
+  margin: 0;
+  font-size: 1rem;
 }
 
 /* ── Agent pane ─────────────────────────────────────────────────── */

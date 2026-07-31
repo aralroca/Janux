@@ -1,3 +1,8 @@
+---
+title: Server API
+description: "Everything importable from the server package: the server factory, api() RPC, the file-system router and the framework endpoints it serves."
+---
+
 # Server API
 
 Everything importable from `@janux/server`.
@@ -35,6 +40,7 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 | `agents` | `{ webBotAuth: { keys }, policy? }` | Web Bot Auth agent identity — see below |
 | `websocket` | `{ path, data?, open?, message?, close?, drain? }` | First-class WebSocket endpoint (`WebSocketConfig`): `janux dev`/`janux start` upgrade `path` themselves; a custom `Bun.serve` uses the returned `serve(req, bunServer)` + `websocket` handlers — see [custom server](/docs/recipes/custom-server). The pure `fetch` answers `426` on `path` |
 | `mcpAuth` | `{ verify(token, req), resourceMetadataUrl? }` | Bearer verification for `POST /_janux/mcp` (`401` + `WWW-Authenticate` otherwise; the GET landing stays public and prints `$TOKEN`-placeholder connect commands). Declarable as `mcpAuth: { tokenEnv }` in `janux.config.ts` |
+| `csp` | `true \| { nonce?, header? }` | Strict CSP: nonces every inline script and style the framework emits, and with `true` also sends the header. See the [CSP recipe](/docs/recipes/csp) |
 | `onAudit` | `(entry: AuditEntry) => void` | Called for every api() dispatch: tool, origin, guard, ok, and the verified agent key |
 | `runtimeUrl`, `stylesheets`, `favicon`, `title`, `lang`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
 
@@ -113,6 +119,10 @@ Every head node the shell writes carries a stable `id` (`jx-og-title`, `jx-jsonl
 
 Error envelope: `{ ok: false, error }` with 400 (invalid input), 401 (`agent_required`), 403 (forbidden), 404, 500.
 
+### The response states its own nonce
+
+A page served with `csp` carries `x-janux-nonce: <nonce>` (`NONCE_HEADER`) alongside the policy. The client runtime re-runs the scripts a navigated page brings — which is what gives them a valid nonce — and it re-stamps **only** the ones already carrying this response's nonce. Markup can forge anything in the body and nothing in the headers, so an injected `<script>` is left inert instead of being handed the capability the policy exists to withhold. See the [CSP recipe](/docs/recipes/csp).
+
 ### Client navigations announce themselves
 
 A page fetched by the client runtime during an SPA navigation carries `x-janux-navigation: 1` (`NAVIGATION_HEADER`). The server answers those without the inlined stylesheet: the live document already has it, the client keeps its `<style>` nodes across the diff, and re-sending it puts kilobytes in front of the content the visitor is waiting for — 27 KB of this site's 95 KB page.
@@ -158,4 +168,5 @@ Not built yet: fetching keys from a signature-agent directory (SSRF story needed
 | `createFsRouter(dir)` | `→ { routes, match(pathname) }` | The file-system router. `match` returns `{ filePath, pattern, params }`, static routes preferred over dynamic. |
 | `buildLlmsTxt(config, pages, tools)` | `→ string` | Renders the `llms.txt` body — pages plus the agent tool index (`confirm` tools annotated). |
 | `createAgentAuth(config)` | `→ { policy, identify(req) }` | Web Bot Auth verifier. `identify` returns `{ verified, keyId } | { verified: false } | null` (unsigned). |
+| `strictPolicy(nonce)` | `string → string` | The recommended `Content-Security-Policy` value: `script-src 'nonce-…' 'strict-dynamic'; object-src 'none'; base-uri 'none'`. Compose your own policy on top of it in `csp.header`. |
 | `htmlDocument(options)` | `ShellOptions → string` | Wraps rendered `html` into the full document shell: snapshot scripts, island module map, stylesheets, favicon, i18n payload. |

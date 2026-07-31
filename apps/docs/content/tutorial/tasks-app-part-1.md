@@ -1,3 +1,8 @@
+---
+title: Tutorial 1/3 — A task board with two faces
+description: "We'll build a task board that is simultaneously a UI and an agent surface. Part 1: the component and its intents."
+---
+
 # Tutorial 1/3 — A task board with two faces
 
 We'll build a task board that is simultaneously a UI and an agent surface. Part 1: the component and its intents.
