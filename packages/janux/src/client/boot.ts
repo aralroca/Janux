@@ -1,4 +1,5 @@
 import { createBus } from '../runtime/bus';
+import { hydrateQueries } from './query-payload';
 import type { ComponentDef } from '../define/types';
 import type { ForeignDef } from '../interop';
 import type { AuditEntry, Proposal } from '../runtime/intents';
@@ -200,6 +201,9 @@ export function boot(options: BootOptions = {}): JanuxClient {
   });
   (options.defs ?? []).forEach((def) => registerDef(registry, def));
   readSnapshots(mount);
+  // Before anything can observe a query: what SSR already fetched is in the
+  // payload, so an island resuming here must not ask for it a second time.
+  hydrateQueries();
   installI18n(mount.ctx);
   listen(mount, (work) => trackInflight(mount, work));
   if (options.glow) enableAgentGlow(options.glow === true ? {} : options.glow);

@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-4227%20passing-brightgreen" alt="4227 tests passing" />
+  <img src="https://img.shields.io/badge/tests-4335%20passing-brightgreen" alt="4335 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -226,7 +226,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 89 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 90 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -294,7 +294,7 @@ Full tables, methodology and machine specs:
 | [`cross-island-state`](examples/cross-island-state) | A `store()` cart shared by five islands with no prop drilling, `persist: 'local'` across reloads, a bus event that crosses islands, and `batch()`ed bundle adds. |
 | [`with-forms`](examples/with-forms) | One `schema()` as the contract for three surfaces: the form UI (per-field errors, no reload), the `api()` endpoint, and the typed agent tool. |
 | [`with-optimistic-ui`](examples/with-optimistic-ui) | `mutation()` with optimistic writes and real rollback: the server rejects every third save and `onError` restores the snapshot with a visible notice. |
-| [`data-cache`](examples/data-cache) | `useQuery` with a reactive query key, typed URL state (`urlState`) that deep-links and honors Back, and agent parity for the same filter. |
+| [`data-cache`](examples/data-cache) | `useQuery` with a reactive query key, typed URL state (`urlState`) that deep-links and honors Back, agent parity for the same filter — plus the HTTP cache model: a public `/catalog` a CDN may keep, a private `/account`, and revalidation by tag readable in the headers. |
 
 ### React interop
 

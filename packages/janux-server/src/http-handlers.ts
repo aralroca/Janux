@@ -1,4 +1,5 @@
 import { createFsRouter, type Matcher } from './router';
+import { policyOf, withCacheHeaders, type CacheConfig } from './cache';
 import type { Ctx } from 'janux';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
@@ -24,6 +25,8 @@ export interface HttpHandlersOptions {
   prefix?: string;
   loadModule: (filePath: string) => Promise<HandlerModule>;
   matchers?: Record<string, Matcher>;
+  /** How a handler module's `cache` export reaches the CDN in front. */
+  cache?: CacheConfig;
 }
 
 const startsWith = (bytes: Uint8Array, magic: number[], offset = 0) =>
@@ -110,7 +113,8 @@ async function collectWithin(body: ReadableStream<Uint8Array>, maxBytes: number)
   return chunks;
 }
 
-function concat(chunks: Uint8Array[]): Uint8Array {
+/** Joins buffered chunks. Shared with the response cache, which buffers the same way. */
+export function concat(chunks: Uint8Array[]): Uint8Array {
   const size = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
   const out = new Uint8Array(size);
 
@@ -185,7 +189,9 @@ export function createHttpHandlers(options: HttpHandlersOptions) {
         return new Response('Method not allowed', { status: 405, headers: allow ? { allow } : undefined });
       }
 
-      return handler({ req, params: match.params, ctx, url });
+      const res = await handler({ req, params: match.params, ctx, url });
+
+      return withCacheHeaders(res, { policy: policyOf(module), params: match.params }, options.cache);
     },
   };
 }

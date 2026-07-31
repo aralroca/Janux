@@ -25,6 +25,27 @@ export interface NavigationConfig {
   speculationRules?: boolean | SpeculationRulesConfig;
 }
 
+/** How route cache policies reach the CDN in front — and the shared copy the server keeps itself. */
+export interface CacheConfig {
+  /**
+   * Header the CDN reads tags from. Default `Cache-Tag` (Cloudflare, Akamai);
+   * Fastly reads `Surrogate-Key`, Netlify `Netlify-Cache-Tag`. There is no
+   * standard here, which is why it is configuration and not a constant.
+   */
+  tagHeader?: string;
+  /**
+   * Keep a shared copy of `scope: 'public'` responses in the server process.
+   * On by default and inert until a route declares a public policy, so it costs
+   * nothing until it is asked for. Turn it off when a CDN in front already
+   * holds the same bytes and the memory is better spent elsewhere.
+   */
+  shared?: boolean;
+  /** Entries the shared cache holds before dropping the least recently used. Default 1000. */
+  maxEntries?: number;
+  /** Largest response body worth holding, in bytes. Default 2 MB. */
+  maxBytes?: number;
+}
+
 /**
  * Bearer protection for the hosted MCP endpoint, declared as data: the CLI
  * maps it to the `mcpAuth` verifier the server takes. `tokenEnv` names the
@@ -77,6 +98,8 @@ export interface JanuxConfig {
   output?: JanuxOutput;
   /** SPA navigation, prefetching and speculation rules. */
   navigation?: NavigationConfig;
+  /** Cache-tag header and the server's own shared response cache. */
+  cache?: CacheConfig;
 }
 
 /** Identity helper for `janux.config.ts`: type-checks and autocompletes the config. */

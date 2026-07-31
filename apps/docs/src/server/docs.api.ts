@@ -84,6 +84,7 @@ export const SECTIONS: SectionDef[] = [
           'events-and-interactions',
           'stores',
           'data-cache',
+          'http-cache',
           'interop',
           'design-system',
         ],

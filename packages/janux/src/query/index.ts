@@ -46,16 +46,23 @@ export function query<T>(
     const entry = client.getQuery(getOptions());
 
     current = entry;
+    // `visible()`, not `state`: data past its swr window is withheld from the
+    // view, so an island shows its pending UI rather than something too old to
+    // be true while the refetch below runs.
     const sync = () => {
-      data.value = entry.state.data;
-      error.value = entry.state.error;
-      isPending.value = entry.state.status === 'pending';
-      isFetching.value = entry.state.isFetching;
+      const shown = entry.visible();
+
+      data.value = shown.data;
+      error.value = shown.error;
+      isPending.value = shown.status === 'pending';
+      isFetching.value = shown.isFetching;
     };
     const unsubscribe = entry.subscribe(sync);
 
     sync();
-    if (entry.isStale()) entry.fetch().catch(() => undefined);
+    // `awaiting` means the server is streaming this entry down the same
+    // response: starting it here is precisely the double fetch to remove.
+    if (!entry.awaiting && entry.isStale()) entry.fetch().catch(() => undefined);
 
     return unsubscribe;
   });
