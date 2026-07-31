@@ -47,7 +47,10 @@ beforeAll(async () => {
   // A leftover from an earlier build, to prove `dist` is replaced and not merged.
   await Bun.write(`${ROOT}/dist/src/gone.js`, 'export const gone = true;');
   outputs = await buildPackage(ROOT);
-});
+  // A real `tsc` build, against bun's 5s default for hooks. It finishes in well
+  // under a second on a quiet machine and has timed out three times on CI —
+  // the work is genuinely slow there, not stuck, so it gets a real deadline.
+}, 60_000);
 
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
