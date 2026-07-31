@@ -12,6 +12,7 @@
     "janux": "workspace:*",
     "@janux/server": "workspace:*",
     "@janux/agent": "workspace:*",
-    "@janux/cli": "workspace:*"
+    "@janux/cli": "workspace:*",
+    "@janux/content": "workspace:*"
   }
 }

@@ -1,3 +1,8 @@
+---
+title: Client API
+description: Everything importable from janux/client, plus the browser conventions.
+---
+
 # Client API
 
 Everything importable from `janux/client`, plus the browser conventions.

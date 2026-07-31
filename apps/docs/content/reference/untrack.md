@@ -1,3 +1,8 @@
+---
+title: untrack()
+description: "Runs a function with dependency tracking switched off. untrack<T>(fn: () => T): T — signals read inside fn are not subscribed to."
+---
+
 # untrack()
 
 ```ts

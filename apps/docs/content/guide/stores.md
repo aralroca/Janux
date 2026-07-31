@@ -1,3 +1,8 @@
+---
+title: Stores — shared state
+description: "A store is a bifacial component without a view: schema-typed state, derived values, intents, events — projected to agents as store://<name>."
+---
+
 # Stores — shared state
 
 A store is a bifacial component without a view: schema-typed state, derived values, intents, events — projected to agents as `store://<name>`.

@@ -1,3 +1,8 @@
+---
+title: Custom server
+description: The production server is a thin wrapper around one function. Compose it yourself when you need WebSockets, custom routing or another runtime.
+---
+
 # Custom server
 
 `janux start` is a thin wrapper around one function: `createJanuxServer(options).fetch(request)` — Web `Request` in, Web `Response` out. When you need your own server (an existing app to mount into, a platform adapter, your own static strategy or logging), you write that wrapper instead of using the command.

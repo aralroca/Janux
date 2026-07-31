@@ -21,12 +21,12 @@
     "benchmarks/*/*"
   ],
   "scripts": {
-    "test": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts",
+    "test": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts",
     "test:e2e": "bun test e2e",
-    "test:coverage": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts --coverage",
+    "test:coverage": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts --coverage",
     "test:census": "bun scripts/test-census.ts",
     "test:lighthouse": "bun run --cwd apps/docs build && bun scripts/lighthouse.ts",
-    "typecheck": "for p in packages/janux packages/janux-server packages/janux-agent packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/create-janux packages/conformance scripts examples/*; do bunx tsc --noEmit -p $p || exit 1; done",
+    "typecheck": "for p in packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-vercel packages/create-janux packages/conformance scripts examples/*; do bunx tsc --noEmit -p $p || exit 1; done",
     "dev:shop": "bun run --cwd examples/shop dev",
     "dev:i18n": "bun run --cwd examples/i18n dev",
     "dev:web-agent": "bun run --cwd examples/with-web-agent dev",
@@ -53,6 +53,10 @@
     "build:packages": "bun scripts/build.ts",
     "pack:packages": "bun scripts/pack.ts",
     "smoke:node": "bun scripts/smoke-node.ts",
+    "docs:stability": "bun packages/docs-tests/generate-stability.ts",
+    "changeset": "changeset",
+    "changeset:status": "changeset status --verbose",
+    "release:version": "bun scripts/version.ts",
     "release": "bun scripts/release.ts",
     "bench": "node benchmarks/bench.mjs"
   },
@@ -60,6 +64,7 @@
     "babel-preset-solid": "2.0.0-beta.20"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.1",
     "@swc/core": "^1.9.0",
     "@types/bun": "^1.2.0",
     "lighthouse": "^13.4.1",

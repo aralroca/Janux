@@ -1,0 +1,34 @@
+---
+title: A React component, mounted from markdown
+date: 2026-07-07
+summary: foreign() mounts a React component unchanged, and MDX lets a note reach for it the same way it reaches for a Janux island.
+tags: [mdx, interop, react]
+---
+
+# A React component, mounted from markdown
+
+The chart below is React. Not a port, not a wrapper — the component is written with `react` and mounted through `foreign()`, and this note names it like any other tag.
+
+<Trend
+  initial={{
+    label: 'Weekly readers',
+    points: [12, 18, 15, 27, 34, 31, 46],
+  }}
+/>
+
+## Why it looks the same from here
+
+A content file does not know what runtime a component belongs to. The page rendering this note hands `render()` a map of components; whether an entry is a Janux `component()` or a `foreign()` React root is the app's business, not the author's.
+
+## It server-renders
+
+The chart above is in the HTML before any JavaScript runs — `foreign()` renders React on the server when the runtime is installed, so the note is readable, crawlable and projectable to markdown even with scripting off. The client root takes over on load.
+
+```tsx
+import { foreign } from 'janux/interop';
+import { Trend } from './Trend';
+
+const TrendIsland = foreign(Trend, { name: 'trend', props: (own) => own.state });
+```
+
+That is the whole bridge. From the note's side, `<Trend />` is a tag.

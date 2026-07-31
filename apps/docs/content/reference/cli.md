@@ -1,3 +1,8 @@
+---
+title: CLI
+description: "Every command, flag and exit code the Janux CLI ships with: dev, build, start, verify and eval, plus the environment variables they read."
+---
+
 # CLI
 
 ## Commands

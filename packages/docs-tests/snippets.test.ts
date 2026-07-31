@@ -18,12 +18,13 @@ interface Snippet {
   code: string;
 }
 
+/** `.mdx` counts too: content that embeds components still fences its examples. */
 function mdFiles(path: string): string[] {
   if (statSync(path).isFile()) return [path];
 
   return readdirSync(path, { recursive: true })
     .map(String)
-    .filter((name) => name.endsWith('.md') && !name.includes('node_modules'))
+    .filter((name) => /\.mdx?$/.test(name) && !name.includes('node_modules'))
     .map((name) => join(path, name));
 }
 

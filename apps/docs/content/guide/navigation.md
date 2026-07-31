@@ -1,3 +1,8 @@
+---
+title: Navigation
+description: Janux navigates like a single-page app without you writing a router.
+---
+
 # Navigation
 
 Janux navigates like a single-page app without you writing a router. The first page is server-rendered HTML with everything in it (as always); every *subsequent* navigation is intercepted client-side, so moving between routes is instant and the shell — a dashboard's sidebar, header, breadcrumbs — never flickers.

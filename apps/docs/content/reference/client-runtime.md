@@ -1,3 +1,8 @@
+---
+title: Client runtime internals
+description: "The seams underneath the client entry point: exports for embedding Janux in another shell, driving it from a test, or building devtools."
+---
+
 # Client runtime internals
 
 [`boot()`](/docs/reference/client-api) wires all of this for you. These exports from `janux/client` are the seams — for embedding Janux in another shell, driving it from a test, or building devtools. If you're building an app, you don't need this page.

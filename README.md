@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-3950%20passing-brightgreen" alt="3950 tests passing" />
+  <img src="https://img.shields.io/badge/tests-4044%20passing-brightgreen" alt="4044 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -65,6 +65,7 @@ Named after **Janus**, the two-faced Roman god of doorways: one face toward the 
 - [Examples](#examples)
 - [Develop](#develop)
 - [Contributing](#contributing)
+- [Releases](#releases)
 - [License](#license)
 
 ## Install
@@ -224,7 +225,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 85 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 88 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -317,6 +318,7 @@ One example per **category**, each verified in CI — the [compatibility matrix]
 | [`with-suspense`](examples/with-suspense) | Streaming SSR: independent `suspense` boundaries that reveal mid-stream, and `error` boundaries that bubble. |
 | [`with-advanced-routing`](examples/with-advanced-routing) | The full router grammar: `[slug]`, `[...path]`, `[[...rest]]`, `[id=integer]`/`[uid=uuid]` matchers, nested `_layout.tsx` chains, `(marketing)` groups and the `_404.tsx`/`_500.tsx` pages, plus SPA navigation with a `persist` island. |
 | [`blog-static`](examples/blog-static) | A markdown blog exported with `output: 'static'` + `staticParams`: zero-JS pages, speculation rules, and the agent face (`llms.txt`, sitemap, `.md` projections) from the same build. |
+| [`with-content`](examples/with-content) | Typed content collections: frontmatter validated by the same `schema()` as component state, and MDX notes that embed a real Janux island and a React component via `foreign()` — compiled on the server, so a note of prose still ships 0 KB. |
 | [`i18n`](examples/i18n) | Internationalization: locale-prefixed routing, language switcher, type-safe `t()` with plurals, and page-scoped client translations. |
 
 ### Styling
@@ -348,6 +350,14 @@ bun run typecheck
 ## Contributing
 
 PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md). Third-party work Janux builds on is credited in [CREDITS.md](CREDITS.md); security reports go through [SECURITY.md](SECURITY.md).
+
+## Releases
+
+Janux is 0.x, and every published package moves on one version.
+
+- [CHANGELOG.md](CHANGELOG.md) — what changed, newest first.
+- [VERSIONING.md](VERSIONING.md) — what a minor is allowed to break, how much notice you get, and how long each one is supported.
+- [STABILITY.md](STABILITY.md) — every public export marked stable, experimental or internal. Generated from the exports themselves.
 
 ## License
 

@@ -1,3 +1,8 @@
+---
+title: Error handling
+description: "A failure surfaces in exactly three places in a Janux app: the intent pipeline, the HTTP envelope of an api() call, and the client runtime."
+---
+
 # Error handling
 
 A failure shows up in exactly three places in a Janux app: the **intent pipeline** (a typed `JanuxIntentError`), the **HTTP envelope** of an `api()` call, and the client runtime's **`janux:error`** DOM event. Each one has an owner — the intent, the caller, and a global reporter.
