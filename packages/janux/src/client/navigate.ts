@@ -6,6 +6,7 @@ import { consumePrefetched, navigableBody, NAVIGATION_HEADERS } from './prefetch
 import { saveWidgetFocus, settleRouteA11y } from './route-a11y';
 import { runScriptsWhileStreaming } from './scripts';
 import { rescopeSpeculationRules } from './speculation';
+import { applyWithViewTransition, viewTransitionSettled, viewTransitionsWanted } from './view-transition';
 
 export interface NavigateOptions {
   signal?: AbortSignal;
@@ -367,7 +368,33 @@ function installListenersWhileStreaming(): () => void {
   return () => observer.disconnect();
 }
 
+/**
+ * Reads the whole page into memory, then hands it back as a stream that is
+ * already complete. Only for the view-transition path.
+ *
+ * A transition suppresses rendering until its callback resolves, so diffing a
+ * live stream inside one would freeze the page for the entire download — and
+ * past four seconds the browser abandons the transition outright. Buffering out
+ * here inverts that: the old page stays live and interactive while the next one
+ * arrives, and only the swap itself, with nothing left to await, is animated.
+ */
+async function buffered(page: ReadableStream<Uint8Array>): Promise<ReadableStream<Uint8Array>> {
+  const reader = page.getReader();
+  const chunks: Uint8Array[] = [];
+
+  // A reader is a cursor, not an iterable: draining it is the one loop here.
+  for (let read = await reader.read(); !read.done; read = await reader.read()) chunks.push(read.value!);
+
+  return new ReadableStream({
+    start(controller) {
+      chunks.forEach((chunk) => controller.enqueue(chunk));
+      controller.close();
+    },
+  });
+}
+
 async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, signal?: AbortSignal): Promise<void> {
+  const source = viewTransitionsWanted() ? await buffered(page) : page;
   const kept = extractPersisted(mount);
   const stopRestoring = restoreWhileStreaming(kept);
   const stopInstallingListeners = installListenersWhileStreaming();
@@ -378,16 +405,24 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
 
   try {
     throwIfAborted(signal);
-    // The Navigation API drives the transition; diff directly (its own would be skipped).
-    await diff(document, page);
     /*
-     * A superseded navigation must not report success: the diff can finish
-     * cleanly on a cancelled stream, having applied only the part that arrived,
-     * and the page that navigation was going to is not the page on screen.
-     * Whatever superseded it is already diffing the same document.
+     * One transition around the whole swap — the diff AND the grafting back of
+     * persisted islands — so the browser snapshots a complete old page against
+     * a complete new one and can pair the shared elements. Without an opted-in
+     * app this is just the callback, run directly.
      */
-    throwIfAborted(signal);
-    await restorePersisted(mount, kept);
+    await applyWithViewTransition(async () => {
+      // The Navigation API drives the transition; diff directly (its own would be skipped).
+      await diff(document, source);
+      /*
+       * A superseded navigation must not report success: the diff can finish
+       * cleanly on a cancelled stream, having applied only the part that arrived,
+       * and the page that navigation was going to is not the page on screen.
+       * Whatever superseded it is already diffing the same document.
+       */
+      throwIfAborted(signal);
+      await restorePersisted(mount, kept);
+    }, signal);
   } catch (error) {
     /*
      * Persisted islands go back untouched — losing a live editor to a superseded
@@ -459,10 +494,11 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
     await wireUpPage(mount);
     /*
      * Last, so `after` means "settled": the page is on screen, its islands are
-     * wired, and only then is the change announced and focus moved. A view
-     * transition wrapping the diff must resolve before this line for the same
-     * reason — a transition is not a moment to speak into or to focus during.
+     * wired, the transition has finished animating, and only then is the change
+     * announced and focus moved — a transition is not a moment to speak into or
+     * to focus during. Resolves immediately when there was no transition.
      */
+    await viewTransitionSettled();
     settleRouteA11y(widgetFocus);
     emitNavigate('after', from, url);
   } catch (error) {
