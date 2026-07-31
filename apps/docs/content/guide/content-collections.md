@@ -11,6 +11,10 @@ That is the whole argument for it: in Janux, content and state are validated by 
 
 ```bash
 bun add @janux/content
+
+# Only if you render bodies with `render()` — see below. Collections
+# themselves need nothing else.
+bun add @mdx-js/mdx
 ```
 
 > **Note:** the runnable version of this page is [`examples/with-content`](https://github.com/aralroca/Janux/tree/main/examples/with-content).

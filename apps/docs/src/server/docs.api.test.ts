@@ -1,7 +1,7 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { SECTIONS, docIndex, docContent, groupLabel, sectionLabel, searchCorpus } from './docs.api';
+import { SECTIONS, contentDir, docIndex, docContent, groupLabel, sectionLabel, searchCorpus } from './docs.api';
 
 const CONTENT_DIR = join(import.meta.dirname, '../../content');
 
@@ -33,6 +33,27 @@ describe('SECTIONS integrity', () => {
       expect(docContent(section, slug)).toBeDefined();
       expect(title).not.toBe(slug);
     }
+  });
+});
+
+describe('where the pages are read from', () => {
+  const previous = process.env.JANUX_APP_ROOT;
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env.JANUX_APP_ROOT;
+    else process.env.JANUX_APP_ROOT = previous;
+  });
+
+  /**
+   * A process that serves several apps publishes each of their roots in turn,
+   * and more than one of them has a `content/` directory. Reading the published
+   * root first is how this site once served an example's three blog posts as
+   * its own eighty-eight pages — every URL a 404.
+   */
+  test('ignores a published root belonging to another app', () => {
+    process.env.JANUX_APP_ROOT = join(import.meta.dirname, '../../../../examples/blog-static');
+
+    expect(contentDir()).toBe(join(import.meta.dirname, '../../content'));
   });
 });
 

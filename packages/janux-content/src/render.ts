@@ -53,8 +53,22 @@ const compiled = new Map<string, Promise<Compiled>>();
  * and compiling them as MDX would break corpora that have always been allowed
  * to write them. `.mdx` opts into the other reading explicitly, by extension.
  */
+/**
+ * The compiler is an optional peer, not a dependency: collections work without
+ * it, `render()` is what needs it, and a package that pulls it in
+ * unconditionally hands every consumer `@types/mdx` — which asks for a global
+ * `JSX` namespace a plain Node project does not have, and fails its typecheck.
+ */
+async function mdx(): Promise<typeof import('@mdx-js/mdx')> {
+  try {
+    return await import('@mdx-js/mdx');
+  } catch {
+    throw new Error('Janux content: rendering a body needs the MDX compiler — install it with `bun add @mdx-js/mdx`.');
+  }
+}
+
 async function compileBody(body: string, format: ContentFormat, file: string): Promise<Compiled> {
-  const { compile, run } = await import('@mdx-js/mdx');
+  const { compile, run } = await mdx();
   const { default: rehypeRaw } = await import('rehype-raw');
   const headings: Heading[] = [];
   const source = await compile(

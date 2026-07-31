@@ -90,6 +90,8 @@ const { Content, headings } = await render(note, { components: { Poll } });
 
 Compilation happens on the server: no MDX runtime reaches the browser, and with `output: 'static'` it happens once, at build time.
 
+The compiler is an **optional peer dependency** — `bun add @mdx-js/mdx`. Collections do not need it; only `render()` does, and calling it without the compiler installed says so.
+
 ## slugify(text)
 
 The heading-id function `render` uses. Exported so an app can produce the same id for a heading it writes itself.

@@ -132,7 +132,7 @@ describe('the compiler stays on the server', () => {
    * would put it in every app's dependency graph — including the ones that only
    * ever write `.md`.
    */
-  it('imports @mdx-js/mdx dynamically, inside the render call', () => {
+  it('imports @mdx-js/mdx dynamically, never at module scope', () => {
     const source = readFileSync(join(import.meta.dir, 'render.ts'), 'utf8');
 
     expect(source).not.toMatch(/^import[^\n]*'@mdx-js\/mdx'/m);

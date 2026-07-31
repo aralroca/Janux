@@ -658,6 +658,7 @@
         "@janux/cli": "workspace:*",
         "@janux/content": "workspace:*",
         "@janux/server": "workspace:*",
+        "@mdx-js/mdx": "^3.1.0",
         "janux": "workspace:*",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
@@ -844,6 +845,7 @@
         "@janux/tailwind": "workspace:*",
         "@janux/vercel": "workspace:*",
         "@janux/vite": "workspace:*",
+        "@mdx-js/mdx": "^3.1.0",
         "janux": "workspace:*",
       },
       "devDependencies": {
@@ -923,16 +925,20 @@
       "name": "@janux/content",
       "version": "0.5.0",
       "dependencies": {
-        "@mdx-js/mdx": "^3.1.0",
         "rehype-raw": "^7.0.0",
         "yaml": "^2.6.0",
       },
       "devDependencies": {
+        "@mdx-js/mdx": "^3.1.0",
         "janux": "workspace:*",
       },
       "peerDependencies": {
+        "@mdx-js/mdx": ">=3",
         "janux": ">=0.5.0",
       },
+      "optionalPeers": [
+        "@mdx-js/mdx",
+      ],
     },
     "packages/janux-server": {
       "name": "@janux/server",

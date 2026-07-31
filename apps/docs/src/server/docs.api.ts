@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineCollection, getCollection, getEntry, type CollectionEntry } from '@janux/content';
 import { api } from '@janux/server';
@@ -7,11 +8,26 @@ import { slugify, stripMarkdown } from './markdown';
 
 /**
  * The pages are files on disk, so this has to hold wherever the module ends up.
- * `import.meta.dirname` is this file's directory when Bun runs the source, and
- * the *bundle's* directory once a deployment adapter has bundled the server —
- * which is why one of them publishes the app root before importing the app.
+ *
+ * When Bun runs the source, this file's own directory locates them. Once a
+ * deployment adapter has bundled the server it does not — `import.meta.dirname`
+ * is then the *bundle's* directory — and the app root the adapter published
+ * (`process.env.JANUX_APP_ROOT`) does.
+ *
+ * Preferring what this file can see, over what it was told, is what makes the
+ * choice independent of who ran first: a process that serves several apps — the
+ * e2e suite does — publishes each of their roots in turn, and several of them
+ * have a `content/` directory of their own to be mistaken for this one.
  */
-const CONTENT_DIR = join(process.env.JANUX_APP_ROOT ?? join(import.meta.dirname, '../..'), 'content');
+export function contentDir(): string {
+  const beside = join(import.meta.dirname, '../../content');
+
+  if (existsSync(beside)) return beside;
+
+  return join(process.env.JANUX_APP_ROOT ?? '', 'content');
+}
+
+const CONTENT_DIR = contentDir();
 
 /**
  * The docs are a content collection, so a page's metadata is checked by the
