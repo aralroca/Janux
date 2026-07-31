@@ -8,7 +8,7 @@ description: The plumbing the CLI and the Vite plugin use. Read this to embed Ja
 The plumbing the [CLI](/docs/reference/cli) and the [Vite plugin](/docs/guide/cli-and-deployment) use. You need this page to embed Janux in another build, to write a custom server, or to script the CLI — not to build an app.
 
 ```ts
-import { resolveAppConfig, shellOptions, apiFiles, apiStubModule, exportedApiNames, apiModuleName, toFetchRequest, sendFetchResponse } from '@janux/vite';
+import { resolveAppConfig, shellOptions, apiFiles, apiStubModule, exportedApiNames, apiModuleName, packageDir, toFetchRequest, sendFetchResponse } from '@janux/vite';
 import { runCli, parseArgs, HELP_TEXT } from '@janux/cli';
 import { createHttpHandlers } from '@janux/server';
 import { renderNode } from 'janux/server';
@@ -62,6 +62,16 @@ A `*.api.ts` module runs on the server; the client gets a tiny typed stub instea
 | `apiModuleName(file)` | The stable module id a stub is addressed by |
 
 The parse-don't-execute step is the important one: server-only imports (a database driver, secrets) never reach the client graph, because the plugin never runs the module to learn its exports.
+
+## packageDir(specifier, from)
+
+`packageDir(specifier: string, from: string): string | undefined` — where a package is installed, resolved the way Node does it: the nearest `node_modules` up the *real* path, symlinks followed. `Bun.resolveSync` answers from Bun's global install cache too, which reports packages the app never installed; this does not.
+
+It is how zero-config integrations are detected — installing `@janux/tailwind` **is** the configuration — and how [`janux info`](/docs/reference/cli#janux-info) reports the versions an app actually resolves.
+
+```ts
+packageDir('@janux/tailwind', root); // → '/app/node_modules/@janux/tailwind' | undefined
+```
 
 ## Node ⇄ Web request adapters
 
