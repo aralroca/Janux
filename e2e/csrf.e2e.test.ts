@@ -55,22 +55,21 @@ const executedTransfers = async (): Promise<{ to: string }[]> => {
 
 beforeAll(async () => {
   if (!BUILT) return;
-  const app = await serveBuilt(APP);
-
-  ({ stop: stopVictim } = app);
-  // Proxied so the guard's inputs and its verdict are both observable.
-  const proxy = Bun.serve({
-    port: 0,
-    fetch: async (req) => {
-      const res = await fetch(new Request(`${app.base}${new URL(req.url).pathname}`, req));
-
-      seen.push({ site: req.headers.get('sec-fetch-site'), origin: req.headers.get('origin'), status: res.status });
-
-      return res;
-    },
+  /*
+   * The guard's inputs and its verdict are both observable, and the victim is
+   * one real server rather than a proxy in front of one. It used to be a proxy,
+   * which meant two `Bun.serve` instances in this process with the front one
+   * awaiting a loopback `fetch` into the back one: under a loaded suite that
+   * starved and returned an empty body, and an empty body is not a parse error
+   * — `res.json()` resolves to `null` — so the ledger read failed with "null is
+   * not an object" and blamed the CSRF guard for a plumbing problem.
+   */
+  const app = await serveBuilt(APP, (req, res) => {
+    seen.push({ site: req.headers.get('sec-fetch-site'), origin: req.headers.get('origin'), status: res.status });
   });
 
-  victim = `http://localhost:${proxy.port}`;
+  ({ stop: stopVictim } = app);
+  victim = app.base;
   attacker = Bun.serve({ port: 0, fetch: () => new Response(forgeryPage(victim), { headers: { 'content-type': 'text/html' } }) });
   browser = await launchChrome();
 });

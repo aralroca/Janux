@@ -97,7 +97,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 - **Stable** — `janux`
 - **Experimental** — _none_
-- **Internal** — `apiFiles`, `apiModuleName`, `apiStubModule`, `exportedApiNames`, `publishAppRoot`, `resolveAppConfig`, `sendFetchResponse`, `shellOptions`, `toFetchRequest`
+- **Internal** — `apiFiles`, `apiModuleName`, `apiStubModule`, `exportedApiNames`, `packageDir`, `publishAppRoot`, `resolveAppConfig`, `sendFetchResponse`, `shellOptions`, `toFetchRequest`
 
 ### `@janux/cli`
 
