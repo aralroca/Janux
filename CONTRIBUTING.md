@@ -44,6 +44,29 @@ bun run pack:packages             # build, pack, and read each tarball back
 bun run smoke:node                # install the tarballs in a clean Node project
 ```
 
+## Changesets, and what a release is
+
+A change to a published package ships with a **changeset** — the file that becomes its changelog entry:
+
+```bash
+bun run changeset                 # write one, interactively
+bun run changeset:status          # what the next release would contain
+```
+
+Docs, examples, benchmarks and CI need none. Everything else does, and it is written for the person upgrading:
+name the export, say what changed, and if it breaks something say what to do instead. See
+[`.changeset/README.md`](.changeset/README.md).
+
+Releasing is two steps and neither of them is your laptop. `bun run release:version` turns the pending changesets
+into version bumps and changelogs — that is a reviewable pull request. Pushing the tag it names is what publishes,
+via [`.github/workflows/release.yml`](.github/workflows/release.yml), with npm provenance.
+`scripts/release.ts` refuses to upload without the OIDC token only a workflow has, so there is no accidental
+manual publish to fall back to.
+
+Two documents make promises to users, and a change can break them: [VERSIONING.md](VERSIONING.md) says what a
+minor may break, and [STABILITY.md](STABILITY.md) says which APIs those rules apply to. STABILITY.md is
+**generated** — `bun run docs:stability` after adding or removing a public export, or the suite fails.
+
 ## Rules of the codebase
 
 These are enforced in review:

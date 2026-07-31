@@ -1,0 +1,127 @@
+name: Release
+
+# The tag is the release. `bun run release:version` writes the versions and the
+# changelogs on a pull request; pushing the tag it names is what publishes, and
+# nothing else does — `scripts/release.ts` refuses to upload without the OIDC
+# token only a workflow gets, so a laptop cannot take this path by accident.
+#
+# `workflow_dispatch` runs the same thing with `--dry-run`: every package is
+# built, packed and read back, and npm is asked what it would upload, without
+# anything reaching the registry.
+on:
+  push:
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # The same gate CI runs, repeated here rather than assumed: a tag can be cut
+  # from any commit, including one CI never saw.
+  verify:
+    runs-on: ubuntu-latest
+
+    # The Postgres memory store and the Redis counter store are production
+    # adapters whose suites skip themselves when the service is unreachable, and
+    # coverage comes in ~1.1pp lower without them — which is enough to redden the
+    # floor below for a reason that has nothing to do with the release.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: assistant
+          POSTGRES_PASSWORD: assistant
+          POSTGRES_DB: janux_harness_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      JANUX_TEST_REDIS: redis://localhost:6379/15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Tests
+        run: bun run test
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Census and coverage floor
+        run: bun run test:census --min-coverage 0.93
+
+  # What npm is about to receive, installed the way a user installs it. This is
+  # the check that can fail for the reason releases fail: a subpath that resolves
+  # in the workspace and nowhere else.
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - name: Pack the publishable packages
+        run: bun run pack:packages
+      - name: Install the tarballs in a clean Node project and import them
+        run: bun run smoke:node
+
+  publish:
+    needs: [verify, smoke]
+    runs-on: ubuntu-latest
+
+    # `id-token: write` is what makes provenance possible: npm exchanges this
+    # token for a Sigstore certificate naming the repository, the commit and this
+    # workflow file. Without it npm publishes an unsigned tarball, and
+    # scripts/release.ts stops rather than let that happen quietly.
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      # npm, not bun, does the upload: `bun publish` has no --provenance.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: bun install --frozen-lockfile
+
+      # On a tag: builds, packs, verifies each tarball and uploads it signed,
+      # skipping versions already on npm. On a manual run: all of that except the
+      # upload. The tag/manifest mismatch check lives in the script, so it holds
+      # however the script is reached.
+      #
+      # NPM_TOKEN is an automation token on the npm account. It can be retired
+      # entirely by configuring npm Trusted Publishing for these packages, which
+      # authenticates with the same OIDC token provenance already uses; nothing
+      # here changes when that happens except that the secret stops being read.
+      - name: Publish
+        run: bun scripts/release.ts ${{ github.event_name == 'workflow_dispatch' && '--dry-run' || '' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # The tarballs are the artifact of a dry run, and the evidence after a
+      # failure — there is nothing to inspect on the runner once it is gone.
+      - name: Upload the tarballs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarballs
+          path: .packed/
+          if-no-files-found: ignore

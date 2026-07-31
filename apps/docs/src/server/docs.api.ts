@@ -69,6 +69,7 @@ export const SECTIONS: SectionDef[] = [
           'stores',
           'data-cache',
           'interop',
+          'design-system',
         ],
       },
       { label: 'Content', slugs: ['content-collections'] },

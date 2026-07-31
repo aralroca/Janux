@@ -5,7 +5,7 @@ description: Janux has no opinion about how you write CSS, and no vite.config fo
 
 # Styling a Janux app
 
-Janux has no opinion about how you write CSS, and no `vite.config` for you to edit. What it does have is a single, predictable contract: **one stylesheet entry, one `<link>` in the HTML shell**. Everything below is a different way of filling that entry.
+Janux has no opinion about how you write CSS, and no `vite.config` for you to edit. It also ships no components to style — [where your buttons come from](/docs/guide/design-system) is answered on its own page. What it does have is a single, predictable contract: **one stylesheet entry, one `<link>` in the HTML shell**. Everything below is a different way of filling that entry.
 
 | Approach | Resolved | Use it when |
 |---|---|---|

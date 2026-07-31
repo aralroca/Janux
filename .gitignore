@@ -21,11 +21,7 @@ apps/docs/.janux/
 .env.local
 .vercel/output
 packages/janux-vercel/src/__fixtures__/app/node_modules/
-<<<<<<< Updated upstream
 # Release artefacts. `bun pm pack` goes by `files` and ignores this file, so
 # these being here is not what keeps them out of a tarball — `files` is.
 .packed/
 .tsconfig.build.json
-=======
-.env*
->>>>>>> Stashed changes
