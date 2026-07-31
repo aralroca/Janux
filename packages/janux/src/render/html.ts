@@ -30,6 +30,17 @@ export function safeJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
+/**
+ * The CSP nonce attribute for an inline tag, or nothing when the app does not
+ * use CSP — which is what keeps an unconfigured app's HTML byte-identical.
+ *
+ * Mirrored in `@janux/server`'s html-escape.ts, which escapes with its own
+ * `safeAttr`; like `safeJson`, the shell does not reach into the renderer.
+ */
+export function nonceAttr(nonce: string | undefined): string {
+  return nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
+}
+
 /** Explicit island keys must survive marker parsing (`:`), selectors (`"`) and id parsing (`#`). */
 export function safeKey(explicit: unknown): string {
   return String(explicit).replace(/[^\w.-]/g, '_');

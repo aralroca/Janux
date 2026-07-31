@@ -86,10 +86,7 @@ describe('SPA navigation (streamed diff)', () => {
     await client.settled();
     counterDetach.mockClear();
 
-    (globalThis as any).fetch = mock(async () => ({
-      ok: true,
-      body: new Response(pageB).body,
-    }));
+    (globalThis as any).fetch = mock(async () => new Response(pageB));
     await client.navigate('/b');
 
     // swapped content + title (whole-document diff)
@@ -128,10 +125,7 @@ describe('SPA navigation (streamed diff)', () => {
     expect(((await client.read('ui://counter')) as any).state.n).toBe(2);
     counterDetach.mockClear();
 
-    (globalThis as any).fetch = mock(async () => ({
-      ok: true,
-      body: new Response(pageB).body,
-    }));
+    (globalThis as any).fetch = mock(async () => new Response(pageB));
     await client.navigate('/b2');
 
     // The stale live instance was disposed with the old page...
@@ -157,7 +151,7 @@ describe('SPA navigation (streamed diff)', () => {
     document.close();
     const client = boot({ defs: [counter, gallery] });
 
-    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageB).body }));
+    (globalThis as any).fetch = mock(async () => new Response(pageB));
     await client.navigate('/b');
     document.querySelector('.shot')!.dispatchEvent(new Event('dblclick', { bubbles: true }));
     await client.settled();
@@ -193,7 +187,7 @@ describe('SPA navigation (streamed diff)', () => {
     panel.appendChild(nested);
     document.body.append(overlay, plain, panel);
 
-    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageB).body }));
+    (globalThis as any).fetch = mock(async () => new Response(pageB));
     await client.navigate('/b');
 
     expect(document.querySelector('h1')!.textContent).toBe('B');
@@ -218,14 +212,14 @@ describe('SPA navigation (streamed diff)', () => {
     expect(editorAttach).toHaveBeenCalledTimes(1); // first visit mounts
 
     // navigate away → the island is gone AND torn down (detach ran)
-    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageDoc).body }));
+    (globalThis as any).fetch = mock(async () => new Response(pageDoc));
     await client.navigate('/doc');
     expect(document.querySelector('janux-island[data-jx="editor#default"]')).toBeNull();
     expect(editorDetach).toHaveBeenCalledTimes(1);
 
     // revisit → the eager island mounts again from a clean slate (the playground
     // relies on this attach/detach symmetry to reset Monaco)
-    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageEditor).body }));
+    (globalThis as any).fetch = mock(async () => new Response(pageEditor));
     await client.navigate('/editor');
     expect(document.querySelector('janux-island[data-jx="editor#default"]')).not.toBeNull();
     expect(editorAttach).toHaveBeenCalledTimes(2);
@@ -259,7 +253,7 @@ describe('SPA navigation (streamed diff)', () => {
     await client.settled();
     expect(document.querySelectorAll('.w-host div').length).toBe(30);
 
-    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageD).body }));
+    (globalThis as any).fetch = mock(async () => new Response(pageD));
     await client.navigate('/d');
 
     expect(document.body.innerHTML).not.toContain('IMPERATIVE');
@@ -278,6 +272,7 @@ describe('SPA navigation (streamed diff)', () => {
 
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
+      headers: new Headers(),
       body: new Response(await pageHtml('B', jsx('h1', { children: 'B' }))).body,
     }));
     await client.navigate('/b');
@@ -301,6 +296,7 @@ describe('SPA navigation (streamed diff)', () => {
 
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
+      headers: new Headers(),
       body: new Response(await pageHtml('B', jsx('h1', { children: 'B' }), sheet)).body,
     }));
     await client.navigate('/b');
@@ -332,6 +328,7 @@ describe('SPA navigation (streamed diff)', () => {
     // a page that declares none of them
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
+      headers: new Headers(),
       body: new Response(await pageHtml('B', jsx('h1', { children: 'B' }))).body,
     }));
     await client.navigate('/b');
@@ -343,6 +340,7 @@ describe('SPA navigation (streamed diff)', () => {
     // and back to a page that declares its own: updated in place, not duplicated
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
+      headers: new Headers(),
       body: new Response(
         await pageHtml(
           'C',
@@ -378,6 +376,7 @@ describe('SPA navigation (streamed diff)', () => {
 
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
+      headers: new Headers(),
       text: async () => {
         bufferedWholePage = true;
 
@@ -400,7 +399,7 @@ describe('SPA navigation (streamed diff)', () => {
   });
 
   it('emits janux:error and hard-navigates when the fetch fails', async () => {
-    (globalThis as any).fetch = mock(async () => ({ ok: false, status: 500 }));
+    (globalThis as any).fetch = mock(async () => new Response('', { status: 500 }));
     document.write(await pageHtml('Page A', jsx(chat as any, {})));
     document.close();
     const client = boot({ defs: [chat] });
@@ -460,7 +459,7 @@ describe('SPA navigation (streamed diff)', () => {
     let hardNavigations = 0;
 
     document.addEventListener('janux:error', (event: any) => errors.push(event.detail));
-    (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(next).body }));
+    (globalThis as any).fetch = mock(async () => new Response(next));
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...location, get href() { return 'http://localhost/a'; }, set href(_value: string) { hardNavigations += 1; } },
@@ -492,6 +491,7 @@ describe('speculation rules across a navigation', () => {
 
     (globalThis as any).fetch = mock(async () => ({
       ok: true,
+      headers: new Headers(),
       body: new Response(await pageHtml('B', jsx('h1', { children: 'B' }), serverRules)).body,
     }));
     await client.navigate('/b');
@@ -527,7 +527,7 @@ describe('persisted island dropped by the incoming page', () => {
 
     console.warn = (...args: unknown[]) => warned.push(args.join(' '));
     try {
-      (globalThis as any).fetch = mock(async () => ({ ok: true, body: new Response(pageB).body }));
+      (globalThis as any).fetch = mock(async () => new Response(pageB));
       await client.navigate('/b');
     } finally {
       console.warn = originalWarn;

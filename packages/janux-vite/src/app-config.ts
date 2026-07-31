@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ServerOptions } from '@janux/server';
-import type { AgentsAuthConfig, JanuxConfig, JanuxOutput, McpAuthConfig, NavigationConfig } from 'janux';
+import type { AgentsAuthConfig, CspConfig, JanuxConfig, JanuxOutput, McpAuthConfig, NavigationConfig } from 'janux';
 
 export type { JanuxOutput } from 'janux';
 
@@ -32,6 +32,7 @@ export interface JanuxAppConfig {
   llmsTxt?: { title?: string; description?: string };
   output: JanuxOutput;
   navigation?: NavigationConfig;
+  csp?: boolean | CspConfig;
 }
 
 const CONFIG_FILES = ['janux.config.ts', 'janux.config.js'];
@@ -99,6 +100,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     llmsTxt: options.llmsTxt,
     output: options.output ?? 'bun',
     navigation: options.navigation,
+    csp: options.csp,
   };
 }
 
@@ -113,7 +115,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
 export function shellOptions(
   app: JanuxAppConfig,
   stylesheets: string[],
-): Pick<ServerOptions, 'title' | 'lang' | 'siteUrl' | 'favicon' | 'stylesheets' | 'navigation'> {
+): Pick<ServerOptions, 'title' | 'lang' | 'siteUrl' | 'favicon' | 'stylesheets' | 'navigation' | 'csp'> {
   return {
     title: app.title,
     lang: app.lang,
@@ -121,6 +123,7 @@ export function shellOptions(
     favicon: app.favicon,
     stylesheets,
     navigation: app.navigation,
+    csp: app.csp,
   };
 }
 

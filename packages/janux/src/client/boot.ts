@@ -10,6 +10,7 @@ import { enableAgentGlow, type GlowOptions } from './glow';
 import { installI18n } from './i18n';
 import type { NavigationConfig } from '../config';
 import { mountEagerIslands, performNavigation } from './navigate';
+import { captureNonce } from './nonce';
 import { configurePrefetch, prefetchOnHover } from './prefetch';
 import { rescopeSpeculationRules, shellNavigationConfig } from './speculation';
 import { installWebMCP } from './webmcp';
@@ -184,6 +185,9 @@ export function boot(options: BootOptions = {}): JanuxClient {
     },
   };
 
+  // Before anything can navigate: a navigation's markup carries the next
+  // response's nonce, and this document's CSP only accepts the one it shipped with.
+  captureNonce();
   Object.entries(options.islands ?? {}).forEach(([name, loader]) => {
     registry.loaders.set(name, loader);
   });

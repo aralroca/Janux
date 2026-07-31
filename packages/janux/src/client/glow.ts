@@ -1,4 +1,5 @@
 import { isMarkerAttr } from '../render/html';
+import { applyNonce } from './nonce';
 
 export const GLOW_CLASS = 'janux-agent-glow';
 
@@ -64,6 +65,7 @@ export function injectGlowStyles(doc: Document = document): void {
   const style = doc.createElement('style');
 
   style.id = 'janux-glow-styles';
+  applyNonce(style);
   style.textContent = GLOW_CSS;
   doc.head.appendChild(style);
 }

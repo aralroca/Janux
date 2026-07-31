@@ -46,6 +46,26 @@ export interface AgentsAuthConfig {
   policy?: 'observe' | 'require';
 }
 
+/**
+ * Strict CSP for the app's pages. `true` is the whole setup: a fresh nonce per
+ * request on every inline script and style the framework emits, plus the
+ * recommended `Content-Security-Policy` header. See the CSP recipe.
+ */
+export interface CspConfig {
+  /**
+   * This request's nonce. A function runs per request — the normal case. A
+   * string is for an app whose proxy already minted one. Default: a fresh
+   * 128-bit random nonce per request.
+   */
+  nonce?: string | ((req: Request) => string);
+  /**
+   * Send `Content-Security-Policy` on page responses. `true` uses the strict
+   * policy; a function builds the app's own from the nonce. Absent ⇒ the
+   * framework nonces the document and leaves the header to the app.
+   */
+  header?: boolean | ((nonce: string) => string);
+}
+
 export interface JanuxConfig {
   routesDir?: string;
   serverDir?: string;
@@ -77,6 +97,8 @@ export interface JanuxConfig {
   output?: JanuxOutput;
   /** SPA navigation, prefetching and speculation rules. */
   navigation?: NavigationConfig;
+  /** Strict CSP: nonce every inline tag, and (with `true`) send the header. */
+  csp?: boolean | CspConfig;
 }
 
 /** Identity helper for `janux.config.ts`: type-checks and autocompletes the config. */
