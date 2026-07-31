@@ -145,6 +145,8 @@ setOnError((error, info) => {
 
 A refusal is **not** an error. `invalid_input`, `forbidden` and the rest of `JanuxIntentError` are the pipeline working; routing them here would drown the signal in every mistyped agent call.
 
+One failure can produce two reports, on purpose: an `api()` that throws during SSR is reported once by the invocation pipeline (which knows *which tool* broke) and once by the render (which knows *which page* died with it). They are different facts, and an operator wants both.
+
 With no handler registered, failures go to the console exactly as they always did. A handler that throws is contained — reporting a failure must never become a second failure.
 
 ## reportError(error, info) / reportWarning(message, info)

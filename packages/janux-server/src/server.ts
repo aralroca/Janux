@@ -755,7 +755,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return handlePage(new Request(`http://localhost${base}`), base, 'notFound');
   };
 
-  const route = async (req: Request, span: JanuxSpan): Promise<Response> => {
+  const handleRequest = async (req: Request, span: JanuxSpan): Promise<Response> => {
     const url = new URL(req.url);
     const { pathname } = url;
     const intercepted = await options.middleware?.(req);
@@ -847,7 +847,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
    */
   const dispatch = async (req: Request, span: JanuxSpan): Promise<Response> => {
     try {
-      return await route(req, span);
+      return await handleRequest(req, span);
     } catch (error) {
       reportError(error, { phase: 'invocation', route: new URL(req.url).pathname });
 
