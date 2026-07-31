@@ -4,10 +4,21 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { Plugin, ViteDevServer } from 'vite';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
+import { fontFaceCss, fontPreloadHrefs } from 'janux';
 import { defineAgent } from '@janux/agent';
 import { packageDir, runtimeIncludes } from './deps';
 import { mimeFor, resolvePublicFile } from './static-files';
-import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
+import { imageResponse } from './image-optimizer';
+import { fontResponse, resolveFonts } from './fonts';
+import {
+  apiFiles,
+  mcpAuthOptions,
+  publishAppRoot,
+  registerInstrumentation,
+  resolveAppConfig,
+  shellOptions,
+  type JanuxPluginOptions,
+} from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { collectIslands, islandCatalogFromDir } from './islands';
 import { attachDevWebSocket } from './dev-websocket';
@@ -22,6 +33,12 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
   // app root means nothing.
   publishAppRoot(vite.config.root);
   const app = await resolveAppConfig(vite.config.root, options);
+  // Resolved here rather than per request: the first `janux dev` downloads, every
+  // one after it reads the cache, and the page sees what the build will ship.
+  const fonts = await resolveFonts(vite.config.root, app.fonts);
+
+  // Same ordering guarantee dev owes prod: instrumented before anything serves.
+  await registerInstrumentation(app.instrumentationModule, (file) => vite.ssrLoadModule(file));
   const apiModules = Object.fromEntries(
     await Promise.all(
       apiFiles(app.serverDir).map(async (file) => [
@@ -48,7 +65,10 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     // Dev bundles nothing, so the build's islands.json is derived from source:
     // without it a suspense-only page ships no runtime under `janux dev`.
     islandModules: islandCatalogFromDir(join(vite.config.root, 'src')),
-    ...shellOptions(app, devStylesheets(vite.config.root, app.stylesheet)),
+    ...shellOptions(app, devStylesheets(vite.config.root, app.stylesheet), {
+      fontFaces: fontFaceCss(fonts) || undefined,
+      fontPreloads: fontPreloadHrefs(fonts),
+    }),
     llmsTxt: app.llmsTxt,
     websocket: websocketModule?.default as ServerOptions['websocket'],
     mcpAuth: mcpAuthOptions(app.mcpAuth),
@@ -119,6 +139,21 @@ export function foreignExternals(root: string): string[] {
 }
 
 const FOREIGN_PACKAGES = ['react', 'react-dom', 'react-dom/client'];
+
+/**
+ * What dev answers before the app does: a file the app put in `public/`, a
+ * self-hosted font out of the resolver's cache, or an image variant derived
+ * from a public file. All three are the URLs `janux build` writes to disk,
+ * produced on demand here — so the page you are writing and the page you ship
+ * pick from the same files.
+ */
+export async function devAsset(root: string, path: string): Promise<Response | undefined> {
+  const publicFile = resolvePublicFile(root, path);
+
+  if (!publicFile) return fontResponse(root, path) ?? imageResponse(root, path);
+
+  return new Response(readFileSync(publicFile), { headers: { 'content-type': mimeFor(publicFile) } });
+}
 
 /** The Janux Vite plugin: JSX runtime config, api() client stubs (SWC) and the SSR dev bridge. */
 export function janux(options: JanuxPluginOptions = {}): Plugin {
@@ -208,14 +243,9 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       return () => {
         vite.middlewares.use((req, res, next) => {
           const handle = async () => {
-            const publicFile = resolvePublicFile(vite.config.root, req.url?.split('?')[0] ?? '/');
+            const asset = await devAsset(vite.config.root, req.url?.split('?')[0] ?? '/');
 
-            if (publicFile) {
-              res.writeHead(200, { 'content-type': mimeFor(publicFile) });
-              res.end(readFileSync(publicFile));
-
-              return;
-            }
+            if (asset) return sendFetchResponse(res, asset);
             // The dev overlay asking which route file and `_layout` chain
             // answered a URL. Resolved before the app sees it, and only for
             // that exact path — a built app has no Vite and no such endpoint.

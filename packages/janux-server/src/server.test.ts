@@ -462,6 +462,56 @@ describe('inlined CSS on a client navigation', () => {
 });
 
 /**
+ * Strict CSP end to end: the nonce the header names has to be the nonce every
+ * tag in the document carries — the shell's, the renderer's, all of them — or
+ * the page is blank. And it has to be a different nonce on every response.
+ */
+describe('strict CSP', () => {
+  const routes = { '/': () => jsx('div', { children: jsx(cart as any, {}) }) };
+  const inlineStyles = ['body{color:red}'];
+  const tags = (html: string) => [...html.matchAll(/<(?:script|style)\b[^>]*>/g)].map(([tag]) => tag);
+
+  it('emits the header and nonces every tag in the document with one line', async () => {
+    const csped = createJanuxServer({ routes, inlineStyles, runtimeUrl: '/client.js', csp: true });
+    const response = await csped.fetch(new Request('http://test/'));
+    const policy = response.headers.get('content-security-policy')!;
+    const nonce = /'nonce-([^']+)'/.exec(policy)![1]!;
+    const emitted = tags(await response.text());
+
+    expect(policy).toContain("'strict-dynamic'");
+    expect(policy).not.toContain('unsafe-inline');
+    expect(emitted.length).toBeGreaterThan(3);
+    expect(emitted.filter((tag) => !tag.includes(`nonce="${nonce}"`))).toEqual([]);
+  });
+
+  it('never repeats a nonce across responses', async () => {
+    const csped = createJanuxServer({ routes, csp: true });
+    const nonceOf = async () =>
+      (await csped.fetch(new Request('http://test/'))).headers.get('content-security-policy');
+
+    expect(await nonceOf()).not.toBe(await nonceOf());
+  });
+
+  it('nonces the document but sets no header when the app owns the header', async () => {
+    const csped = createJanuxServer({ routes, csp: { nonce: 'app-picked' } });
+    const response = await csped.fetch(new Request('http://test/'));
+
+    expect(response.headers.get('content-security-policy')).toBeNull();
+    expect(tags(await response.text()).filter((tag) => !tag.includes('nonce="app-picked"'))).toEqual([]);
+  });
+
+  // Zero regression: an app that never asked for CSP must get exactly the
+  // document (and the headers) it got before the option existed.
+  it('changes nothing for an app that never configured it', async () => {
+    const plain = createJanuxServer({ routes, inlineStyles });
+    const response = await plain.fetch(new Request('http://test/'));
+
+    expect(response.headers.get('content-security-policy')).toBeNull();
+    expect(await response.text()).not.toContain('nonce');
+  });
+});
+
+/**
  * First-class WebSockets: `fetch` stays Request→Response pure, so the server
  * exposes the seam the `Bun.serve` owner mounts instead — `serve(req, bun)`
  * decides the upgrade when the request matches `websocket.path`, and

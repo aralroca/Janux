@@ -60,16 +60,20 @@ describe('recipes/vercel.md — the handler it describes is the one that runs', 
 });
 
 describe('recipes/vercel.md — the caveats are the real ones', () => {
-  /** The env var is a contract between the adapter and app code that reads files. */
+  /**
+   * The env var is a contract between the adapter and app code that reads files.
+   * It is written by the shared adapter builder now, not by janux-vercel: every
+   * adapter's generated entry sets it the same way.
+   */
   it('names the app-root variable the adapter actually sets', () => {
     expect(PAGE).toContain('process.env.JANUX_APP_ROOT');
-    expect(readFileSync(join(import.meta.dir, '../../janux-vercel/src/build.ts'), 'utf8')).toContain(
+    expect(readFileSync(join(import.meta.dir, '../../janux-cli/src/adapter-build.ts'), 'utf8')).toContain(
       'process.env.JANUX_APP_ROOT',
     );
   });
 
   it('names the client-only specifiers the bundler stubs', () => {
-    const bundler = readFileSync(join(import.meta.dir, '../../janux-vercel/src/bundler.ts'), 'utf8');
+    const bundler = readFileSync(join(import.meta.dir, '../../janux-cli/src/bundler.ts'), 'utf8');
 
     for (const suffix of ['worker', 'url', 'raw']) {
       expect(PAGE).toContain(`?${suffix}`);

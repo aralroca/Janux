@@ -1,9 +1,19 @@
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { defineAgent } from '@janux/agent';
 import type { ServerOptions } from '@janux/server';
-import { apiFiles, apiModuleName, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxAppConfig } from '@janux/vite/config';
+import {
+  apiFiles,
+  apiModuleName,
+  builtFontAssets,
+  mcpAuthOptions,
+  registerInstrumentation,
+  resolveAppConfig,
+  shellOptions,
+  type JanuxAppConfig,
+} from '@janux/vite/config';
 
 /**
  * The production wiring, kept away from the build commands on purpose.
@@ -37,9 +47,9 @@ export interface PrebuiltApp {
  */
 async function builtStyles(root: string, app: { inlineStyles?: boolean }): Promise<string[] | undefined> {
   if (!app.inlineStyles) return undefined;
-  const sheet = Bun.file(join(root, 'dist/client/styles.css'));
+  const sheet = join(root, 'dist/client/styles.css');
 
-  return (await sheet.exists()) ? [await sheet.text()] : undefined;
+  return existsSync(sheet) ? [await readFile(sheet, 'utf8')] : undefined;
 }
 
 /**
@@ -49,9 +59,9 @@ async function builtStyles(root: string, app: { inlineStyles?: boolean }): Promi
  * gates the runtime on that registry and the page never boots.
  */
 async function builtIslandModules(root: string): Promise<Record<string, string> | undefined> {
-  const catalog = Bun.file(join(root, 'dist/client/islands.json'));
+  const catalog = join(root, 'dist/client/islands.json');
 
-  return (await catalog.exists()) ? await catalog.json() : undefined;
+  return existsSync(catalog) ? JSON.parse(await readFile(catalog, 'utf8')) : undefined;
 }
 
 type Loader = (file: string) => Promise<Record<string, unknown>>;
@@ -76,6 +86,10 @@ async function optionalModule(load: Loader, file: string | undefined): Promise<R
 export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): Promise<ServerOptions> {
   const app = prebuilt?.config ?? (await resolveAppConfig(root));
   const load = moduleLoader(prebuilt);
+
+  // First, before any app module is imported: an SDK that patches globals has
+  // to do it before the code it means to observe is loaded.
+  await registerInstrumentation(app.instrumentationModule, load);
   const inlineStyles = await builtStyles(root, app);
   const apiModules = Object.fromEntries(
     await Promise.all(apiFiles(app.serverDir).map(async (file) => [apiModuleName(file), await load(file)])),
@@ -96,7 +110,9 @@ export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): P
     storeDefs: storesModule ?? {},
     runtimeUrl: existsSync(join(root, 'dist/client/client.js')) ? '/client.js' : undefined,
     islandModules: await builtIslandModules(root),
-    ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : []),
+    // Read back from the build, never resolved here: a production server (and a
+    // static export, which has none) must not depend on the network to answer.
+    ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : [], builtFontAssets(join(root, 'dist/client'))),
     inlineStyles,
     llmsTxt: app.llmsTxt,
     i18n: i18nModule?.default,

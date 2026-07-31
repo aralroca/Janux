@@ -1,3 +1,5 @@
+import type { GenericFamily } from './font/css';
+
 export type JanuxOutput = 'bun' | 'static';
 
 /**
@@ -41,6 +43,27 @@ export interface NavigationConfig {
   viewTransitions?: boolean;
 }
 
+/** How route cache policies reach the CDN in front — and the shared copy the server keeps itself. */
+export interface CacheConfig {
+  /**
+   * Header the CDN reads tags from. Default `Cache-Tag` (Cloudflare, Akamai);
+   * Fastly reads `Surrogate-Key`, Netlify `Netlify-Cache-Tag`. There is no
+   * standard here, which is why it is configuration and not a constant.
+   */
+  tagHeader?: string;
+  /**
+   * Keep a shared copy of `scope: 'public'` responses in the server process.
+   * On by default and inert until a route declares a public policy, so it costs
+   * nothing until it is asked for. Turn it off when a CDN in front already
+   * holds the same bytes and the memory is better spent elsewhere.
+   */
+  shared?: boolean;
+  /** Entries the shared cache holds before dropping the least recently used. Default 1000. */
+  maxEntries?: number;
+  /** Largest response body worth holding, in bytes. Default 2 MB. */
+  maxBytes?: number;
+}
+
 /**
  * Bearer protection for the hosted MCP endpoint, declared as data: the CLI
  * maps it to the `mcpAuth` verifier the server takes. `tokenEnv` names the
@@ -60,6 +83,51 @@ export interface McpAuthConfig {
 export interface AgentsAuthConfig {
   webBotAuth: { keys: JsonWebKey[] };
   policy?: 'observe' | 'require';
+}
+
+/**
+ * A font the app wants self-hosted. Declaring it is the whole API: the build
+ * downloads it once, ships the subsets asked for, preloads the critical file
+ * and generates a fallback face measured from the real font — see the
+ * fonts guide. Nothing of this reaches the browser as JavaScript.
+ */
+export interface FontConfig {
+  /** Google Fonts family name, e.g. `Inter`. */
+  family: string;
+  /** Weights to ship. Default: `[400]`. */
+  weights?: number[];
+  /** Default: `['normal']`. */
+  styles?: ('normal' | 'italic')[];
+  /** Unicode subsets to ship — the rest are never downloaded. Default: `['latin']`. */
+  subsets?: string[];
+  /** `font-display`. Default: `swap`, which is what the adjusted fallback makes safe. */
+  display?: 'auto' | 'block' | 'swap' | 'fallback' | 'optional';
+  /** Preload the primary subset's files. Default: true. */
+  preload?: boolean;
+  /** Generic family the fallback metrics are computed against. Default: `sans-serif`. */
+  fallback?: GenericFamily;
+  /** CSS custom property carrying the whole stack, e.g. `--font-sans`. */
+  variable?: string;
+}
+
+/**
+ * Strict CSP for the app's pages. `true` is the whole setup: a fresh nonce per
+ * request on every inline script and style the framework emits, plus the
+ * recommended `Content-Security-Policy` header. See the CSP recipe.
+ */
+export interface CspConfig {
+  /**
+   * This request's nonce. A function runs per request — the normal case. A
+   * string is for an app whose proxy already minted one. Default: a fresh
+   * 128-bit random nonce per request.
+   */
+  nonce?: string | ((req: Request) => string);
+  /**
+   * Send `Content-Security-Policy` on page responses. `true` uses the strict
+   * policy; a function builds the app's own from the nonce. Absent ⇒ the
+   * framework nonces the document and leaves the header to the app.
+   */
+  header?: boolean | ((nonce: string) => string);
 }
 
 export interface JanuxConfig {
@@ -91,8 +159,14 @@ export interface JanuxConfig {
   inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
   output?: JanuxOutput;
+  /** Fonts to self-host, subset, preload and give an adjusted fallback. */
+  fonts?: FontConfig[];
   /** SPA navigation, prefetching and speculation rules. */
   navigation?: NavigationConfig;
+  /** Strict CSP: nonce every inline tag, and (with `true`) send the header. */
+  csp?: boolean | CspConfig;
+  /** Cache-tag header and the server's own shared response cache. */
+  cache?: CacheConfig;
 }
 
 /** Identity helper for `janux.config.ts`: type-checks and autocompletes the config. */

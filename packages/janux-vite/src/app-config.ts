@@ -2,9 +2,27 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ServerOptions } from '@janux/server';
-import type { AgentsAuthConfig, JanuxConfig, JanuxOutput, McpAuthConfig, NavigationConfig } from 'janux';
+import type {
+  AgentsAuthConfig,
+  CacheConfig,
+  CspConfig,
+  FontConfig,
+  JanuxConfig,
+  JanuxOutput,
+  McpAuthConfig,
+  NavigationConfig,
+} from 'janux';
 
 export type { JanuxOutput } from 'janux';
+export { registerInstrumentation, type InstrumentationModule } from './instrumentation';
+/*
+ * Re-exported here, beside `shellOptions`, because they are used together and
+ * because this is the entry a production server imports. Reaching the package
+ * ROOT for it instead pulls in the Vite plugin — and with it @swc/core, which
+ * the Vercel adapter then tries to bundle into a serverless function, where its
+ * native binding does not exist.
+ */
+export { builtFontAssets } from './fonts';
 
 export type JanuxPluginOptions = JanuxConfig;
 
@@ -20,6 +38,8 @@ export interface JanuxAppConfig {
   ctxModule?: string;
   matchersModule?: string;
   websocketModule?: string;
+  /** `src/instrumentation.ts`, loaded and `register()`ed before the server serves. */
+  instrumentationModule?: string;
   mcpAuth?: McpAuthConfig;
   agents?: AgentsAuthConfig;
   httpHandlersDir?: string;
@@ -31,7 +51,11 @@ export interface JanuxAppConfig {
   inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
   output: JanuxOutput;
+  /** Fonts to self-host, as declared in janux.config.ts. */
+  fonts: FontConfig[];
   navigation?: NavigationConfig;
+  csp?: boolean | CspConfig;
+  cache?: CacheConfig;
 }
 
 const CONFIG_FILES = ['janux.config.ts', 'janux.config.js'];
@@ -104,6 +128,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     ctxModule: optional(resolve(root, 'src/ctx.ts')),
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
     websocketModule: options.websocket ? resolve(root, options.websocket) : optional(resolve(root, 'src/ws.ts')),
+    instrumentationModule: optional(resolve(root, 'src/instrumentation.ts')),
     mcpAuth: options.mcpAuth,
     agents: options.agents,
     httpHandlersDir: optional(resolve(root, 'src/api')),
@@ -115,7 +140,10 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     inlineStyles: options.inlineStyles,
     llmsTxt: options.llmsTxt,
     output: options.output ?? 'bun',
+    fonts: options.fonts ?? [],
     navigation: options.navigation,
+    csp: options.csp,
+    cache: options.cache,
   };
 }
 
@@ -130,7 +158,20 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
 export function shellOptions(
   app: JanuxAppConfig,
   stylesheets: string[],
-): Pick<ServerOptions, 'title' | 'lang' | 'siteUrl' | 'favicon' | 'stylesheets' | 'navigation'> {
+  fonts: Pick<ServerOptions, 'fontFaces' | 'fontPreloads'> = {},
+): Pick<
+  ServerOptions,
+  | 'title'
+  | 'lang'
+  | 'siteUrl'
+  | 'favicon'
+  | 'stylesheets'
+  | 'navigation'
+  | 'csp'
+  | 'cache'
+  | 'fontFaces'
+  | 'fontPreloads'
+> {
   return {
     title: app.title,
     lang: app.lang,
@@ -138,6 +179,9 @@ export function shellOptions(
     favicon: app.favicon,
     stylesheets,
     navigation: app.navigation,
+    csp: app.csp,
+    cache: app.cache,
+    ...fonts,
   };
 }
 

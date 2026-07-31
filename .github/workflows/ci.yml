@@ -46,6 +46,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      # `@janux/node` declares Node 24+, and its suite spawns a real `node` to
+      # assert behaviour Bun's `node:http` shim does not share (it never emits
+      # 'close' on a ServerResponse). Pinned rather than inherited: the runner's
+      # default version is not a promise, and 24 is the version the adapter
+      # claims to support.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - run: bun install --frozen-lockfile
 
       # Unit + conformance corpus + docs truth guards, then types.
@@ -68,6 +76,15 @@ jobs:
           # An empty list would let every browser suite skip itself green.
           [ -n "$apps" ] || { echo "::error::no e2e example apps discovered"; exit 1; }
           for app in $apps; do bun run --cwd "$app" build; done
+      # Same trick for the Node adapter suite, which gates on hasNodeBuild()
+      # rather than isBuilt(): without its `build:node` output it would skip
+      # itself green, and the one suite that proves a Bun-free deployment works
+      # is the one that must never do that.
+      - name: Build the Node deployments the adapter e2e drives
+        run: |
+          apps=$(grep -l -e hasNodeBuild -e serveNode e2e/*.e2e.test.ts | xargs grep -hoE "'examples/[a-z0-9-]+'" | tr -d "'" | sort -u)
+          [ -n "$apps" ] || { echo "::error::no node-adapter example apps discovered"; exit 1; }
+          for app in $apps; do bun run --cwd "$app" build:node; done
       - name: Install Chrome for Playwright
         run: bunx playwright install --with-deps chrome
 

@@ -18,10 +18,13 @@
     "./config": "./src/app-config.ts"
   },
   "dependencies": {
+    "@capsizecss/metrics": "^3",
+    "@capsizecss/unpack": "^2",
+    "@janux/agent": "workspace:*",
+    "@janux/server": "workspace:*",
     "@swc/core": "^1.9.0",
     "janux": "workspace:*",
-    "@janux/server": "workspace:*",
-    "@janux/agent": "workspace:*"
+    "sharp": "^0.34.5"
   },
   "peerDependencies": {
     "vite": ">=5"

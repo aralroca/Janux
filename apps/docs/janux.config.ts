@@ -12,6 +12,20 @@ export default defineConfig({
   siteUrl: SITE_URL,
   // The sheet is ~5 KB gzipped: cheaper to inline than to block the first paint on.
   inlineStyles: true,
+  /*
+   * Dogfood: the site used to ship the system stack, which never shifts because
+   * it never loads. A real webfont is the honest test of the primitive — one
+   * self-hosted variable file covering every weight the sheet uses, preloaded,
+   * with a fallback face measured from that very file so the swap moves nothing.
+   */
+  fonts: [
+    {
+      family: 'Inter',
+      weights: [400, 600, 700, 800],
+      subsets: ['latin'],
+      variable: '--font-sans',
+    },
+  ],
   llmsTxt: {
     title: 'Janux',
     description:

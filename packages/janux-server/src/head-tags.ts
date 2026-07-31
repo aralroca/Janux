@@ -1,5 +1,5 @@
 import type { HeadTag, PageMeta } from 'janux';
-import { safeAttr, safeJson } from './html-escape';
+import { nonceAttr, safeAttr, safeJson } from './html-escape';
 
 /**
  * The social/structured-data half of the document head: Open Graph, Twitter
@@ -19,6 +19,8 @@ export interface HeadContext {
   siteUrl?: string;
   title?: string;
   description?: string;
+  /** CSP nonce: JSON-LD is a data block, but a strict policy still sees a `<script>`. */
+  nonce?: string;
 }
 
 let warnedAboutSiteUrl = false;
@@ -96,13 +98,14 @@ function twitterCard(meta: PageMeta, ctx: HeadContext, image?: string): string {
   return cardTags('name', 'twitter', { ...derived, ...unprefixed(meta.twitter, 'twitter') });
 }
 
-function jsonLdScripts(jsonLd: PageMeta['jsonLd']): string {
+function jsonLdScripts(jsonLd: PageMeta['jsonLd'], nonce?: string): string {
   const entries = jsonLd === undefined ? [] : Array.isArray(jsonLd) ? jsonLd : [jsonLd];
+  const cspAttr = nonceAttr(nonce);
 
   return entries
     .map(
       (entry, index) =>
-        `<script type="application/ld+json" id="jx-jsonld-${index}">${safeJson(entry)}</script>`,
+        `<script type="application/ld+json" id="jx-jsonld-${index}"${cspAttr}>${safeJson(entry)}</script>`,
     )
     .join('');
 }
@@ -125,15 +128,21 @@ function content(name: string, text: string): string {
   return RAW_TEXT_TAGS.has(name) ? text.replace(/<\/(?=[a-z])/gi, '<\\/') : safeAttr(text);
 }
 
-function customTag({ tag: name, attrs, text }: HeadTag, index: number): string {
+/**
+ * A route's own head tag. `script` and `style` get the request nonce like every
+ * other tag the shell emits: the app cannot write it itself (it is minted per
+ * request), and without it a strict policy simply refuses the tag.
+ */
+function customTag(nonce: string | undefined, { tag: name, attrs, text }: HeadTag, index: number): string {
   const id = attrs?.id ?? `jx-head-${index}`;
   const rendered = Object.entries({ ...attrs, id })
     .map(([key, value]) => ` ${safeAttr(key)}="${safeAttr(value)}"`)
     .join('');
+  const cspAttr = RAW_TEXT_TAGS.has(name) ? nonceAttr(nonce) : '';
 
   if (VOID_TAGS.has(name)) return `<${safeAttr(name)}${rendered}>`;
 
-  return `<${safeAttr(name)}${rendered}>${content(name, text ?? '')}</${safeAttr(name)}>`;
+  return `<${safeAttr(name)}${rendered}${cspAttr}>${content(name, text ?? '')}</${safeAttr(name)}>`;
 }
 
 /** Every head node a route's `meta` contributes beyond `<title>` and the description. */
@@ -147,7 +156,7 @@ export function headTags(meta: PageMeta | undefined, ctx: HeadContext): string {
     meta.robots ? `<meta name="robots" id="jx-robots" content="${safeAttr(meta.robots)}">` : '',
     openGraph(meta, ctx, image, canonical),
     twitterCard(meta, ctx, image),
-    jsonLdScripts(meta.jsonLd),
-    (meta.head ?? []).map(customTag).join(''),
+    jsonLdScripts(meta.jsonLd, ctx.nonce),
+    (meta.head ?? []).map((tag, index) => customTag(ctx.nonce, tag, index)).join(''),
   ].join('');
 }

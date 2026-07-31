@@ -63,6 +63,28 @@ A `*.api.ts` module runs on the server; the client gets a tiny typed stub instea
 
 The parse-don't-execute step is the important one: server-only imports (a database driver, secrets) never reach the client graph, because the plugin never runs the module to learn its exports.
 
+## The image optimizer
+
+One optimizer, used from both ends of an app's life — the build-time half of the [images guide](/docs/guide/images):
+
+| Function | Does |
+|---|---|
+| `writeImageVariants(root, outDir)` | Walks `<root>/public`, encodes every ladder width in AVIF and WebP, and writes them under `outDir/_janux/image/`. Returns how many sources it processed. Called by `janux build`, whatever the `output` |
+| `imageResponse(root, pathname)` | Encodes one variant on demand for `janux dev`, or `undefined` when the path is not one `<Image>` would have emitted |
+
+Neither asks the other what exists: both derive URLs from `janux`'s pure `variantUrl` / `parseVariantUrl`, which is what keeps `janux dev`, `janux start` and `output: 'static'` picking from the same candidates.
+
+## The font resolver
+
+The build-time half of the [font pipeline](/docs/guide/fonts). Everything is cached under `node_modules/.janux/fonts`, so the network is touched once per font and never again.
+
+| Function | Does |
+|---|---|
+| `resolveFonts(root, configs)` | Fetches the Google stylesheet, keeps the declared subsets/weights, self-hosts each `woff2` and measures the real file — returns the `ResolvedFont[]` the CSS layer formats |
+| `writeFontAssets(root, configs, outDir)` | The build's output: the files, the finished CSS and the preload list, written under `outDir/_janux/font/` |
+| `builtFontAssets(outDir)` | Reads those back for `janux start` and `output: 'static'` — neither resolves anything |
+| `fontResponse(root, path)` | Serves one file out of the cache under `janux dev`, where there is no build output yet |
+
 ## packageDir(specifier, from)
 
 `packageDir(specifier: string, from: string): string | undefined` — where a package is installed, resolved the way Node does it: the nearest `node_modules` up the *real* path, symlinks followed. `Bun.resolveSync` answers from Bun's global install cache too, which reports packages the app never installed; this does not.

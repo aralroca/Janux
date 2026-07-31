@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { runtimeIncludes } from './deps';
-import { devStylesheets, fallsThroughToVite, foreignExternals, janux } from './plugin';
+import { devAsset, devStylesheets, fallsThroughToVite, foreignExternals, janux } from './plugin';
 
 /**
  * Regression: the dev shell used to link `/src/styles.css`, which Vite's
@@ -130,5 +130,31 @@ describe('api() client stubs', () => {
 
   it('leaves an app file outside the server directory alone', async () => {
     expect(await transformed(docs, join(docs, 'src/components/widget.api.ts'))).toBeUndefined();
+  });
+});
+
+/**
+ * What `janux dev` answers before the app gets a look. Public files were always
+ * here; image variants join them, because an `<Image>` that only resolves after
+ * `janux build` would be a broken image for the whole time you are writing the
+ * page.
+ */
+describe('devAsset', () => {
+  const app = resolve(import.meta.dir, '__fixtures__/image-app');
+
+  it('serves a file straight out of public/', async () => {
+    const response = await devAsset(app, '/logo.svg');
+
+    expect(response?.headers.get('content-type')).toBe('image/svg+xml');
+  });
+
+  it('encodes an image variant on demand, so dev shows what the build will ship', async () => {
+    const response = await devAsset(app, '/_janux/image/photos/hero.jpg/320.webp');
+
+    expect(response?.headers.get('content-type')).toBe('image/webp');
+  });
+
+  it('leaves anything else to the app', async () => {
+    expect(await devAsset(app, '/posts/hello')).toBeUndefined();
   });
 });

@@ -3,8 +3,9 @@ import { createInstance, type JanuxInstance } from '../runtime/instance';
 import type { EventBus } from '../runtime/bus';
 import type { ComponentDef, Ctx } from '../define/types';
 import { isForeignDef, type ForeignDef } from '../interop';
+import { isTracing, withSpan } from '../observability/tracing';
 import { detachProps } from '../interop/detach';
-import { dedupeKey, escapeHtml, renderAttrs, safeJson, safeKey, VOID_ELEMENTS } from './html';
+import { dedupeKey, escapeHtml, nonceAttr, renderAttrs, safeJson, safeKey, VOID_ELEMENTS } from './html';
 import { UNSUSPENSE_RUNTIME } from './unsuspense';
 
 export interface IslandRecord {
@@ -43,6 +44,13 @@ export interface RenderOptions {
    * that already exist — the page becomes interactive while boundaries stream.
    */
   onBeforeBoundaries?: (summary: Omit<RenderResult, 'html'>) => string;
+  /**
+   * CSP nonce for the inline scripts the renderer emits of its own — the
+   * unsuspense runtime, each boundary's swap call, the fail-soft reporter.
+   * Under a strict `script-src` an unnonced one is a boundary that never
+   * reveals. Absent ⇒ no attribute, exactly as before.
+   */
+  nonce?: string;
 }
 
 /** What a suspended island resolves to — the swap script is error-agnostic. */
@@ -137,10 +145,10 @@ function islandCtx(scope: RenderScope): RenderOptions['ctx'] {
 type Emit = (chunk: string) => void;
 
 /** The failure is reported in-page: same `janux:error` channel a failed navigation uses. */
-function failSoftScript(id: string, error: unknown): string {
+function failSoftScript(id: string, error: unknown, nonce?: string): string {
   const detail = safeJson(String(error));
 
-  return `<script id="jxe:${id}" key="jxe:${id}">document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: island failed",${detail})</script>`;
+  return `<script id="jxe:${id}" key="jxe:${id}"${nonceAttr(nonce)}>document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: island failed",${detail})</script>`;
 }
 
 /**
@@ -230,28 +238,44 @@ async function renderSuspended(def: ComponentDef, instance: JanuxInstance, scope
     new Promise<typeof IDLE>((resolve) => setTimeout(() => resolve(IDLE), 0)),
   ]);
 
-  if (first !== IDLE) return emitBoundaryInline(first, emit, id, open);
+  if (first !== IDLE) return emitBoundaryInline(first, emit, id, open, scope.nonce);
   emit(`${open} data-jx-pending>`);
   try {
     await renderInto(def.suspense!(instance.bag), fallbackScope(scope), emit);
   } catch (error) {
     // A broken fallback must not break the boundary: the island still closes,
     // the content still swaps in, and the failure is reported.
-    emit(failSoftScript(id, error));
+    emit(failSoftScript(id, error, scope.nonce));
   }
   emit('</janux-island>');
   scope.boundaries!.push({ id, content });
 }
 
 /** A boundary resolved in place: content (or error view) between the island's own tags. */
-function emitBoundaryInline(result: BoundaryResult, emit: Emit, id: string, open: string): void {
+function emitBoundaryInline(result: BoundaryResult, emit: Emit, id: string, open: string, nonce?: string): void {
   emit(`${open}>`);
   emit(result.html);
   emit('</janux-island>');
-  if (result.failed !== undefined) emit(failSoftScript(id, result.failed));
+  if (result.failed !== undefined) emit(failSoftScript(id, result.failed, nonce));
 }
 
-async function renderIsland(def: ComponentDef, props: any, scope: RenderScope, emit: Emit): Promise<void> {
+/**
+ * One span per island — the unit an operator actually tunes, since an island is
+ * what re-renders and what ships JS. A suspended island's span covers what it
+ * contributed to *this* flush (its fallback); the deferred content arrives on
+ * its own chunk, after the span closed.
+ */
+function renderIsland(def: ComponentDef, props: any, scope: RenderScope, emit: Emit): Promise<void> {
+  // The guard is not redundant with the one inside `withSpan`: reaching it at
+  // all means allocating the two closures below, per island, on every render.
+  // That was measurable on the SSR benchmark — and "no instrumentation, no
+  // cost" is the promise this feature is allowed to exist under.
+  if (!isTracing()) return renderIslandInto(def, props, scope, emit);
+
+  return withSpan('janux.island', () => ({ 'janux.island': def.name }), () => renderIslandInto(def, props, scope, emit));
+}
+
+async function renderIslandInto(def: ComponentDef, props: any, scope: RenderScope, emit: Emit): Promise<void> {
   const key = nextKey(scope, def, props.key ?? props.id);
   const stores = storeInstances(scope);
   const missing = Object.keys(def.use ?? {}).filter((alias) => !stores[alias]);
@@ -298,7 +322,7 @@ async function renderIsland(def: ComponentDef, props: any, scope: RenderScope, e
     // Buffered: an `error` view must be able to replace the content wholesale,
     // and a suspense island in an inline render (`renderToString`, agent-facing
     // projections) resolves in place instead of streaming a trailing chunk.
-    return emitBoundaryInline(await renderBoundaryContent(def, instance, childScope), emit, id, open);
+    return emitBoundaryInline(await renderBoundaryContent(def, instance, childScope), emit, id, open, scope.nonce);
   }
   emit(`${open}>`);
   await loadSources(instance);
@@ -377,12 +401,21 @@ function localizedProps(node: JanuxNode, scope: RenderScope): Record<string, unk
   return { ...node.$p, href: `/${i18n.locale}${href === '/' ? '' : href}` };
 }
 
+/**
+ * Tags a strict CSP refuses without a nonce. A `<script>` or `<style>` written
+ * in JSX is the app's own, but the nonce is minted per request, so the app
+ * cannot write it — the renderer does, unless the view declared one itself.
+ */
+const NONCEABLE_TAGS = new Set(['script', 'style']);
+
 async function renderElement(node: JanuxNode, scope: RenderScope, emit: Emit): Promise<void> {
   const tag = node.$t as string;
-  const attrs = renderAttrs(localizedProps(node, scope));
+  const props = localizedProps(node, scope);
+  const attrs = renderAttrs(props);
+  const cspAttr = NONCEABLE_TAGS.has(tag) && props.nonce === undefined ? nonceAttr(scope.nonce) : '';
 
   if (VOID_ELEMENTS.has(tag)) return emit(`<${tag}${attrs}/>`);
-  emit(`<${tag}${attrs}>`);
+  emit(`<${tag}${attrs}${cspAttr}>`);
   try {
     if (typeof node.$p.dangerHTML === 'string') emit(node.$p.dangerHTML);
     else await renderInto(node.$p.children, scope, emit);
@@ -605,10 +638,10 @@ const HALT = Symbol('halt');
  * The call script carries its own `id` so the navigation script-runner keys it
  * individually instead of by its (per-page-identical) shape.
  */
-function completionChunk(boundary: BoundaryRecord, result: BoundaryResult, runtimeSent: boolean): string {
+function completionChunk(boundary: BoundaryRecord, result: BoundaryResult, runtimeSent: boolean, nonce?: string): string {
   const runtime = runtimeSent ? '' : UNSUSPENSE_RUNTIME;
-  const call = `<script data-jxu-run id="jxs:${boundary.id}" key="jxu:${boundary.id}">${runtime}jx$u(${safeJson(boundary.id)},document.currentScript)</script>`;
-  const failed = result.failed === undefined ? '' : failSoftScript(boundary.id, result.failed);
+  const call = `<script data-jxu-run id="jxs:${boundary.id}" key="jxu:${boundary.id}"${nonceAttr(nonce)}>${runtime}jx$u(${safeJson(boundary.id)},document.currentScript)</script>`;
+  const failed = result.failed === undefined ? '' : failSoftScript(boundary.id, result.failed, nonce);
 
   // The trailing empty template is for the NAVIGATION diff: its walker holds a
   // chunk's last node until a following sibling proves it complete, which
@@ -653,7 +686,7 @@ async function flushBoundaries(scope: RenderScope, emit: Emit, halt: Promise<typ
 
     if (next === HALT) return;
     list.splice(list.indexOf(next.boundary), 1);
-    emit(completionChunk(next.boundary, next.result, runtimeSent));
+    emit(completionChunk(next.boundary, next.result, runtimeSent, scope.nonce));
     runtimeSent = true;
   }
 }
