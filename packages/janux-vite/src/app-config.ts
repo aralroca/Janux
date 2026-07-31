@@ -76,18 +76,20 @@ async function configFileOptions(root: string): Promise<JanuxConfig> {
  *
  * A module that finds its data files with `import.meta.dirname` gets the
  * *bundle's* directory once bundled, which is why the Vercel adapter has always
- * set this before importing the app. Setting it here means every path — dev,
- * `janux start`, the static prerender, a server created programmatically — makes
- * the same promise, so `dir: 'content/notes'` is not secretly a promise about
- * the working directory.
+ * set this before importing the app. Every path that boots an app publishes it
+ * too, so `dir: 'content/notes'` is not secretly a promise about the working
+ * directory.
+ *
+ * Called when an app is *served*, never merely when its config is read: tooling
+ * resolves the config of apps it will not run, and a stale root is worse than
+ * no root — it points a running app's modules at someone else's files.
  */
-function publishAppRoot(root: string): void {
+export function publishAppRoot(root: string): void {
   process.env.JANUX_APP_ROOT = root;
 }
 
 /** Resolves the conventional app layout: src/routes, src/server, src/client.ts, src/agent.ts, src/stores.ts. */
 export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginOptions = {}): Promise<JanuxAppConfig> {
-  publishAppRoot(root);
   const options = { ...packageJsonOptions(root), ...(await configFileOptions(root)), ...pluginOptions };
 
   return {

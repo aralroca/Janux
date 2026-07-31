@@ -224,7 +224,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 85 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 87 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|

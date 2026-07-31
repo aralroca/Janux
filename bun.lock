@@ -388,6 +388,7 @@
       "dependencies": {
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
+        "@janux/content": "workspace:*",
         "@janux/server": "workspace:*",
         "janux": "workspace:*",
       },

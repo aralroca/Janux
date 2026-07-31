@@ -97,6 +97,17 @@ describe('parseFrontmatter', () => {
   it('rejects a frontmatter block that is not a map', () => {
     expect(() => parseFrontmatter('---\n- a\n- b\n---\n')).toThrow(/map/i);
   });
+
+  /**
+   * A YAML error is almost always an unquoted colon, and the parser's own
+   * message says which column — not which of eighty-five files.
+   */
+  it('names the file when the YAML itself does not parse', () => {
+    const source = '---\ndescription: Everything importable: the lot\n---\n# Hi\n';
+
+    expect(() => parseFrontmatter(source, 'content/api.md')).toThrow(/content\/api\.md/);
+    expect(() => parseFrontmatter(source, 'content/api.md')).toThrow(/Nested mappings/);
+  });
 });
 
 describe('validateFrontmatter', () => {

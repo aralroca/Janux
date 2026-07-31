@@ -7,7 +7,7 @@ import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
 import { packageDir, runtimeIncludes } from './deps';
 import { mimeFor, resolvePublicFile } from './static-files';
-import { apiFiles, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
+import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { collectIslands, islandCatalogFromDir } from './islands';
 import { attachDevWebSocket } from './dev-websocket';
@@ -129,6 +129,8 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
     async config(config, env) {
       bundling = env.command === 'build';
       const root = resolve(config.root ?? process.cwd());
+
+      publishAppRoot(root);
       const app = await resolveAppConfig(root, options);
       const { clientEntry } = app;
 

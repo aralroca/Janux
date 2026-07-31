@@ -11,6 +11,7 @@ import * as query from 'janux/query';
 import * as workerEntry from 'janux/worker';
 import * as januxServer from '@janux/server';
 import * as agent from '@janux/agent';
+import * as content from '@janux/content';
 import * as agentLocal from '@janux/agent/local';
 import * as vite from '@janux/vite';
 import * as cli from '@janux/cli';
@@ -35,6 +36,7 @@ const ENTRIES: Record<string, Record<string, unknown>> = {
   'janux/worker': workerEntry,
   '@janux/server': januxServer,
   '@janux/agent': agent,
+  '@janux/content': content,
   '@janux/agent/local': agentLocal,
   '@janux/vite': vite,
   '@janux/cli': cli,

@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { mcpAuthOptions, resolveAppConfig } from './app-config';
+import { mcpAuthOptions, publishAppRoot, resolveAppConfig } from './app-config';
 
 function app(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), 'janux-app-'));
@@ -201,17 +201,34 @@ describe('resolveAppConfig stylesheet', () => {
 });
 
 describe('the app root the framework publishes', () => {
+  const previous = process.env.JANUX_APP_ROOT;
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env.JANUX_APP_ROOT;
+    else process.env.JANUX_APP_ROOT = previous;
+  });
+
   /**
    * An app's own modules locate their data files through `JANUX_APP_ROOT` — the
    * convention the Vercel adapter established because a bundle's
-   * `import.meta.dirname` is not the app's. Every path that boots an app
-   * resolves the config first, so this is where the promise is kept.
+   * `import.meta.dirname` is not the app's.
    */
-  it('is set from the root being resolved', async () => {
-    const root = app({ 'janux.config.ts': 'export default {};' });
+  it('publishes the root an app is served from', () => {
+    publishAppRoot('/srv/app');
 
-    await resolveAppConfig(root);
+    expect(process.env.JANUX_APP_ROOT).toBe('/srv/app');
+  });
 
-    expect(process.env.JANUX_APP_ROOT).toBe(root);
+  /**
+   * Reading a config is not running an app. Tooling resolves the config of apps
+   * it will never serve — a test harness, a monorepo build — and a root left
+   * behind by one of those points a *running* app's modules at someone else's
+   * files.
+   */
+  it('does not publish anything when a config is merely resolved', async () => {
+    publishAppRoot('/srv/app');
+    await resolveAppConfig(app({ 'janux.config.ts': 'export default {};' }));
+
+    expect(process.env.JANUX_APP_ROOT).toBe('/srv/app');
   });
 });

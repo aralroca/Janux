@@ -137,7 +137,7 @@ function readEntry<C extends CollectionDef<any>>(def: C, source: SourceFile): Co
   const cached = cache.get(source.file);
 
   if (cached?.mtimeMs === mtimeMs) return cached.entry;
-  const { data, body } = parseFrontmatter(readFileSync(source.file, 'utf8'));
+  const { data, body } = parseFrontmatter(readFileSync(source.file, 'utf8'), source.file);
   const entry: CollectionEntry<C> = {
     ...source,
     body,

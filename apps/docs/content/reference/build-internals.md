@@ -24,6 +24,8 @@ import { renderNode } from 'janux/server';
 
 Config files are imported with an **mtime cache-buster**, which is why editing `janux.config.ts` takes effect in dev without restarting. Discovery is by existence: `src/middleware.ts`, `src/matchers.ts`, `src/i18n.ts` (or `src/i18n/index.ts`), `src/api/`, `src/stores.ts`, `src/agent.ts`, `src/styles.css`, `public/favicon.svg`.
 
+`publishAppRoot(root)`, from the same entry, sets `JANUX_APP_ROOT` — the app root an app's own modules read to find their data files, since a bundle's `import.meta.dirname` is not the app's. Every path that *serves* an app publishes it (the dev plugin, `prodServerOptions`, a deployment adapter); merely resolving a config does not, because tooling resolves the config of apps it will never run.
+
 ## shellOptions(app, stylesheets)
 
 `shellOptions(app: JanuxAppConfig, stylesheets: string[])` maps a resolved app config onto the `ServerOptions` fields the [HTML shell](/docs/guide/ssr-and-resumability) reads — `title`, `lang`, `siteUrl`, `favicon` — and passes the stylesheet URLs through. Dev and production build the same shell from the same config, so they share this mapping instead of each listing the fields:

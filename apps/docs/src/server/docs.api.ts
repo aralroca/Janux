@@ -71,6 +71,7 @@ export const SECTIONS: SectionDef[] = [
           'interop',
         ],
       },
+      { label: 'Content', slugs: ['content-collections'] },
       { label: 'Rendering & navigation', slugs: ['ssr-and-resumability', 'navigation', 'i18n'] },
       { label: 'Server & agents', slugs: ['api-rpc', 'http-handlers', 'agent-and-copilot'] },
       { label: 'Shipping', slugs: ['cli-and-deployment', 'architecture-and-roadmap'] },
@@ -93,7 +94,7 @@ export const SECTIONS: SectionDef[] = [
     section: 'reference',
     label: 'Reference',
     groups: [
-      { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api'] },
+      { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api', 'content-api'] },
       {
         label: 'Agent harness',
         slugs: ['agent-memory', 'agent-guardrails', 'agent-workflows', 'agent-rate-limit', 'agent-mcp-client', 'agent-attachments'],

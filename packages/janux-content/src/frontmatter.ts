@@ -44,18 +44,37 @@ export interface ParsedSource {
   body: string;
 }
 
-/** Splits and parses the frontmatter block. Values are YAML core types; nothing is validated yet. */
-export function parseFrontmatter(source: string): ParsedSource {
+/**
+ * Splits and parses the frontmatter block. Values are YAML core types; nothing
+ * is validated yet.
+ *
+ * `file` only ever appears in error messages, and it earns its place there: a
+ * YAML failure is almost always an unquoted colon, and the parser's message
+ * names the column — never which of eighty-five files it was reading.
+ */
+export function parseFrontmatter(source: string, file?: string): ParsedSource {
   const { yaml, body } = splitFrontmatter(source);
 
   if (yaml === undefined) return { data: {}, body };
-  const parsed = yaml.trim() === '' ? {} : parseYaml(yaml);
+  const parsed = yaml.trim() === '' ? {} : parse(yaml, file);
 
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new Error('Janux content: frontmatter must be a map of fields.');
+    throw new Error(`Janux content: frontmatter must be a map of fields${where(file)}.`);
   }
 
   return { data: parsed as Record<string, unknown>, body };
+}
+
+function where(file: string | undefined): string {
+  return file ? ` in ${file}` : '';
+}
+
+function parse(yaml: string, file: string | undefined): unknown {
+  try {
+    return parseYaml(yaml);
+  } catch (error) {
+    throw new Error(`Janux content: unparseable frontmatter${where(file)}\n${(error as Error).message}`, { cause: error });
+  }
 }
 
 /**
