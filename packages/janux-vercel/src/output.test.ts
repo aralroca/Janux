@@ -48,7 +48,10 @@ describe('a bundled function with no node_modules beside it', () => {
     // it was deployed at, and one process can only be one app.
     const serve = `const handler = (await import('./index.js')).default;
       const response = await handler(new Request('https://janux.build/'));
-      console.log(response.status, await response.text());`;
+      // One string, not (number, string): bun colours an inspected number, so
+      // the status arrived as \`\\x1b[33m200\\x1b[0m\` and the prefix assertion
+      // below failed wherever FORCE_COLOR is set — every local run, never CI.
+      console.log(\`\${response.status} \${await response.text()}\`);`;
     const served = Bun.spawnSync(['bun', '-e', serve], { cwd: deployment });
 
     expect(served.stderr.toString()).toBe('');

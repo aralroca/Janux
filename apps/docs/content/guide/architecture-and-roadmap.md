@@ -31,7 +31,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 
 - **Reactivity & events:** nested islands (stateful-in-stateful), ownership tree, rich delegated events, controlled inputs, and **path-pruned** reactive state (the old O(paths)-per-write limit is gone — descendant notification is indexed and unread paths are reclaimed).
 - **Foreign-UI interop:** `janux/interop` mounts React components unchanged as real embedded roots, with a tracked props bridge and events→intents (see [the guide](/docs/guide/interop)).
-- **Routing:** full segment grammar (typed matchers, catch-all, optional catch-all), nested `_layout` chains, `(group)` directories, deterministic route-sort, request middleware.
+- **Routing:** full segment grammar (typed matchers, catch-all, optional catch-all), nested `_layout` chains, `(group)` directories, deterministic route-sort, request middleware, per-entry scroll restoration (streaming-safe) and shallow routing (`data-shallow`).
 - **Data & state:** client cache (`useQuery`/`mutation`/`QueryClient`, optimistic rollback, per-request SSR client), persisted stores, typed URL state.
 - **Query hydration:** what SSR fetched travels in the response and the client resumes on top of it — no refetch on mount; a query still in flight when the shell goes out is announced and delivered on the same stream.
 - **HTTP cache:** per-route `cachePolicy` (`max-age`/`s-maxage`/`stale-while-revalidate`, private by default), on-demand `revalidateTag`/`revalidatePath`, cache tags for the CDN in front and a bounded shared response cache behind — one `staleTime`/`swr`/`tags` vocabulary shared with `useQuery` and `source`.
@@ -53,7 +53,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 
 ## Testing
 
-The framework is developed test-first with `bun:test` + happy-dom (4580 tests, the count `bun run test:census` measures and enforces):
+The framework is developed test-first with `bun:test` + happy-dom (4632 tests, the count `bun run test:census` measures and enforces):
 
 - Resume-without-hydration is asserted (zero component code until interaction).
 - Guard semantics (auto/confirm/forbidden × human/agent) are covered at every layer: instance, HTTP, bridge, agent loop.

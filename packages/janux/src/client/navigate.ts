@@ -3,11 +3,16 @@ import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { scanMarkers, scanTree } from './events';
 import { consumePrefetched, navigableBody, NAVIGATION_HEADERS, type NavigablePage } from './prefetch';
+import { saveWidgetFocus, settleRouteA11y } from './route-a11y';
 import { runScriptsWhileStreaming } from './scripts';
+import { applyScrollPlan, type ScrollPlan } from './scroll';
 import { rescopeSpeculationRules } from './speculation';
+import { applyWithViewTransition, viewTransitionSettled, viewTransitionsWanted } from './view-transition';
 
 export interface NavigateOptions {
   signal?: AbortSignal;
+  /** How the incoming page should be scrolled. Absent means "a new page": the top. */
+  scroll?: ScrollPlan;
 }
 
 const esc = (id: string): string =>
@@ -366,7 +371,34 @@ function installListenersWhileStreaming(): () => void {
   return () => observer.disconnect();
 }
 
-async function applyPage(mount: MountContext, page: NavigablePage, signal?: AbortSignal): Promise<void> {
+/**
+ * Reads the whole page into memory, then hands it back as a stream that is
+ * already complete. Only for the view-transition path.
+ *
+ * A transition suppresses rendering until its callback resolves, so diffing a
+ * live stream inside one would freeze the page for the entire download — and
+ * past four seconds the browser abandons the transition outright. Buffering out
+ * here inverts that: the old page stays live and interactive while the next one
+ * arrives, and only the swap itself, with nothing left to await, is animated.
+ */
+async function buffered(body: ReadableStream<Uint8Array>): Promise<ReadableStream<Uint8Array>> {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+
+  // A reader is a cursor, not an iterable: draining it is the one loop here.
+  for (let read = await reader.read(); !read.done; read = await reader.read()) chunks.push(read.value!);
+
+  return new ReadableStream({
+    start(controller) {
+      chunks.forEach((chunk) => controller.enqueue(chunk));
+      controller.close();
+    },
+  });
+}
+
+async function applyPage(mount: MountContext, page: NavigablePage, options: NavigateOptions = {}): Promise<void> {
+  const { signal } = options;
+  const source = viewTransitionsWanted() ? await buffered(page.body) : page.body;
   const kept = extractPersisted(mount);
   const stopRestoring = restoreWhileStreaming(kept);
   const stopInstallingListeners = installListenersWhileStreaming();
@@ -377,16 +409,30 @@ async function applyPage(mount: MountContext, page: NavigablePage, signal?: Abor
 
   try {
     throwIfAborted(signal);
-    // The Navigation API drives the transition; diff directly (its own would be skipped).
-    await diff(document, page.body);
     /*
-     * A superseded navigation must not report success: the diff can finish
-     * cleanly on a cancelled stream, having applied only the part that arrived,
-     * and the page that navigation was going to is not the page on screen.
-     * Whatever superseded it is already diffing the same document.
+     * One transition around the whole swap — the diff AND the grafting back of
+     * persisted islands — so the browser snapshots a complete old page against
+     * a complete new one and can pair the shared elements. Without an opted-in
+     * app this is just the callback, run directly.
      */
-    throwIfAborted(signal);
-    await restorePersisted(mount, kept);
+    await applyWithViewTransition(async () => {
+      // The Navigation API drives the transition; diff directly (its own would be skipped).
+      await diff(document, source);
+      /*
+       * A superseded navigation must not report success: the diff can finish
+       * cleanly on a cancelled stream, having applied only the part that arrived,
+       * and the page that navigation was going to is not the page on screen.
+       * Whatever superseded it is already diffing the same document.
+       */
+      throwIfAborted(signal);
+      await restorePersisted(mount, kept);
+      /*
+       * Last step of the swap, and inside the transition on purpose: the
+       * browser snapshots the new page the moment this callback resolves, so
+       * scrolling afterwards would animate to the old offset and then jump.
+       */
+      applyScrollPlan(options.scroll);
+    }, signal);
   } catch (error) {
     /*
      * Persisted islands go back untouched — losing a live editor to a superseded
@@ -435,12 +481,16 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
   // Everything mounted before this line belongs to the page being left.
   mount.epoch = (mount.epoch ?? 0) + 1;
   emitNavigate('before', from, url);
+  // Read while the widget is still in the document: applying the page lifts
+  // persisted islands out of it, and removing a node blurs whatever it held.
+  const widgetFocus = saveWidgetFocus();
+
   try {
     throwIfAborted(options.signal);
     const page = await fetchPage(url, options.signal);
 
     throwIfAborted(options.signal);
-    await applyPage(mount, page, options.signal);
+    await applyPage(mount, page, options);
   } catch (error) {
     if ((error as any)?.name === 'AbortError') return;
     reportNavigationError(error);
@@ -452,6 +502,14 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
   }
   try {
     await wireUpPage(mount);
+    /*
+     * Last, so `after` means "settled": the page is on screen, its islands are
+     * wired, the transition has finished animating, and only then is the change
+     * announced and focus moved — a transition is not a moment to speak into or
+     * to focus during. Resolves immediately when there was no transition.
+     */
+    await viewTransitionSettled();
+    settleRouteA11y(widgetFocus);
     emitNavigate('after', from, url);
   } catch (error) {
     /*

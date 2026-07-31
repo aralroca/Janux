@@ -25,6 +25,22 @@ export interface NavigationConfig {
   prefetch?: boolean | { ttl?: number };
   /** `<script type="speculationrules">` for browser-driven navigations. Default: true. */
   speculationRules?: boolean | SpeculationRulesConfig;
+  /**
+   * Animate navigations with the View Transitions API, pairing elements that
+   * share a `view-transition-name` across routes. Default: false.
+   *
+   * Opt-in on purpose, because it changes how the page is applied. A view
+   * transition suppresses rendering until its callback resolves, so the
+   * incoming page is fetched in full BEFORE the swap instead of being diffed as
+   * it streams: the old page stays live and interactive for the whole download,
+   * and then changes in one animated step. That is the right trade for small,
+   * hover-prefetched pages and the wrong one for a page that paints
+   * progressively over a second, and only the app knows which it is.
+   *
+   * Ignored when the browser lacks the API or the user asked for
+   * `prefers-reduced-motion: reduce`.
+   */
+  viewTransitions?: boolean;
 }
 
 /** How route cache policies reach the CDN in front — and the shared copy the server keeps itself. */

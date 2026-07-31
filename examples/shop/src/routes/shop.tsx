@@ -11,7 +11,13 @@ export default function ShopPage() {
   return (
     <div class="app">
       <header class="topbar">
-        <a class="brand" href="/">
+        {/*
+          The same `view-transition-name` the order page gives its wordmark, so
+          the browser pairs the two and carries one into the other instead of
+          cross-fading it with everything else. Nothing framework-specific — a
+          CSS property the typed `style` object already knows about.
+        */}
+        <a class="brand" href="/" style={{ viewTransitionName: 'wordmark' }}>
           ✦ Janux Shop
         </a>
         <nav>
