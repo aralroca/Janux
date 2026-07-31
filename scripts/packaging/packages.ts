@@ -8,6 +8,7 @@ export const PUBLISH_ORDER = [
   'janux-tailwind',
   'janux-cli',
   'janux-vercel',
+  'janux-node',
   'create-janux',
 ] as const;
 

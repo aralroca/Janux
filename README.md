@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-4106%20passing-brightgreen" alt="4106 tests passing" />
+  <img src="https://img.shields.io/badge/tests-4227%20passing-brightgreen" alt="4227 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -75,7 +75,7 @@ bunx create-janux my-app
 cd my-app && bun install && bun run dev
 ```
 
-Requires [Bun](https://bun.sh) ≥ 1.3 — the dev server, the build and the production server all run on it.
+Requires [Bun](https://bun.sh) ≥ 1.3 for the dev server and the build. Production is a choice: Bun, [Node 24+](https://janux.build/docs/recipes/deploying) via `@janux/node`, Vercel, or a static export — same app, one adapter.
 
 Or add the pieces to an existing workspace:
 
@@ -220,12 +220,13 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 | [`@janux/server`](packages/janux-server) | api() RPC, file-system router (layouts, groups, matchers, middleware), HTTP handlers + uploads, HTML shell, `/_janux/*` endpoints incl. the hosted MCP + `.md` projections, llms.txt, Web Bot Auth |
 | [`@janux/agent`](packages/janux-agent) | Model resolution, providers, the tool loop with turn continuation, and the embedded harness: memory (in-memory/Postgres), durable workflows, guardrail processors, rate limiting (in-memory/Redis), attachments, outbound MCP client |
 | [`@janux/vite`](packages/janux-vite) | Vite plugin (SWC api stubs, SSR bridge) |
-| [`@janux/cli`](packages/janux-cli) | `janux dev / build / start / verify / eval` |
+| [`@janux/cli`](packages/janux-cli) | `janux dev / build / start / verify / eval`, plus the adapter API third-party deploy targets are written against |
+| [`@janux/node`](packages/janux-node) · [`@janux/vercel`](packages/janux-vercel) | Deployment adapters: a self-contained `build/` for any Node 24+ host, and a Build Output API directory for Vercel |
 | [`create-janux`](packages/create-janux) | Scaffolder |
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 88 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 89 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -337,6 +338,7 @@ One example per **category**, each verified in CI — the [compatibility matrix]
 | [`with-uploads`](examples/with-uploads) | End-to-end file uploads: `dropzone()` feeding a validating multipart handler (type + size), server-rendered gallery, previews without a reload. |
 | [`realtime-chat`](examples/realtime-chat) | A custom server composing `createJanuxServer` with Bun's native WebSockets: optimistic delivery, cursor-based replay on reconnect, live presence. |
 | [`with-worker`](examples/with-worker) | `worker()`: the same prime-counting function on a Web Worker and on the main thread, with a ticker that proves which one froze the page. |
+| [`with-node-adapter`](examples/with-node-adapter) | The same app deployed to Node with `@janux/node`: one `build/` directory, no Bun on the box, and a click counter that only moves if the island hydrated from the bundle Node served. |
 
 ## Develop
 

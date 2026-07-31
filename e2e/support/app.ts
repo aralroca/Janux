@@ -58,6 +58,48 @@ export async function serveBuilt(name: string, observe?: (req: Request, res: Res
   return { base: `http://localhost:${server.port}`, stop: () => server.stop(true) };
 }
 
+/** Whether `janux-node` ran for the app — the Node suites skip otherwise. */
+export function hasNodeBuild(name: string): boolean {
+  return existsSync(join(appRoot(name), 'build/index.js'));
+}
+
+/**
+ * Serves the app the way a deployment does: `node build/index.js`, in its own
+ * process, with no Bun anywhere in it.
+ *
+ * The other helpers run the server in *this* process, which cannot answer the
+ * question this one exists for — a bundle that only works because Bun happened
+ * to be the thing importing it would pass every one of them.
+ */
+export async function serveNode(name: string, port: number) {
+  const child = Bun.spawn(['node', join(appRoot(name), 'build/index.js')], {
+    cwd: appRoot(name),
+    env: { ...process.env, PORT: String(port) },
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  const base = `http://localhost:${port}`;
+  const output = { text: '' };
+
+  void (async () => {
+    const decoder = new TextDecoder();
+
+    for await (const chunk of child.stdout as ReadableStream<Uint8Array>) output.text += decoder.decode(chunk, { stream: true });
+  })();
+
+  for (let attempt = 0; attempt < 150; attempt += 1) {
+    try {
+      await fetch(base);
+
+      return { base, output, stop: () => child.kill() };
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  child.kill();
+  throw new Error(`${name}: the node server never came up.\n${await new Response(child.stderr).text()}`);
+}
+
 let sharedChrome: Promise<Browser> | undefined;
 
 /**

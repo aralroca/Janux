@@ -14,7 +14,8 @@ description: "How Janux is put together: the packages, the four design invariant
 | `@janux/content` | Content collections: frontmatter validated by the core schema, Markdown/MDX bodies compiled to Janux components on the server |
 | `@janux/agent` | Model resolution (Anthropic/OpenAI/Google/OpenRouter), the ui/api tool loop, and the embedded harness: memory (in-memory + Postgres), durable workflows, guardrail processors, rate limiting (in-memory + Redis), attachments, outbound MCP client |
 | `@janux/vite` | Vite plugin: JSX config, SSR bridge, api client stubs via **SWC** |
-| `@janux/cli` | `janux dev/build/start/verify/eval`; `output: "static"` prerender |
+| `@janux/cli` | `janux dev/build/start/verify/eval`; `output: "static"` prerender; the [adapter API](/docs/recipes/adapters) deploy targets implement |
+| `@janux/node`, `@janux/vercel` | Deployment adapters. Each declares its capabilities, so a target that cannot hold a WebSocket open says so at build time |
 | `create-janux` | App scaffolder |
 
 ## Design invariants
@@ -50,7 +51,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 
 ## Testing
 
-The framework is developed test-first with `bun:test` + happy-dom (4106 tests, the count `bun run test:census` measures and enforces):
+The framework is developed test-first with `bun:test` + happy-dom (4227 tests, the count `bun run test:census` measures and enforces):
 
 - Resume-without-hydration is asserted (zero component code until interaction).
 - Guard semantics (auto/confirm/forbidden × human/agent) are covered at every layer: instance, HTTP, bridge, agent loop.

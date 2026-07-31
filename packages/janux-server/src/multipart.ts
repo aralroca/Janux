@@ -1,8 +1,8 @@
-import type { FileSink } from 'bun';
 import { copyFile, mkdtemp, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rejectOversized, sniffContentType, SNIFF_BYTES, tooLarge } from './http-handlers';
+import { platform, type JanuxFileSink } from './platform';
 import { MALFORMED, OVER_LIMIT, parseBoundary, parseMultipart, type PartHeaders, type PartSink } from './multipart-parser';
 
 export interface SpoolOptions {
@@ -84,7 +84,7 @@ function fileOf(headers: PartHeaders, path: string, state: SpoolState): SpooledF
   };
 }
 
-async function writeChunk(sink: FileSink, state: SpoolState, chunk: Uint8Array): Promise<void> {
+async function writeChunk(sink: JanuxFileSink, state: SpoolState, chunk: Uint8Array): Promise<void> {
   if (state.head.byteLength < SNIFF_BYTES) state.head = concatHead(state.head, chunk);
   state.size += chunk.byteLength;
   state.pending += chunk.byteLength;
@@ -103,7 +103,7 @@ async function writeChunk(sink: FileSink, state: SpoolState, chunk: Uint8Array):
  * when the disk is the slower end.
  */
 function spoolFile(headers: PartHeaders, path: string, add: (file: SpooledFile) => void): PartSink {
-  const sink = Bun.file(path).writer();
+  const sink = platform.fileSink(path);
   const state: SpoolState = { size: 0, pending: 0, head: new Uint8Array(0) };
 
   return {
