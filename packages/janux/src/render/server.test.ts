@@ -584,6 +584,101 @@ describe('suspense boundaries', () => {
     expect(full).toContain('janux:error');
   });
 
+  /**
+   * The renderer emits inline scripts of its own — the unsuspense runtime, each
+   * boundary's swap call, the fail-soft reporter — and under a strict CSP every
+   * one of them is a blocked script, i.e. a boundary that never reveals. The
+   * sweep is over the emitted markup, not over the tags we remember writing.
+   */
+  describe('CSP nonce', () => {
+    const unnonced = (html: string, nonce: string) =>
+      [...html.matchAll(/<script\b[^>]*>/g)].map(([tag]) => tag).filter((tag) => !tag.includes(`nonce="${nonce}"`));
+
+    it('nonces the unsuspense runtime and every boundary swap script', async () => {
+      const { def, release } = gated('nonced');
+      const { chunks } = renderToStream(jsx(def as any, {}), { nonce: 'n0nce' });
+      const collected: string[] = [];
+      const drained = (async () => {
+        for await (const chunk of chunks) collected.push(chunk);
+      })();
+
+      await settle();
+      release(['a']);
+      await drained;
+      const full = collected.join('');
+
+      expect(full).toContain('self.jx$u=');
+      expect(unnonced(full, 'n0nce')).toEqual([]);
+    });
+
+    it('nonces the fail-soft reporter of a boundary that threw', async () => {
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const def = component({
+        name: 'nfail',
+        sources: { data: source({ query: () => gate.then(() => []) }) },
+        suspense: () => jsx('p', { children: 'wait' }),
+        view: () => {
+          throw new Error('late');
+        },
+      });
+      const { chunks } = renderToStream(jsx(def as any, {}), { nonce: 'n0nce' });
+      const collected: string[] = [];
+      const drained = (async () => {
+        for await (const chunk of chunks) collected.push(chunk);
+      })();
+
+      await settle();
+      release();
+      await drained;
+      const full = collected.join('');
+
+      expect(full).toContain('janux:error');
+      expect(unnonced(full, 'n0nce')).toEqual([]);
+    });
+
+    /*
+     * A `<script>` written in JSX is the app's own — apps/docs does exactly
+     * this for its theme-init snippet — but the nonce is minted per request, so
+     * only the renderer can put it there.
+     */
+    it('nonces a script and a style written in the view', async () => {
+      const page = jsx('div', {
+        children: [jsx('script', { dangerHTML: 'theme()' }), jsx('style', { children: 'a{}' })],
+      });
+      const { html } = await renderToString(page, { nonce: 'n0nce' });
+
+      expect(html).toContain('<script nonce="n0nce">theme()</script>');
+      expect(html).toContain('<style nonce="n0nce">a{}</style>');
+    });
+
+    it('leaves other elements alone, and lets an explicit nonce win', async () => {
+      const page = jsx('div', { children: jsx('script', { nonce: 'mine', children: 'x' }) });
+      const { html } = await renderToString(page, { nonce: 'n0nce' });
+
+      expect(html).toContain('<div>');
+      expect(html).toContain('<script nonce="mine">x</script>');
+      expect(html).not.toContain('n0nce');
+    });
+
+    it('emits no nonce attribute when the app never configured one', async () => {
+      const { def, release } = gated('plain');
+      const { chunks } = renderToStream(jsx(def as any, {}));
+      const collected: string[] = [];
+      const drained = (async () => {
+        for await (const chunk of chunks) collected.push(chunk);
+      })();
+
+      await settle();
+      release(['a']);
+      await drained;
+
+      expect(collected.join('')).not.toContain('nonce');
+    });
+  });
+
   it('emits the onBeforeBoundaries interlude between the body and the first boundary chunk', async () => {
     const { def, release } = gated('mid');
     const page = jsx('main', { children: jsx(def as any, {}) });

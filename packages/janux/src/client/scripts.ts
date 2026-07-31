@@ -14,6 +14,8 @@
  * every navigation, since the incoming page ships the same text as the live one.
  */
 
+import { applyNonce, currentNonce } from './nonce';
+
 const RAN_MARKER = 'jxRan';
 /** Data blocks are read, not executed: snapshots the client resumes from, i18n payloads, JSON-LD. */
 const DATA_TYPES = /^application\/(janux\+state|janux\+i18n|ld\+json)$/;
@@ -39,9 +41,31 @@ function execute(inert: HTMLScriptElement): void {
 
   [...inert.attributes].forEach(({ name, value }) => fresh.setAttribute(name, value));
   fresh.dataset[RAN_MARKER] = '';
+  // After the copy: the incoming markup carries the response's own nonce, which
+  // this document's policy does not name — only the one captured at boot does.
+  applyNonce(fresh);
   fresh.textContent = inert.textContent;
   // In place, so the page's own order is the order they run in.
   inert.replaceWith(fresh);
+}
+
+/**
+ * Whether re-running this script would be re-running the SERVER's script.
+ *
+ * Re-creating a script is how it survives the diff, but it also decides what
+ * gets a valid nonce — so doing it blindly would hand an injected `<script>`
+ * exactly the thing a strict CSP exists to withhold. The response states its
+ * own nonce in a header, out of reach of the markup it carries, and only tags
+ * already bearing THAT value get re-stamped. An injection cannot guess it, so
+ * it stays inert and the browser refuses it, same as on a first load.
+ *
+ * Without CSP nothing is being vouched for and every script re-runs, exactly as
+ * it did before nonces existed.
+ */
+function vouchedFor(script: HTMLScriptElement, incomingNonce: string): boolean {
+  if (!currentNonce()) return true;
+
+  return incomingNonce !== '' && (script.nonce || script.getAttribute('nonce')) === incomingNonce;
 }
 
 /**
@@ -65,11 +89,11 @@ function newScripts(records: MutationRecord[]): HTMLScriptElement[] {
  * Runs the scripts a navigation brings, as the diff inserts them — a script that
  * arrives mid-stream runs mid-stream. Returns the teardown.
  */
-export function runScriptsWhileStreaming(): () => void {
+export function runScriptsWhileStreaming(incomingNonce = ''): () => void {
   const ran = ranAlready();
   const run = (records: MutationRecord[]) =>
     newScripts(records)
-      .filter((script) => isExecutable(script) && !ran.has(identity(script)))
+      .filter((script) => isExecutable(script) && vouchedFor(script, incomingNonce) && !ran.has(identity(script)))
       .forEach((script) => {
         ran.add(identity(script));
         execute(script);

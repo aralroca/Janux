@@ -158,6 +158,20 @@ describe('the bridge under real Node', () => {
     expect(report.cookie).toBe('session=abc');
   });
 
+  /**
+   * Minting a nonce uses `crypto.getRandomValues` and `btoa` — globals node
+   * grew late enough that "it is a web primitive" is not on its own a promise —
+   * and the policy has to survive the trip through the bridge, since a header
+   * that never reaches the client is a page that never runs.
+   */
+  it('mints a strict policy and carries it across the bridge, per response', () => {
+    expect(report.cspPolicy).toContain("'strict-dynamic'");
+    expect(report.cspPolicy).not.toContain('unsafe-inline');
+    expect(report.cspNonceMatchesPolicy).toBe(true);
+    expect(report.cspNonceInDocument).toBe(true);
+    expect(report.cspNonceIsPerResponse).toBe(true);
+  });
+
   it('keeps two set-cookie headers two cookies', () => {
     expect(report.cookies).toEqual(['a=1; Path=/', 'b=2; Path=/']);
   });

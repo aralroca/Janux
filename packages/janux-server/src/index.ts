@@ -29,3 +29,4 @@ export { spoolMultipart, type SpoolOptions, type SpooledFile, type SpooledForm }
 export { buildLlmsTxt, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 export { createAgentAuth, type AgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 export { htmlDocument, type ShellOptions } from './html-shell';
+export { NONCE_HEADER, strictPolicy, type ResolvedCsp } from './csp';

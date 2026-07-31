@@ -12,6 +12,7 @@
  */
 
 import { concat } from './http-handlers';
+import { NONCE_HEADER } from './csp';
 
 export interface ResponseCacheConfig {
   /** Header tags are read from. Default `Cache-Tag`. */
@@ -102,6 +103,12 @@ function shareable(res: Response): { freshMs: number; staleMs: number } | undefi
   const control = res.headers.get('cache-control') ?? '';
 
   if (res.status !== 200) return undefined;
+  // A nonced document is per-request by construction: keeping one would replay
+  // the SAME nonce to every visitor for the whole freshness window, which is
+  // worth exactly what `'unsafe-inline'` is worth. You cannot have both a
+  // per-request nonce and a shared body — so `csp` wins and the page is not
+  // stored. See csp.ts and recipes/csp.md.
+  if (res.headers.has(NONCE_HEADER)) return warnUnshareableNonce();
   if (res.headers.has('set-cookie')) return undefined;
   // `Vary: *` means "no two requests are equivalent" — there is no key to build.
   if (res.headers.get('vary')?.split(',').some((name) => name.trim() === '*')) return undefined;
@@ -111,6 +118,18 @@ function shareable(res: Response): { freshMs: number; staleMs: number } | undefi
   if (freshMs <= 0) return undefined;
 
   return { freshMs, staleMs: directive(control, 'stale-while-revalidate') ?? 0 };
+}
+
+let warnedAboutNonce = false;
+
+/** Once per process: a page silently dropping out of the shared cache is worth one line. */
+function warnUnshareableNonce(): undefined {
+  if (!warnedAboutNonce) {
+    warnedAboutNonce = true;
+    console.warn('Janux: pages served with `csp` are not shared-cached — a stored nonce would be reused by every visitor.');
+  }
+
+  return undefined;
 }
 
 /** Same URL, same body — unless the response says it varies, in which case those values join the key. */

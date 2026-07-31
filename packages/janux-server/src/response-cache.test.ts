@@ -276,3 +276,42 @@ describe('shared response cache', () => {
     expect((await fetchThrough(store, req(), app.run)).state).toBe('MISS');
   });
 });
+
+/**
+ * `cache` and `csp` are individually correct and jointly a trap: a stored
+ * document carries the nonce it was rendered with, so every later visitor in
+ * the freshness window would be served someone else's nonce. It still renders
+ * — header and body agree, both come from the entry — which is what makes it
+ * dangerous: the protection is gone and nothing looks broken.
+ */
+describe('a nonced document is never shared-cached', () => {
+  it('keeps no copy, however cacheable the policy says it is', async () => {
+    const store = cache();
+    let minted = 0;
+    const app = origin(() => {
+      const res = publicRes('page');
+
+      res.headers.set('x-janux-nonce', `n${(minted += 1)}`);
+
+      return res;
+    });
+
+    await fetchThrough(store, req('/nonced'), app.run);
+    const second = await fetchThrough(store, req('/nonced'), app.run);
+
+    expect(second.state).toBeNull();
+    expect(app.calls).toBe(2);
+  });
+
+  /** The control: the very same policy IS shared-cached once no nonce is in play. */
+  it('still stores the same page when the app does not use CSP', async () => {
+    const store = cache();
+    const app = origin(() => publicRes('page'));
+
+    await fetchThrough(store, req('/plain'), app.run);
+    const second = await fetchThrough(store, req('/plain'), app.run);
+
+    expect(second.state).toBe('HIT');
+    expect(app.calls).toBe(1);
+  });
+});

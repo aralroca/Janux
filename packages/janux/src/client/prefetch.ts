@@ -1,5 +1,12 @@
+/** A navigable response: its body, plus the CSP nonce the SERVER served it with. */
+export interface NavigablePage {
+  body: ReadableStream<Uint8Array>;
+  /** Empty when the app does not use CSP. Only the header is trusted — markup can forge anything. */
+  nonce: string;
+}
+
 interface PrefetchEntry {
-  body: Promise<ReadableStream<Uint8Array>>;
+  body: Promise<NavigablePage>;
   at: number;
   /** The page this entry serves — its document, or the route manifest that goes with it. */
   page: string;
@@ -18,6 +25,9 @@ export interface PrefetchConfig {
  * streaming diff would otherwise spend its first chunks on.
  */
 export const NAVIGATION_HEADERS = { accept: 'text/html', 'x-janux-navigation': '1' };
+
+/** Mirrors `NONCE_HEADER` in @janux/server: this response's nonce, out of reach of its own markup. */
+const NONCE_HEADER = 'x-janux-nonce';
 
 export const MANIFEST_HEADERS = { accept: 'application/json' };
 
@@ -41,11 +51,13 @@ export function routeManifestUrl(path: string): string | undefined {
  * a proxy's plain-text error) is a failed navigation, and there the browser
  * takes over.
  */
-export function navigableBody(response: Response): ReadableStream<Uint8Array> | undefined {
+export function navigableBody(response: Response): NavigablePage | undefined {
   if (!response.body) return undefined;
-  if (response.ok) return response.body;
+  const page = { body: response.body, nonce: response.headers.get(NONCE_HEADER) ?? '' };
 
-  return response.headers.get('content-type')?.includes('text/html') ? response.body : undefined;
+  if (response.ok) return page;
+
+  return response.headers.get('content-type')?.includes('text/html') ? page : undefined;
 }
 
 const DEFAULT_TTL = 30_000;
@@ -84,7 +96,7 @@ function drop(url: string): void {
   // Both, because a warmed response can be in either state: still on the wire,
   // or headers in hand with an unopened body. Each keeps the connection.
   entry?.request.abort();
-  entry?.body.then((body) => body.cancel()).catch(() => {});
+  entry?.body.then((page) => page.body.cancel()).catch(() => {});
 }
 
 /** Pages, not entries: a page and its route manifest are warmed as one unit. */
@@ -103,7 +115,7 @@ function saveData(): boolean {
   return (navigator as any)?.connection?.saveData === true;
 }
 
-function warmBody(url: string, headers: HeadersInit, signal: AbortSignal): Promise<ReadableStream<Uint8Array>> {
+function warmBody(url: string, headers: HeadersInit, signal: AbortSignal): Promise<NavigablePage> {
   // Low on purpose: a page nobody has opened yet must never outrank what the
   // page the user is actually on is still loading.
   return fetch(url, { headers, signal, priority: 'low' }).then(
@@ -165,7 +177,7 @@ export function prefetchOnHover(url: string): void {
 }
 
 /** The warmed stream if still fresh, evicting the entry either way. */
-function take(url: string): Promise<ReadableStream<Uint8Array>> | undefined {
+function take(url: string): Promise<NavigablePage> | undefined {
   const entry = prefetched.get(url);
 
   prefetched.delete(url);
@@ -182,7 +194,7 @@ function take(url: string): Promise<ReadableStream<Uint8Array>> | undefined {
  * is to stop the pages the pointer merely passed over. The destination's own
  * manifest survives: it is part of this navigation, not competition for it.
  */
-export function consumePrefetched(url: string): Promise<ReadableStream<Uint8Array>> | undefined {
+export function consumePrefetched(url: string): Promise<NavigablePage> | undefined {
   const page = take(url);
 
   // A click settles where the pointer was going: a hover still counting down
@@ -196,6 +208,7 @@ export function consumePrefetched(url: string): Promise<ReadableStream<Uint8Arra
 /** The route manifest warmed with the page, for the first read after landing on it. */
 export function consumeWarmManifest(path: string): Promise<ReadableStream<Uint8Array>> | undefined {
   const url = routeManifestUrl(path);
+  const warmed = url ? take(url) : undefined;
 
-  return url ? take(url) : undefined;
+  return warmed?.then(({ body }) => body);
 }

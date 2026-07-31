@@ -9,6 +9,16 @@
  */
 import { createServer } from 'node:http';
 import { toRequest, writeResponse } from '../http-bridge.ts';
+// The real resolver, imported straight from source: its only import is a type,
+// so nothing else of the framework has to resolve under node for this to run.
+import { resolveCsp } from '../../../janux-server/src/csp.ts';
+
+/*
+ * Two things in the CSP path could plausibly differ off Bun: minting the nonce
+ * (`crypto.getRandomValues` + `btoa`, both globals node only grew recently) and
+ * getting the header across the bridge. Both are checked here, under real node.
+ */
+const csp = resolveCsp(true);
 
 const state = { pulled: 0, cancelled: false };
 
@@ -27,6 +37,14 @@ async function handle(request, pathname) {
     headers.append('set-cookie', 'b=2; Path=/');
 
     return new Response('ok', { headers });
+  }
+
+  if (pathname === '/csp') {
+    const { nonce, policy } = csp(request);
+
+    return new Response(`<script nonce="${nonce}"></script>`, {
+      headers: { 'content-security-policy': policy, 'x-janux-nonce': nonce },
+    });
   }
 
   if (pathname === '/echo') return new Response(await request.text());
@@ -55,6 +73,14 @@ const meta = await (await fetch(base, { headers: { cookie: 'session=abc' } })).j
 const cookies = (await fetch(`${base}/cookies`)).headers.getSetCookie();
 const echoed = await (await fetch(`${base}/echo`, { method: 'POST', body: 'x'.repeat(300_000) })).text();
 
+const csped = await fetch(`${base}/csp`);
+const cspPolicy = csped.headers.get('content-security-policy');
+const cspNonce = csped.headers.get('x-janux-nonce');
+const cspHtml = await csped.text();
+const cspSecond = await fetch(`${base}/csp`);
+
+await cspSecond.text();
+
 // The client walks away mid-stream; the body must stop being pulled.
 const aborter = new AbortController();
 const streaming = await fetch(`${base}/forever`, { signal: aborter.signal });
@@ -77,6 +103,10 @@ console.log(
     echoedLength: echoed.length,
     cancelled: state.cancelled,
     stoppedPulling: state.pulled === settled,
+    cspPolicy,
+    cspNonceMatchesPolicy: cspPolicy?.includes(`'nonce-${cspNonce}'`) ?? false,
+    cspNonceInDocument: cspHtml.includes(`nonce="${cspNonce}"`),
+    cspNonceIsPerResponse: cspNonce !== cspSecond.headers.get('x-janux-nonce'),
   }),
 );
 server.close();

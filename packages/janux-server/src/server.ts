@@ -7,6 +7,7 @@ import {
   translateCore,
   type AuditEntry,
   type ComponentDef,
+  type CspConfig,
   type Ctx,
   type I18n,
   type I18nConfig,
@@ -26,17 +27,27 @@ import { assertValidInput, errorStatus, evictOldestProposal, json, proposalId, t
 import { apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 import { createFsRouter, type Route } from './router';
-import { queryPayloadScript, shellEpilogue, shellEpilogueRest, shellInterlude, shellPrelude, type ShellOptions } from './html-shell';
-import { safeJson } from './html-escape';
+import {
+  queryPayloadScript,
+  shellEpilogue,
+  shellEpilogueRest,
+  shellInterlude,
+  shellPrelude,
+  type ShellOptions,
+} from './html-shell';
+import { nonceAttr, safeJson } from './html-escape';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
 import { refuseCrossSite } from './csrf';
+import { NONCE_HEADER, resolveCsp } from './csp';
 
 /**
  * Set by the client runtime on a navigation fetch. What the document already has
  * (the app's CSS) does not need to travel again — see handlePage.
  */
 export const NAVIGATION_HEADER = 'x-janux-navigation';
+
+
 
 export interface AgentMount {
   handle(req: Request, deps: AgentDeps): Promise<Response>;
@@ -127,6 +138,12 @@ export interface ServerOptions {
   staticExport?: boolean;
   /** SPA navigation, prefetching and speculation rules (`navigation` in the app config). */
   navigation?: NavigationConfig;
+  /**
+   * Strict CSP. `true` is the whole setup: a fresh nonce per request on every
+   * inline script and style the framework emits, plus the recommended
+   * `Content-Security-Policy` header. See `csp.ts`.
+   */
+  csp?: boolean | CspConfig;
   /** How route cache policies reach the CDN in front (`cache` in the app config). */
   cache?: CacheConfig;
 }
@@ -196,10 +213,10 @@ function reportRenderFailure(error: unknown): void {
  * the document is closed so the parser is never left mid-tag. No auto-reload:
  * a deterministic render error would just fail the same way again.
  */
-function streamErrorScript(error: unknown): string {
+function streamErrorScript(error: unknown, nonce?: string): string {
   const detail = safeJson(String(error));
 
-  return `\n<script key="jx-stream-error">document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: render failed mid-stream",${detail})</script>\n</body>\n</html>`;
+  return `\n<script key="jx-stream-error"${nonceAttr(nonce)}>document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: render failed mid-stream",${detail})</script>\n</body>\n</html>`;
 }
 
 /**
@@ -212,6 +229,7 @@ function documentStream(
   body: AsyncGenerator<string>,
   epilogue: () => Promise<string>,
   onCancel: () => void,
+  nonce?: string,
 ): ReadableStream<Uint8Array> {
   async function* document(): AsyncGenerator<string> {
     let sentBody = false;
@@ -226,7 +244,7 @@ function documentStream(
       }
       yield `${sentBody ? '\n' : ''}${await epilogue()}`;
     } catch (error) {
-      yield streamErrorScript(error);
+      yield streamErrorScript(error, nonce);
     }
   }
 
@@ -252,6 +270,7 @@ function documentStream(
 
 /** The Janux fullstack server: pages, api() endpoints, manifest, proposals and the agent mount. */
 export function createJanuxServer(options: ServerOptions = {}) {
+  const csp = resolveCsp(options.csp, options.staticExport);
   const apiTools = collectApis(options.apis ?? {});
   const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
   const httpHandlers = options.httpHandlers
@@ -622,6 +641,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
      * streaming diff then spends its first chunks on.
      */
     const navigating = req.headers.get(NAVIGATION_HEADER) === '1';
+    // Minted once per request: the header names this nonce and so does every
+    // inline tag below, which is the only way the two can agree.
+    const { nonce, policy } = csp?.(req) ?? {};
 
     if (options.i18n && !locale) {
       const { search } = new URL(req.url);
@@ -650,6 +672,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       });
     }
     const rendered = renderPageStream(document.page, ctx, {
+      nonce,
       onBeforeBoundaries: (summary) => {
         const shell = shellFor(summary);
 
@@ -691,7 +714,8 @@ export function createJanuxServer(options: ServerOptions = {}) {
         i18n: shellI18n(locale, result),
         navigation: options.navigation,
         navigating,
-        queryScript: queryPayloadScript((ctx as any).queryClient, sentQueries),
+        nonce,
+        queryScript: queryPayloadScript((ctx as any).queryClient, sentQueries, nonce),
       };
     };
     const prelude = shellPrelude(shellFor());
@@ -710,12 +734,15 @@ export function createJanuxServer(options: ServerOptions = {}) {
         return interludeSent ? shellEpilogueRest(shell, interludeUris) : shellEpilogue(shell);
       },
       rendered.cancel,
+      nonce,
     );
 
     return new Response(body, {
       status: document.status,
       headers: {
         'content-type': 'text/html; charset=utf-8',
+        ...(nonce ? { [NONCE_HEADER]: nonce } : {}),
+        ...(policy ? { 'content-security-policy': policy } : {}),
         ...cacheHeadersFor(document.cache ?? {}, options.cache),
       },
     });

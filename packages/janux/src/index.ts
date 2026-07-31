@@ -62,6 +62,7 @@ export {
   type JanuxConfig,
   type JanuxOutput,
   type McpAuthConfig,
+  type CspConfig,
   type NavigationConfig,
   type SpeculationRulesConfig,
 } from './config';
