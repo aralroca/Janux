@@ -137,4 +137,58 @@ sources: {
 }
 ```
 
+## SSR hydration: the data comes with the page
+
+A page that renders `useQuery` on the server used to fetch twice — once during
+SSR, once again when the island resumed. It does not any more. The per-request
+`QueryClient` is dehydrated into the response, and the client resumes on top of
+it:
+
+```
+1 fetch on the server · 0 on mount
+```
+
+Nothing to configure. Two things are worth knowing, because both are visible:
+
+**Freshness still decides.** Hydrated data arrives with the `updatedAt` the
+server stamped, so a query that declares no `staleTime` is stale the instant it
+lands and refetches — correctly, by its own definition. Declaring freshness is
+what turns hydration into zero requests:
+
+```ts
+useQuery(bag, 'products', () => ({
+  queryKey: ['products', state.tag],
+  queryFn: () => listProducts({ tag: state.tag }),
+  staleTime: 30_000,   // ← what makes the mount silent
+}));
+```
+
+**Only plain data travels.** The state invariant is schema-typed plain data, and
+the payload holds to it: objects, arrays, strings, numbers, booleans and `null`.
+A `Map`, a `Set`, a `Date`, a class instance or an object holding a function is
+**not serialized** — that entry is simply left out of the payload and the client
+fetches it normally. Nothing is silently mangled into `{}` on the way over. If
+you want such a value hydrated, return it in a schema-expressible shape (an
+array of pairs instead of a `Map`, an ISO string instead of a `Date`).
+
+Queries are also left out when they failed, or when they are still running at
+the moment the response ends.
+
+### Queries still in flight
+
+If a query has not resolved when the shell goes out — a page with [suspense
+boundaries](/docs/guide/ssr-and-resumability) ships its shell early — the chunk
+that goes out *announces* it. An island observing that entry renders pending and
+waits, instead of starting the request the server is already running; the result
+arrives later on the same response and resolves it.
+
+If the response ends without it (a stream that died, a query that never
+settled), the client releases the entry and fetches it normally. A broken stream
+costs a request, never a spinner that never stops.
+
+### Pages without queries
+
+The payload script is emitted only when there is something to say, so a page
+that runs no queries carries not one byte of it.
+
 > **See it running**: [`examples/data-cache`](https://github.com/aralroca/Janux/tree/main/examples/data-cache) — the cached, filterable catalog with typed URL state, a public `/catalog` a CDN may keep, and a panel that revalidates by tag in front of you. More in [Examples](/docs/more/examples).

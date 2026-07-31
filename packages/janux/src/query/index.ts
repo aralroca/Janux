@@ -60,7 +60,9 @@ export function query<T>(
     const unsubscribe = entry.subscribe(sync);
 
     sync();
-    if (entry.isStale()) entry.fetch().catch(() => undefined);
+    // `awaiting` means the server is streaming this entry down the same
+    // response: starting it here is precisely the double fetch to remove.
+    if (!entry.awaiting && entry.isStale()) entry.fetch().catch(() => undefined);
 
     return unsubscribe;
   });

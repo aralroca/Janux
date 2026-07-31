@@ -83,8 +83,11 @@ One cache instance. The client runtime creates it; SSR gets a fresh one **per re
 | `invalidateQueries(key?)` | Refetches everything matching the key **prefix** — no key means all |
 | `invalidateTag(tag)` | Refetches every entry carrying `tag` — the same word `revalidateTag` uses on the server |
 | `mutate(options, vars)` | Runs a mutation's lifecycle (what `mutation()` wraps) |
-| `dehydrate()` | Serializable snapshot of every entry — for SSR handoff |
-| `hydrate(entries)` | Restores a snapshot on the client |
+| `settle(options?)` | Resolves once nothing is in flight — what SSR awaits before dehydrating. Bounded by `rounds` (waterfall depth, default 10) and `timeoutMs` (default 5s), so a `queryFn` that never settles cannot hold a response open |
+| `dehydrate()` | The successful, plain-data entries worth sending to the client |
+| `hydrate(entries)` | Restores entries from the payload, resolving anything awaited |
+| `expect(hashes)` | Marks entries as arriving on the stream, so observers wait instead of fetching |
+| `releaseExpected()` | The response ended: anything still awaited may fetch after all |
 
 `invalidateQueries(['cart'])` matches by prefix, so it also refreshes `['cart', 'summary']`. Failed refetches are swallowed on purpose: invalidation must not reject.
 
@@ -94,6 +97,10 @@ One cache instance. The client runtime creates it; SSR gets a fresh one **per re
 await revalidateTag('catalog');                    // server: cached pages + the CDN
 await getQueryClient().invalidateTag('catalog');   // client: observed queries
 ```
+
+`dehydrate()` deliberately drops anything that is not plain schema-shaped data — a `Map`, a `Set`, a `Date`, a class instance — rather than shipping it broken (`JSON.stringify(new Map())` is `{}`, which would arrive as an empty object). Those entries are refetched on the client. See [SSR hydration](/docs/guide/data-cache).
+
+`expect`/`releaseExpected` are what the streamed payload drives; an app does not normally call them.
 
 ## getQueryClient()
 

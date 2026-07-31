@@ -205,13 +205,16 @@ full, and [the API reference](/docs/reference/data-cache-api).
 
 ## Where query hydration fits
 
-SSR builds a fresh `QueryClient` per request and the client refetches on mount —
-the double fetch our [roadmap](/docs/guide/architecture-and-roadmap) still owns.
-When that payload lands, it does not bring a second cache model with it: a
-hydrated entry arrives with the `staleTime`/`swr`/`tags` it was declared with,
-so it is fresh, stale or expired by the same arithmetic as everything above.
-That is the reason these two knobs are named the same on both sides — there is
-one thing to learn, and the hydration work has nowhere to drift to.
+SSR dehydrates its `QueryClient` into the response and the client resumes on top
+of it, so a page's data is fetched once — on the server — and not again on
+mount. That payload brings no second cache model with it: a hydrated entry
+arrives with the server's `updatedAt` and is read through the `staleTime`/`swr`
+it was declared with, so it is fresh, stale or expired by the same arithmetic as
+everything above.
+
+Which is why a hydrated query that declares no `staleTime` still refetches: with
+no freshness declared, data is stale the moment it lands. One model, one answer,
+on both sides of the wire. See [SSR hydration](/docs/guide/data-cache).
 
 ## Trying it
 

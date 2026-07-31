@@ -5,6 +5,8 @@
  * the core itself has no runtime dependency.
  */
 
+import { isPlainData } from './hydration';
+
 export type QueryKey = readonly unknown[];
 export type QueryStatus = 'pending' | 'success' | 'error';
 
@@ -71,17 +73,45 @@ function startsWithSegments(key: QueryKey, prefix: QueryKey): boolean {
 }
 
 const DEFAULT_STALE = 0;
+/** How long SSR waits for the queries a render started, before giving up on them. */
+const SETTLE_TIMEOUT_MS = 5_000;
+const SETTLE_ROUNDS = 10;
+
+export interface SettleOptions {
+  /** Deadline for the whole wait. Default 5s. */
+  timeoutMs?: number;
+  /** Waterfall depth to follow. Default 10. */
+  rounds?: number;
+}
+
+/** A timer that never keeps a process alive on its own account. */
+function after(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    (setTimeout(resolve, ms) as any)?.unref?.();
+  });
+}
+
+/** Whether an arriving state describes a more recent read than the one held. */
+function isNewerThan(incoming: QueryState<unknown>, held: QueryState<unknown>): boolean {
+  return held.status !== 'success' || incoming.updatedAt >= held.updatedAt;
+}
 const DEFAULT_GC = 5 * 60 * 1000;
 
 class Query<T> {
   state: QueryState<T> = { status: 'pending', data: undefined, error: undefined, isFetching: false, updatedAt: 0 };
+  /**
+   * The server said this entry is coming down the same stream. Until it lands
+   * (or the response ends without it) the client must not start the request
+   * itself — restarting is the double fetch this whole mechanism removes.
+   */
+  awaiting = false;
   private listeners = new Set<Listener>();
   private promise: Promise<T> | undefined;
   private gcTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     readonly hash: string,
-    readonly options: QueryOptions<T>,
+    public options: QueryOptions<T>,
     private readonly onGarbage: (hash: string) => void,
     private readonly now: () => number,
   ) {}
@@ -105,7 +135,40 @@ class Query<T> {
 
   private set(patch: Partial<QueryState<T>>): void {
     this.state = { ...this.state, ...patch };
+    this.notify();
+  }
+
+  private notify(): void {
     this.listeners.forEach((listener) => listener());
+  }
+
+  /** The fetch in flight, for `settle()` to await before dehydrating. */
+  inFlight(): Promise<T> | undefined {
+    return this.promise;
+  }
+
+  /**
+   * Attaches the options an observer actually declared. An entry can exist
+   * before anyone observes it — hydrated from the payload, or expected from the
+   * stream — and those carry a placeholder `queryFn`. Without this, the first
+   * real observer would inherit the placeholder and a later `refetch()` would
+   * replay the payload instead of going to the server.
+   */
+  setOptions(options: QueryOptions<T>): void {
+    this.options = options;
+  }
+
+  /** Takes a state that arrived from the server, and tells observers about it. */
+  adopt(state: QueryState<T>): void {
+    this.state = state;
+    this.notify();
+  }
+
+  /** Stops awaiting the stream and lets observers notice they must fetch after all. */
+  release(): void {
+    if (!this.awaiting) return;
+    this.awaiting = false;
+    if (this.listeners.size > 0 && this.isStale()) this.fetch().catch(() => undefined);
   }
 
   isStale(): boolean {
@@ -180,7 +243,11 @@ export class QueryClient {
     const hash = hashKey(options.queryKey);
     const existing = this.queries.get(hash);
 
-    if (existing) return existing;
+    if (existing) {
+      existing.setOptions(options);
+
+      return existing;
+    }
     const query = new Query<T>(hash, options, (key) => this.queries.delete(key), this.now);
 
     this.queries.set(hash, query);
@@ -234,11 +301,41 @@ export class QueryClient {
     }
   }
 
-  /** Test/SSR seam: dehydrate cache entries and rebuild them on the client. */
+  /**
+   * Resolves once nothing is in flight — including fetches that only started
+   * because an earlier one finished, which is what a render querying in a
+   * waterfall produces.
+   *
+   * Bounded twice over, because SSR awaits this before closing a response: by
+   * rounds, so a query that retriggers itself cannot loop, and by a deadline,
+   * so a `queryFn` that never settles costs a few seconds rather than a
+   * response that never ends. Whatever is still running is simply left out of
+   * the payload, and the client fetches it.
+   */
+  async settle(options: SettleOptions = {}): Promise<void> {
+    await Promise.race([this.drain(options.rounds ?? SETTLE_ROUNDS), after(options.timeoutMs ?? SETTLE_TIMEOUT_MS)]);
+  }
+
+  private async drain(rounds: number): Promise<void> {
+    const pending = [...this.queries.values()].map((query) => query.inFlight()).filter(Boolean);
+
+    if (pending.length === 0 || rounds === 0) return;
+    await Promise.allSettled(pending);
+
+    return this.drain(rounds - 1);
+  }
+
+  /**
+   * The entries worth sending to the client: settled successes whose data is
+   * plain JSON. Anything else (a Map, a class instance, a function on the
+   * object) is left out rather than shipped broken — the state invariant is
+   * schema-typed plain data, and the client simply refetches what it did not
+   * receive.
+   */
   dehydrate(): Record<string, QueryState<unknown>> {
     return Object.fromEntries(
       [...this.queries.entries()]
-        .filter(([, query]) => query.state.status === 'success')
+        .filter(([, query]) => query.state.status === 'success' && isPlainData(query.state.data))
         .map(([hash, query]) => [hash, query.state]),
     );
   }
@@ -248,12 +345,43 @@ export class QueryClient {
       // The hash *is* the serialized key, so parsing it back keeps a hydrated
       // entry matchable by `invalidateQueries` now that matching is segment-wise.
       const queryKey = parseHash(hash);
-      const query = new Query(hash, { queryKey, queryFn: async () => state.data } as any, (key) => this.queries.delete(key), this.now);
+      const existing = this.queries.get(hash);
+      const query = existing ?? new Query(hash, { queryKey, queryFn: async () => state.data } as any, (key) => this.queries.delete(key), this.now);
 
-      query.state = state;
+      query.awaiting = false;
+      // A payload chunk describes a read the server made. If the client has
+      // since fetched something newer, that wins: hydration fills gaps, it
+      // never moves data backwards.
+      if (isNewerThan(state, query.state)) query.adopt(state as QueryState<any>);
       this.queries.set(hash, query);
     });
   }
+
+  /**
+   * Declares the entries the server is still streaming. An observer of one of
+   * these renders pending and waits, instead of firing the request the server
+   * is already running.
+   */
+  expect(hashes: string[]): void {
+    hashes.forEach((hash) => {
+      const existing = this.queries.get(hash);
+      const query = existing ?? new Query(hash, { queryKey: parseHash(hash), queryFn: async () => undefined } as any, (key) => this.queries.delete(key), this.now);
+
+      query.awaiting = true;
+      this.queries.set(hash, query);
+    });
+  }
+
+  /** Hashes of the queries fetching right now — what a streamed chunk announces as coming. */
+  inFlightHashes(): string[] {
+    return [...this.queries.values()].filter((query) => query.inFlight()).map((query) => query.hash);
+  }
+
+  /** The response ended: anything still expected is not coming, so let it fetch. */
+  releaseExpected(): void {
+    this.queries.forEach((query) => query.release());
+  }
 }
+
 
 export { Query };

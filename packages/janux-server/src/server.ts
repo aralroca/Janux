@@ -26,7 +26,7 @@ import { assertValidInput, errorStatus, evictOldestProposal, json, proposalId, t
 import { apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 import { createFsRouter, type Route } from './router';
-import { shellEpilogue, shellEpilogueRest, shellInterlude, shellPrelude, type ShellOptions } from './html-shell';
+import { queryPayloadScript, shellEpilogue, shellEpilogueRest, shellInterlude, shellPrelude, type ShellOptions } from './html-shell';
 import { safeJson } from './html-escape';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
@@ -638,6 +638,8 @@ export function createJanuxServer(options: ServerOptions = {}) {
      * interlude could not know (i18n keys and boundary snapshots).
      */
     const interludeUris = new Set<string>();
+    /** Query entries already sent, so each chunk only carries what the last could not. */
+    const sentQueries = new Set<string>();
     let interludeSent = false;
     const document = kind ? await resolveErrorPage(kind, ctx) : await resolveDocument(page, ctx);
 
@@ -689,6 +691,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
         i18n: shellI18n(locale, result),
         navigation: options.navigation,
         navigating,
+        queryScript: queryPayloadScript((ctx as any).queryClient, sentQueries),
       };
     };
     const prelude = shellPrelude(shellFor());
@@ -696,7 +699,13 @@ export function createJanuxServer(options: ServerOptions = {}) {
       prelude,
       rendered.chunks,
       async () => {
-        const shell = shellFor(await rendered.done);
+        const summary = await rendered.done;
+
+        // The HTML already flushed; only the tail waits. A query the render
+        // kicked off resolves into this payload instead of into a second
+        // request from the browser.
+        await (ctx as any).queryClient?.settle();
+        const shell = shellFor(summary);
 
         return interludeSent ? shellEpilogueRest(shell, interludeUris) : shellEpilogue(shell);
       },

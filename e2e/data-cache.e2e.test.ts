@@ -134,6 +134,44 @@ describe('examples/data-cache HTTP cache', () => {
   });
 });
 
+describe.skipIf(!BUILT)('examples/data-cache query hydration', () => {
+  it('mounts without asking for data the SSR payload already carried', async () => {
+    const { page, errors } = await openPage();
+    const apiCalls: string[] = [];
+
+    page.on('request', (request) => {
+      if (request.url().includes('/_janux/api/')) apiCalls.push(request.url());
+    });
+
+    await page.goto(`${BASE}/`);
+    await waitForCount(page, 4);
+    // The products are on screen and nothing was requested for them: SSR
+    // fetched once, the payload carried it, the island resumed on top of it.
+    expect(await items(page)).toEqual(['Keyboard', 'Mouse', 'Monitor', 'Webcam']);
+    expect(apiCalls).toEqual([]);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
+
+  it('still goes to the server for a key the payload did not carry', async () => {
+    const { page } = await openPage();
+    const apiCalls: string[] = [];
+
+    page.on('request', (request) => {
+      if (request.url().includes('/_janux/api/')) apiCalls.push(request.url());
+    });
+
+    await page.goto(`${BASE}/`);
+    await waitForCount(page, 4);
+    await page.locator('.tag', { hasText: 'display' }).click();
+    await waitForCount(page, 1);
+
+    // Hydration is not a cache for everything — an unseen key is a real request.
+    expect(apiCalls.length).toBe(1);
+    await page.close();
+  }, TIMEOUT);
+});
+
 describe.skipIf(!BUILT)('examples/data-cache in the browser', () => {
   it('loads unfiltered: every product renders and the URL stays clean', async () => {
     const { page, errors } = await openPage();
