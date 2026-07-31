@@ -135,4 +135,4 @@ React interop is opt-in and per-island: an app with no foreign island ships none
 
 Measured from `dist/client` after `janux build`.
 
-Related: [Foreign-UI interop](/docs/guide/interop) · [`foreign()`](/docs/reference/foreign) · [Examples](/docs/more/examples)
+Related: [Foreign-UI interop](/docs/guide/interop) · [`foreign()`](/docs/reference/foreign) · [Design system](/docs/guide/design-system) · [Examples](/docs/more/examples)

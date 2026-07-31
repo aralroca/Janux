@@ -55,6 +55,7 @@ export const SECTIONS: SectionDef[] = [
           'stores',
           'data-cache',
           'interop',
+          'design-system',
         ],
       },
       { label: 'Rendering & navigation', slugs: ['ssr-and-resumability', 'navigation', 'i18n'] },

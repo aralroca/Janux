@@ -21,6 +21,11 @@
      on both. Asserted by palette.test.ts. */
   --accent: light-dark(#0062ff, #47a8ff);
   --accent-soft: light-dark(#f0f6ff, #12283f);
+  /* The accent as it lands on a --heading fill, which inverts with the scheme:
+     the Ask AI pill is #111111 in light, where --accent is only 3.77:1 — this
+     lifts it to 10.18. In dark the pill is #ededed, so it keeps --accent's own
+     dark value; #98c0ff there would fall to 1.58. */
+  --accent-on-heading: light-dark(#98c0ff, #47a8ff);
   --code-bg: light-dark(#f6f6f6, #1a1a1a);
   /* Tint behind a highlighted code line. GitHub's light palette is tuned to
      land at ~4.5:1 on pure white — its red is 4.57 — so ANY light tint drops
@@ -1251,6 +1256,12 @@ body[data-theme='dark'] .scores-video {
   color: var(--accent);
   font-size: 13px;
   line-height: 1;
+}
+
+/* Only the spark on the pill: the one in the open panel's header sits on --bg,
+   where --accent is already 5.01:1 and this pair would be 1.86. */
+.copilot-toggle .copilot-spark {
+  color: var(--accent-on-heading);
 }
 
 /* A docked panel, not a bubble: answers run long, and a tall column with a

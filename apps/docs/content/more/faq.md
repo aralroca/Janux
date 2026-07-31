@@ -8,6 +8,10 @@ No. The framework is a complete SSR/islands framework without any key. The copil
 
 Only if they use the copilot. Pages, islands, api() calls — none of it touches a model. The agent runs per copilot conversation, server-side, under your key and your `maxTurns` cap.
 
+## Does Janux ship a component library?
+
+No, and it is not going to. Buttons, inputs and layout are plain JSX and your own CSS; accessible widgets come from shadcn/ui or Radix through `foreign()`. The reasoning, and a worked example, are on the [design system page](/docs/guide/design-system).
+
 ## Why can't I mutate state outside `run()`?
 
 Because every mutation being a named, validated, guard-checked intent is what makes the agent surface trustworthy — and what gives you audit trails, proposals and browserless tests for free. It's the framework's one big constraint; everything else falls out of it.
