@@ -33,18 +33,6 @@ function sourcemapOptions(mode: ViteMode): Record<string, unknown> {
   return { server: { sourcemapIgnoreList: () => false } };
 }
 
-/**
- * `janux build` produces a production bundle whatever shell it runs in.
- *
- * Vite decides `import.meta.env.DEV` from the mode, but reads `NODE_ENV` ahead
- * of it — so on a machine where `NODE_ENV` is `development` or `test`, a build
- * would keep every dev-only branch, the error overlay included. Declaring the
- * mode is not enough; the variable Vite actually consults has to say so too.
- */
-export function pinProductionEnv(env: Record<string, string | undefined>): void {
-  env.NODE_ENV = 'production';
-}
-
 /** Shared vite options: janux plugin, the tailwind postcss pipeline when installed, and sourcemaps. */
 export async function viteOptions(root: string, mode: ViteMode): Promise<Record<string, unknown>> {
   const tailwind = await loadTailwindPlugin(root);
@@ -135,7 +123,6 @@ async function bundleClient(root: string, input: Record<string, string>, stylesh
 }
 
 export async function build({ root }: CliCommand): Promise<void> {
-  pinProductionEnv(process.env);
   const app = await resolveAppConfig(root);
   const input = bundleInputs(app);
 

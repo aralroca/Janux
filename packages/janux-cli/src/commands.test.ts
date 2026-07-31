@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
 import { createJanuxServer } from '@janux/server';
 import { jsx } from 'janux';
-import { bundleInputs, cssAssetName, devBanner, localeRedirectStub, pinProductionEnv, prerenderPages, viteOptions } from './commands';
+import { bundleInputs, cssAssetName, devBanner, localeRedirectStub, prerenderPages, viteOptions } from './commands';
 import { prodServerOptions } from './prod';
 
 /** Runs the stub's inline script with a fake navigator/location and returns the redirect target. */
@@ -207,25 +207,6 @@ describe('viteOptions sourcemaps', () => {
 
     expect(options.build.sourcemap).toBe('hidden');
     expect(options.css?.devSourcemap).toBeUndefined();
-  });
-});
-
-/**
- * Vite decides `import.meta.env.DEV` from the mode but reads `NODE_ENV` ahead
- * of it, so a shell exporting `NODE_ENV=development` had `janux build` ship
- * every dev-only branch — the error overlay included. Declaring the mode is not
- * enough on its own.
- */
-describe('pinProductionEnv', () => {
-  it('makes NODE_ENV say production, whatever it said before', () => {
-    const unset: Record<string, string | undefined> = {};
-    const development = { NODE_ENV: 'development' };
-
-    pinProductionEnv(unset);
-    pinProductionEnv(development);
-
-    expect(unset.NODE_ENV).toBe('production');
-    expect(development.NODE_ENV).toBe('production');
   });
 });
 

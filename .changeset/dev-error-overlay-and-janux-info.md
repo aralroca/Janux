@@ -14,7 +14,3 @@ files exist for an error tracker without a `sourceMappingURL` reaching the brows
 
 `janux info` prints versions, the resolved config, detected adapters, active zero-config integrations and every
 route as markdown to paste into an issue unedited.
-
-`janux build` now pins `NODE_ENV=production` before invoking Vite: Vite reads `NODE_ENV` ahead of the mode when
-deciding `import.meta.env.DEV`, so a shell exporting `NODE_ENV=development` used to produce a build with dev-only
-branches in it.

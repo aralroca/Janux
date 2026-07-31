@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
 import { resolveAppConfig } from '@janux/vite';
-import { bundleInputs, pinProductionEnv, viteOptions } from './commands';
+import { bundleInputs, viteOptions } from './commands';
 
 /**
  * The dev error overlay must cost a production bundle nothing — measured, not
@@ -44,12 +44,13 @@ async function bundle(forced = false): Promise<{ bytes: number; chunks: number; 
   const app = await resolveAppConfig(SHOP);
   const options = (await viteOptions(SHOP, 'build')) as any;
 
-  // What `janux build` does before it calls Vite — and the whole point here:
-  // under `bun test` NODE_ENV is `test`, exactly the shell that used to turn
-  // every dev branch back on. Restored so it cannot leak into sibling suites.
+  // Vite reads `NODE_ENV` ahead of the mode when deciding `import.meta.env.DEV`,
+  // and `bun test` sets it to `test` — which is not what a real `janux build`
+  // sees, where it is unset and Vite defaults to production. Reproduce the real
+  // shell here, and restore it so it cannot leak into sibling suites.
   const restore = process.env.NODE_ENV;
 
-  pinProductionEnv(process.env);
+  process.env.NODE_ENV = 'production';
   const result: any = await build({
     ...options,
     plugins: [...(forced ? [forceDevGuards] : []), ...options.plugins],
