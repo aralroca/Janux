@@ -5,11 +5,14 @@ import { scanMarkers, scanTree } from './events';
 import { consumePrefetched, navigableBody, NAVIGATION_HEADERS } from './prefetch';
 import { saveWidgetFocus, settleRouteA11y } from './route-a11y';
 import { runScriptsWhileStreaming } from './scripts';
+import { applyScrollPlan, type ScrollPlan } from './scroll';
 import { rescopeSpeculationRules } from './speculation';
 import { applyWithViewTransition, viewTransitionSettled, viewTransitionsWanted } from './view-transition';
 
 export interface NavigateOptions {
   signal?: AbortSignal;
+  /** How the incoming page should be scrolled. Absent means "a new page": the top. */
+  scroll?: ScrollPlan;
 }
 
 const esc = (id: string): string =>
@@ -393,7 +396,8 @@ async function buffered(page: ReadableStream<Uint8Array>): Promise<ReadableStrea
   });
 }
 
-async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, signal?: AbortSignal): Promise<void> {
+async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, options: NavigateOptions = {}): Promise<void> {
+  const { signal } = options;
   const source = viewTransitionsWanted() ? await buffered(page) : page;
   const kept = extractPersisted(mount);
   const stopRestoring = restoreWhileStreaming(kept);
@@ -422,6 +426,12 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
        */
       throwIfAborted(signal);
       await restorePersisted(mount, kept);
+      /*
+       * Last step of the swap, and inside the transition on purpose: the
+       * browser snapshots the new page the moment this callback resolves, so
+       * scrolling afterwards would animate to the old offset and then jump.
+       */
+      applyScrollPlan(options.scroll);
     }, signal);
   } catch (error) {
     /*
@@ -480,7 +490,7 @@ async function runNavigation(url: string, mount: MountContext, options: Navigate
     const page = await fetchPage(url, options.signal);
 
     throwIfAborted(options.signal);
-    await applyPage(mount, page, options.signal);
+    await applyPage(mount, page, options);
   } catch (error) {
     if ((error as any)?.name === 'AbortError') return;
     reportNavigationError(error);

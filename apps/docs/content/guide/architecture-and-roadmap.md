@@ -24,7 +24,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 
 - **Reactivity & events:** nested islands (stateful-in-stateful), ownership tree, rich delegated events, controlled inputs, and **path-pruned** reactive state (the old O(paths)-per-write limit is gone — descendant notification is indexed and unread paths are reclaimed).
 - **Foreign-UI interop:** `janux/interop` mounts React components unchanged as real embedded roots, with a tracked props bridge and events→intents (see [the guide](/docs/guide/interop)).
-- **Routing:** full segment grammar (typed matchers, catch-all, optional catch-all), nested `_layout` chains, `(group)` directories, deterministic route-sort, request middleware.
+- **Routing:** full segment grammar (typed matchers, catch-all, optional catch-all), nested `_layout` chains, `(group)` directories, deterministic route-sort, request middleware, per-entry scroll restoration (streaming-safe) and shallow routing (`data-shallow`).
 - **Data & state:** client cache (`useQuery`/`mutation`/`QueryClient`, optimistic rollback, per-request SSR client), persisted stores, typed URL state.
 - **Platform:** arbitrary `src/api/**` HTTP handlers + multipart uploads + `dropzone`.
 - **Agentic surface:** hosted MCP endpoint (`/_janux/mcp`), per-page Markdown projections, proposal visual diffs, `llms.txt`, Web Bot Auth, `janux verify`/`janux eval`.
@@ -39,7 +39,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 
 ## Testing
 
-The framework is developed test-first with `bun:test` + happy-dom (3940 tests, the count `bun run test:census` measures and enforces):
+The framework is developed test-first with `bun:test` + happy-dom (3950 tests, the count `bun run test:census` measures and enforces):
 
 - Resume-without-hydration is asserted (zero component code until interaction).
 - Guard semantics (auto/confirm/forbidden × human/agent) are covered at every layer: instance, HTTP, bridge, agent loop.

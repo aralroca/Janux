@@ -10,6 +10,8 @@ import { enableAgentGlow, type GlowOptions } from './glow';
 import { installI18n } from './i18n';
 import type { NavigationConfig } from '../config';
 import { mountEagerIslands, performNavigation } from './navigate';
+import { rememberScroll, scrollPlanFor } from './scroll';
+import { announceUrlChange, shallowNavigate } from './shallow';
 import { configurePrefetch, prefetchOnHover } from './prefetch';
 import { rescopeSpeculationRules, shellNavigationConfig } from './speculation';
 import { installWebMCP } from './webmcp';
@@ -37,9 +39,16 @@ export interface BootOptions {
   onAudit?: (entry: AuditEntry) => void;
 }
 
+export interface NavigateRequest {
+  /** Move the URL without re-rendering the page — the programmatic `data-shallow`. */
+  shallow?: boolean;
+  /** Replace the current history entry instead of pushing one. Shallow only. */
+  replace?: boolean;
+}
+
 export interface JanuxClient extends JanuxBridge {
   mount(id: string): Promise<unknown>;
-  navigate(url: string): Promise<void>;
+  navigate(url: string, options?: NavigateRequest): Promise<void>;
   proposals: Map<string, Proposal>;
 }
 
@@ -76,7 +85,7 @@ async function awaitTracked(mount: MountContext, work: Promise<unknown>): Promis
 
 let nativeClickAt = 0;
 
-export type NavigateAction = 'intercept' | 'cancel' | 'default';
+export type NavigateAction = 'intercept' | 'shallow' | 'cancel' | 'default';
 
 // Prefer the precise source element; fall back to a recent data-native click.
 function fromNativeLink(event: any): boolean {
@@ -86,6 +95,11 @@ function fromNativeLink(event: any): boolean {
   nativeClickAt = 0;
 
   return wasNative;
+}
+
+/** A link that asked for the URL to move without the page being re-rendered. */
+function fromShallowLink(event: any): boolean {
+  return !!event.sourceElement?.closest?.('[data-shallow]');
 }
 
 /** What the router does with a navigation: take it over, cancel it, or leave it to the browser. */
@@ -109,12 +123,42 @@ export function navigateAction(event: any): NavigateAction {
    * case before it ever raises a navigate event.)
    */
   if (destination.href === location.href) return 'cancel';
+  /*
+   * Declared shallow: the address bar and the back button move, the page does
+   * not. Checked before the query-only rule below, which is what would
+   * otherwise hand a `?tab=` link to the browser for a full reload.
+   */
+  if (fromShallowLink(event)) return 'shallow';
   // Query-only changes on the same path are shallow: islands read the query
   // reactively (urlState), so a filter/tab/dialog change never re-renders the
   // page. Cross-path navigations still get the SPA diff.
   if (destination.pathname === location.pathname && destination.search !== location.search) return 'default';
 
   return 'intercept';
+}
+
+/**
+ * Intercepted with nothing to do: the Navigation API still commits the URL and
+ * the history entry, and skipping the fetch and the diff IS the feature.
+ * `scroll: 'manual'` keeps a filter change from jumping to the top.
+ */
+function interceptShallow(event: any): void {
+  event.intercept({ scroll: 'manual', handler: async () => announceUrlChange() });
+}
+
+function interceptNavigation(event: any, mount: MountContext): void {
+  // Still on the page being left: its offset and its entry key are both true
+  // only right here, before the navigation commits.
+  rememberScroll();
+  const scroll = scrollPlanFor(event);
+
+  event.intercept({
+    // Manual, because the browser would restore against a document that is
+    // still streaming in and clamp the offset to a page that is too short.
+    scroll: 'manual',
+    handler: () =>
+      awaitTracked(mount, performNavigation(event.destination.url, mount, { signal: event.signal, scroll })),
+  });
 }
 
 /**
@@ -144,12 +188,8 @@ function installNavigation(mount: MountContext, config: NavigationConfig): void 
 
       return;
     }
-    if (action !== 'intercept') return;
-    event.intercept({
-      scroll: 'after-transition',
-      handler: () =>
-        awaitTracked(mount, performNavigation(event.destination.url, mount, { signal: event.signal })),
-    });
+    if (action === 'shallow') return interceptShallow(event);
+    if (action === 'intercept') interceptNavigation(event, mount);
   });
   rescopeSpeculationRules();
   if (config.prefetch === false) return;
@@ -206,9 +246,12 @@ export function boot(options: BootOptions = {}): JanuxClient {
 
       return mountIsland(id, root, mount);
     },
-    async navigate(url: string) {
+    async navigate(url: string, options: NavigateRequest = {}) {
       const nav = (window as any).navigation;
       const target = new URL(url, location.href).href;
+
+      // The URL moves, the page stays: no fetch, no diff, bindings notified.
+      if (options.shallow) return shallowNavigate(target, { replace: options.replace });
 
       // Already there: same contract as clicking the page you are on — a no-op.
       // (Going through nav.navigate() would reject with the cancellation.)

@@ -1,5 +1,6 @@
 import { signal, type Sig } from '../signals';
 import { validate, type JxType } from '../schema';
+import { announceUrlChange, URL_CHANGE_EVENT } from './shallow';
 
 /** A reactive, typed binding to the URL query string (nuqs-style). */
 export interface UrlStateHandle<T> {
@@ -43,6 +44,8 @@ function writeParam(name: string, value: unknown, fallback: unknown, replace: bo
 
   // Query-only same-path change: the router treats it as shallow (no re-render).
   history[replace ? 'replaceState' : 'pushState']({}, '', url);
+  // Every other binding on this param is now stale — pushState fires nothing.
+  announceUrlChange();
 }
 
 /**
@@ -62,7 +65,11 @@ export function urlState<T>(
     value.value = readParam(name, type, fallback);
   };
 
-  if (typeof window !== 'undefined') window.addEventListener('popstate', onPop);
+  if (typeof window !== 'undefined') {
+    window.addEventListener('popstate', onPop);
+    // Shallow changes are not popstate: nothing pops, the URL simply moved.
+    document.addEventListener(URL_CHANGE_EVENT, onPop);
+  }
 
   return {
     value,

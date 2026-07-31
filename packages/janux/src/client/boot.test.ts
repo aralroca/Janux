@@ -761,6 +761,22 @@ describe('navigateAction', () => {
     expect(navigateAction(navigateEvent(`${HERE}?tab=two`))).toBe('default');
     expect(navigateAction(navigateEvent('https://example.com/'))).toBe('default');
   });
+
+  /** A link marked `data-shallow` moves the URL and leaves the page alone. */
+  it('takes a data-shallow link over as a shallow change', () => {
+    const sourceElement = { closest: (selector: string) => (selector.includes('shallow') ? {} : null) };
+
+    expect(navigateAction(navigateEvent(`${HERE}?tab=two`, { sourceElement }))).toBe('shallow');
+    // Shallow is not only for the query: a path can move without a re-render too.
+    expect(navigateAction(navigateEvent('http://localhost:3000/docs', { sourceElement }))).toBe('shallow');
+  });
+
+  /** `data-native` still wins: it asked for the browser, which is not a shallow change. */
+  it('lets data-native beat data-shallow', () => {
+    const sourceElement = { closest: () => ({}) };
+
+    expect(navigateAction(navigateEvent(`${HERE}?tab=two`, { sourceElement }))).toBe('default');
+  });
 });
 
 describe('same-page navigation is a no-op', () => {

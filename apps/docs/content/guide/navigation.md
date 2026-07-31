@@ -162,6 +162,98 @@ Nothing is buffered on either side: the server flushes the page [as it renders i
 
 Navigations are serialized and each one **cancels the one before it**: the superseded fetch is aborted, its stream is torn down mid-diff, and only the last click you made decides where you end up. A superseded navigation never reports itself as finished (no `janux:navigate` `after` event) and never disposes an island — so clicking three sidebar entries in a second leaves you on the third, with your assistant still open, and with two requests the server stopped sending.
 
+## Scroll restoration
+
+Going back returns you to **exactly where you were**, including on a page that streams.
+
+Nothing to configure. Janux remembers the offset of every history entry as you leave it and puts it
+back when you traverse to it again — back *and* forward. A pushed navigation opens at the top,
+because a new page is a new page, and a link to `#section` still lands on its anchor.
+
+The reason this needs the router at all is streaming. The browser offers to restore scroll for
+intercepted navigations, but it restores against whatever the document measures at that instant —
+and a page whose content is still arriving is far too short to hold the old offset, so the position
+gets clamped and the reader lands at the top of a list they had already scrolled through. Janux
+takes `scroll: 'manual'` and restores as the last step of the swap, once the incoming page is in
+the document.
+
+That ordering is also what makes it agree with [view transitions](#view-transitions): the offset is
+applied *inside* the transition, before the browser snapshots the new page, so the animation runs
+between two correctly-scrolled pages instead of animating to the old position and then jumping.
+
+A navigation that gets superseded never applies its offset — the page that won decides where you
+end up.
+
+## Shallow routing
+
+Sometimes the URL should move and the page should not: a filter, a tab, a URL-addressable dialog.
+The address bar and the back button have to be right, but the server has nothing new to say, so
+fetching and diffing the same page would be a round trip to redraw what is already on screen.
+
+Mark the link:
+
+```tsx
+<a href="?tag=video" data-shallow>video</a>
+```
+
+The URL changes, a history entry is pushed, and **nothing re-renders**. Islands bound to the query
+through [`urlState`](/docs/guide/data-cache#typed-url-state) react on their own, because every
+shallow change announces itself — `history.pushState` fires no event, so a binding that did not go
+through the router would silently go stale.
+
+The same thing programmatically:
+
+```ts
+janux.navigate('/orders?status=paid', { shallow: true });
+// or, without leaving a history entry behind:
+janux.navigate('/orders?status=paid', { shallow: true, replace: true });
+```
+
+`urlState` is the typed face of this: it writes the URL the same way and every binding on the same
+param stays in sync, in every island.
+
+> Shallow is opt-in on purpose. A query param the **server** renders differently — a search page, a
+> paginated list — must still go to the server, and only the app knows which of the two a given
+> param is.
+
+## View transitions
+
+Off by default. Turn it on per app:
+
+```ts
+// janux.config.ts
+export default defineConfig({
+  navigation: { viewTransitions: true },
+});
+```
+
+Navigations are then wrapped in a single [View
+Transition](https://developer.mozilla.org/docs/Web/API/View_Transition_API), and elements that
+declare the same `view-transition-name` on both routes are paired — the browser carries one into
+the other instead of cross-fading it with the rest of the page. No new API: it is a CSS property
+the typed `style` object already knows.
+
+```tsx
+<a class="brand" href="/" style={{ viewTransitionName: 'wordmark' }}>
+  ✦ Janux Shop
+</a>
+```
+
+One transition for the whole page, not one per streamed chunk — shared elements are paired by
+comparing a snapshot of the whole old page against the whole new one, so a transition per chunk
+could never produce the effect.
+
+It is opt-in because **it changes how the page is applied**. A view transition suppresses rendering
+until the swap resolves, so with it on the incoming page is read in full *before* the swap instead
+of being diffed as it streams: the old page stays live and interactive for the whole download, and
+then changes in one animated step. That is the right trade for small, hover-prefetched pages and
+the wrong one for a page that paints progressively over a second — which is why the framework does
+not choose for you.
+
+Ignored entirely when the browser lacks the API, and when the reader asked for
+`prefers-reduced-motion: reduce`. Navigating again mid-transition skips the one on screen, so an
+interrupted navigation never leaves a frozen frame.
+
 ## Why diff, not swap
 
 Most HTML-over-the-wire routers *replace* the page body (Turbo) or swap `<head>`/`<body>` (Astro's ClientRouter). Janux **diffs the whole document** instead, and that difference is the whole point for app-shaped UIs:
