@@ -14,6 +14,11 @@ export type { Heading } from './headings';
  * `renderToString` as a real island, and why a page of prose still ships 0 KB.
  * The compiler is reached through a dynamic import so it never enters an app's
  * client graph, and an app that only writes `.md` never loads it either.
+ *
+ * An `.mdx` body is therefore **trusted code**, like every other module in the
+ * app: its expressions run with the same access, and `baseUrl` lets it import
+ * the app's own files. `components` scopes which tags a body may name — it is
+ * not a sandbox, and this is not a way to run content other people wrote.
  */
 
 export interface RenderOptions {
@@ -21,7 +26,7 @@ export interface RenderOptions {
    * What the content may name. A capitalised key is a component the body can
    * mount — a Janux `component()` becomes an island, a `foreign()` mounts React
    * unchanged. A lowercase key overrides an element (`h2`, `code`, `a`), which
-   * is how an app applies its own chrome to markdown it did not write.
+   * is how an app applies its own chrome to a body without editing it.
    */
   components?: Record<string, unknown>;
 }

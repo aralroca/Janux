@@ -92,6 +92,8 @@ Compilation happens on the server: no MDX runtime reaches the browser, and with 
 
 The compiler is an **optional peer dependency** — `bun add @mdx-js/mdx`. Collections do not need it; only `render()` does, and calling it without the compiler installed says so.
 
+An `.mdx` body is **trusted code**: its expressions are evaluated on the server with the access any module of yours has, and `components` scopes which tags it may name, not what it may do. See [content files are code](/docs/guide/content-collections#content-files-are-code).
+
 ## slugify(text)
 
 The heading-id function `render` uses. Exported so an app can produce the same id for a heading it writes itself.

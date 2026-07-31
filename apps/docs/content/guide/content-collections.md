@@ -128,7 +128,7 @@ The paragraph you are reading is markdown. The poll below is a real island.
 <Poll initial={{ question: 'Which part sold you?', options: [] }} />
 ```
 
-A capitalised key is a component the body can mount — a `component()` becomes a real island, and a [`foreign()`](/docs/guide/interop) wrapper mounts React unchanged. A lowercase key overrides an element (`h2`, `code`, `a`), which is how an app applies its own chrome to markdown it did not write.
+A capitalised key is a component the body can mount — a `component()` becomes a real island, and a [`foreign()`](/docs/guide/interop) wrapper mounts React unchanged. A lowercase key overrides an element (`h2`, `code`, `a`), which is how an app applies its own chrome to a body without editing it.
 
 An island mounted from content is an island like any other: it server-renders, it resumes without hydrating the page around it, and its intents are on the [manifest](/docs/guide/agent-and-copilot) — so an agent reading the page can call `poll.vote` while a reader clicks it.
 
@@ -138,6 +138,14 @@ The extension chooses the reading, and the difference matters for an existing co
 
 - In `.md`, `{ braces }` are prose and raw HTML like `<figure>` is passed through as written.
 - In `.mdx`, both are JSX.
+
+### Content files are code
+
+An `.mdx` body is a program. Its expressions are real JavaScript, evaluated on the server when the page renders, with the same access any other module in your app has — `process.env`, the filesystem, and `import` of your own modules resolved relative to the file. The `components` map decides which *tags* a body may name; it is not a sandbox, and nothing else about the file is restricted.
+
+So treat a content file exactly as you treat a `.tsx` module: something a person you trust wrote, and that code review covers. `@janux/content` reads a directory in your repository — it is not a mechanism for running content submitted by other people.
+
+> **Warning:** if content comes from somewhere you do not control, do not render it with `render()`. `.md` at least evaluates no author-written JavaScript, but raw HTML in a body still reaches the page, so it is not a sandbox either — a `<script>` an author wrote is a `<script>` the browser runs. Untrusted input needs a sanitizing pipeline you own.
 
 ## The compiler never reaches the browser
 

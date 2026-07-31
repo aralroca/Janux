@@ -32,4 +32,4 @@ Only the reading of the file. `.mdx` lets a body name components; everything els
 <Poll initial={{ question: 'Which part sold you?', options: [] }} />
 ```
 
-Components are passed in explicitly by the page that renders the note, so a content file can only mount what the app has offered it.
+Components are passed in explicitly by the page that renders the note, so a body can only name tags the app offered it. That is a scoping rule, not a sandbox: an `.mdx` body is code, evaluated on the server, and it is trusted exactly like any other module in the repository.
