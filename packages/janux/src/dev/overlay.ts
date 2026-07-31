@@ -87,15 +87,21 @@ function documentListeners(): [EventTarget, string, EventListener][] {
   ];
 }
 
+/** `boot()` runs again on re-boot and on HMR; installing twice would double every report. */
+let installed: (() => void) | undefined;
+
 export function installDevOverlay(): () => void {
+  if (installed) return installed;
   const listeners = documentListeners();
   const stopChannel = onJanuxError(reportExplained);
 
   listeners.forEach(([target, type, handler]) => target.addEventListener(type, handler));
-
-  return () => {
+  installed = () => {
+    installed = undefined;
     stopChannel();
     listeners.forEach(([target, type, handler]) => target.removeEventListener(type, handler));
     dismissDevOverlay();
   };
+
+  return installed;
 }

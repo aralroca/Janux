@@ -24,6 +24,30 @@ export interface DevRouteInfo {
 /** Where `janux dev` answers it. Not a route: the dev middleware owns this path. */
 export const DEV_ROUTE_PATH = '/_janux/dev/route';
 
+/** The app config fields the endpoint needs — the same two the dev server routes with. */
+interface DevRouteApp {
+  routesDir: string;
+  matchersModule?: string;
+}
+
+/**
+ * The endpoint as the middleware uses it: resolves the app's own `src/matchers.ts`
+ * first, exactly as `loadServerOptions` does. Without them a declared
+ * `[post=slug]` route renders fine but reports here as unmatched, and a
+ * diagnostic that lies about supported routing is worse than no diagnostic.
+ */
+export async function devRouteHandler(
+  root: string,
+  app: DevRouteApp,
+  loadModule: (file: string) => Promise<Record<string, unknown>>,
+  url: string,
+): Promise<Response | undefined> {
+  if (!url.startsWith(DEV_ROUTE_PATH)) return undefined;
+  const matchers = app.matchersModule ? await loadModule(app.matchersModule) : undefined;
+
+  return devRouteResponse(root, app.routesDir, url, matchers as Record<string, Matcher> | undefined);
+}
+
 /** The endpoint itself: `undefined` for every URL that is not it, so the middleware passes those on. */
 export function devRouteResponse(
   root: string,

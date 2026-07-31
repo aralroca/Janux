@@ -70,9 +70,11 @@ describe('the dev overlay in a production bundle', () => {
     const shipped = await bundle();
     const forced = await bundle(true);
 
-    // It exists, weighs something, and even earns its own chunk...
+    // It exists and weighs something — the overlay is a static import (it has
+    // to install synchronously, before boot mounts eager islands), so it is
+    // inlined into the entry rather than earning a chunk of its own.
     expect(forced.bytes).toBeGreaterThan(shipped.bytes);
-    expect(forced.chunks).toBeGreaterThan(shipped.chunks);
+    expect(forced.chunks).toBe(shipped.chunks);
     OVERLAY_FINGERPRINTS.forEach((fingerprint) => expect(forced.code).toContain(fingerprint));
     // ...and `janux build` emits none of it, in no chunk.
     OVERLAY_FINGERPRINTS.forEach((fingerprint) => expect(shipped.code).not.toContain(fingerprint));
