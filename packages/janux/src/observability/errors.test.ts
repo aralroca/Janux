@@ -29,8 +29,12 @@ describe('the global error sink', () => {
   });
 
   it('falls back to the console when no handler is registered', () => {
+    // `spyOn` returns the pre-existing spy — history included — when another
+    // test file already wrapped console.error; cleared, so calls[0] is ours
+    // whatever order the files ran in.
     const logged = spyOn(console, 'error').mockImplementation(() => undefined);
 
+    logged.mockClear();
     reportError(new Error('boom'), { phase: 'ssr', route: '/orders' });
 
     expect(logged).toHaveBeenCalled();
@@ -42,6 +46,8 @@ describe('the global error sink', () => {
     const logged = spyOn(console, 'error').mockImplementation(() => undefined);
     const warned = spyOn(console, 'warn').mockImplementation(() => undefined);
 
+    logged.mockClear();
+    warned.mockClear();
     setOnError(() => {
       throw new Error('sentry is down');
     });
