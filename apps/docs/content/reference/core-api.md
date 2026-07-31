@@ -219,6 +219,45 @@ Call it from the route module (or something it awaits): once the document starts
 
 Parses the duration strings used by `every()` and `effect({ debounce })` into milliseconds — `'300ms'`, `'2s'`, `'5m'`, `'1h'`. Throws on anything else. Exposed mostly so custom refresh/debounce logic can share one parser.
 
+### Image(props)
+
+The responsive image primitive — see the [images guide](/docs/guide/images) for the whole story. `src` is a path into `public/`; `width` plus either `height` or `aspectRatio` is required, so the box is always reserved:
+
+```tsx
+import { Image } from 'janux';
+
+export function Hero() {
+  return <Image src="/photos/hero.jpg" alt="Aurora" width={1200} aspectRatio="16/9" priority />;
+}
+```
+
+It renders a `<picture>` with AVIF and WebP candidates plus the original as the `<img>` fallback, and ships no client code. `sizes` defaults to `<width>px`, `priority` sets `loading="eager"` + `fetchpriority="high"`, and `unoptimized` (required for a remote `src`) links the source as-is.
+
+### Image URL helpers
+
+The contract `<Image>` and the build-time optimizer share. An app rarely calls these; a custom pipeline that wants to emit the same variants does.
+
+| Export | What it is |
+|---|---|
+| `IMAGE_WIDTHS` | The ladder every `srcset` is drawn from: `[320, 640, 960, 1280, 1920]` |
+| `IMAGE_FORMATS` | The modern formats emitted, most efficient first: `['avif', 'webp']` |
+| `isOptimizable(src)` | Whether a source is a raster format worth re-encoding (`.png`, `.jpg`, `.webp`) |
+| `variantUrl(src, width, format)` | `/photos/hero.jpg` + `640` + `avif` → `/_janux/image/photos/hero.jpg/640.avif` |
+| `parseVariantUrl(pathname)` | The inverse, and the trust boundary with it: `undefined` for anything Janux would not itself have emitted |
+
+### Font CSS helpers
+
+The pure half of the [font pipeline](/docs/guide/fonts) — the part that reaches the browser. An app declares fonts in `janux.config.ts` and never calls these; a custom pipeline that wants the same output does.
+
+| Export | What it is |
+|---|---|
+| `FONT_ROUTE` | Where self-hosted files live: `/_janux/font` |
+| `fallbackOverrides(font, fallback)` | The `size-adjust` / `ascent-override` / `descent-override` / `line-gap-override` that make a system font occupy a webfont's space, from both fonts' real metrics |
+| `fontFaceCss(fonts)` | The `@font-face` rules — real faces, the adjusted fallback, and the `--var` naming the stack |
+| `fontPreloadHrefs(fonts)` | The files worth a `<link rel=preload>`, deduped |
+
+`FontMetrics`, `FontOverrides`, `ResolvedFont` and `ResolvedFontFace` are the shapes they pass between them; `GenericFamily` is the `sans-serif | serif | monospace` a fallback is measured against.
+
 ### JSX runtime
 
 `Fragment`, `jsx`, `jsxs` and the `JanuxNode` type are the automatic-runtime targets your `.tsx` compiles to (`jsxImportSource: 'janux'`). You import them only if you emit JSX calls by hand; normal components never touch them.

@@ -108,6 +108,10 @@ export interface ServerOptions {
   stylesheets?: string[];
   /** CSS inlined into every page instead of linked (see `inlineStyles` in the app config). */
   inlineStyles?: string[];
+  /** Self-hosted woff2 files to `<link rel=preload>`, from the app's declared fonts. */
+  fontPreloads?: string[];
+  /** `@font-face` rules inlined into every page: the real faces plus their metric-adjusted fallbacks. */
+  fontFaces?: string;
   favicon?: string;
   llmsTxt?: LlmsTxtConfig;
   agents?: AgentsConfig;
@@ -770,6 +774,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
         manifestUrl: options.staticExport ? undefined : `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
         stylesheets: options.stylesheets,
         inlineStyles: navigating ? undefined : options.inlineStyles,
+        // Same reasoning as inlineStyles: the document already carries these,
+        // and a navigation response repeating them is bytes the diff discards.
+        fontPreloads: navigating ? undefined : options.fontPreloads,
+        fontFaces: navigating ? undefined : options.fontFaces,
         favicon: options.favicon,
         i18n: shellI18n(locale, result),
         navigation: options.navigation,

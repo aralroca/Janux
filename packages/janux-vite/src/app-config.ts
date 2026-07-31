@@ -6,6 +6,7 @@ import type {
   AgentsAuthConfig,
   CacheConfig,
   CspConfig,
+  FontConfig,
   JanuxConfig,
   JanuxOutput,
   McpAuthConfig,
@@ -14,6 +15,14 @@ import type {
 
 export type { JanuxOutput } from 'janux';
 export { registerInstrumentation, type InstrumentationModule } from './instrumentation';
+/*
+ * Re-exported here, beside `shellOptions`, because they are used together and
+ * because this is the entry a production server imports. Reaching the package
+ * ROOT for it instead pulls in the Vite plugin — and with it @swc/core, which
+ * the Vercel adapter then tries to bundle into a serverless function, where its
+ * native binding does not exist.
+ */
+export { builtFontAssets } from './fonts';
 
 export type JanuxPluginOptions = JanuxConfig;
 
@@ -42,6 +51,8 @@ export interface JanuxAppConfig {
   inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
   output: JanuxOutput;
+  /** Fonts to self-host, as declared in janux.config.ts. */
+  fonts: FontConfig[];
   navigation?: NavigationConfig;
   csp?: boolean | CspConfig;
   cache?: CacheConfig;
@@ -129,6 +140,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     inlineStyles: options.inlineStyles,
     llmsTxt: options.llmsTxt,
     output: options.output ?? 'bun',
+    fonts: options.fonts ?? [],
     navigation: options.navigation,
     csp: options.csp,
     cache: options.cache,
@@ -146,9 +158,19 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
 export function shellOptions(
   app: JanuxAppConfig,
   stylesheets: string[],
+  fonts: Pick<ServerOptions, 'fontFaces' | 'fontPreloads'> = {},
 ): Pick<
   ServerOptions,
-  'title' | 'lang' | 'siteUrl' | 'favicon' | 'stylesheets' | 'navigation' | 'csp' | 'cache'
+  | 'title'
+  | 'lang'
+  | 'siteUrl'
+  | 'favicon'
+  | 'stylesheets'
+  | 'navigation'
+  | 'csp'
+  | 'cache'
+  | 'fontFaces'
+  | 'fontPreloads'
 > {
   return {
     title: app.title,
@@ -159,6 +181,7 @@ export function shellOptions(
     navigation: app.navigation,
     csp: app.csp,
     cache: app.cache,
+    ...fonts,
   };
 }
 

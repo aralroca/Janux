@@ -59,6 +59,7 @@ export {
   speculationRules,
   type AgentsAuthConfig,
   type CacheConfig,
+  type FontConfig,
   type JanuxConfig,
   type JanuxOutput,
   type McpAuthConfig,
@@ -66,6 +67,27 @@ export {
   type NavigationConfig,
   type SpeculationRulesConfig,
 } from './config';
+export { Image, type ImageProps } from './image/image';
+export {
+  IMAGE_FORMATS,
+  IMAGE_WIDTHS,
+  isOptimizable,
+  parseVariantUrl,
+  variantUrl,
+  type ImageFormat,
+  type ImageVariant,
+} from './image/urls';
+export {
+  fallbackOverrides,
+  FONT_ROUTE,
+  fontFaceCss,
+  fontPreloadHrefs,
+  type FontMetrics,
+  type FontOverrides,
+  type GenericFamily,
+  type ResolvedFont,
+  type ResolvedFontFace,
+} from './font/css';
 export {
   cacheHeaders,
   cachePolicy,

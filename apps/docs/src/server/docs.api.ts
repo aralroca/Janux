@@ -90,7 +90,7 @@ export const SECTIONS: SectionDef[] = [
         ],
       },
       { label: 'Content', slugs: ['content-collections'] },
-      { label: 'Rendering & navigation', slugs: ['ssr-and-resumability', 'navigation', 'i18n'] },
+      { label: 'Rendering & navigation', slugs: ['ssr-and-resumability', 'navigation', 'images', 'fonts', 'i18n'] },
       { label: 'Server & agents', slugs: ['api-rpc', 'http-handlers', 'agent-and-copilot'] },
       { label: 'Shipping', slugs: ['cli-and-deployment', 'architecture-and-roadmap'] },
     ],

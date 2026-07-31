@@ -1,10 +1,18 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
 import { createJanuxServer } from '@janux/server';
 import { jsx } from 'janux';
-import { bundleInputs, cssAssetName, devBanner, localeRedirectStub, prerenderPages, viteOptions } from './commands';
+import {
+  bundleInputs,
+  cssAssetName,
+  devBanner,
+  emitAssets,
+  localeRedirectStub,
+  prerenderPages,
+  viteOptions,
+} from './commands';
 import { prodServerOptions } from './prod';
 
 /** Runs the stub's inline script with a fake navigator/location and returns the redirect target. */
@@ -222,5 +230,38 @@ describe('localeRedirectStub', () => {
 
   it('keeps the no-JS meta refresh pointing at the default locale', () => {
     expect(localeRedirectStub(['en', 'es'], 'en')).toContain('content="1; url=/en"');
+  });
+});
+
+/**
+ * `janux build` has to leave the image variants on disk whichever output the app
+ * chose: a static export has no server left to encode them, and `janux start`
+ * should never spend a request doing work the build already could.
+ */
+describe('emitAssets', () => {
+  function appWithImage(): string {
+    const root = mkdtempSync(join(tmpdir(), 'janux-build-'));
+
+    cpSync(join(import.meta.dir, '__fixtures__/image-app'), root, { recursive: true });
+
+    return root;
+  }
+
+  it('copies public/ verbatim and writes the variants <Image> links to', async () => {
+    const root = appWithImage();
+
+    await emitAssets(root, { fonts: [] });
+
+    expect(existsSync(join(root, 'dist/client/hero.jpg'))).toBe(true);
+    expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/640.avif'))).toBe(true);
+    expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/1920.webp'))).toBe(true);
+  });
+
+  it('is a no-op for an app with nothing to serve', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-build-'));
+
+    await emitAssets(root, { fonts: [] });
+
+    expect(existsSync(join(root, 'dist/client/_janux'))).toBe(false);
   });
 });

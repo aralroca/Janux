@@ -65,7 +65,8 @@ body[data-theme='dark'] {
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+  /* Set by the inlined @font-face block; the stack after the comma is what a build with no fonts resolved falls back to. */
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;

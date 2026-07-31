@@ -23,7 +23,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `janux`
 
-- **Stable** — `CLIENT_TOOL_NAMES`, `CLIENT_TOOL_SPECS`, `CONFIG_SCRIPT_ID`, `Fragment`, `JanuxIntentError`, `JxType`, `SPECULATION_SCRIPT_ID`, `batch`, `bool`, `buildDefault`, `buildManifest`, `cacheHeaders`, `cachePolicy`, `coerceForm`, `component`, `computed`, `createBus`, `createInstance`, `createRoot`, `defineConfig`, `effect`, `enums`, `every`, `formatElements`, `getI18n`, `getOwner`, `int`, `intent`, `isNotFoundError`, `jsx`, `jsxs`, `list`, `money`, `notFound`, `num`, `obj`, `onCleanup`, `onEvent`, `parseDuration`, `renderToStream`, `renderToString`, `resolveGuard`, `runWithOwner`, `schema`, `selectMessages`, `signal`, `source`, `speculationRules`, `store`, `str`, `toJsonSchema`, `translateCore`, `untrack`, `validate`, `watch`
+- **Stable** — `CLIENT_TOOL_NAMES`, `CLIENT_TOOL_SPECS`, `CONFIG_SCRIPT_ID`, `FONT_ROUTE`, `Fragment`, `IMAGE_FORMATS`, `IMAGE_WIDTHS`, `Image`, `JanuxIntentError`, `JxType`, `SPECULATION_SCRIPT_ID`, `batch`, `bool`, `buildDefault`, `buildManifest`, `cacheHeaders`, `cachePolicy`, `coerceForm`, `component`, `computed`, `createBus`, `createInstance`, `createRoot`, `defineConfig`, `effect`, `enums`, `every`, `fallbackOverrides`, `fontFaceCss`, `fontPreloadHrefs`, `formatElements`, `getI18n`, `getOwner`, `int`, `intent`, `isNotFoundError`, `isOptimizable`, `jsx`, `jsxs`, `list`, `money`, `notFound`, `num`, `obj`, `onCleanup`, `onEvent`, `parseDuration`, `parseVariantUrl`, `renderToStream`, `renderToString`, `resolveGuard`, `runWithOwner`, `schema`, `selectMessages`, `signal`, `source`, `speculationRules`, `store`, `str`, `toJsonSchema`, `translateCore`, `untrack`, `validate`, `variantUrl`, `watch`
 - **Experimental** — _none_
 - **Internal** — _none_
 
@@ -103,7 +103,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 - **Stable** — `janux`
 - **Experimental** — _none_
-- **Internal** — `apiFiles`, `apiModuleName`, `apiStubModule`, `exportedApiNames`, `packageDir`, `publishAppRoot`, `resolveAppConfig`, `sendFetchResponse`, `shellOptions`, `toFetchRequest`
+- **Internal** — `apiFiles`, `apiModuleName`, `apiStubModule`, `builtFontAssets`, `exportedApiNames`, `fontResponse`, `imageResponse`, `packageDir`, `publishAppRoot`, `resolveAppConfig`, `resolveFonts`, `sendFetchResponse`, `shellOptions`, `toFetchRequest`, `writeFontAssets`, `writeImageVariants`
 
 ### `@janux/cli`
 

@@ -1,0 +1,175 @@
+/*
+ * The one rule that makes `width`/`height` on the tag do their job: a fluid
+ * image needs `height: auto`, or the attributes stop describing the box and
+ * start distorting the picture. Everything else here is just layout.
+ */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#fbfbfd, #0b0d12);
+  --fg: light-dark(#14161c, #e9ecf2);
+  --muted: light-dark(#5c6270, #9aa2b1);
+  --line: light-dark(#e4e6ec, #232733);
+  --card: light-dark(#ffffff, #12151d);
+  --accent: #0062ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  /* Set by the @font-face block the build inlined; the stack after the comma is the no-fonts fallback. */
+  font: 16px/1.6 var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  background: var(--line);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875em;
+  color: var(--accent);
+}
+
+.page {
+  max-width: 70rem;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 650;
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.masthead nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.masthead a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.badge {
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.page-head {
+  padding: 3rem 0 2rem;
+  max-width: 44rem;
+}
+
+.page-head h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.hero {
+  margin: 0 0 3.5rem;
+}
+
+.hero figcaption,
+.gallery p,
+.pass-through p {
+  margin: 0.6rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+h2 {
+  margin: 0 0 1.25rem;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+.gallery,
+.pass-through {
+  margin-bottom: 3.5rem;
+}
+
+.gallery ul,
+.pass-through ul {
+  display: grid;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gallery ul {
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.pass-through ul {
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.pass-through li {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.pass-through img {
+  flex: none;
+  width: 72px;
+}
+
+.colophon {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.colophon p {
+  margin: 0;
+  max-width: 48rem;
+}
