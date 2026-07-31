@@ -1,3 +1,8 @@
+---
+title: Durable workflows
+description: "Multi-step agent processes that survive a restart: every step is snapshotted, so a run suspended waiting for a human resumes exactly where it stopped."
+---
+
 # Durable workflows
 
 Multi-step agent processes that **survive a restart**: each step's state is snapshotted to the same [storage adapter](/docs/reference/agent-memory) memory uses, so a run suspended waiting for a human resumes exactly where it stopped — in another process, hours later.

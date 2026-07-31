@@ -7,7 +7,7 @@ import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { defineAgent } from '@janux/agent';
 import { packageDir, runtimeIncludes } from './deps';
 import { mimeFor, resolvePublicFile } from './static-files';
-import { apiFiles, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
+import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig, shellOptions, type JanuxPluginOptions } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { collectIslands, islandCatalogFromDir } from './islands';
 import { attachDevWebSocket } from './dev-websocket';
@@ -17,6 +17,10 @@ import { sendFetchResponse, toFetchRequest } from './request-adapter';
 const SSR_PACKAGES = ['janux', '@janux/server', '@janux/agent'];
 
 async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOptions): Promise<ServerOptions> {
+  // Here rather than in `config()`: this is the moment the app's own modules
+  // are loaded, and `config()` also runs for `janux build`, where publishing an
+  // app root means nothing.
+  publishAppRoot(vite.config.root);
   const app = await resolveAppConfig(vite.config.root, options);
   const apiModules = Object.fromEntries(
     await Promise.all(

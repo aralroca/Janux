@@ -1,3 +1,8 @@
+---
+title: Optimistic UI
+description: Show the result before the server confirms it, and put the old value back if it fails.
+---
+
 # Optimistic UI
 
 Show the result before the server confirms it, and put the old value back if it fails. `mutation()` gives you the three moments that need: `onMutate` writes the optimistic value and returns a snapshot, `onError` restores it, `onSettled` re-syncs with the server.

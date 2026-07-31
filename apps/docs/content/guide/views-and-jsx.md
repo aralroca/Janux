@@ -1,3 +1,8 @@
+---
+title: Views and JSX
+description: A view is a pure function of the bag it receives ({ state, derived, intents, use, ctx, children }) returning JSX.
+---
+
 # Views and JSX
 
 A `view` is a pure function of the bag it receives (`{ state, derived, intents, use, ctx, children }`) returning JSX. It runs on the server for the initial HTML and again on the client when the island re-renders. This page is the complete prop surface — what JSX accepts and exactly what it becomes in HTML.

@@ -1,3 +1,8 @@
+---
+title: CLI and deployment
+description: The commands a Janux app ships with — dev, build, start, verify and eval — and what each one does on the way to a deployment.
+---
+
 # CLI and deployment
 
 ## Commands

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright';
 import { createJanuxServer } from '../../packages/janux-server/src/index';
 import { prodServerOptions } from '../../packages/janux-cli/src/prod';
+import { publishAppRoot } from '../../packages/janux-vite/src/app-config';
 import { staticResponse } from '../../packages/janux-cli/src/static-assets';
 
 /** Driving a real Chrome does not fit bun's 5s default. */
@@ -22,6 +23,7 @@ export function isBuilt(name: string): boolean {
 
 /** In-process server for SSR-only suites: no port, no static assets. */
 export async function ssrApp(name: string) {
+  publishAppRoot(appRoot(name));
   const server = createJanuxServer(await prodServerOptions(appRoot(name)));
   const get = (path: string, headers: Record<string, string> = {}) =>
     server.fetch(new Request(`http://test${path}`, { headers }));
@@ -39,6 +41,7 @@ export async function ssrApp(name: string) {
  * and delivered empty response bodies.
  */
 export async function serveBuilt(name: string, observe?: (req: Request, res: Response) => void) {
+  publishAppRoot(appRoot(name));
   const app = createJanuxServer(await prodServerOptions(appRoot(name)));
   const staticDir = join(appRoot(name), 'dist/client');
   const server = Bun.serve({

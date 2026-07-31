@@ -1,3 +1,8 @@
+---
+title: computed()
+description: "A read-only signal derived from other signals. computed<T>(fn: () => T): ReadonlySig<T> — fn runs immediately, then re-runs whenever any signal it read changes."
+---
+
 # computed()
 
 ```ts

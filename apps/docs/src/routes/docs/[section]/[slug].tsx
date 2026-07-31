@@ -1,7 +1,7 @@
 import { notFound, type PageMeta } from 'janux';
 import { Layout } from '../../../components/Layout';
-import { docContent, docIndex, groupLabel, sectionLabel } from '../../../server/docs.api';
-import { renderMarkdown, summarize, type TocEntry } from '../../../server/markdown';
+import { docEntry, docIndex, groupLabel, sectionLabel } from '../../../server/docs.api';
+import { renderMarkdown, type TocEntry } from '../../../server/markdown';
 import { absolute, SOCIAL_IMAGE } from '../../../site';
 
 export function staticParams() {
@@ -46,13 +46,13 @@ function docJsonLd({ title, path, section, slug, description }: DocMeta) {
 }
 
 export function meta({ params }: { params: { section: string; slug: string } }): PageMeta {
-  const markdown = docContent(params.section, params.slug);
+  const doc = docEntry(params.section, params.slug);
 
   // No such doc: the page calls notFound(), and `_404.tsx` brings its own meta.
-  if (!markdown) return {};
-  const title = markdown.match(/^# (.+)$/m)?.[1] ?? 'Janux docs';
+  if (!doc) return {};
+  // Authored, not guessed: the collection schema is what guarantees both exist.
+  const { title, description } = doc.data;
   const path = `/docs/${params.section}/${params.slug}`;
-  const description = summarize(markdown);
 
   return {
     title: `${title} — Janux docs`,
@@ -124,12 +124,12 @@ function PrevNext({ path }: { path: string }) {
 }
 
 export default async function DocPage({ params }: { params: { section: string; slug: string } }) {
-  const markdown = docContent(params.section, params.slug);
+  const doc = docEntry(params.section, params.slug);
 
   // A URL that names no doc is a 404, not a doc page about the absence of one:
   // `_404.tsx` answers it, with the status crawlers and readers both expect.
-  if (!markdown) notFound();
-  const rendered = await renderMarkdown(markdown);
+  if (!doc) notFound();
+  const rendered = await renderMarkdown(doc.body);
   const path = `/docs/${params.section}/${params.slug}`;
 
   return (

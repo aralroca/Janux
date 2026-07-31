@@ -1,3 +1,8 @@
+---
+title: Build & CLI internals
+description: The plumbing the CLI and the Vite plugin use. Read this to embed Janux in another build, to write a custom server, or to script the CLI.
+---
+
 # Build & CLI internals
 
 The plumbing the [CLI](/docs/reference/cli) and the [Vite plugin](/docs/guide/cli-and-deployment) use. You need this page to embed Janux in another build, to write a custom server, or to script the CLI — not to build an app.
@@ -18,6 +23,8 @@ import { renderNode } from 'janux/server';
 3. options passed to the plugin.
 
 Config files are imported with an **mtime cache-buster**, which is why editing `janux.config.ts` takes effect in dev without restarting. Discovery is by existence: `src/middleware.ts`, `src/matchers.ts`, `src/i18n.ts` (or `src/i18n/index.ts`), `src/api/`, `src/stores.ts`, `src/agent.ts`, `src/styles.css`, `public/favicon.svg`.
+
+`publishAppRoot(root)`, from the same entry, sets `JANUX_APP_ROOT` — the app root an app's own modules read to find their data files, since a bundle's `import.meta.dirname` is not the app's. Every path that *serves* an app publishes it (the dev plugin, `prodServerOptions`, a deployment adapter); merely resolving a config does not, because tooling resolves the config of apps it will never run.
 
 ## shellOptions(app, stylesheets)
 

@@ -1,3 +1,8 @@
+---
+title: Project structure
+description: "Janux is convention over configuration: every path below is optional and discovered by existence."
+---
+
 # Project structure
 
 Janux is convention over configuration: every path below is **optional** and discovered by existence. Create the file and the feature turns on — there is nothing to register.
