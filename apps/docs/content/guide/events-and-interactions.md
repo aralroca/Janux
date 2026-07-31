@@ -1,3 +1,8 @@
+---
+title: Events and interactions
+description: "Events use the names you already know, with one deliberate difference: the value is a named intent, never an anonymous closure."
+---
+
 # Events and interactions
 
 Events use the names you already know — `onClick`, `onSubmit`, `onInput`, `onDoubleClick`, any DOM event — with one deliberate difference: **the value is an intent, never a closure**. There is no anonymous `onClick={() => ...}` (it is a compile-time error) — a handler is always a named, schema-typed, guard-checked intent, and delegated listeners on `document` do all the work. No component code runs until the first interaction.

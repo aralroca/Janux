@@ -1,3 +1,8 @@
+---
+title: Deploying
+description: "A Janux app in production is: Bun + your source + dist/client. No server bundle, no Node, no Vite at runtime."
+---
+
 # Deploying
 
 A Janux app in production is a **`Request → Response` function plus `dist/client`**. Which runtime calls that function is a build-time choice — an *adapter* — and nothing in `src/` depends on it.

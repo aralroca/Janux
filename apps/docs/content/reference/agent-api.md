@@ -1,3 +1,8 @@
+---
+title: Agent API
+description: "Everything importable from the agent package: model routing, the tool loop, and the embedded harness for memory, workflows, guardrails and rate limiting."
+---
+
 # Agent API
 
 Everything importable from `@janux/agent`.

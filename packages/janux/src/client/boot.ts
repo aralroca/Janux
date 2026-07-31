@@ -13,6 +13,7 @@ import { mountEagerIslands, performNavigation } from './navigate';
 import { configurePrefetch, prefetchOnHover } from './prefetch';
 import { rescopeSpeculationRules, shellNavigationConfig } from './speculation';
 import { installWebMCP } from './webmcp';
+import { installDevOverlay } from '../dev/overlay';
 
 export interface BootOptions {
   islands?: Record<string, IslandLoader>;
@@ -167,6 +168,16 @@ function installNavigation(mount: MountContext, config: NavigationConfig): void 
  * No component code executes until first interaction or agent call.
  */
 export function boot(options: BootOptions = {}): JanuxClient {
+  /*
+   * Dev only, eliminated from production builds — and installed first, and
+   * synchronously. `mountEagerIslands` runs before this function returns, so a
+   * source or effect that throws during that mount publishes its chain while
+   * boot is still executing: a dynamic import would still be in flight, nobody
+   * would be subscribed, and the startup failures this feature exists to
+   * explain would be the exact ones it missed.
+   */
+  if (import.meta.env?.DEV) installDevOverlay();
+
   const registry = createClientRegistry();
   const proposals = new Map<string, Proposal>();
   const mount: MountContext = {

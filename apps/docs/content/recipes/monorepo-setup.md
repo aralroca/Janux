@@ -1,3 +1,8 @@
+---
+title: Monorepo setup
+description: "A Janux app is a normal Bun workspace member: nothing in the framework needs to know it lives in a monorepo."
+---
+
 # Monorepo setup
 
 A Janux app is a normal Bun workspace member: nothing in the framework needs to know it lives in a monorepo. What *does* need care is where you run the CLI from, and how a shared package's islands reach the client runtime.

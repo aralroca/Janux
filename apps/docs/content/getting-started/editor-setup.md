@@ -1,3 +1,8 @@
+---
+title: Editor setup
+description: The TypeScript and editor configuration a Janux app needs — what the scaffolder writes for you, and what to add when JSX suddenly types as any.
+---
+
 # Editor setup
 
 `bun create janux` writes all of this for you. This page is what to do when you're adding Janux to an existing project — or when JSX suddenly types as `any`.

@@ -1,3 +1,8 @@
+---
+title: Outbound MCP client
+description: "Your copilot calling other people's MCP servers — the mirror image of the hosted MCP endpoint your app exposes. Guide: external MCP clients."
+---
+
 # Outbound MCP client
 
 Your copilot calling **other** people's MCP servers — the mirror image of the [hosted MCP endpoint](/docs/guide/agent-and-copilot) your app exposes. Guide: [external MCP clients](/docs/recipes/external-mcp-clients).

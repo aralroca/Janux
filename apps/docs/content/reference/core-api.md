@@ -1,3 +1,8 @@
+---
+title: Core API
+description: "Everything importable from the core package: the component and store factories, the schema builders, the signals, the renderer and the config helpers."
+---
+
 # Core API
 
 Everything importable from `janux`.

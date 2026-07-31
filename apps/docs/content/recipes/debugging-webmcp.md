@@ -1,3 +1,8 @@
+---
+title: Debugging agent tools with Chrome's WebMCP panel
+description: Chrome DevTools ships a WebMCP pane that shows every client-side tool a page exposes to AI agents, with its schema and a live call log.
+---
+
 # Debugging agent tools with Chrome's WebMCP panel
 
 Chrome DevTools ships a **WebMCP** pane (Application → WebMCP) that shows every client-side tool a page exposes to AI agents — registration, schemas and a full invocation log. Janux speaks WebMCP out of the box: `boot()` registers every tool from the manifest with `document.modelContext` and re-syncs on every SPA navigation. Zero config — you only need a Chrome that has the panel.

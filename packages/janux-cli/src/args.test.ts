@@ -15,6 +15,7 @@ describe('janux CLI args', () => {
     expect(parseArgs(['build'], '/app').command).toBe('build');
     expect(parseArgs(['start'], '/app').command).toBe('start');
     expect(parseArgs(['verify'], '/app').command).toBe('verify');
+    expect(parseArgs(['info'], '/app').command).toBe('info');
   });
 
   it('parses eval files and flags', () => {
@@ -34,6 +35,7 @@ describe('janux CLI args', () => {
     expect(parseArgs(['nope'], '/app').command).toBe('help');
     expect(parseArgs([], '/app').command).toBe('help');
     expect(HELP_TEXT).toContain('janux dev');
+    expect(HELP_TEXT).toContain('janux info');
   });
 
   it('rejects non-numeric ports', () => {

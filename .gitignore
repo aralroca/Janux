@@ -25,6 +25,5 @@ packages/janux-vercel/src/__fixtures__/app/node_modules/
 # these being here is not what keeps them out of a tarball — `files` is.
 .packed/
 .tsconfig.build.json
-.env*
 # What @janux/node writes: a self-contained deployment directory.
 build/

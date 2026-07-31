@@ -1,3 +1,8 @@
+---
+title: A copilot with a local, in-browser model
+description: "Move the whole agent loop into the visitor browser: an open-source model runs on their machine over WebGPU and calls your app real tools."
+---
+
 # A copilot with a local, in-browser model
 
 `@janux/agent/local` moves the whole agent loop into the visitor's browser: an open-source model runs on their machine (Transformers.js over WebGPU), calls your app's tools, and nothing leaves the page. It powers this site's own **Ask AI** — including on `output: "static"` deploys, where there is no server at all.

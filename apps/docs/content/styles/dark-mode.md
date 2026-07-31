@@ -1,3 +1,8 @@
+---
+title: Dark mode
+description: "Dark mode in a server-rendered app has one hard requirement: the page must arrive already correct."
+---
+
 # Dark mode
 
 Dark mode in a server-rendered app has one hard requirement: the page must arrive already correct. Anything that decides the theme in JavaScript after load produces a flash of the wrong colours.

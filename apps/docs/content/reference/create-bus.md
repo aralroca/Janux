@@ -1,3 +1,8 @@
+---
+title: createBus
+description: The event channel that connects components, stores and the server — one bus per client, created and wired for you by the runtime.
+---
+
 # createBus
 
 ```ts

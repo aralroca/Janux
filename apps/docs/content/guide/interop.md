@@ -1,3 +1,8 @@
+---
+title: Foreign-UI interop (React)
+description: A mature front-end leans on a third-party ecosystem — node-graph editors, animation libraries, data grids, PDF viewers — that doesn't mount on a foreign runtime.
+---
+
 # Foreign-UI interop (React)
 
 A mature front-end leans on a third-party ecosystem — node-graph editors, animation libraries, data grids, PDF viewers — that doesn't mount on a foreign runtime. `janux/interop` lets you **mount them unchanged**, each in a real embedded React root, while everything around them stays bifacial.
@@ -83,6 +88,8 @@ That's the whole model: Janux owns the tree, React owns its leaves, and each fil
 - A standalone foreign (outside any island) SSRs and mounts from its serialized call-site props; `on:` requires an enclosing island.
 - `react`/`react-dom` are optional peers — apps without foreign islands pay nothing.
 - Reverse interop (mounting a Janux island inside a React app) is on the roadmap.
+
+> **Where your components come from**: interop is also Janux's answer to the design-system question — the framework ships no UI primitives on purpose. See [Design system](/docs/guide/design-system) for the shadcn/Radix recipe and the pragma that will otherwise cost you an afternoon.
 
 > **What actually works**: the [interop compatibility matrix](/docs/more/interop-matrix) has one verified example per category — TanStack Table, TanStack Virtual, Recharts, dnd-kit, React Flow, react-hook-form, cmdk and Radix — with the caveats, the "no"s and the measured bundle cost of each.
 

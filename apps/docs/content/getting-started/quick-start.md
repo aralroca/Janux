@@ -1,3 +1,8 @@
+---
+title: Quick start
+description: Create a Janux app and run it, then read what the scaffolder generated — one command to a working page that already has an agent surface.
+---
+
 # Quick start
 
 ## Create an app
