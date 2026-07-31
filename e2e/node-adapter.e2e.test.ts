@@ -69,6 +69,49 @@ describe.if(BUILT)('the Node build serves the app', () => {
     );
   });
 
+  /**
+   * `capabilities.websocket: true` is the one claim Node makes that Vercel does
+   * not, and it is the claim most likely to be quietly false: `ws` reaches the
+   * bundle only if the bundler could see the specifier, and the app's `src/ws.ts`
+   * only through the generated module map.
+   */
+  it('holds a WebSocket open, the capability the adapter declares', async () => {
+    const socket = new WebSocket(`${node!.base.replace('http', 'ws')}/ws`);
+    const frames: any[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`only saw ${JSON.stringify(frames)}`)), 10_000);
+
+      socket.onmessage = (event) => {
+        frames.push(JSON.parse(String(event.data)));
+        if (frames.length === 1) socket.send('ping from the test');
+        if (frames.length === 2) {
+          clearTimeout(timer);
+          resolve();
+        }
+      };
+      socket.onerror = () => reject(new Error('the WebSocket never connected'));
+    });
+    socket.close();
+
+    expect(frames[0]).toMatchObject({ type: 'welcome' });
+    expect(frames[1]).toMatchObject({ type: 'echo', text: 'ping from the test' });
+    // The handler runs in the deployment, so it reports the deployment's runtime.
+    expect(frames[1].runtime).toStartWith('Node ');
+  }, TIMEOUT);
+
+  it('closes an upgrade on a path it has no handler for, instead of leaking the socket', async () => {
+    const socket = new WebSocket(`${node!.base.replace('http', 'ws')}/nope`);
+
+    await expect(
+      new Promise((resolve, reject) => {
+        socket.onerror = () => reject(new Error('refused'));
+        socket.onopen = () => resolve('opened');
+        setTimeout(() => resolve('left hanging'), 5_000);
+      }),
+    ).rejects.toThrow('refused');
+  }, TIMEOUT);
+
   it('serves the built client compressed, with the content type the browser needs', async () => {
     const response = await fetch(`${node!.base}/client.js`, { headers: { 'accept-encoding': 'br, gzip' } });
 

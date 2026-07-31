@@ -5,6 +5,7 @@ The same Janux app, served by Node instead of Bun. Nothing in `src/` mentions ei
 - **One adapter, one command** — `janux build` produces the client, `janux-node` turns it into a `build/` directory. `node build/index.js` serves it.
 - **Nothing to install on the box** — `build/` holds the bundled server, the client assets and the app's source tree. No `node_modules`, no install step, because there is nothing left to resolve.
 - **The whole app survives the move** — SSR, island hydration, `api()` RPC, the agent manifest and the CSRF guard on the invocation pipeline all work exactly as they do under Bun. The page proves it: the click counter only moves if the island hydrated from the bundle Node served.
+- **WebSockets included** — `src/ws.ts` works, which among the shipped adapters is true of Bun and Node only. The `ws` implementation is bundled in, so the deployment stays install-free.
 - **Node 24+** — the adapter declares it, and `@janux/node` uses no API newer than that.
 
 ```bash
@@ -21,10 +22,17 @@ node build/index.js                  # production on Node (PORT=3000 by default)
 
 ```
 build/index.js          # the launcher you run
-build/.janux/index.js   # the bundled server — every app module inlined
+build/.janux/index.js   # the bundled server — every app module inlined, `ws` included
 build/dist/client/      # the client bundle and stylesheet, served with cache headers + brotli
 build/src/              # the app's source: the router reads it to learn which URLs exist
 build/package.json      # {"type":"module"} — without it Node reads the bundle as CommonJS
+```
+
+The WebSocket endpoint answers on `/ws` and reports the runtime that handled each frame:
+
+```bash
+node -e "const s=new WebSocket('ws://localhost:3000/ws');s.onmessage=e=>console.log(e.data)"
+# {"type":"welcome","runtime":"Node 24.…"}
 ```
 
 Copy that directory to any box with Node 24+ and run it. A container is the same idea:

@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-4018%20passing-brightgreen" alt="4018 tests passing" />
+  <img src="https://img.shields.io/badge/tests-4021%20passing-brightgreen" alt="4021 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -74,7 +74,7 @@ bunx create-janux my-app
 cd my-app && bun install && bun run dev
 ```
 
-Requires [Bun](https://bun.sh) ≥ 1.3 — the dev server, the build and the production server all run on it.
+Requires [Bun](https://bun.sh) ≥ 1.3 for the dev server and the build. Production is a choice: Bun, [Node 24+](https://janux.build/docs/recipes/deploying) via `@janux/node`, Vercel, or a static export — same app, one adapter.
 
 Or add the pieces to an existing workspace:
 

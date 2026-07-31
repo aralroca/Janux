@@ -21,7 +21,7 @@ A ❌ is not something you discover in production: an adapter *declares* what it
 The one people ask for first, because it means no Bun on the box:
 
 ```bash
-bun install
+bun add @janux/node    # the adapter is a dependency of the app, like @janux/vercel
 bun run build          # the client bundle — Vite, as always
 bunx janux-node        # → build/
 node build/index.js    # PORT=3000 by default
@@ -46,6 +46,8 @@ CMD ["node", "index.js"]
 ```
 
 Apps that read their own files at runtime pass them along: `bunx janux-node --include content`.
+
+`src/ws.ts` works here and nowhere else among the shipped adapters: the `ws` implementation is bundled in, so a WebSocket app stays as install-free as any other.
 
 > **Note:** the **build** still runs under Bun — Vite, `@swc/core` and the bundler are build tooling. What Node has to run is the output. A CI image with Bun and a production image with Node is the intended shape, and the two never have to be the same machine.
 

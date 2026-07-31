@@ -212,6 +212,10 @@ Mirror `@janux/node`:
 - a `bin` that calls `runAdapter`, so users run `bunx janux-myplatform` after `janux build`;
 - `engines` naming the runtime version you actually support.
 
+The app installs your adapter as a dependency — the generated entry imports it by name, so it has to resolve at build time.
+
+> **Warning:** anything your runtime code needs must be **statically importable**, or the bundler cannot see it and your output ships an import the deployment cannot resolve. `@janux/node` learned this the hard way: it reached `ws` through a variable specifier (`const M = 'ws'; await import(M)`), the bundle looked fine, every page rendered, and WebSockets died on connect. A test that scans the bundle for any specifier that is neither relative nor `node:` is worth more than it costs.
+
 The build runs under Bun — Vite, SWC and the bundler are build tooling. Only the **runtime** is your platform's, which is the whole point: the machine that builds and the machine that serves do not have to be the same kind of machine.
 
 ## Testing it

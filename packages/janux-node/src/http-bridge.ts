@@ -95,6 +95,11 @@ export async function writeResponse(response: Response, outgoing: ServerResponse
 
   try {
     for (;;) {
+      // Checked here as well as on 'close': a client that hung up before the
+      // listener was attached never fires it, and the loop would spin pulling
+      // chunks into a dead socket forever.
+      if (outgoing.destroyed) break;
+
       const { done, value } = await reader.read();
 
       if (done) break;

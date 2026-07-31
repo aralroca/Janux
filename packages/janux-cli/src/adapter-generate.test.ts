@@ -55,6 +55,38 @@ describe('generateApp', () => {
   });
 });
 
+/**
+ * `src/ws.ts` was the one conventional module the generator forgot, on both
+ * counts: it was not in the module map, and its path was emitted as the build
+ * machine's. It went unnoticed because the only adapter that existed could not
+ * hold a socket open anyway — `@janux/node` can, and declares that it does.
+ */
+describe('generateApp — the WebSocket module', () => {
+  function appWithWs(): string {
+    const root = mkdtempSync(join(tmpdir(), 'janux-adapter-ws-'));
+
+    mkdirSync(join(root, 'src/routes'), { recursive: true });
+    writeFileSync(join(root, 'src/routes/index.tsx'), 'export default () => null;');
+    writeFileSync(join(root, 'src/ws.ts'), "export default { path: '/ws' };\n");
+
+    return root;
+  }
+
+  it('is one of the modules the bundle inlines', async () => {
+    const root = appWithWs();
+
+    expect(appModules(await resolveAppConfig(root))).toContain(join(root, 'src/ws.ts'));
+  });
+
+  it('has its path rebuilt at runtime, not frozen to the build machine', async () => {
+    const root = appWithWs();
+    const source = generateApp(root, await resolveAppConfig(root));
+
+    expect(source).toContain('websocketModule: path("src/ws.ts")');
+    expect(source).not.toContain(root);
+  });
+});
+
 describe('bundlerPath', () => {
   /**
    * The bundler is spawned as a sibling file, and what that sibling is called

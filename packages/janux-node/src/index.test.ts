@@ -74,12 +74,26 @@ describe('node().adapt', () => {
     expect(JSON.parse(await readFile(join(BUILD, 'package.json'), 'utf8'))).toEqual({ type: 'module' });
   });
 
-  it('leaves no bare specifier for a box with no node_modules to resolve', async () => {
+  /**
+   * The general form, because the specific form missed the one that mattered:
+   * `ws` reached the bundle through a *variable* specifier, which no bundler can
+   * see, so `build/` shipped an import no deployment could resolve — every page
+   * rendered and WebSockets died on connect. Anything that is not a `node:`
+   * builtin has to be inlined.
+   */
+  it('leaves no import a box with no node_modules could fail to resolve', async () => {
     const bundle = await readFile(join(BUILD, '.janux/index.js'), 'utf8');
+    const specifiers = [...bundle.matchAll(/(?:\bfrom|\brequire\s*\(|\bimport\s*\()\s*["']([^"']+)["']/g)].map((match) => match[1]!);
+    const external = [...new Set(specifiers)].filter((name) => !name.startsWith('node:') && !name.startsWith('.') && !name.startsWith('/'));
 
-    expect(bundle).not.toContain("from '@janux/server'");
-    expect(bundle).not.toContain("from 'janux'");
-    expect(bundle).not.toContain("from '@janux/cli'");
+    expect(external).toEqual([]);
+  });
+
+  it('carries the app WebSocket module, which only reaches the bundle through the generated map', async () => {
+    const generated = await readFile(join(APP, '.janux/app.ts'), 'utf8');
+
+    expect(generated).toContain('websocketModule: path("src/ws.ts")');
+    expect(generated).toContain("from '../src/ws'");
   });
 });
 

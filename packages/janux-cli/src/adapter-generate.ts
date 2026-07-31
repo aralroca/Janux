@@ -26,6 +26,7 @@ const PATH_FIELDS = new Set([
   'middlewareModule',
   'ctxModule',
   'matchersModule',
+  'websocketModule',
   'httpHandlersDir',
   'stylesheet',
 ]);
@@ -47,7 +48,15 @@ export function appModules(app: JanuxAppConfig): string[] {
   // them — and a bundled function that cannot import them has no error pages.
   const errorPages = Object.values(router?.errorPages ?? {});
   const routes = [...found.flatMap((route) => [route.filePath, ...route.layouts]), ...errorPages];
-  const singles = [app.agentModule, app.storesModule, app.i18nModule, app.middlewareModule, app.ctxModule, app.matchersModule];
+  const singles = [
+    app.agentModule,
+    app.storesModule,
+    app.i18nModule,
+    app.middlewareModule,
+    app.ctxModule,
+    app.matchersModule,
+    app.websocketModule,
+  ];
   const handlers = app.httpHandlersDir ? walkFiles(app.httpHandlersDir) : [];
 
   return [...new Set([...routes, ...apiFiles(app.serverDir), ...handlers, ...singles].filter(Boolean) as string[])];

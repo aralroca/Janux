@@ -25,7 +25,7 @@ import { prodServerOptions, type PrebuiltApp } from './prod';
  * than something each adapter reimplements: compression, caching headers and
  * content types included.
  */
-export { staticResponse, cacheControl, contentType } from './static-assets';
+export { staticResponse } from './static-assets';
 
 /**
  * An app whose modules were resolved at build time, plus the root the *running*

@@ -58,6 +58,14 @@ async function write(path: string, contents: string): Promise<void> {
 }
 
 export function createAdapterBuilder(root: string, config: JanuxAppConfig, name: string): AdapterBuilder {
+  const copyDir = (from: string, to: string): boolean => {
+    if (!existsSync(join(root, from))) return false;
+    mkdirSync(join(root, to), { recursive: true });
+    cpSync(join(root, from), join(root, to), { recursive: true });
+
+    return true;
+  };
+
   return {
     root,
     config,
@@ -79,20 +87,14 @@ export function createAdapterBuilder(root: string, config: JanuxAppConfig, name:
 
     write: (path, contents) => write(join(root, path), contents),
 
-    copyDir: (from, to) => {
-      if (!existsSync(join(root, from))) return false;
-      mkdirSync(join(root, to), { recursive: true });
-      cpSync(join(root, from), join(root, to), { recursive: true });
+    copyDir,
 
-      return true;
-    },
-
+    // The same copy, except a missing client is not an optional extra: it means
+    // `janux build` never ran, and the deployment would ship pages with no JS.
     copyClient: (to) => {
-      const from = join(root, 'dist/client');
-
-      if (!existsSync(from)) throw new Error(`${name}: ${from} is missing — run \`janux build\` first`);
-      mkdirSync(join(root, to), { recursive: true });
-      cpSync(from, join(root, to), { recursive: true });
+      if (!copyDir('dist/client', to)) {
+        throw new Error(`${name}: ${join(root, 'dist/client')} is missing — run \`janux build\` first`);
+      }
     },
 
     log: (message) => console.log(`${name}: ${message}`),

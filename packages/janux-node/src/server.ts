@@ -10,7 +10,13 @@ import { createServer, type Server } from 'node:http';
 import type { Duplex } from 'node:stream';
 import type { IncomingMessage } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { adoptSocket, createWebSocketServer, matchesPath, type NodeWebSocketServer } from '@janux/server/node-websocket';
+// Statically, not through `@janux/server/node-websocket`'s dynamic import: that
+// one keeps `ws` optional for `janux dev`, where Bun provides it natively. Here
+// the specifier has to be visible to the bundler, or `build/` ships an import
+// no deployment can resolve — and the app's WebSockets die on connect while
+// every page still renders.
+import { WebSocketServer } from 'ws';
+import { adoptSocket, matchesPath } from '@janux/server/node-websocket';
 import type { JanuxRequestHandler } from '@janux/cli/adapter';
 import type { WebSocketConfig } from '@janux/server';
 import { toRequest, writeResponse } from './http-bridge';
@@ -33,14 +39,21 @@ export interface NodeServer {
   close(): Promise<void>;
 }
 
-/** Upgrades on the app's path; every other upgrade is left alone rather than destroyed. */
+/**
+ * Upgrades on the app's path, and closes every other one.
+ *
+ * Node destroys an unhandled upgrade socket only while the server has *no*
+ * 'upgrade' listener; attaching this one makes that our job, and ignoring a
+ * request we will never answer leaks the connection until the client gives up.
+ * (`janux dev` is the opposite case and rightly ignores them: Vite's own HMR
+ * listener is on the same server.)
+ */
 function attachWebSocket(server: Server, config: WebSocketConfig): void {
-  let wssPromise: Promise<NodeWebSocketServer> | undefined;
-  const wss = () => (wssPromise ??= createWebSocketServer());
+  const wss = new WebSocketServer({ noServer: true });
 
-  server.on('upgrade', async (req: IncomingMessage, socket: Duplex, head: Buffer) => {
-    if (!matchesPath(req, config.path)) return;
-    (await wss()).handleUpgrade(req, socket, head, (client: any) => adoptSocket(client, req, config));
+  server.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+    if (!matchesPath(req, config.path)) return void socket.destroy();
+    wss.handleUpgrade(req, socket, head, (client) => adoptSocket(client, req, config));
   });
 }
 
@@ -60,8 +73,15 @@ export async function createNodeServer({
 
   if (websocket) attachWebSocket(server, websocket);
   await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(port, hostname, resolve);
+    const failed = (error: Error) => reject(error);
+
+    server.once('error', failed);
+    // The listener is removed once bound: leaving it attached would quietly
+    // swallow a later server error into an already-settled promise.
+    server.listen(port, hostname, () => {
+      server.off('error', failed);
+      resolve();
+    });
   });
 
   const bound = (server.address() as AddressInfo).port;
