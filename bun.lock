@@ -831,6 +831,7 @@
       "dependencies": {
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
+        "@janux/node": "workspace:*",
         "@janux/server": "workspace:*",
         "@janux/tailwind": "workspace:*",
         "@janux/vercel": "workspace:*",

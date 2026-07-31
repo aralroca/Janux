@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-3910%20passing-brightgreen" alt="3910 tests passing" />
+  <img src="https://img.shields.io/badge/tests-4018%20passing-brightgreen" alt="4018 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -219,12 +219,13 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 | [`@janux/server`](packages/janux-server) | api() RPC, file-system router (layouts, groups, matchers, middleware), HTTP handlers + uploads, HTML shell, `/_janux/*` endpoints incl. the hosted MCP + `.md` projections, llms.txt, Web Bot Auth |
 | [`@janux/agent`](packages/janux-agent) | Model resolution, providers, the tool loop with turn continuation, and the embedded harness: memory (in-memory/Postgres), durable workflows, guardrail processors, rate limiting (in-memory/Redis), attachments, outbound MCP client |
 | [`@janux/vite`](packages/janux-vite) | Vite plugin (SWC api stubs, SSR bridge) |
-| [`@janux/cli`](packages/janux-cli) | `janux dev / build / start / verify / eval` |
+| [`@janux/cli`](packages/janux-cli) | `janux dev / build / start / verify / eval`, plus the adapter API third-party deploy targets are written against |
+| [`@janux/node`](packages/janux-node) · [`@janux/vercel`](packages/janux-vercel) | Deployment adapters: a self-contained `build/` for any Node 24+ host, and a Build Output API directory for Vercel |
 | [`create-janux`](packages/create-janux) | Scaffolder |
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 85 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 86 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|

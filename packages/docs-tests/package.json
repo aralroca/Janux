@@ -10,7 +10,8 @@
     "@janux/vite": "workspace:*",
     "@janux/cli": "workspace:*",
     "@janux/tailwind": "workspace:*",
-    "@janux/vercel": "workspace:*"
+    "@janux/vercel": "workspace:*",
+    "@janux/node": "workspace:*"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^18.0.0",

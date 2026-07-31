@@ -1,10 +1,67 @@
 # Deploying
 
-A Janux app in production is: **Bun + your source + `dist/client`**. No server bundle, no Node, no Vite at runtime.
+A Janux app in production is a **`Request → Response` function plus `dist/client`**. Which runtime calls that function is a build-time choice — an *adapter* — and nothing in `src/` depends on it.
 
-## Containers
+## Adapters
 
-One stage: install, `bun run build`, `bun run start`. The full Dockerfile — with the `.dockerignore` it needs, a healthcheck that works without `curl`, and measured image sizes — lives in [Docker](/docs/recipes/docker). It runs as-is on Fly.io, Railway, Render, a VPS — anything that runs a container.
+| Target | Adapter | Command | WebSockets | Streaming | Filesystem |
+|---|---|---|---|---|---|
+| **Bun** | built in | `bun run build && bun run start` | ✅ | ✅ | ✅ |
+| **Node 24+** | `@janux/node` | `bun run build && bunx janux-node` → `node build/index.js` | ✅ | ✅ | ✅ |
+| **Vercel** | `@janux/vercel` | `bun run build && bunx janux-vercel` | ❌ serverless | ✅ | ✅ `/tmp` |
+| **Any static host** | `output: "static"` | `bun run build` → upload `dist/client` | ❌ | — | ❌ |
+| Cloudflare, Netlify, Deno | *not shipped* | [write one](/docs/recipes/adapters) | — | — | — |
+
+Bun and Node are full parity: same app, same features, different `node_modules`. Vercel trades WebSockets for a CDN and zero servers. `output: "static"` gives up the server entirely.
+
+A ❌ is not something you discover in production: an adapter *declares* what it supports, and `janux build` prints the app features a missing capability disables.
+
+### Node
+
+The one people ask for first, because it means no Bun on the box:
+
+```bash
+bun install
+bun run build          # the client bundle — Vite, as always
+bunx janux-node        # → build/
+node build/index.js    # PORT=3000 by default
+```
+
+`build/` is self-contained — copy that directory anywhere with Node 24+ and run it. There is no install step, because there is nothing left to resolve:
+
+```
+build/index.js          # the launcher
+build/.janux/index.js   # the bundled server: every app module inlined
+build/dist/client/      # client bundle + stylesheet, served with cache headers and brotli
+build/src/              # the app's source — the router reads it to learn which URLs exist
+build/package.json      # {"type":"module"}
+```
+
+```dockerfile
+FROM node:24-slim
+WORKDIR /app
+COPY build ./
+ENV PORT=3000
+CMD ["node", "index.js"]
+```
+
+Apps that read their own files at runtime pass them along: `bunx janux-node --include content`.
+
+> **Note:** the **build** still runs under Bun — Vite, `@swc/core` and the bundler are build tooling. What Node has to run is the output. A CI image with Bun and a production image with Node is the intended shape, and the two never have to be the same machine.
+
+Working example: [`examples/with-node-adapter`](https://github.com/aralroca/Janux/tree/main/examples/with-node-adapter).
+
+### Bun
+
+The default, and still the shortest path: `janux start` serves `dist/client` and the app from one process, WebSockets included. One stage — install, `bun run build`, `bun run start`. The full Dockerfile, with the `.dockerignore` it needs, a healthcheck that works without `curl`, and measured image sizes, lives in [Docker](/docs/recipes/docker). It runs as-is on Fly.io, Railway, Render, a VPS — anything that runs a container.
+
+### Vercel
+
+[Vercel](/docs/recipes/vercel) has its own page: the adapter writes a Build Output API directory, so the platform builds nothing and traces nothing.
+
+### Something else
+
+The adapter API is public and documented: [Writing an adapter](/docs/recipes/adapters) is enough to target Cloudflare, Netlify, Deno or your own infrastructure without reading Janux's source. The runtime contract is one function, and every platform above already speaks it.
 
 ## Environment checklist
 
@@ -12,6 +69,7 @@ One stage: install, `bun run build`, `bun run start`. The full Dockerfile — wi
 |---|---|
 | `JANUX_MODEL` or one provider API key | Only if you want the copilot live (without it the agent answers a setup card — the app itself works) |
 | `PORT` | Optional, defaults to 3000 |
+| `HOST` | Optional; `@janux/node` binds every interface without it |
 | Your own secrets (DB urls, etc.) | Read them in `ctxFor` / api modules as usual |
 
 ## What to check after deploy
@@ -65,7 +123,7 @@ Every record becomes a prerendered page (`{ section: 'guide', slug: 'getting-sta
 
 ### What you give up
 
-A static export is HTML + islands only. Everything under `/_janux/*` needs the server: `api()` endpoints, the manifest, proposals/approvals and the copilot. If your app uses those, ship a server instead ([Docker](/docs/recipes/docker)) — `output: "static"` is for sites, not apps.
+A static export is HTML + islands only. Everything under `/_janux/*` needs the server: `api()` endpoints, the manifest, proposals/approvals and the copilot. If your app uses those, ship a server instead — Bun, Node or Vercel above — `output: "static"` is for sites, not apps.
 
 ## Scaling notes
 
