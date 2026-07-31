@@ -1,5 +1,5 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { applyScrollPlan, rememberScroll, scrollPlanFor } from './scroll';
 
 beforeAll(() => GlobalRegistrator.register({ url: 'http://localhost:3000/list' }));
@@ -18,6 +18,16 @@ beforeEach(() => {
   Object.defineProperty(window, 'scrollY', { configurable: true, value: 0, writable: true });
   document.body.innerHTML = '';
   history.replaceState({}, '', '/list');
+  delete (window as any).navigation;
+});
+
+/*
+ * The window is global to the whole test process, and the stub above is a
+ * `navigation` without `addEventListener` — exactly the shape `boot()` refuses
+ * to survive. Leaving it behind takes down every suite that boots after this
+ * file, which is a failure CI sees and a single-file run never does.
+ */
+afterEach(() => {
   delete (window as any).navigation;
 });
 
