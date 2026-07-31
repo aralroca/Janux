@@ -1,3 +1,8 @@
+---
+title: Forms
+description: "A form is one intent: the submitted fields become its input, validated against its schema, guarded like any action, and callable with no form at all."
+---
+
 # Forms
 
 A form is one intent. Put `onSubmit={...}` on the `<form>` and the submitted fields become the intent's input — validated against its schema, guarded like any other action, and callable by an agent without a form at all.

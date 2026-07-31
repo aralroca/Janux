@@ -131,6 +131,20 @@ export interface SourceDef {
   description?: string;
   query: (bag: { ctx: Ctx }) => unknown;
   refresh?: RefreshPolicy;
+  /**
+   * How long the loaded value counts as fresh (`'30s'`, `'5m'`, or ms). A
+   * refresh trigger — an interval tick or a bus event — that arrives inside the
+   * window is skipped, so a burst of events costs one query. An explicit
+   * `sources.x.refresh()` always runs: asking is not a policy decision.
+   */
+  staleTime?: string | number;
+  /**
+   * How long a stale value may still be shown while it revalidates. Past
+   * `staleTime + swr` the value is withheld and the reader reports `pending`
+   * again — the same arithmetic a route's `cachePolicy` and a `useQuery` use.
+   * Absent means a stale value is shown indefinitely (the default).
+   */
+  swr?: string | number;
 }
 
 export interface LifecycleDef {

@@ -1,3 +1,8 @@
+---
+title: Cross-island communication
+description: "Three tools, in order of preference: stores for shared state, events for notifications, the bridge for agent-side observation."
+---
+
 # Cross-island communication
 
 Three tools, in order of preference: **stores** for shared state, **events** for notifications, the **bridge** for agent-side observation.

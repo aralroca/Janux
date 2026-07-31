@@ -1,3 +1,7 @@
+---
+title: Observability with Sentry
+description: Wire instrumentation.ts to Sentry via OpenTelemetry — spans, errors and PII redaction — in one register().
+---
 # Observability with Sentry
 
 Sentry is an OpenTelemetry backend, so wiring it up is the same two lines that wire up Datadog, Grafana or a bare OTLP collector. What is *not* the same is what Janux puts in the trace: the guard that decided, and whether a human or an agent was asking.

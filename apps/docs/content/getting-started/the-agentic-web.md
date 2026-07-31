@@ -1,3 +1,8 @@
+---
+title: The Agentic Web
+description: "The web has a second audience: AI agents now read, plan and act on the same pages people click. Janux is built for the web both can operate."
+---
+
 # The Agentic Web
 
 The web has a second audience. People still click, but AI agents now read, plan and act on the same pages — from MCP clients like Claude or Cursor, from agentic browsers, and from the copilot inside your own product. **The Agentic Web is the web both audiences can operate.**

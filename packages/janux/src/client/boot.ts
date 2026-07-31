@@ -1,4 +1,5 @@
 import { createBus } from '../runtime/bus';
+import { hydrateQueries } from './query-payload';
 import type { ComponentDef } from '../define/types';
 import type { ForeignDef } from '../interop';
 import type { AuditEntry, Proposal } from '../runtime/intents';
@@ -10,9 +11,11 @@ import { enableAgentGlow, type GlowOptions } from './glow';
 import { installI18n } from './i18n';
 import type { NavigationConfig } from '../config';
 import { mountEagerIslands, performNavigation } from './navigate';
+import { captureNonce } from './nonce';
 import { configurePrefetch, prefetchOnHover } from './prefetch';
 import { rescopeSpeculationRules, shellNavigationConfig } from './speculation';
 import { installWebMCP } from './webmcp';
+import { installDevOverlay } from '../dev/overlay';
 
 export interface BootOptions {
   islands?: Record<string, IslandLoader>;
@@ -167,6 +170,16 @@ function installNavigation(mount: MountContext, config: NavigationConfig): void 
  * No component code executes until first interaction or agent call.
  */
 export function boot(options: BootOptions = {}): JanuxClient {
+  /*
+   * Dev only, eliminated from production builds — and installed first, and
+   * synchronously. `mountEagerIslands` runs before this function returns, so a
+   * source or effect that throws during that mount publishes its chain while
+   * boot is still executing: a dynamic import would still be in flight, nobody
+   * would be subscribed, and the startup failures this feature exists to
+   * explain would be the exact ones it missed.
+   */
+  if (import.meta.env?.DEV) installDevOverlay();
+
   const registry = createClientRegistry();
   const proposals = new Map<string, Proposal>();
   const mount: MountContext = {
@@ -184,11 +197,17 @@ export function boot(options: BootOptions = {}): JanuxClient {
     },
   };
 
+  // Before anything can navigate: a navigation's markup carries the next
+  // response's nonce, and this document's CSP only accepts the one it shipped with.
+  captureNonce();
   Object.entries(options.islands ?? {}).forEach(([name, loader]) => {
     registry.loaders.set(name, loader);
   });
   (options.defs ?? []).forEach((def) => registerDef(registry, def));
   readSnapshots(mount);
+  // Before anything can observe a query: what SSR already fetched is in the
+  // payload, so an island resuming here must not ask for it a second time.
+  hydrateQueries();
   installI18n(mount.ctx);
   listen(mount, (work) => trackInflight(mount, work));
   if (options.glow) enableAgentGlow(options.glow === true ? {} : options.glow);

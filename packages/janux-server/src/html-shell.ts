@@ -5,8 +5,9 @@ import {
   type NavigationConfig,
   type PageMeta,
 } from 'janux';
+import type { QueryClient } from 'janux/query';
 import { headTags } from './head-tags';
-import { safeAttr, safeJson } from './html-escape';
+import { nonceAttr, safeAttr, safeJson } from './html-escape';
 
 export interface ShellI18n {
   locale: string;
@@ -37,6 +38,8 @@ export interface ShellOptions {
   i18n?: ShellI18n;
   /** `navigation` from the app config: reaches the client through the shell. */
   navigation?: NavigationConfig;
+  /** Query hydration payload for this chunk — see `queryPayloadScript`. Absent when the page ran no queries. */
+  queryScript?: string;
   /**
    * The response answers a client navigation (`x-janux-navigation`), so the
    * speculation rules ship already narrowed to `[data-native]` links — the
@@ -44,6 +47,12 @@ export interface ShellOptions {
    * pass be a no-op instead of making the browser drop its candidates.
    */
   navigating?: boolean;
+  /**
+   * CSP nonce for this response. Every inline script and style the shell emits
+   * carries it, so an app can serve a `script-src` that names the nonce and
+   * nothing else. Absent ⇒ no attribute anywhere, byte-identical to before.
+   */
+  nonce?: string;
 }
 
 /*
@@ -52,15 +61,46 @@ export interface ShellOptions {
  * silently morphs one script into another (a snapshot's JSON becoming the
  * runtime's, say). Keyed, they are matched by identity or inserted.
  */
-function stateScripts(snapshots: ShellOptions['snapshots']): string {
+function stateScripts(snapshots: ShellOptions['snapshots'], nonce?: string): string {
+  const cspAttr = nonceAttr(nonce);
+
   return snapshots
     .map((snapshot) => {
       const payload = safeJson({ state: snapshot.state, sources: snapshot.sources ?? {} });
       const uri = safeAttr(snapshot.uri);
 
-      return `<script type="application/janux+state" key="state:${uri}" data-uri="${uri}">${payload}</script>`;
+      return `<script type="application/janux+state" key="state:${uri}" data-uri="${uri}"${cspAttr}>${payload}</script>`;
     })
     .join('\n');
+}
+
+/**
+ * What SSR already knows about the page's queries, as a script the client
+ * drains. Two things travel: `entries`, the data SSR resolved (so the client
+ * renders it without asking for it again), and `expect`, the hashes of queries
+ * still in flight when this chunk went out (so an observer of one of them waits
+ * for the stream instead of starting the same request).
+ *
+ * `sent` is filled as entries are emitted, so a later chunk only carries what
+ * the earlier ones could not — the same bookkeeping `shellEpilogueRest` does
+ * for snapshots.
+ *
+ * Returns `''` when there is nothing to say, which is every page that runs no
+ * queries: the mechanism costs those pages not one byte.
+ */
+export function queryPayloadScript(client: QueryClient | undefined, sent: Set<string>, nonce?: string): string {
+  if (!client) return '';
+  const entries = Object.entries(client.dehydrate()).filter(([hash]) => !sent.has(hash));
+  const expected = client.inFlightHashes().filter((hash) => !sent.has(hash));
+
+  if (entries.length === 0 && expected.length === 0) return '';
+  entries.forEach(([hash]) => sent.add(hash));
+  const payload = safeJson({ entries: Object.fromEntries(entries), expect: expected });
+
+  // Self-removing so the navigation diff re-executes it on the next page
+  // instead of morphing the JSON of one payload into another — the same reason
+  // the suspense call scripts remove themselves.
+  return `<script key="jx-query:${sent.size}"${nonceAttr(nonce)}>(window.__JANUX_QUERY__=window.__JANUX_QUERY__||[]).push(${payload});document.currentScript.remove()</script>`;
 }
 
 /**
@@ -76,16 +116,17 @@ function stateScripts(snapshots: ShellOptions['snapshots']): string {
 function navigationScripts(options: Omit<ShellOptions, 'html'>): string {
   const config = options.navigation;
   const rules = speculationRules(config?.speculationRules ?? true, { nativeOnly: options.navigating });
+  const cspAttr = nonceAttr(options.nonce);
   const scripts = rules
     ? [
-        `<script type="speculationrules" key="${SPECULATION_SCRIPT_ID}" id="${SPECULATION_SCRIPT_ID}">${safeJson(rules)}</script>`,
+        `<script type="speculationrules" key="${SPECULATION_SCRIPT_ID}" id="${SPECULATION_SCRIPT_ID}"${cspAttr}>${safeJson(rules)}</script>`,
       ]
     : [];
 
   // Only when it says something: the defaults live in the client.
   if (config && Object.keys(config).length > 0) {
     scripts.push(
-      `<script type="application/janux+config" key="${CONFIG_SCRIPT_ID}" id="${CONFIG_SCRIPT_ID}">${safeJson({ navigation: config })}</script>`,
+      `<script type="application/janux+config" key="${CONFIG_SCRIPT_ID}" id="${CONFIG_SCRIPT_ID}"${cspAttr}>${safeJson({ navigation: config })}</script>`,
     );
   }
 
@@ -98,9 +139,11 @@ function runtimeScripts(options: Omit<ShellOptions, 'html'>): string {
     options.islandNames.map((name) => [name, options.islandModules?.[name] ?? '']),
   );
 
+  const cspAttr = nonceAttr(options.nonce);
+
   return [
-    `<script key="jx-islands">window.__JANUX_ISLANDS__=${safeJson(modules)}</script>`,
-    options.runtimeUrl ? `<script type="module" key="jx-runtime" src="${options.runtimeUrl}"></script>` : '',
+    `<script key="jx-islands"${cspAttr}>window.__JANUX_ISLANDS__=${safeJson(modules)}</script>`,
+    options.runtimeUrl ? `<script type="module" key="jx-runtime" src="${options.runtimeUrl}"${cspAttr}></script>` : '',
   ].join('\n');
 }
 
@@ -121,13 +164,14 @@ export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
   // Inlined CSS takes the same `jx-style-N` ids as the links it replaces: the
   // diff keys on the id, not on the element name.
   const links = options.stylesheets ?? [];
+  const cspAttr = nonceAttr(options.nonce);
   const styleLinks = [
     ...links.map((href, index) => `<link rel="stylesheet" id="jx-style-${index}" href="${safeAttr(href)}">`),
     // `</style` is the only sequence that can end the element early; a backslash
     // before the slash is valid inside a CSS string, where such text can appear.
     ...(options.inlineStyles ?? []).map(
       (css, index) =>
-        `<style id="jx-style-${links.length + index}">${css.replace(/<\/(?=style)/gi, '<\\/')}</style>`,
+        `<style id="jx-style-${links.length + index}"${cspAttr}>${css.replace(/<\/(?=style)/gi, '<\\/')}</style>`,
     ),
   ].join('');
   const description = options.description
@@ -147,6 +191,7 @@ export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
     siteUrl: options.siteUrl,
     title: options.title,
     description: options.description,
+    nonce: options.nonce,
   });
 
   return [
@@ -163,7 +208,7 @@ export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
 
 function i18nScript(options: Omit<ShellOptions, 'html'>): string {
   return options.i18n?.payload
-    ? `<script type="application/janux+i18n" key="jx-i18n" id="jx-i18n">${safeJson(options.i18n.payload)}</script>`
+    ? `<script type="application/janux+i18n" key="jx-i18n" id="jx-i18n"${nonceAttr(options.nonce)}>${safeJson(options.i18n.payload)}</script>`
     : '';
 }
 
@@ -174,7 +219,8 @@ function i18nScript(options: Omit<ShellOptions, 'html'>): string {
 export function shellEpilogue(options: Omit<ShellOptions, 'html'>): string {
   return [
     i18nScript(options),
-    options.islandNames.length > 0 ? stateScripts(options.snapshots) : '',
+    options.islandNames.length > 0 ? stateScripts(options.snapshots, options.nonce) : '',
+    options.queryScript ?? '',
     navigationScripts(options),
     runtimeScripts(options),
     '</body>',
@@ -195,11 +241,12 @@ export function shellEpilogue(options: Omit<ShellOptions, 'html'>): string {
  */
 export function shellInterlude(options: Omit<ShellOptions, 'html'>): string {
   const kick = options.runtimeUrl
-    ? `<script key="jx-runtime-eager" id="jx-runtime-eager">import(${safeJson(options.runtimeUrl)})</script>`
+    ? `<script key="jx-runtime-eager" id="jx-runtime-eager"${nonceAttr(options.nonce)}>import(${safeJson(options.runtimeUrl)})</script>`
     : '';
 
   return [
-    options.islandNames.length > 0 ? stateScripts(options.snapshots) : '',
+    options.islandNames.length > 0 ? stateScripts(options.snapshots, options.nonce) : '',
+    options.queryScript ?? '',
     navigationScripts(options),
     runtimeScripts(options),
     kick,
@@ -218,7 +265,8 @@ export function shellEpilogueRest(options: Omit<ShellOptions, 'html'>, emittedUr
 
   return [
     i18nScript(options),
-    options.islandNames.length > 0 ? stateScripts(rest) : '',
+    options.islandNames.length > 0 ? stateScripts(rest, options.nonce) : '',
+    options.queryScript ?? '',
     '</body>',
     '</html>',
   ]

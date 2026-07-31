@@ -2,7 +2,7 @@ import diff from 'diff-dom-streaming';
 import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { scanMarkers, scanTree } from './events';
-import { consumePrefetched, navigableBody, NAVIGATION_HEADERS } from './prefetch';
+import { consumePrefetched, navigableBody, NAVIGATION_HEADERS, type NavigablePage } from './prefetch';
 import { runScriptsWhileStreaming } from './scripts';
 import { rescopeSpeculationRules } from './speculation';
 
@@ -180,19 +180,19 @@ async function sweepStaleInstances(mount: MountContext): Promise<void> {
  * byte. (It used to be buffered into one chunk; that is a whole page's latency
  * spent looking at the previous one.)
  */
-async function fetchPage(url: string, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>> {
+async function fetchPage(url: string, signal?: AbortSignal): Promise<NavigablePage> {
   const cached = await consumePrefetched(url);
 
   // The contract: the returned stream dies with the navigation's signal. A
   // fresh fetch is signal-bound natively; a prefetched body was fetched before
   // any navigation existed, so it gets wrapped.
-  if (cached !== undefined) return abortableStream(cached, signal);
+  if (cached !== undefined) return { ...cached, body: abortableStream(cached.body, signal) };
   const response = await fetch(url, { signal, headers: NAVIGATION_HEADERS });
-  const body = navigableBody(response);
+  const page = navigableBody(response);
 
-  if (!body) throw new Error(`navigation fetch failed (${response.status})`);
+  if (!page) throw new Error(`navigation fetch failed (${response.status})`);
 
-  return body;
+  return page;
 }
 
 /**
@@ -366,11 +366,11 @@ function installListenersWhileStreaming(): () => void {
   return () => observer.disconnect();
 }
 
-async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, signal?: AbortSignal): Promise<void> {
+async function applyPage(mount: MountContext, page: NavigablePage, signal?: AbortSignal): Promise<void> {
   const kept = extractPersisted(mount);
   const stopRestoring = restoreWhileStreaming(kept);
   const stopInstallingListeners = installListenersWhileStreaming();
-  const stopRunningScripts = runScriptsWhileStreaming();
+  const stopRunningScripts = runScriptsWhileStreaming(page.nonce);
   const restoreStyles = keepRuntimeStyles();
   const restoreRuntimeNodes = keepRuntimeNodes();
   const stopWatchingModals = keepModalsHonest();
@@ -378,7 +378,7 @@ async function applyPage(mount: MountContext, page: ReadableStream<Uint8Array>, 
   try {
     throwIfAborted(signal);
     // The Navigation API drives the transition; diff directly (its own would be skipped).
-    await diff(document, page);
+    await diff(document, page.body);
     /*
      * A superseded navigation must not report success: the diff can finish
      * cleanly on a cancelled stream, having applied only the part that arrived,

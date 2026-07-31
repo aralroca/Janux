@@ -7,7 +7,8 @@ import { createBus, type EventBus } from './bus';
 import { createPendingTracker } from './settled';
 import { createSources } from './sources';
 import { startEffects } from './effects';
-import { invokeIntent, type AuditEntry, type Proposal } from './intents';
+import { invokeIntent, type AuditEntry, type IntentHooks, type Proposal } from './intents';
+import { traceDef } from '../dev/trace';
 import { applyPatch, resolveInitial } from './state-intake';
 
 export interface InstanceOptions {
@@ -119,6 +120,13 @@ function evaluateDerived(readers: Record<string, unknown>): Record<string, unkno
 
 /** Creates a live component/store instance. Call `attach()` to start sources, effects and lifecycle. */
 export function createInstance(def: ComponentDef, options: InstanceOptions = {}): JanuxInstance {
+  const scheme = def.kind === 'store' ? 'store' : 'ui';
+  const uri = `${scheme}://${def.name}${options.key ? `#${options.key}` : ''}`;
+
+  // Dev only, eliminated from production builds: effects and sources publish
+  // their failures with the chain that explains them (see dev/error-channel.ts).
+  if (import.meta.env?.DEV) def = traceDef(def, uri);
+
   const ctx = options.ctx ?? {};
   const bus = options.bus ?? createBus();
   const tracker = createPendingTracker();
@@ -129,8 +137,6 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
   const { readers: derived, dispose: disposeDerived } = derivedReaders(def, state.proxy);
   const emit = makeEmit(def, bus);
   const use = storeHandles(options.stores ?? {});
-  const scheme = def.kind === 'store' ? 'store' : 'ui';
-  const uri = `${scheme}://${def.name}${options.key ? `#${options.key}` : ''}`;
 
   const intents: JanuxInstance['intents'] = {};
   const bag: RunBag = {
@@ -145,12 +151,14 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     // session's user; `invokeIntent` overlays the caller's actual origin.
     origin: 'human',
   };
-  const hooks = {
+  const hooks: IntentHooks = {
     gate,
     onAudit: options.onAudit,
     onProposal: options.onProposal,
     trackPending: tracker.track,
   };
+
+  if (import.meta.env?.DEV) hooks.devUri = uri;
 
   Object.entries(def.intents ?? {}).forEach(([name, intentDef]) => {
     const invoke = (input?: unknown, opts?: { origin?: Origin }) =>

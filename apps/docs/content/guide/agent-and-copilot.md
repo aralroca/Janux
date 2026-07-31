@@ -1,3 +1,8 @@
+---
+title: The agent and your copilot
+description: Every Janux app embeds an agent runtime, with a working copilot endpoint whose tools are your mounted components, before you configure anything.
+---
+
 # The agent and your copilot
 
 Every Janux app embeds an agent runtime. Zero config: with no `src/agent.ts` at all, the app has a working copilot endpoint whose tools are your mounted intents plus your api() functions.

@@ -1,3 +1,8 @@
+---
+title: Schema API
+description: Everything typed in Janux uses one schema system, importable from janux.
+---
+
 # Schema API
 
 Everything typed in Janux uses one schema system, importable from `janux`.

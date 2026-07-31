@@ -14,7 +14,9 @@
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./platform": "./src/platform.ts",
+    "./node-websocket": "./src/node-websocket.ts"
   },
   "dependencies": {
     "janux": "workspace:*",
@@ -47,6 +49,14 @@
       ".": {
         "types": "./dist/src/index.d.ts",
         "default": "./dist/src/index.js"
+      },
+      "./platform": {
+        "types": "./dist/src/platform.d.ts",
+        "default": "./dist/src/platform.js"
+      },
+      "./node-websocket": {
+        "types": "./dist/src/node-websocket.d.ts",
+        "default": "./dist/src/node-websocket.js"
       }
     }
   },

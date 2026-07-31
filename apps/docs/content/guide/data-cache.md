@@ -1,6 +1,13 @@
+---
+title: Data cache & URL state
+description: "The client cache a console leans on: cached reads keyed by reactive values, background revalidation, and mutations with optimistic writes and real rollback."
+---
+
 # Data cache & URL state
 
 For the server-state a console leans on — cached reads, background revalidation, mutations with rollback — Janux ships a small client cache (`janux/client`), a signal adapter, persisted stores and typed URL state. It's built on a framework-agnostic core so the same cache works on the server (per-request) and in the browser.
+
+> This is the **client** half of one cache model. The other half — what a CDN may keep, and how to revalidate it by tag — is [HTTP cache & revalidation](/docs/guide/http-cache). Both halves use the same three states (fresh, stale, expired) and the same `tags` vocabulary, on purpose: there is one thing to learn, not two.
 
 ## Queries
 
@@ -104,4 +111,106 @@ status.set('paid');          // writes ?status=paid; set(fallback) clears it
 
 > The console's filter/tab/modal state (previously a third-party URL-state library) maps directly onto `urlState`; its server-state cache (previously a separate query library) maps onto `useQuery` + `QueryClient`.
 
-> **See it running**: [`examples/data-cache`](https://github.com/aralroca/Janux/tree/main/examples/data-cache) — the cached, filterable catalog with typed URL state. More in [Examples](/docs/more/examples).
+## Freshness, and how long stale is still worth showing
+
+`staleTime` says how long the data is fresh; `swr` says how long a stale copy may still be rendered while it revalidates. Past `staleTime + swr` the entry is **expired** and the query reports `isPending` again, rather than paint something too old to be true.
+
+```tsx
+const products = useQuery(bag, 'catalog', () => ({
+  queryKey: ['catalog', state.tag],
+  queryFn: () => listProducts({ tag: state.tag }),
+  staleTime: 30_000,   // fresh for 30s
+  swr: 300_000,        // shown-while-revalidating for 5 more minutes
+  tags: ['catalog'],   // the word that drops it
+}));
+```
+
+Those are the same two words a route declares to a CDN with [`cachePolicy`](/docs/guide/http-cache), and `tags` is the same vocabulary `revalidateTag` uses on the server — so a mutation drops both halves with one string:
+
+```ts
+await revalidateTag('catalog');                    // server: cached pages + the CDN
+await getQueryClient().invalidateTag('catalog');   // client: observed queries
+```
+
+Without `swr` there is no expiry, which is the default: stale data is shown indefinitely while it refreshes.
+
+A `source` takes the same two options, with the same meaning — a refresh trigger inside `staleTime` is skipped, and past `staleTime + swr` the reader reports `pending` again:
+
+```ts
+sources: {
+  catalog: source({ query: () => listProducts({}), staleTime: '30s', swr: '5m', refresh: onEvent('inventory.changed') }),
+}
+```
+
+## SSR hydration: the data comes with the page
+
+A page that renders `useQuery` on the server used to fetch twice — once during
+SSR, once again when the island resumed. It does not any more. The per-request
+`QueryClient` is dehydrated into the response, and the client resumes on top of
+it:
+
+```
+1 fetch on the server · 0 on mount
+```
+
+Nothing to configure. Two things are worth knowing, because both are visible:
+
+**Freshness still decides.** Hydrated data arrives with the `updatedAt` the
+server stamped, so a query that declares no `staleTime` is stale the instant it
+lands and refetches — correctly, by its own definition. Declaring freshness is
+what turns hydration into zero requests:
+
+```ts
+useQuery(bag, 'products', () => ({
+  queryKey: ['products', state.tag],
+  queryFn: () => listProducts({ tag: state.tag }),
+  staleTime: 30_000,   // ← what makes the mount silent
+}));
+```
+
+**Only plain data travels.** The state invariant is schema-typed plain data, and
+the payload holds to it: objects, arrays, strings, finite numbers, booleans and
+`null`. An entry holding anything else is **not serialized** — it is left out of
+the payload and the client fetches it normally. Nothing is silently mangled on
+the way over.
+
+What is left out, and why:
+
+| Value | What JSON would do to it |
+|---|---|
+| `Map`, `Set` | becomes `{}` — the data replaced by nothing |
+| `Date`, class instance | becomes a string / a bare object, never itself again |
+| function | dropped from an object, `null` inside an array |
+| `Symbol` | same: dropped, or `null` |
+| `BigInt` | **throws** — it cannot travel at all |
+| `NaN`, `Infinity` | becomes `null` — a different number |
+| `undefined` **in an array** | becomes `null` — a different value |
+
+`undefined` as an object *property* is fine: JSON drops the key, and a schema
+reads an absent key and an undefined one the same way — so `{ id, nickname:
+undefined }` hydrates as `{ id }`.
+
+If you want one of the others hydrated, return it in a schema-expressible shape:
+an array of pairs instead of a `Map`, an ISO string instead of a `Date`.
+
+Queries are also left out when they failed, or when they are still running at
+the moment the response ends.
+
+### Queries still in flight
+
+If a query has not resolved when the shell goes out — a page with [suspense
+boundaries](/docs/guide/ssr-and-resumability) ships its shell early — the chunk
+that goes out *announces* it. An island observing that entry renders pending and
+waits, instead of starting the request the server is already running; the result
+arrives later on the same response and resolves it.
+
+If the response ends without it (a stream that died, a query that never
+settled), the client releases the entry and fetches it normally. A broken stream
+costs a request, never a spinner that never stops.
+
+### Pages without queries
+
+The payload script is emitted only when there is something to say, so a page
+that runs no queries carries not one byte of it.
+
+> **See it running**: [`examples/data-cache`](https://github.com/aralroca/Janux/tree/main/examples/data-cache) — the cached, filterable catalog with typed URL state, a public `/catalog` a CDN may keep, and a panel that revalidates by tag in front of you. More in [Examples](/docs/more/examples).

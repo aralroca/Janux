@@ -1,3 +1,8 @@
+---
+title: Testing components
+description: "Janux components test without a browser: createInstance gives you the full runtime — intents, guards, effects, sources, events — as plain function calls."
+---
+
 # Testing components
 
 Janux components test **without a browser**: `createInstance` gives you the full runtime — intents, guards, effects, sources, events — as plain function calls.

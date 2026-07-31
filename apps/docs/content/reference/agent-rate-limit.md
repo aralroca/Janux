@@ -1,3 +1,8 @@
+---
+title: Agent rate limiting
+description: Per-identity limits on copilot turns, with a global circuit breaker.
+---
+
 # Agent rate limiting
 
 Per-identity limits on copilot turns, with a global circuit breaker. The counter store is pluggable, which is what makes the limiter correct across several instances.

@@ -20,6 +20,7 @@ export const UNDOCUMENTED: Record<string, string[]> = {
   'janux/observability': [],
   'janux/worker': [],
   '@janux/server': [],
+  '@janux/content': [],
   '@janux/agent': [],
   '@janux/agent/local': [],
   '@janux/vite': [],

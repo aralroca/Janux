@@ -1,3 +1,7 @@
+---
+title: Observability API
+description: "Everything importable from janux/observability: the tracer seam, the OTel adapter, the global error sink and the PII filter."
+---
 # Observability API
 
 Everything importable from `janux/observability`, plus the `instrumentation.ts` convention that turns it on.

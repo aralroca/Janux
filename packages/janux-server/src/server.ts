@@ -7,6 +7,7 @@ import {
   translateCore,
   type AuditEntry,
   type ComponentDef,
+  type CspConfig,
   type Ctx,
   type I18n,
   type I18nConfig,
@@ -16,6 +17,8 @@ import {
 } from 'janux';
 import { QueryClient } from 'janux/query';
 import { isTracing, reportError, withSpan, type JanuxSpan } from 'janux/observability';
+import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from './cache';
+import { createResponseCache } from './response-cache';
 import { createHttpHandlers, type HandlerModule } from './http-handlers';
 import { createMcpEndpoint, type McpAuth } from './mcp';
 import { pageMarkdown } from './md-projection';
@@ -25,17 +28,27 @@ import { assertValidInput, errorStatus, evictOldestProposal, json, proposalId, t
 import { apiAttributes, apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 import { createFsRouter, type Route } from './router';
-import { shellEpilogue, shellEpilogueRest, shellInterlude, shellPrelude, type ShellOptions } from './html-shell';
-import { safeJson } from './html-escape';
+import {
+  queryPayloadScript,
+  shellEpilogue,
+  shellEpilogueRest,
+  shellInterlude,
+  shellPrelude,
+  type ShellOptions,
+} from './html-shell';
+import { nonceAttr, safeJson } from './html-escape';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
 import { refuseCrossSite } from './csrf';
+import { NONCE_HEADER, resolveCsp } from './csp';
 
 /**
  * Set by the client runtime on a navigation fetch. What the document already has
  * (the app's CSS) does not need to travel again — see handlePage.
  */
 export const NAVIGATION_HEADER = 'x-janux-navigation';
+
+
 
 export interface AgentMount {
   handle(req: Request, deps: AgentDeps): Promise<Response>;
@@ -126,6 +139,14 @@ export interface ServerOptions {
   staticExport?: boolean;
   /** SPA navigation, prefetching and speculation rules (`navigation` in the app config). */
   navigation?: NavigationConfig;
+  /**
+   * Strict CSP. `true` is the whole setup: a fresh nonce per request on every
+   * inline script and style the framework emits, plus the recommended
+   * `Content-Security-Policy` header. See `csp.ts`.
+   */
+  csp?: boolean | CspConfig;
+  /** How route cache policies reach the CDN in front (`cache` in the app config). */
+  cache?: CacheConfig;
 }
 
 async function resolveMeta(
@@ -167,6 +188,12 @@ interface RenderablePage {
 interface ResolvedDocument {
   status: number;
   page?: RenderablePage;
+  /**
+   * The matched route's declared policy. Only a 200 carries one: an error page
+   * is not the page the policy described, and caching a miss under a cached
+   * pattern outlives whatever caused it.
+   */
+  cache?: CacheDecision;
 }
 
 type ErrorPageKind = 'notFound' | 'serverError';
@@ -192,10 +219,10 @@ function reportRenderFailure(error: unknown, route?: string): void {
  * the document is closed so the parser is never left mid-tag. No auto-reload:
  * a deterministic render error would just fail the same way again.
  */
-function streamErrorScript(error: unknown): string {
+function streamErrorScript(error: unknown, nonce?: string): string {
   const detail = safeJson(String(error));
 
-  return `\n<script key="jx-stream-error">document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: render failed mid-stream",${detail})</script>\n</body>\n</html>`;
+  return `\n<script key="jx-stream-error"${nonceAttr(nonce)}>document.dispatchEvent(new CustomEvent("janux:error",{detail:${detail}}));console.error("Janux: render failed mid-stream",${detail})</script>\n</body>\n</html>`;
 }
 
 /**
@@ -208,6 +235,7 @@ function documentStream(
   body: AsyncGenerator<string>,
   epilogue: () => Promise<string>,
   onCancel: () => void,
+  nonce?: string,
 ): ReadableStream<Uint8Array> {
   async function* document(): AsyncGenerator<string> {
     let sentBody = false;
@@ -222,7 +250,7 @@ function documentStream(
       }
       yield `${sentBody ? '\n' : ''}${await epilogue()}`;
     } catch (error) {
-      yield streamErrorScript(error);
+      yield streamErrorScript(error, nonce);
     }
   }
 
@@ -248,12 +276,21 @@ function documentStream(
 
 /** The Janux fullstack server: pages, api() endpoints, manifest, proposals and the agent mount. */
 export function createJanuxServer(options: ServerOptions = {}) {
+  const csp = resolveCsp(options.csp, options.staticExport);
   const apiTools = collectApis(options.apis ?? {});
   const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
   const httpHandlers = options.httpHandlers
-    ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers })
+    ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers, cache: options.cache })
     : undefined;
   const loadRoute = options.loadRoute ?? ((filePath: string) => import(/* @vite-ignore */ filePath));
+  /**
+   * Inert until a route declares `scope: 'public'` — it only ever holds what a
+   * response told a shared cache it could hold, which is why it is on by
+   * default without changing any existing app's behaviour.
+   */
+  const responseCache = options.cache?.shared === false ? undefined : createResponseCache(options.cache);
+  const cached = (req: Request, produce: () => Promise<Response>): Promise<Response> =>
+    responseCache ? responseCache.handle(req, produce) : produce();
   // Absent for an app with no routes dir (inline `routes`), which then has no
   // error pages either and degrades to the bare status line.
   const errorPages: Partial<Record<ErrorPageKind, string>> = router?.errorPages ?? {};
@@ -371,7 +408,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const meta = await resolveMeta(module?.meta, ctx, route.params);
     const vnode = await applyLayouts(await render({ ctx, params: route.params }), route.layouts, ctx, route.params);
 
-    return { vnode, meta };
+    return { vnode, meta, cache: { policy: policyOf(module), params: route.params, vary: [NAVIGATION_HEADER] } };
   };
 
   /**
@@ -408,7 +445,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     try {
       const page = await resolvePage(pathname, ctx);
 
-      return page ? { status: 200, page } : await resolveErrorPage('notFound', ctx);
+      return page ? { status: 200, page, cache: page.cache } : await resolveErrorPage('notFound', ctx);
     } catch (error) {
       if (isNotFoundError(error)) return resolveErrorPage('notFound', ctx);
       reportRenderFailure(error, pathname);
@@ -664,6 +701,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
      * streaming diff then spends its first chunks on.
      */
     const navigating = req.headers.get(NAVIGATION_HEADER) === '1';
+    // Minted once per request: the header names this nonce and so does every
+    // inline tag below, which is the only way the two can agree.
+    const { nonce, policy } = csp?.(req) ?? {};
 
     if (options.i18n && !locale) {
       const { search } = new URL(req.url);
@@ -680,11 +720,19 @@ export function createJanuxServer(options: ServerOptions = {}) {
      * interlude could not know (i18n keys and boundary snapshots).
      */
     const interludeUris = new Set<string>();
+    /** Query entries already sent, so each chunk only carries what the last could not. */
+    const sentQueries = new Set<string>();
     let interludeSent = false;
     const document = kind ? await resolveErrorPage(kind, ctx) : await resolveDocument(page, ctx);
 
-    if (!document.page) return new Response(STATUS_TEXT[document.status], { status: document.status });
+    if (!document.page) {
+      return new Response(STATUS_TEXT[document.status], {
+        status: document.status,
+        headers: cacheHeadersFor({}, options.cache),
+      });
+    }
     const rendered = renderPageStream(document.page, ctx, {
+      nonce,
       onBeforeBoundaries: (summary) => {
         const shell = shellFor(summary);
 
@@ -726,6 +774,8 @@ export function createJanuxServer(options: ServerOptions = {}) {
         i18n: shellI18n(locale, result),
         navigation: options.navigation,
         navigating,
+        nonce,
+        queryScript: queryPayloadScript((ctx as any).queryClient, sentQueries, nonce),
       };
     };
     const prelude = shellPrelude(shellFor());
@@ -733,14 +783,29 @@ export function createJanuxServer(options: ServerOptions = {}) {
       prelude,
       rendered.chunks,
       async () => {
-        const shell = shellFor(await rendered.done);
+        const summary = await rendered.done;
+
+        // The HTML already flushed; only the tail waits. A query the render
+        // kicked off resolves into this payload instead of into a second
+        // request from the browser.
+        await (ctx as any).queryClient?.settle();
+        const shell = shellFor(summary);
 
         return interludeSent ? shellEpilogueRest(shell, interludeUris) : shellEpilogue(shell);
       },
       rendered.cancel,
+      nonce,
     );
 
-    return new Response(body, { status: document.status, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    return new Response(body, {
+      status: document.status,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        ...(nonce ? { [NONCE_HEADER]: nonce } : {}),
+        ...(policy ? { 'content-security-policy': policy } : {}),
+        ...cacheHeadersFor(document.cache ?? {}, options.cache),
+      },
+    });
   };
 
   /**
@@ -774,7 +839,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
       // Reaching the pure fetch means nobody upgraded — see serve().
       return new Response('WebSocket upgrade required', { status: 426, headers: { upgrade: 'websocket' } });
     }
-    if (httpHandlers?.handles(pathname)) return httpHandlers.dispatch(req, await ctxWithAgent(req));
+    if (httpHandlers?.handles(pathname)) {
+      return cached(req, async () => httpHandlers.dispatch(req, await ctxWithAgent(req)));
+    }
     if (pathname.startsWith('/_janux/api/')) return handleApi(req, pathname.slice('/_janux/api/'.length));
     if (pathname === '/_janux/approve') return handleApprove(req);
     if (pathname === '/_janux/reject') {
@@ -836,7 +903,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       });
     }
 
-    return handlePage(req, pathname, undefined, span);
+    return cached(req, () => handlePage(req, pathname, undefined, span));
   };
 
   /**

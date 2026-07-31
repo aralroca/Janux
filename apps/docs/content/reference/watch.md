@@ -1,3 +1,8 @@
+---
+title: watch()
+description: "Runs a function now and again whenever any signal it read changes. watch(fn: () => void | (() => void)): () => void — the return value is a dispose function."
+---
+
 # watch()
 
 ```ts

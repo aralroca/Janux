@@ -14,7 +14,7 @@ afterAll(() => GlobalRegistrator.unregister());
 const streamOf = (html: string) => new Response(html).body!;
 
 function mockFetch(): ReturnType<typeof mock> {
-  const fetched = mock(async (url: string) => ({ ok: true, body: streamOf(`<p>${url}</p>`) }));
+  const fetched = mock(async (url: string) => new Response(`<p>${url}</p>`));
 
   (globalThis as any).fetch = fetched;
 
@@ -99,6 +99,7 @@ describe('prefetch cache', () => {
 
     (globalThis as any).fetch = mock(async (url: string) => ({
       ok: true,
+      headers: new Headers(),
       body: new ReadableStream({
         cancel() {
           cancelled.push(url);
