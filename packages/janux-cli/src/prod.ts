@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { defineAgent } from '@janux/agent';
 import type { ServerOptions } from '@janux/server';
-import { apiFiles, apiModuleName, mcpAuthOptions, publishAppRoot, resolveAppConfig, shellOptions, type JanuxAppConfig } from '@janux/vite/config';
+import { apiFiles, apiModuleName, mcpAuthOptions, resolveAppConfig, shellOptions, type JanuxAppConfig } from '@janux/vite/config';
 
 /**
  * The production wiring, kept away from the build commands on purpose.
@@ -74,10 +74,6 @@ async function optionalModule(load: Loader, file: string | undefined): Promise<R
 }
 
 export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): Promise<ServerOptions> {
-  // Before the app's modules are loaded, so one that reads its data files
-  // through the app root finds them. A prebuilt app was published by its
-  // adapter, from the bundle's own location — that one stands.
-  if (!prebuilt) publishAppRoot(root);
   const app = prebuilt?.config ?? (await resolveAppConfig(root));
   const load = moduleLoader(prebuilt);
   const inlineStyles = await builtStyles(root, app);

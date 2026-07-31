@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it } from 'bun:test';
 import { createJanuxServer } from '@janux/server';
 import { prodServerOptions } from './prod';
 
@@ -97,5 +97,27 @@ describe('prodServerOptions websocket and mcpAuth', () => {
     expect(denied.status).toBe(401);
     expect(denied.headers.get('www-authenticate')).toContain('Bearer');
     expect((await rpc({ authorization: 'Bearer demo-token' })).status).toBe(200);
+  });
+});
+
+describe('prodServerOptions and the app root', () => {
+  const previous = process.env.JANUX_APP_ROOT;
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env.JANUX_APP_ROOT;
+    else process.env.JANUX_APP_ROOT = previous;
+  });
+
+  /**
+   * Building options is not serving: tooling builds them for apps it will never
+   * run, and a root left behind by one of those points the *next* app's modules
+   * at someone else's files. `start`, the static prerender and a deployment
+   * adapter publish it; this does not.
+   */
+  it('does not publish an app root of its own', async () => {
+    process.env.JANUX_APP_ROOT = '/srv/other';
+    await prodServerOptions(builtApp());
+
+    expect(process.env.JANUX_APP_ROOT).toBe('/srv/other');
   });
 });

@@ -16,6 +16,10 @@ import { sendFetchResponse, toFetchRequest } from './request-adapter';
 const SSR_PACKAGES = ['janux', '@janux/server', '@janux/agent'];
 
 async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOptions): Promise<ServerOptions> {
+  // Here rather than in `config()`: this is the moment the app's own modules
+  // are loaded, and `config()` also runs for `janux build`, where publishing an
+  // app root means nothing.
+  publishAppRoot(vite.config.root);
   const app = await resolveAppConfig(vite.config.root, options);
   const apiModules = Object.fromEntries(
     await Promise.all(
@@ -129,8 +133,6 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
     async config(config, env) {
       bundling = env.command === 'build';
       const root = resolve(config.root ?? process.cwd());
-
-      publishAppRoot(root);
       const app = await resolveAppConfig(root, options);
       const { clientEntry } = app;
 
