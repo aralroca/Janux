@@ -1,4 +1,5 @@
 import { signal } from '../signals';
+import { parseDuration } from '../define/factories';
 import type { Ctx, SourceDef, SourceReader } from '../define/types';
 import type { EventBus } from './bus';
 import type { PendingTracker } from './settled';
@@ -9,6 +10,9 @@ export interface SourcesRuntime {
   dispose: () => void;
 }
 
+const windowMs = (value: string | number | undefined): number | undefined =>
+  value === undefined ? undefined : typeof value === 'string' ? parseDuration(value) : value;
+
 function createOne(
   def: SourceDef,
   ctx: Ctx,
@@ -16,13 +20,23 @@ function createOne(
   tracker: PendingTracker,
   cleanups: (() => void)[],
   initial: { value: unknown } | undefined,
+  now: () => number,
 ) {
   const value = signal<unknown>(initial?.value);
   const pending = signal(initial === undefined);
   const refreshing = signal(initial === undefined);
   const error = signal<unknown>(null);
+  const staleTime = windowMs(def.staleTime) ?? 0;
+  const swr = windowMs(def.swr);
+  let updatedAt = initial === undefined ? -Infinity : now();
 
-  const load = async (): Promise<void> => {
+  /** Past `staleTime + swr` the value is too old to show — see `swr` on SourceDef. */
+  const expired = (): boolean => swr !== undefined && value.value !== undefined && now() - updatedAt >= staleTime + swr;
+
+  const load = async (force = false): Promise<void> => {
+    // A policy declined is not a failure: the caller gets a resolved promise and
+    // the value it already had.
+    if (!force && value.value !== undefined && now() - updatedAt < staleTime) return;
     refreshing.value = true;
     // `pending` means "nothing to show yet", so a refresh over existing data
     // leaves it false: `pending ? spinner : rows` must not blank a table the
@@ -33,6 +47,7 @@ function createOne(
         .then(() => def.query({ ctx }))
         .then((result) => {
           value.value = result;
+          updatedAt = now();
           error.value = null;
         })
         .catch((cause) => {
@@ -59,10 +74,10 @@ function createOne(
 
   const reader = {
     get value() {
-      return value.value;
+      return expired() ? undefined : value.value;
     },
     get pending() {
-      return pending.value;
+      return pending.value || expired();
     },
     get refreshing() {
       return refreshing.value;
@@ -70,7 +85,8 @@ function createOne(
     get error() {
       return error.value;
     },
-    refresh: load,
+    /** An explicit ask always runs, whatever the freshness policy says. */
+    refresh: () => load(true),
   };
 
   return { reader, start };
@@ -87,10 +103,11 @@ export function createSources(
   bus: EventBus,
   tracker: PendingTracker,
   initialValues?: Record<string, { value: unknown }>,
+  now: () => number = Date.now,
 ): SourcesRuntime {
   const cleanups: (() => void)[] = [];
   const entries = Object.entries(defs ?? {}).map(([name, def]) => {
-    return [name, createOne(def, ctx, bus, tracker, cleanups, initialValues?.[name])] as const;
+    return [name, createOne(def, ctx, bus, tracker, cleanups, initialValues?.[name], now)] as const;
   });
 
   return {

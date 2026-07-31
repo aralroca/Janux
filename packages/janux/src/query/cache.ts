@@ -19,8 +19,18 @@ export interface QueryState<T> {
 export interface QueryOptions<T> {
   queryKey: QueryKey;
   queryFn: () => Promise<T>;
+  /** How long the data counts as fresh. The client's `max-age`. */
   staleTime?: number;
+  /**
+   * How long stale data may still be shown while it revalidates — the client's
+   * `stale-while-revalidate`, and the same arithmetic: past
+   * `staleTime + swr` the data is too old to show and the query goes back to
+   * pending. Absent means stale data is shown indefinitely (the default).
+   */
+  swr?: number;
   gcTime?: number;
+  /** Named tags `invalidateTag()` purges — the same word a route's `cachePolicy` uses. */
+  tags?: string[];
 }
 
 type Listener = () => void;
@@ -104,6 +114,29 @@ class Query<T> {
     return this.state.status !== 'success' || this.now() - this.state.updatedAt >= staleTime;
   }
 
+  /**
+   * Past `staleTime + swr` the data is no longer worth showing. Without a `swr`
+   * window there is no expiry at all, which is what every existing query
+   * expects — stale data shown indefinitely while it revalidates.
+   */
+  isExpired(): boolean {
+    if (this.options.swr === undefined || this.state.status !== 'success') return false;
+    const staleTime = this.options.staleTime ?? DEFAULT_STALE;
+
+    return this.now() - this.state.updatedAt >= staleTime + this.options.swr;
+  }
+
+  /**
+   * What an observer should render. Expired data is withheld rather than
+   * deleted: the entry keeps its `updatedAt`, so the refetch it triggers is an
+   * ordinary revalidation and not a cold start.
+   */
+  visible(): QueryState<T> {
+    if (!this.isExpired()) return this.state;
+
+    return { ...this.state, status: 'pending', data: undefined };
+  }
+
   setData(data: T): void {
     this.set({ status: 'success', data, error: undefined, updatedAt: this.now() });
   }
@@ -156,7 +189,7 @@ export class QueryClient {
   }
 
   getQueryData<T>(key: QueryKey): T | undefined {
-    return this.queries.get(hashKey(key))?.state.data;
+    return this.queries.get(hashKey(key))?.visible().data as T | undefined;
   }
 
   setQueryData<T>(key: QueryKey, data: T): void {
@@ -168,6 +201,18 @@ export class QueryClient {
     const matches = [...this.queries.values()].filter(
       (query) => !key || startsWithSegments(query.options.queryKey, key),
     );
+
+    await Promise.all(matches.map((query) => query.fetch().catch(() => undefined)));
+  }
+
+  /**
+   * Refetch every entry carrying this tag. The server side of the same word:
+   * a mutation that calls `revalidateTag('catalog')` on the server can call
+   * this with the identical string here, and both halves of the cache drop the
+   * same thing.
+   */
+  async invalidateTag(tag: string): Promise<void> {
+    const matches = [...this.queries.values()].filter((query) => query.options.tags?.includes(tag));
 
     await Promise.all(matches.map((query) => query.fetch().catch(() => undefined)));
   }

@@ -2,6 +2,8 @@
 
 For the server-state a console leans on — cached reads, background revalidation, mutations with rollback — Janux ships a small client cache (`janux/client`), a signal adapter, persisted stores and typed URL state. It's built on a framework-agnostic core so the same cache works on the server (per-request) and in the browser.
 
+> This is the **client** half of one cache model. The other half — what a CDN may keep, and how to revalidate it by tag — is [HTTP cache & revalidation](/docs/guide/http-cache). Both halves use the same three states (fresh, stale, expired) and the same `tags` vocabulary, on purpose: there is one thing to learn, not two.
+
 ## Queries
 
 Inside a component, bind a cached read with `useQuery(bag, id, getOptions)`. It ships with Janux — import it from the client entry:
@@ -104,4 +106,35 @@ status.set('paid');          // writes ?status=paid; set(fallback) clears it
 
 > The console's filter/tab/modal state (previously a third-party URL-state library) maps directly onto `urlState`; its server-state cache (previously a separate query library) maps onto `useQuery` + `QueryClient`.
 
-> **See it running**: [`examples/data-cache`](https://github.com/aralroca/Janux/tree/main/examples/data-cache) — the cached, filterable catalog with typed URL state. More in [Examples](/docs/more/examples).
+## Freshness, and how long stale is still worth showing
+
+`staleTime` says how long the data is fresh; `swr` says how long a stale copy may still be rendered while it revalidates. Past `staleTime + swr` the entry is **expired** and the query reports `isPending` again, rather than paint something too old to be true.
+
+```tsx
+const products = useQuery(bag, 'catalog', () => ({
+  queryKey: ['catalog', state.tag],
+  queryFn: () => listProducts({ tag: state.tag }),
+  staleTime: 30_000,   // fresh for 30s
+  swr: 300_000,        // shown-while-revalidating for 5 more minutes
+  tags: ['catalog'],   // the word that drops it
+}));
+```
+
+Those are the same two words a route declares to a CDN with [`cachePolicy`](/docs/guide/http-cache), and `tags` is the same vocabulary `revalidateTag` uses on the server — so a mutation drops both halves with one string:
+
+```ts
+await revalidateTag('catalog');                    // server: cached pages + the CDN
+await getQueryClient().invalidateTag('catalog');   // client: observed queries
+```
+
+Without `swr` there is no expiry, which is the default: stale data is shown indefinitely while it refreshes.
+
+A `source` takes the same two options, with the same meaning — a refresh trigger inside `staleTime` is skipped, and past `staleTime + swr` the reader reports `pending` again:
+
+```ts
+sources: {
+  catalog: source({ query: () => listProducts({}), staleTime: '30s', swr: '5m', refresh: onEvent('inventory.changed') }),
+}
+```
+
+> **See it running**: [`examples/data-cache`](https://github.com/aralroca/Janux/tree/main/examples/data-cache) — the cached, filterable catalog with typed URL state, a public `/catalog` a CDN may keep, and a panel that revalidates by tag in front of you. More in [Examples](/docs/more/examples).

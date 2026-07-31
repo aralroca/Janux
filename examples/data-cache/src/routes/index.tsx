@@ -1,4 +1,5 @@
 import { Catalog } from '../components/Catalog';
+import { CacheProbe } from '../components/CacheProbe';
 import { AgentPanel } from '../components/AgentPanel';
 
 export const meta = {
@@ -16,6 +17,12 @@ export default function Home() {
       <main class="split">
         <section class="preview">
           <Catalog eager />
+          <h2 class="probe-title">HTTP cache</h2>
+          <p class="bar-hint">
+            <a href="/catalog">/catalog</a> is public and tagged; <a href="/account">/account</a> declares nothing, so
+            it is private.
+          </p>
+          <CacheProbe eager />
         </section>
         <AgentPanel eager />
       </main>

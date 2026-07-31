@@ -15,6 +15,8 @@ import {
   type RenderResult,
 } from 'janux';
 import { QueryClient } from 'janux/query';
+import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from './cache';
+import { createResponseCache } from './response-cache';
 import { createHttpHandlers, type HandlerModule } from './http-handlers';
 import { createMcpEndpoint, type McpAuth } from './mcp';
 import { pageMarkdown } from './md-projection';
@@ -125,6 +127,8 @@ export interface ServerOptions {
   staticExport?: boolean;
   /** SPA navigation, prefetching and speculation rules (`navigation` in the app config). */
   navigation?: NavigationConfig;
+  /** How route cache policies reach the CDN in front (`cache` in the app config). */
+  cache?: CacheConfig;
 }
 
 async function resolveMeta(
@@ -166,6 +170,12 @@ interface RenderablePage {
 interface ResolvedDocument {
   status: number;
   page?: RenderablePage;
+  /**
+   * The matched route's declared policy. Only a 200 carries one: an error page
+   * is not the page the policy described, and caching a miss under a cached
+   * pattern outlives whatever caused it.
+   */
+  cache?: CacheDecision;
 }
 
 type ErrorPageKind = 'notFound' | 'serverError';
@@ -245,9 +255,17 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const apiTools = collectApis(options.apis ?? {});
   const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
   const httpHandlers = options.httpHandlers
-    ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers })
+    ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers, cache: options.cache })
     : undefined;
   const loadRoute = options.loadRoute ?? ((filePath: string) => import(/* @vite-ignore */ filePath));
+  /**
+   * Inert until a route declares `scope: 'public'` — it only ever holds what a
+   * response told a shared cache it could hold, which is why it is on by
+   * default without changing any existing app's behaviour.
+   */
+  const responseCache = options.cache?.shared === false ? undefined : createResponseCache(options.cache);
+  const cached = (req: Request, produce: () => Promise<Response>): Promise<Response> =>
+    responseCache ? responseCache.handle(req, produce) : produce();
   // Absent for an app with no routes dir (inline `routes`), which then has no
   // error pages either and degrades to the bare status line.
   const errorPages: Partial<Record<ErrorPageKind, string>> = router?.errorPages ?? {};
@@ -358,7 +376,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const meta = await resolveMeta(module?.meta, ctx, route.params);
     const vnode = await applyLayouts(await render({ ctx, params: route.params }), route.layouts, ctx, route.params);
 
-    return { vnode, meta };
+    return { vnode, meta, cache: { policy: policyOf(module), params: route.params, vary: [NAVIGATION_HEADER] } };
   };
 
   /**
@@ -395,7 +413,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     try {
       const page = await resolvePage(pathname, ctx);
 
-      return page ? { status: 200, page } : await resolveErrorPage('notFound', ctx);
+      return page ? { status: 200, page, cache: page.cache } : await resolveErrorPage('notFound', ctx);
     } catch (error) {
       if (isNotFoundError(error)) return resolveErrorPage('notFound', ctx);
       reportRenderFailure(error);
@@ -623,7 +641,12 @@ export function createJanuxServer(options: ServerOptions = {}) {
     let interludeSent = false;
     const document = kind ? await resolveErrorPage(kind, ctx) : await resolveDocument(page, ctx);
 
-    if (!document.page) return new Response(STATUS_TEXT[document.status], { status: document.status });
+    if (!document.page) {
+      return new Response(STATUS_TEXT[document.status], {
+        status: document.status,
+        headers: cacheHeadersFor({}, options.cache),
+      });
+    }
     const rendered = renderPageStream(document.page, ctx, {
       onBeforeBoundaries: (summary) => {
         const shell = shellFor(summary);
@@ -680,7 +703,13 @@ export function createJanuxServer(options: ServerOptions = {}) {
       rendered.cancel,
     );
 
-    return new Response(body, { status: document.status, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    return new Response(body, {
+      status: document.status,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        ...cacheHeadersFor(document.cache ?? {}, options.cache),
+      },
+    });
   };
 
   /**
@@ -714,7 +743,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
       // Reaching the pure fetch means nobody upgraded — see serve().
       return new Response('WebSocket upgrade required', { status: 426, headers: { upgrade: 'websocket' } });
     }
-    if (httpHandlers?.handles(pathname)) return httpHandlers.dispatch(req, await ctxWithAgent(req));
+    if (httpHandlers?.handles(pathname)) {
+      return cached(req, async () => httpHandlers.dispatch(req, await ctxWithAgent(req)));
+    }
     if (pathname.startsWith('/_janux/api/')) return handleApi(req, pathname.slice('/_janux/api/'.length));
     if (pathname === '/_janux/approve') return handleApprove(req);
     if (pathname === '/_janux/reject') {
@@ -776,7 +807,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       });
     }
 
-    return handlePage(req, pathname);
+    return cached(req, () => handlePage(req, pathname));
   };
 
   /**
