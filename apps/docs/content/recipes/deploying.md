@@ -1,6 +1,6 @@
 ---
 title: Deploying
-description: "A Janux app in production is: Bun + your source + dist/client. No server bundle, no Node, no Vite at runtime."
+description: "A Janux app in production is a Request → Response function plus dist/client. Which runtime calls it — Bun, Node 24+, Vercel, or none at all — is a build-time choice."
 ---
 
 # Deploying

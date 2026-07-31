@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { resolveAppConfig } from '@janux/vite/config';
 import { appModules, generateApp } from './adapter-generate';
 import { bundlerPath } from './adapter-build';
@@ -61,6 +61,49 @@ describe('generateApp', () => {
  * machine's. It went unnoticed because the only adapter that existed could not
  * hold a socket open anyway — `@janux/node` can, and declares that it does.
  */
+/**
+ * The generator keeps a hand-written list of which config fields are paths, so
+ * a new app convention added anywhere else silently freezes the build machine's
+ * directory into the deployment — which is exactly how `src/ws.ts` shipped
+ * broken. This builds an app with every convention present and asserts the
+ * generated module mentions the build root nowhere at all, so the next
+ * convention has to be added to the list or this fails.
+ */
+describe('generateApp — every path field, not just the remembered ones', () => {
+  it('never leaks the build machine root, whatever conventions the app uses', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-adapter-full-'));
+    const files: Record<string, string> = {
+      'src/routes/index.tsx': 'export default () => null;',
+      'src/routes/_layout.tsx': 'export default ({ children }: any) => children;',
+      'src/server/thing.api.ts': 'export const noop = {};',
+      'src/api/raw.ts': 'export const GET = () => new Response("ok");',
+      'src/ws.ts': "export default { path: '/ws' };",
+      'src/agent.ts': 'export default {};',
+      'src/stores.ts': 'export const nothing = {};',
+      'src/i18n.ts': 'export default {};',
+      'src/middleware.ts': 'export default () => undefined;',
+      'src/ctx.ts': 'export default () => ({});',
+      'src/matchers.ts': 'export const id = (value: string) => value.length > 0;',
+      'src/client.ts': 'export {};',
+      'src/styles.css': 'body { margin: 0; }',
+    };
+
+    Object.entries(files).forEach(([file, contents]) => {
+      mkdirSync(join(root, dirname(file)), { recursive: true });
+      writeFileSync(join(root, file), contents);
+    });
+
+    const config = await resolveAppConfig(root);
+    const source = generateApp(root, config);
+    // The fixture is meant to exercise the path fields, not one of them.
+    const pathFields = Object.entries(config).filter(([key, value]) => key !== 'root' && typeof value === 'string' && value.startsWith(root));
+
+    expect(pathFields.length).toBeGreaterThan(8);
+    pathFields.forEach(([key]) => expect(source).toContain(`${key}: path(`));
+    expect(source).not.toContain(root);
+  });
+});
+
 describe('generateApp — the WebSocket module', () => {
   function appWithWs(): string {
     const root = mkdtempSync(join(tmpdir(), 'janux-adapter-ws-'));

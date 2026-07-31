@@ -1,3 +1,8 @@
+---
+title: Writing an adapter
+description: The two halves of the Janux adapter contract — a build hook and a Request → Response handler — with a complete worked example, so you can target a platform Janux does not ship.
+---
+
 # Writing an adapter
 
 An adapter teaches Janux to deploy somewhere. Janux ships four targets ([Deploying](/docs/recipes/deploying) has the matrix); this page is how you write a fifth, without reading the framework's source.
