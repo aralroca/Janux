@@ -174,7 +174,9 @@ export const STREAM_DIFF_SCENARIOS: ScenarioCase[] = [
       });
       log.push(document.body.innerHTML);
     },
-    expected: ['<div>bar</div>'],
+    // Untouched means untouched: the node keeps its own content and its place,
+    // and the diff neither rewrites it nor counts it when pruning the tail.
+    expected: ['<div>bar</div><div id="ignore">bar</div>'],
   },
   {
     id: 'stream-diff-a-sibling-after-an-ignored-node-still-applies',
@@ -186,7 +188,7 @@ export const STREAM_DIFF_SCENARIOS: ScenarioCase[] = [
       });
       log.push(document.body.innerHTML);
     },
-    expected: ['<div><b>new</b></div>'],
+    expected: ['<div><span id="ignore">skip</span><b>new</b></div>'],
   },
   {
     id: 'stream-diff-incoming-body-attributes-are-dropped-not-merged',

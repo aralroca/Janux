@@ -288,21 +288,35 @@ function keepRuntimeStyles(): () => void {
   return keepAttached([...document.head.querySelectorAll('style, link[rel="stylesheet"]')], document.head);
 }
 
+function linkedHref(node: Node | null): string | null {
+  const el = node as Element | null;
+
+  return el?.tagName === 'LINK' && el.getAttribute('rel') === 'stylesheet' ? el.getAttribute('href') : null;
+}
+
 /**
- * A stylesheet already applied to THIS document, which the diff must not touch.
+ * Linked stylesheets the document already has, on BOTH sides of the diff.
  *
- * Detaching one is not free even when it goes straight back: the browser treats
- * a re-inserted `<link>` as a new stylesheet and blocks on it, so the page
- * paints unstyled for a frame — the flash `keepRuntimeStyles` was papering
- * over. Matching on `parentNode` keeps this to the live head: the incoming
- * page's nodes hang off the parsed document, so they still apply normally.
+ * A `<link>` the browser has to re-acquire blocks rendering until it resolves,
+ * so detaching one — or dropping in the incoming page's copy of a sheet already
+ * applied — paints the page unstyled for a frame. That is the flash
+ * `keepRuntimeStyles` was undoing rather than preventing. Ignoring both copies
+ * leaves the live sheet untouched and its `<link>` element in place.
+ *
+ * Only linked sheets: an inline `<style>` applies the moment it is parsed, so
+ * it has nothing to wait for and the diff can own it like any other node.
+ * A sheet this page does not have yet is not in the set, so it still applies.
  */
-function isLiveStyleNode(node: Node | null): boolean {
-  return (
-    node?.parentNode === document.head &&
-    ((node as Element).tagName === 'STYLE' ||
-      ((node as Element).tagName === 'LINK' && (node as Element).getAttribute('rel') === 'stylesheet'))
+function ignoreAppliedStyles(): (node: Node | null) => boolean {
+  const applied = new Set(
+    [...document.head.querySelectorAll('link[rel="stylesheet"]')].map((link) => link.getAttribute('href')),
   );
+
+  return (node) => {
+    const href = linkedHref(node);
+
+    return href !== null && applied.has(href);
+  };
 }
 
 /**
@@ -434,7 +448,7 @@ async function applyPage(mount: MountContext, page: NavigablePage, options: Navi
      */
     await applyWithViewTransition(async () => {
       // The Navigation API drives the transition; diff directly (its own would be skipped).
-      await diff(document, source, { shouldIgnoreNode: isLiveStyleNode });
+      await diff(document, source, { shouldIgnoreNode: ignoreAppliedStyles() });
       /*
        * A superseded navigation must not report success: the diff can finish
        * cleanly on a cancelled stream, having applied only the part that arrived,
