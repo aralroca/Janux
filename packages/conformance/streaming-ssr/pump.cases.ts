@@ -359,14 +359,28 @@ export const PUMP_CASES: ScenarioCase[] = [
     id: 'stream2-pump-the-chunks-a-cancelled-stream-emitted-are-a-prefix-of-the-full-render',
     src: 'janux',
     run: async (log) => {
-      const page = () => jsx('main', { children: [jsx('h1', { children: 'a' }), jsx(timed('pump-prefix', 8) as any, {}), jsx('footer', { children: 'z' })] });
-      const full = (await chunksOf(page())).join('');
+      // Gated, not timed: a deadline only holds while the machine is idle, and
+      // a loaded runner spends longer in `settle()` than any delay short enough
+      // to keep the suite fast — the island would resolve before the cancel and
+      // the "shorter" half of the assertion would evaporate. A closed gate
+      // cannot resolve however slow the box is, so the cancelled stream stops
+      // at the fallback by construction. Full render second, once released.
+      const gate = gated('pump-prefix');
+      const page = () => jsx('main', { children: [jsx('h1', { children: 'a' }), jsx(gate.def as any, {}), jsx('footer', { children: 'z' })] });
       const stream = driving(page());
 
       await settle();
       stream.cancel();
       await stream.finished;
       await stream.done;
+      // The full render has to take the same suspended path, so it starts
+      // while the gate is still closed and is released once it is waiting.
+      const rest = chunksOf(page());
+
+      await settle();
+      gate.release(['a']);
+      const full = (await rest).join('');
+
       log.push(`prefix=${full.startsWith(stream.text())} shorter=${stream.text().length < full.length}`);
     },
     expected: ['prefix=true shorter=true'],
