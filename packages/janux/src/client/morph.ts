@@ -37,17 +37,31 @@ export function isValueControl(el: Element): el is ValueControl {
   return VALUE_CONTROL_TAGS.has(el.localName);
 }
 
-/** Controlled inputs: state → DOM property writes, never touching the focused control. */
-function syncValue(from: Element, to: Element): void {
-  if (!isValueControl(from) || !isValueControl(to) || document.activeElement === from) return;
-  if (from instanceof HTMLInputElement && to instanceof HTMLInputElement) {
-    if (from.type === 'checkbox' || from.type === 'radio') {
-      if (from.checked !== to.checked) from.checked = to.checked;
+interface ControlState {
+  checked: boolean;
+  value: string;
+}
 
-      return;
-    }
+/**
+ * The incoming control's state, captured BEFORE the child pass: `morphChildren`
+ * moves incoming nodes into the live tree, so reading `to.value` afterwards can
+ * see a `<select>` whose freshly-selected `<option>` is already gone.
+ */
+function captureControlState(to: Element): ControlState | null {
+  if (!isValueControl(to)) return null;
+
+  return { checked: (to as HTMLInputElement).checked === true, value: to.value };
+}
+
+/** Controlled inputs: state → DOM property writes, never touching the focused control. */
+function syncValue(from: Element, state: ControlState | null): void {
+  if (state === null || !isValueControl(from) || document.activeElement === from) return;
+  if (from instanceof HTMLInputElement && (from.type === 'checkbox' || from.type === 'radio')) {
+    if (from.checked !== state.checked) from.checked = state.checked;
+
+    return;
   }
-  if (from.value !== to.value) from.value = to.value;
+  if (from.value !== state.value) from.value = state.value;
 }
 
 const BOUNDARY_TAGS = new Set(['JANUX-ISLAND', 'JANUX-FOREIGN']);
@@ -95,7 +109,10 @@ function targetNode(match: ChildMatch, toKid: ChildNode, index: number): ChildNo
   if (isIsland(toKid)) {
     const host = match.islands.get((toKid as Element).getAttribute('data-jx')!);
 
-    if (!host) return toKid;
+    // `sameKind`, not just the id: a `janux-island` and a `janux-foreign` can
+    // share an id across a navigation, and handing the foreign's runtime a
+    // host of the other kind breaks its mount — replace instead.
+    if (!host || !sameKind(host, toKid)) return toKid;
     morphNode(host, toKid);
 
     return host;
@@ -159,8 +176,13 @@ function morphNode(from: Node, to: Node): void {
   syncAttrs(from as Element, to as Element);
   // A nested island is a boundary: its own render loop owns everything inside.
   if (isIsland(from)) return;
-  syncValue(from as Element, to as Element);
+  // AFTER the children, exactly as in reconcile.ts: `<select>.value` can only
+  // select an <option> that already exists — written first, a value+options
+  // change in one pass left the old selection in place.
+  const control = captureControlState(to as Element);
+
   morphChildren(from as Element, to as Element);
+  syncValue(from as Element, control);
 }
 
 /** Patches `root`'s children in place to match `nextChildren` (index+tag matching). */

@@ -24,10 +24,14 @@ const fmt = (value, op) => {
 	return `${value.toFixed(2)}ms`;
 };
 
+// Signed so the direction is readable in every cell: `+N×` means janux is N
+// times better (lower) than react, `-N×` means N times worse. Magnitude ≥ 1.
 const ratioCell = (value, reference) => {
-	if (value == null || reference == null || reference === 0) return '—';
+	if (value == null || reference == null || reference === 0 || value === 0) return '—';
 
-	return `${(value / reference).toFixed(2)}×`;
+	return value <= reference
+		? `+${(reference / value).toFixed(2)}×`
+		: `-${(value / reference).toFixed(2)}×`;
 };
 
 export function renderSuite(result) {

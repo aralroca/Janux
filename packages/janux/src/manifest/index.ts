@@ -39,7 +39,7 @@ function toolsFor(def: ComponentDef, ctx: Ctx, instance?: JanuxInstance): Manife
   // that answers differently on each call pass the filter and then be advertised
   // as `forbidden` — a tool listed for the agent that the filter meant to remove.
   return Object.entries(def.intents ?? {})
-    .map(([name, intentDef]) => ({ name, intentDef, guard: resolveGuard(intentDef, ctx, 'agent') }))
+    .map(([name, intentDef]) => ({ name, intentDef, guard: resolveGuard(intentDef, ctx, 'agent', `${def.name}.${name}`) }))
     .filter(({ guard }) => guard !== 'forbidden')
     .map(({ name, intentDef, guard }) => ({
       name: `${def.name}.${name}`,

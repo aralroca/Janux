@@ -846,6 +846,10 @@
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^18.0.0",
+        "@types/react": "^19.2.0",
+        "diff-dom-streaming": "^0.6.9",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
         "web-bot-auth": "^0.1.3",
       },
     },

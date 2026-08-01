@@ -122,6 +122,19 @@ function compareRoutes(a: Route, b: Route): number {
 
 
 /**
+ * A route declaring the same param name twice (`dup/[x]/[x].tsx`) would let one
+ * value silently overwrite the other, so the tree is rejected at build — the
+ * behaviour Next.js and SvelteKit converged on.
+ */
+function assertDistinctNames(route: Route): Route {
+  const names = route.segments.map((segment) => segment.name).filter((name): name is string => name !== undefined);
+  const duplicate = names.find((name, index) => names.indexOf(name) !== index);
+
+  if (duplicate === undefined) return route;
+  throw new Error(`janux: duplicate param name "${duplicate}" in route "${route.pattern}" — every dynamic segment needs a distinct name.`);
+}
+
+/**
  * File-system router: full segment grammar (`[param]`, `[param=matcher]`,
  * `[...rest]`, `[[...rest]]`), `(group)` directories and nested `_layout.*`
  * chains, matched in deterministic specificity order.
@@ -130,12 +143,14 @@ export function createFsRouter(dir: string, customMatchers: Record<string, Match
   const matchers = { ...BUILTIN_MATCHERS, ...customMatchers };
   const rootLayout = layoutIn(dir);
   const routes: Route[] = walk(dir)
-    .map(({ filePath, urlSegments, layouts }) => ({
-      pattern: `/${urlSegments.join('/')}`.replace(/\/+/g, '/'),
-      segments: urlSegments.map(parseSegment),
-      filePath,
-      layouts,
-    }))
+    .map(({ filePath, urlSegments, layouts }) =>
+      assertDistinctNames({
+        pattern: `/${urlSegments.join('/')}`.replace(/\/+/g, '/'),
+        segments: urlSegments.map(parseSegment),
+        filePath,
+        layouts,
+      }),
+    )
     .sort(compareRoutes);
 
   return {

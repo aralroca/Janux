@@ -62,3 +62,56 @@ describe('a bundled function with no node_modules beside it', () => {
     // to flake it.
   }, 30_000);
 });
+
+/**
+ * A static export has no function to invoke, so the output directory is the
+ * whole deployment: prerendered HTML on the CDN and a routing table that never
+ * mentions a server. Writing one anyway would put a cold start in front of
+ * files Vercel can already answer.
+ */
+describe('a static export', () => {
+  it('is the CDN and nothing else', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-static-out-'));
+
+    mkdirSync(join(root, 'dist/client'), { recursive: true });
+    await Bun.write(join(root, 'dist/client/index.html'), '<!doctype html><title>x</title>');
+    await Bun.write(join(root, 'janux.config.ts'), 'export default { output: "static" };\n');
+
+    const bytes = await writeVercelOutput(root, await resolveAppConfig(root));
+    const config = await Bun.file(join(root, '.vercel/output/config.json')).json();
+
+    expect(bytes).toBe(0);
+    expect(config).toEqual({ version: 3, routes: [{ handle: 'filesystem' }] });
+    expect(await Bun.file(join(root, '.vercel/output/static/index.html')).exists()).toBe(true);
+    expect(existsSync(join(root, '.vercel/output/functions'))).toBe(false);
+  });
+
+  /**
+   * The output directory is rewritten, not merged into: a file left behind by
+   * the previous build is a file Vercel deploys, and a stale page is worse than
+   * a missing one.
+   */
+  it('replaces whatever the last build left behind', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-static-out-'));
+
+    mkdirSync(join(root, 'dist/client'), { recursive: true });
+    await Bun.write(join(root, 'dist/client/index.html'), '<!doctype html><title>x</title>');
+    await Bun.write(join(root, 'janux.config.ts'), 'export default { output: "static" };\n');
+    await Bun.write(join(root, '.vercel/output/static/gone.html'), 'from the last build');
+
+    await writeVercelOutput(root, await resolveAppConfig(root));
+
+    expect(existsSync(join(root, '.vercel/output/static/gone.html'))).toBe(false);
+    expect(await Bun.file(join(root, '.vercel/output/static/index.html')).exists()).toBe(true);
+  });
+
+  /** An app that has not been built yet still gets a valid output directory rather than a crash. */
+  it('writes an empty CDN directory for an app with no client build', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-static-out-'));
+
+    await Bun.write(join(root, 'janux.config.ts'), 'export default { output: "static" };\n');
+    await writeVercelOutput(root, await resolveAppConfig(root));
+
+    expect(existsSync(join(root, '.vercel/output/static'))).toBe(true);
+  });
+});

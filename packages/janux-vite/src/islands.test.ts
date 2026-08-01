@@ -36,6 +36,20 @@ describe('islandNamesIn', () => {
     expect(islandNamesIn(`export const A = component({ name: dynamic });`)).toEqual([]);
     expect(islandNamesIn('const = broken (')).toEqual([]);
   });
+
+  /**
+   * Regression: `as const` is its own AST node (`TsConstAssertion`), not the
+   * `TsAsExpression` a named assertion produces — so a def written that way was
+   * declared, bundled and never catalogued. A page whose islands all sit behind
+   * suspense then ships no runtime and never boots, with nothing to see in the
+   * build output.
+   */
+  it('looks through every wrapper a def can be written behind', () => {
+    expect(islandNamesIn(`export const A = component({ name: 'alpha' }) as const;`)).toEqual(['alpha']);
+    expect(islandNamesIn(`export const A = (component({ name: 'beta' }));`)).toEqual(['beta']);
+    expect(islandNamesIn(`export const A = component({ name: 'gamma' })!;`)).toEqual(['gamma']);
+    expect(islandNamesIn(`export const A = (component({ name: 'delta' }) as const);`)).toEqual(['delta']);
+  });
 });
 
 /**

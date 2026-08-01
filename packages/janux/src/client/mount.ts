@@ -1,4 +1,5 @@
 import { effect as watch, untrack } from '../signals';
+import { scheduleRender } from '../runtime/render-queue';
 import { createInstance, type JanuxInstance } from '../runtime/instance';
 import type { ComponentDef } from '../define/types';
 import type { EventBus } from '../runtime/bus';
@@ -164,7 +165,10 @@ function startRenderLoop(instance: JanuxInstance, root: Element, key: string, mo
         mountPassForeigns(pass, root, mount, instance);
         sweepChildren(instance.def.name, key, mount);
       });
-    }),
+      // Queued, not inline: N writes landing in one task cost one render, not
+      // N. `flushRenders()` (the intent pipeline, `settled()`) is what makes
+      // the DOM observable again.
+    }, scheduleRender),
   );
 }
 

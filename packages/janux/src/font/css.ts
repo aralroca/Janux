@@ -70,6 +70,19 @@ function percent(value: number): string {
 }
 
 /**
+ * A family name as the body of a quoted CSS string.
+ *
+ * Foundries ship names with apostrophes in them, and CSS has no error recovery
+ * worth the name: an unescaped quote does not break its own declaration, it
+ * ends the string early and everything after it — the remaining faces, the
+ * fallback alias, the custom property — is parsed as garbage. A backslash
+ * escapes what follows it, so it has to escape itself first.
+ */
+function cssString(value: string): string {
+  return value.replace(/[\\']/g, '\\$&');
+}
+
+/**
  * Every override is stated against the *adjusted* em, not the original one —
  * `size-adjust` has already scaled it, so an ascent expressed against the raw
  * `unitsPerEm` would be applied twice.
@@ -89,7 +102,7 @@ export function fallbackOverrides(font: FontMetrics, fallback: FontMetrics): Fon
 /** One `@font-face` per subset: the `unicode-range` is what stops a page loading Cyrillic it never shows. */
 function realFace(font: ResolvedFont, face: ResolvedFontFace): string {
   return (
-    `@font-face{font-family:'${font.family}';font-style:${face.style};font-weight:${face.weight};` +
+    `@font-face{font-family:'${cssString(font.family)}';font-style:${face.style};font-weight:${face.weight};` +
     `font-display:${font.display};src:url(${face.url}) format('woff2');unicode-range:${face.unicodeRange}}`
   );
 }
@@ -99,7 +112,7 @@ function fallbackFace(font: ResolvedFont): string {
   const { sizeAdjust, ascentOverride, descentOverride, lineGapOverride } = font.overrides;
 
   return (
-    `@font-face{font-family:'${font.family} Fallback';src:local('${SYSTEM_FALLBACK[font.fallback]}');` +
+    `@font-face{font-family:'${cssString(font.family)} Fallback';src:local('${SYSTEM_FALLBACK[font.fallback]}');` +
     `size-adjust:${sizeAdjust};ascent-override:${ascentOverride};` +
     `descent-override:${descentOverride};line-gap-override:${lineGapOverride}}`
   );
@@ -109,7 +122,9 @@ function fallbackFace(font: ResolvedFont): string {
 function variableRule(font: ResolvedFont): string[] {
   if (!font.variable) return [];
 
-  return [`:root{${font.variable}:'${font.family}','${font.family} Fallback',${font.fallback}}`];
+  const family = cssString(font.family);
+
+  return [`:root{${font.variable}:'${family}','${family} Fallback',${font.fallback}}`];
 }
 
 export function fontFaceCss(fonts: ResolvedFont[]): string {

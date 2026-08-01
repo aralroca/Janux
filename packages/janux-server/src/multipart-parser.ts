@@ -103,10 +103,23 @@ function stepDelimiter(scan: Scan, ctx: Ctx): boolean {
   return scan.state === 'headers';
 }
 
+/**
+ * The ceiling applies to the block, not only to the search for its end.
+ *
+ * Checking `end < 0` alone let a *terminated* 200MB header block through: the
+ * CRLFCRLF was found, so the "still looking" branch never fired, and the whole
+ * thing had already been buffered and was about to be `toString`ed. A header
+ * block is the one stretch this parser holds whole, which is exactly why its
+ * size has to be bounded however it arrives.
+ */
+function headersTooBig(buffer: Buffer, end: number): boolean {
+  return end < 0 ? buffer.length > HEADER_BYTES : end > HEADER_BYTES;
+}
+
 async function stepHeaders(scan: Scan, ctx: Ctx): Promise<boolean> {
   const end = scan.buffer.indexOf(CRLF_CRLF);
 
-  if (end < 0 && scan.buffer.length > HEADER_BYTES) throw MALFORMED;
+  if (headersTooBig(scan.buffer, end)) throw MALFORMED;
   if (end < 0) return false;
   scan.sink = await ctx.open(parseHeaders(scan.buffer.subarray(0, end).toString('utf8')));
   scan.buffer = scan.buffer.subarray(end + CRLF_CRLF.length);

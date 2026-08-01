@@ -41,6 +41,37 @@ describe('janux CLI args', () => {
   it('rejects non-numeric ports', () => {
     expect(() => parseArgs(['dev', '--port', 'abc'], '/app')).toThrow(/--port/);
   });
+
+  /**
+   * A port the OS cannot bind is refused by the flag that named it. Left to the
+   * runtime, `Bun.serve` and `server.listen` both fail from inside the server,
+   * with a message about sockets rather than about what was typed.
+   */
+  it('rejects a port that is not a whole number', () => {
+    expect(() => parseArgs(['dev', '--port', '3000.5'], '/app')).toThrow(/--port/);
+    expect(() => parseArgs(['dev', '--port', 'Infinity'], '/app')).toThrow(/--port/);
+  });
+
+  it('rejects a port outside the TCP range', () => {
+    expect(() => parseArgs(['dev', '--port', '-1'], '/app')).toThrow(/--port/);
+    expect(() => parseArgs(['dev', '--port', '65536'], '/app')).toThrow(/--port/);
+    expect(parseArgs(['dev', '--port', '65535'], '/app').port).toBe(65535);
+  });
+
+  /** How a platform tells a deployment which port to listen on. */
+  it('falls back to PORT from the environment before the default', () => {
+    const previous = process.env.PORT;
+
+    process.env.PORT = '8080';
+    try {
+      expect(parseArgs(['start'], '/app').port).toBe(8080);
+      // An explicit flag still wins over the environment.
+      expect(parseArgs(['start', '--port', '4321'], '/app').port).toBe(4321);
+    } finally {
+      if (previous === undefined) delete process.env.PORT;
+      else process.env.PORT = previous;
+    }
+  });
 });
 
 describe('tailwind auto-detection', () => {

@@ -1,6 +1,7 @@
 import { coerceForm, validate } from '../schema';
 import { batch } from '../signals';
 import { dryRunDiff } from './dry-run';
+import { flushRenders } from './render-queue';
 import { isTracing, withSpan, type JanuxSpan, type SpanAttributes } from '../observability/tracing';
 import { withGate, type MutationGate } from '../state/mutation-gate';
 import { publishJanuxError } from '../dev/error-channel';
@@ -51,12 +52,33 @@ export class JanuxIntentError extends Error {
   }
 }
 
-export function resolveGuard(def: IntentDef, ctx: Ctx, origin: Origin): GuardValue {
+const GUARD_VALUES = new Set<GuardValue>(['auto', 'confirm', 'forbidden']);
+
+/**
+ * Anything that is not one of the three answers is not an answer.
+ *
+ * `guard === 'forbidden'` is false for a `Promise`, so an `async` guard — which
+ * the types forbid and JavaScript happily allows — used to resolve to a *pass*:
+ * the gate that exists to fail closed failed open, silently, for every agent
+ * call, and the intent was advertised in the manifest besides. Same for a
+ * typo'd value. Both deny here, and say so once so the author finds out from a
+ * log rather than from an incident. Mirrors `resolveApiGuard` in @janux/server.
+ */
+function normalizeGuard(tool: string, value: unknown): GuardValue {
+  if (GUARD_VALUES.has(value as GuardValue)) return value as GuardValue;
+  console.warn(
+    `Janux: the guard on "${tool}" answered ${JSON.stringify(String(value))} — expected "auto", "confirm" or "forbidden", so the intent is treated as forbidden`,
+  );
+
+  return 'forbidden';
+}
+
+export function resolveGuard(def: IntentDef, ctx: Ctx, origin: Origin, tool = 'intent'): GuardValue {
   const guard = def.guard ?? 'auto';
 
-  if (typeof guard !== 'function') return guard;
+  if (typeof guard !== 'function') return normalizeGuard(tool, guard);
   try {
-    return guard({ ctx, origin });
+    return normalizeGuard(tool, guard({ ctx, origin }));
   } catch {
     // A guard that cannot decide denies. Letting the throw escape took the whole
     // manifest down with it, so one bad guard blanked the entire agent surface —
@@ -208,6 +230,10 @@ async function runInvocation(
     }
     const result = await run();
 
+    // The render this intent caused is queued, so resolve only once it has
+    // run: `await intent()` promising a DOM that has not caught up yet is a
+    // trap every caller would have to work around.
+    flushRenders();
     audit(hooks, { ...invoked, input: parsed, ok: true });
 
     return result;
@@ -238,7 +264,8 @@ export function invokeIntent(
   origin: Origin,
   hooks: IntentHooks,
 ): Promise<unknown> {
-  const invoked: Invoked = { tool: `${componentName}.${intentName}`, guard: resolveGuard(def, bag.ctx, origin), origin };
+  const tool = `${componentName}.${intentName}`;
+  const invoked: Invoked = { tool, guard: resolveGuard(def, bag.ctx, origin, tool), origin };
   const id: IntentId = { component: componentName, name: intentName };
 
   // Guarded rather than left to `withSpan`: an uninstrumented click must not

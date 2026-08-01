@@ -160,6 +160,18 @@ describe('spoolMultipart', () => {
     expect((response as Response).status).toBe(413);
   });
 
+  it('names the field ceiling it broke, not the body ceiling it never reached', async () => {
+    // A 413 that quotes the 100MB body limit for a 2MB field reads as a lie:
+    // the caller shrinks the upload and gets refused all over again.
+    const huge = 'a'.repeat(2 * 1024 * 1024);
+    const response = await spoolMultipart(post(chunked(multipart([{ name: 'bio', body: huge }]), 65_536)), {
+      maxBytes: 100 * 1024 * 1024,
+      dir,
+    });
+
+    expect(await (response as Response).json()).toEqual({ error: 'a form field exceeds the 1048576-byte limit' });
+  });
+
   it('400s a part whose headers never end, instead of holding them all', async () => {
     // Header bytes are the one stretch that cannot be streamed out, so an
     // endless `content-disposition` would otherwise grow to the body ceiling.

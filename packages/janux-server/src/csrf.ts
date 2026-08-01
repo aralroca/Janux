@@ -95,6 +95,22 @@ function sameSiteByHeaders(req: Request, allowed: string[]): boolean {
  * Only the signature counts. `x-janux-origin: agent` is a free-to-type hint about
  * which guard rules apply, never a claim of identity.
  */
+/**
+ * A verifier that cannot answer has not verified anything.
+ *
+ * Letting it throw turned a malformed `Signature-Input` — or a key store that was
+ * momentarily unreachable — into a 500 from the fetch handler, on the one path
+ * whose answer should be "no". The exemption is a claim to prove, so failing to
+ * prove it denies, like `resolveApiGuard` does with a guard that blows up.
+ */
+async function verifiedAgent(req: Request, policy: CsrfPolicy): Promise<boolean> {
+  try {
+    return (await policy.verifiedAgent?.(req)) === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function refuseCrossSite(req: Request, pathname: string, policy: CsrfPolicy): Promise<Response | undefined> {
   if (!isInvocation(pathname)) return undefined;
   /*
@@ -106,7 +122,7 @@ export async function refuseCrossSite(req: Request, pathname: string, policy: Cs
    */
   if (SAFE.has(req.method.toUpperCase())) return json({ ok: false, error: 'method_not_allowed' }, 405);
   if (sameSiteByHeaders(req, policy.allowedOrigins ?? [])) return undefined;
-  if (await policy.verifiedAgent?.(req)) return undefined;
+  if (await verifiedAgent(req, policy)) return undefined;
 
   return json({ ok: false, error: 'cross_site_denied' }, 403);
 }

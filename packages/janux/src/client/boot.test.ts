@@ -126,6 +126,43 @@ describe('client boot (resume without hydration)', () => {
     expect(resource.state.locale).toBe('es');
   });
 
+  it('settles after a click whose intent throws, reporting it on janux:error instead of rejecting', async () => {
+    // The failure already reaches the app through `janux:error`; making
+    // `settled()` rethrow it too turns "wait for quiet" into a second throw
+    // site, and one that only fires when the call wins the race against the
+    // inflight set being cleaned up.
+    const brokenDef = component({
+      name: 'broken',
+      state: schema({ n: int() }),
+      intents: {
+        boom: intent({
+          run: () => {
+            throw new Error('intent exploded');
+          },
+        }),
+      },
+      view: ({ state, intents }: any) =>
+        jsx('div', {
+          children: [
+            jsx('output', { children: String(state.n) }),
+            jsx('button', { onClick: intents.boom, children: 'boom' }),
+          ],
+        }),
+    });
+    const { html } = await renderToString(jsx(brokenDef as any, {}));
+    const errors: string[] = [];
+
+    document.body.innerHTML = html;
+    document.addEventListener('janux:error', (event: any) => errors.push(String(event.detail)));
+    const client = boot({ defs: [brokenDef] });
+
+    document.querySelector('button')!.click();
+
+    await client.settled();
+
+    expect(errors.join(' ')).toContain('intent exploded');
+  });
+
   it('resumes source values from the snapshot — no double-fetch, ready intents work on first click', async () => {
     const clientQuery = mock(async () => ['should-not-run']);
     const shopDef = component({

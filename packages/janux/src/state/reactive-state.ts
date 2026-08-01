@@ -116,7 +116,10 @@ export function createReactiveState<T extends object>(
   const wrapArrayMethod = (target: unknown[], path: string, method: string) => {
     return (...args: unknown[]) => {
       assertMutable(gate, path);
-      const result = (target as any)[method](...args.map((arg) => plainify(arg, path)));
+      // `sort`'s argument is a comparator, not data to store — every other
+      // mutator's arguments become array contents and go through the strict clone.
+      const stored = method === 'sort' ? args : args.map((arg) => plainify(arg, path, undefined, true));
+      const result = (target as any)[method](...stored);
 
       touch(path);
 
@@ -178,7 +181,7 @@ export function createReactiveState<T extends object>(
     const target = childPath(path, key);
 
     assertMutable(gate, target);
-    Reflect.set(raw, key, plainify(value, target));
+    Reflect.set(raw, key, plainify(value, target, undefined, true));
     touch(target);
 
     return true;

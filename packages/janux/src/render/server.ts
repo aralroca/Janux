@@ -4,7 +4,7 @@ import type { EventBus } from '../runtime/bus';
 import type { ComponentDef, Ctx } from '../define/types';
 import { isForeignDef, type ForeignDef } from '../interop';
 import { isTracing, withSpan } from '../observability/tracing';
-import { detachProps } from '../interop/detach';
+import { renderForeignToString } from '../interop/ssr';
 import { dedupeKey, escapeHtml, nonceAttr, renderAttrs, safeJson, safeKey, VOID_ELEMENTS } from './html';
 import { UNSUSPENSE_RUNTIME } from './unsuspense';
 
@@ -195,6 +195,29 @@ function fallbackScope(scope: RenderScope): RenderScope {
 }
 
 /**
+ * Moves what the isolated subtree produced into the scope that owns the page.
+ *
+ * A one-shot copy is not enough: a boundary NESTED in this content registers
+ * its own island only when its sources load — after this content promise
+ * settled — and a boundary nested in THAT one is not even known yet. So the
+ * isolated scope is drained again every time a boundary adopted from it
+ * settles. Copied once, a two-level nesting lost the inner chunk entirely
+ * (its content never reached the page) and the inner island shipped no
+ * snapshot, so it booted on the client with nothing.
+ */
+function adopt(scope: RenderScope, isolated: RenderScope): void {
+  scope.registry.islands.push(...isolated.registry.islands.splice(0));
+  const nested = isolated.boundaries?.splice(0) ?? [];
+
+  scope.boundaries?.push(
+    ...nested.map((boundary) => ({
+      ...boundary,
+      content: boundary.content.finally(() => adopt(scope, isolated)),
+    })),
+  );
+}
+
+/**
  * An island body under a boundary: sources load, the island registers, and the
  * subtree renders isolated and buffered — streamed chunks cannot be unstreamed,
  * and an `error` view replaces the content wholesale. A failure with no
@@ -210,8 +233,7 @@ async function renderBoundaryContent(def: ComponentDef, instance: JanuxInstance,
   try {
     const html = await renderNode(def.view!(instance.bag), isolated);
 
-    scope.registry.islands.push(...isolated.registry.islands);
-    scope.boundaries?.push(...(isolated.boundaries ?? []));
+    adopt(scope, isolated);
 
     return { html };
   } catch (error) {
@@ -339,27 +361,9 @@ async function renderIslandInto(def: ComponentDef, props: any, scope: RenderScop
   emit('</janux-island>');
 }
 
-/** CJS/ESM interop for a dynamically imported module. */
-function interopDefault(mod: any): any {
-  return mod?.default ?? mod;
-}
-
 /** SSR markup for a foreign component when its runtime is installed; empty host otherwise. */
-async function foreignInner(def: ForeignDef, props: Record<string, unknown>, scope: RenderScope): Promise<string> {
-  if (def.options.hydrate === 'only') return '';
-  const load = scope.foreignImport ?? ((spec: string) => import(/* @vite-ignore */ spec));
-
-  try {
-    const [react, reactServer] = await Promise.all([load('react'), load('react-dom/server')]);
-    const mapped = def.options.props ? def.options.props(props) : props;
-    // The same props boundary as on the client — see interop/detach.
-    const reactProps = detachProps(mapped);
-    const element = interopDefault(react).createElement(def.component as any, reactProps as any);
-
-    return interopDefault(reactServer).renderToString(element);
-  } catch {
-    return '';
-  }
+function foreignInner(def: ForeignDef, props: Record<string, unknown>, scope: RenderScope): Promise<string> {
+  return renderForeignToString(def, props, scope.foreignImport ?? ((spec: string) => import(/* @vite-ignore */ spec)));
 }
 
 /** Serializable call-site props travel on the host so top-level foreigns can hydrate. */
@@ -393,7 +397,9 @@ function localizedProps(node: JanuxNode, scope: RenderScope): Record<string, unk
   const href = node.$p.href;
 
   if (node.$t !== 'a' || !i18n || typeof href !== 'string' || !href.startsWith('/')) return node.$p;
-  if (href.startsWith('/_janux')) return node.$p;
+  // `//host/path` is a network-path reference (RFC 3986) — another host, not a
+  // page of this app: prefixing it would reroute a CDN URL into the router.
+  if (href.startsWith('//') || href.startsWith('/_janux')) return node.$p;
   const [, first] = href.split('/');
 
   if (first && i18n.locales.includes(first)) return node.$p;
@@ -479,7 +485,9 @@ async function renderSiblings(nodes: unknown[], scope: RenderScope, emit: Emit):
 async function renderInto(node: unknown, scope: RenderScope, emit: Emit): Promise<void> {
   if (scope.halted?.()) return;
   if (node === null || node === undefined || typeof node === 'boolean') return;
-  if (typeof node === 'string' || typeof node === 'number') return emit(escapeHtml(node));
+  // `bigint` renders as text like `number` does (React ≥19 and Vue agree) —
+  // falling through used to reach `renderElement` and crash on `node.$p`.
+  if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') return emit(escapeHtml(node));
   if (Array.isArray(node)) {
     // One child needs no buffering machinery — and single-child arrays are
     // what JSX produces most of the time.

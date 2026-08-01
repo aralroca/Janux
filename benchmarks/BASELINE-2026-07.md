@@ -31,6 +31,16 @@ delta — including the ones that get reverted.
 | 4 | Coalescer as a push pump (fix, not opt) | ~600 0ms timers per render never fire under a microtask loop and pin their machinery | 810MB→0.6MB per 1000 SSR renders; the ssr-throughput OOM disappears | ✅ committed — found BY the harness |
 | 5 | JSX-against-DOM reconciler (reconcile.ts) | building the throwaway tree with toDomNodes was the dominant fixed cost | select 26.2→16.2, update 24.4→17.1, swap 28.8→22.4 | ✅ committed |
 | 6 | sameProps/sameValue + LIS + unkeyed fast-paths (CPU-profile-guided: matchState 22%) | value-equal props do not reserialize; unkeyed lists skip Map/Set/LIS; equivalent bound intents count as "unchanged" | select→7.4, update→8.4, swap→9.9; runlots 0.63×react, clear 0.89× | ✅ committed |
+| 7 | Render queue (runtime/render-queue.ts + an optional `schedule` on `effect`) | every intent flushed its own batch inline, so N events in ONE task cost N full island renders however little each changed; queueing collapses them into one, still inside the task | delegated_input_burst 145.1→12.6ms (11.6×, and past react); scaling-curves update_512 was 508ms of pure per-event renders | ✅ committed |
+| 8 | Sync `invokeMarker` + `notify` early-return on a reader-less signal | an already-mounted island paid a wrapper promise and two microtask hops per event to `await Promise.resolve()`; and one state write bumps path+descendants+ancestors, most of which nobody reads | inside run-to-run noise on its own; kept because both are strictly less work per event | ✅ committed |
+
+**Where that leaves the board (full run 2026-08-01)**: `reset` is now 1st
+(14.9ms, +2.69× react) and `delegated_input_burst` beat react for the first
+time. Everything still off the podium is the *same* lever below — `typing`
+(83.1 vs 44.5 solid), the krausest micro-ops (remove −18.4×, select −13.4×,
+update −7.5×, add −4.5×), `input_during_updates` (−1.57×). None of them is a
+burst: they are single events whose cost *is* one whole-island re-render, so
+queueing cannot help them and no further micro-optimization will either.
 
 **Next identified lever (RFC-level, to decide with Aral)**: the remaining floor
 (~7ms/1000 rows) is re-running the whole view (JSX rebuild + reactive-proxy

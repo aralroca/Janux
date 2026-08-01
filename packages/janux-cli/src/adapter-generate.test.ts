@@ -15,6 +15,36 @@ describe('appModules', () => {
     expect(appModules(app)).toEqual([join(APP, 'src/routes/index.tsx')]);
   });
 
+  /**
+   * The router reads the routes directory at boot, but it imports nothing else:
+   * an api module, an http handler or a layout the map forgot is a tool or a
+   * page that 500s on the first request in production and nowhere else.
+   */
+  it('includes the api modules, the http handlers and the layout chain', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-adapter-modules-'));
+    const write = (file: string, code = 'export default () => null;') => {
+      mkdirSync(dirname(join(root, file)), { recursive: true });
+      writeFileSync(join(root, file), code);
+    };
+
+    write('src/routes/_layout.tsx');
+    write('src/routes/index.tsx');
+    write('src/routes/admin/users.tsx');
+    write('src/server/shop.api.ts', 'export const list = 1;');
+    write('src/api/webhook.ts', 'export const GET = 1;');
+    write('src/ws.ts', 'export default {};');
+
+    const modules = appModules(await resolveAppConfig(root)).map((file) => file.slice(root.length + 1));
+
+    expect(modules).toContain('src/server/shop.api.ts');
+    expect(modules).toContain('src/api/webhook.ts');
+    expect(modules).toContain('src/ws.ts');
+    expect(modules).toContain('src/routes/_layout.tsx');
+    // A layout wrapping two routes is one import, not two: the map is keyed by
+    // path, and a duplicate would be a second binding of the same module.
+    expect(modules.filter((file) => file === 'src/routes/_layout.tsx')).toHaveLength(1);
+  });
+
   /** No URL matches `_404`/`_500`, so the route list never names them — and a bundle without them has no error pages. */
   it('includes the error pages', async () => {
     const root = mkdtempSync(join(tmpdir(), 'janux-adapter-errors-'));
