@@ -289,6 +289,23 @@ function keepRuntimeStyles(): () => void {
 }
 
 /**
+ * A stylesheet already applied to THIS document, which the diff must not touch.
+ *
+ * Detaching one is not free even when it goes straight back: the browser treats
+ * a re-inserted `<link>` as a new stylesheet and blocks on it, so the page
+ * paints unstyled for a frame — the flash `keepRuntimeStyles` was papering
+ * over. Matching on `parentNode` keeps this to the live head: the incoming
+ * page's nodes hang off the parsed document, so they still apply normally.
+ */
+function isLiveStyleNode(node: Node | null): boolean {
+  return (
+    node?.parentNode === document.head &&
+    ((node as Element).tagName === 'STYLE' ||
+      ((node as Element).tagName === 'LINK' && (node as Element).getAttribute('rel') === 'stylesheet'))
+  );
+}
+
+/**
  * Same story one level down: an agent feedback overlay, a portal root or any
  * node a runtime injected into the page belongs to the session, not to the
  * route, so the diff would drop it for good. Opt in with `data-janux-keep`.
@@ -417,7 +434,7 @@ async function applyPage(mount: MountContext, page: NavigablePage, options: Navi
      */
     await applyWithViewTransition(async () => {
       // The Navigation API drives the transition; diff directly (its own would be skipped).
-      await diff(document, source);
+      await diff(document, source, { shouldIgnoreNode: isLiveStyleNode });
       /*
        * A superseded navigation must not report success: the diff can finish
        * cleanly on a cancelled stream, having applied only the part that arrived,
