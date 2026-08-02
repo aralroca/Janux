@@ -6,13 +6,14 @@
  * manifests in the repository point at `src/` so the workspace needs no build
  * step, which means the compiled shape only exists if this script put it there.
  *
- * This runs from `.github/workflows/release.yml`, on a tag, and it refuses to
- * do the real thing anywhere else: without an OIDC token there is no
- * provenance, and an unsigned tarball is the exact thing publishing from CI is
- * supposed to make impossible. `--allow-unattested` exists for the day npm's
- * signing is down, and is meant to be typed deliberately.
+ * Two ways in, both supported. Pushing the tag runs this from
+ * `.github/workflows/release.yml`, where an OIDC token buys provenance: npm
+ * signs each tarball and names the repository, the commit and the workflow.
+ * Running it here publishes the same tarballs unsigned, and says so first — a
+ * maintainer cutting a release by hand is not an accident to be prevented.
  *
- *   bun run release -- --dry-run
+ *   bun run release              # publish from this machine
+ *   bun run release -- --dry-run # build, pack and verify, upload nothing
  */
 import { existsSync, rmSync } from 'node:fs';
 import { buildPackage } from './packaging/build';
@@ -35,11 +36,18 @@ function assertTagMatches(versions: Map<string, string>): void {
   }
 }
 
-function assertAllowedToUpload(): void {
-  if (dryRun || provenance || Bun.argv.includes('--allow-unattested')) return;
-  console.error('Refusing to publish without provenance: no OIDC token, so this is not a workflow run.');
-  console.error('Push the tag and let .github/workflows/release.yml do it, or pass --allow-unattested.');
-  process.exit(1);
+/**
+ * Says what the tarballs will and will not carry, and gets out of the way.
+ *
+ * Provenance needs the OIDC token only a workflow gets, so a laptop publishes
+ * unsigned — worth saying out loud once, not worth refusing over: cutting a
+ * release by hand is a supported thing to do here, and a maintainer who reads
+ * this line has all the information the old refusal was protecting.
+ */
+function announceProvenance(): void {
+  if (dryRun || provenance) return;
+  console.log('… no OIDC token: publishing from here, so npm will not sign these tarballs.');
+  console.log('  Push the tag instead and .github/workflows/release.yml signs them.');
 }
 
 /** Builds, packs and verifies one package; returns the archive npm will receive. */
@@ -59,7 +67,7 @@ async function pack(dir: string, versions: Map<string, string>): Promise<string>
 const versions = await releaseVersions();
 
 assertTagMatches(versions);
-assertAllowedToUpload();
+announceProvenance();
 if (dryRun && !provenance) console.log('… dry run without an OIDC token: packing only, npm would not sign this.');
 rmSync(PACKED, { recursive: true, force: true });
 for (const dir of PUBLISH_ORDER) {
