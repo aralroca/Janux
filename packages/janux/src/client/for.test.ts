@@ -241,6 +241,41 @@ describe('<For>', () => {
     expect(bodies).toEqual([]);
   });
 
+  it('disposes row scopes when the CONTAINER stops being rendered', () => {
+    const root = document.createElement('div');
+    const rows = signal(rowsOf([1, 2]));
+    const shown = signal(true);
+    const selected = signal(0);
+    const bodies: number[] = [];
+    const view = () =>
+      shown.value
+        ? jsx('ul', {
+            children: jsx(For, {
+              each: rows.value,
+              by: (row: Row) => row.id,
+              children: (row: Row) => {
+                bodies.push(row.id);
+
+                return jsx('li', { class: selected.value === row.id ? 'x' : '', children: row.label });
+              },
+            }),
+          })
+        : null;
+
+    island(root, view);
+    // The <ul> goes away and comes back: the first generation's rows must not
+    // stay subscribed and re-rendering into detached nodes.
+    shown.value = false;
+    flushRenders();
+    shown.value = true;
+    flushRenders();
+    bodies.length = 0;
+    selected.value = 1;
+    flushRenders();
+    expect(bodies).toEqual([1, 2]);
+    expect(root.querySelectorAll('li').length).toBe(2);
+  });
+
   it('refuses a row body that renders more than one node', () => {
     const root = document.createElement('tbody');
 

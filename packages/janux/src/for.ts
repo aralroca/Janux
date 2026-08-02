@@ -1,4 +1,4 @@
-import { toRaw } from './state/reactive-state';
+import { toRaw } from './state/raw';
 
 /**
  * `<For>` — the fine-grained list primitive.

@@ -8,9 +8,10 @@
 		</script>
 	</head>
 	<body>
-		<div id="main">
-			<janux-island key="todomvc#1" data-jx="todomvc#1" data-jx-eager></janux-island>
-		</div>
+		<!-- The island host sits FLUSH inside #main: the newline+tabs a pretty-printed
+		     tag would leave behind are two real text nodes in the census the harness
+		     takes, which the react/solid/svelte columns (empty root div) do not pay. -->
+		<div id="main"><janux-island key="todomvc#1" data-jx="todomvc#1" data-jx-eager></janux-island></div>
 		<script type="module" src="/src/main.tsx"></script>
 	</body>
 </html>

@@ -2,6 +2,9 @@ import { batch, signal, untrack, type Sig } from '../signals';
 import { assertMutable, createGate, type MutationGate } from './mutation-gate';
 import { ancestorsOf, childPath, parentOf } from './path';
 import { isPlainContainer, plainify } from './plainify';
+import { RAW } from './raw';
+
+export { RAW, toRaw } from './raw';
 
 const MUTATING_ARRAY_METHODS = new Set([
   'push',
@@ -24,20 +27,6 @@ export interface ReactiveState<T extends object = Record<string, unknown>> {
 
 /** Writes between prune sweeps: keeps the sweep cost amortized O(1) per write. */
 const PRUNE_EVERY = 256;
-
-/**
- * Escape hatch to the plain object behind a state proxy. `<For>` walks the list
- * ONCE per render to diff it: going through the proxy would register a tracked
- * path (and build a child proxy) for every index on every pass, which is the
- * whole cost the primitive exists to remove. The values it hands rows are plain
- * data by construction — state is JSON-safe by schema.
- */
-export const RAW = Symbol.for('janux.raw');
-
-/** The plain value behind a state proxy; anything else passes through. */
-export function toRaw<T>(value: T): T {
-  return (value as { [RAW]?: T } | null | undefined)?.[RAW] ?? value;
-}
 
 export function createReactiveState<T extends object>(
   initial: T,
@@ -186,6 +175,10 @@ export function createReactiveState<T extends object>(
     // The hottest line in the state system: one `childPath` for both uses.
     const target = childPath(path, key);
 
+    // Unconditional, even with nothing tracking: proxy identity is keyed on the
+    // version signal, so skipping it for untracked reads would stop a write from
+    // minting a new identity for the changed subtree — the contract `foreign()`
+    // hands React. (Measured as a ~15% win on list writes, and reverted for it.)
     versionOf(target).value;
 
     return isPlainContainer(value) ? proxyFor(value, target) : value;

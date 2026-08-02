@@ -2,6 +2,7 @@ import { Fragment, type JanuxNode } from '../jsx-runtime';
 import { attrEntries } from '../render/html';
 import { isForeignDef } from '../interop';
 import { isFor, readEach, type ForProps } from '../for';
+import { toRaw } from '../state/raw';
 import { effect as watch, onCleanup, runWithOwner, signal, untrack, type Owner, type Sig } from '../signals';
 import { scheduleRender } from '../runtime/render-queue';
 import { elementShell, isComponentDef, svgChildren, toDomNodes, type RenderPass } from './dom';
@@ -334,6 +335,8 @@ interface RowScope {
 }
 
 interface ForState {
+  /** The container this list fills — the handle the detached-list sweep checks. */
+  root: Element;
   rows: Map<unknown, RowScope>;
   stamp: number;
   /**
@@ -347,6 +350,34 @@ interface ForState {
 
 /** Per parent element, per `<For>` in it — the list state has to outlive one render. */
 const forStates = new WeakMap<Element, Map<string | number, ForState>>();
+
+/**
+ * Every list under one island root, so a list whose CONTAINER disappears still
+ * gets torn down. `<ul>{todos.length > 0 && <For/>}</ul>` drops the whole
+ * container when the list empties: the WeakMap entry goes with the element, but
+ * the row effects are subscribed to island state and would keep re-rendering
+ * into detached nodes forever. Emptying and refilling a list leaked one live
+ * effect per row per cycle, which is what made repeated editing degrade ~30x.
+ */
+const listsByIsland = new WeakMap<Element, Set<ForState>>();
+/** The island root of the render in progress — the owner a new list registers under. */
+let renderRoot: Element | null = null;
+
+function disposeList(state: ForState): void {
+  state.rows.forEach((row) => row.dispose());
+  state.rows.clear();
+}
+
+function sweepDetachedLists(root: Element): void {
+  const lists = listsByIsland.get(root);
+
+  if (lists === undefined) return;
+  lists.forEach((state) => {
+    if (state.root === root || root.contains(state.root)) return;
+    disposeList(state);
+    lists.delete(state);
+  });
+}
 
 /**
  * Nested islands and foreign roots need the parent's key/sequence bookkeeping,
@@ -491,14 +522,21 @@ function forStateFor(root: Element, id: string | number, parent: RenderPass['par
 
   if (existing) return existing;
   const created: ForState = {
+    root,
     rows: new Map(),
     stamp: 0,
     pass: { parent, seq: new Map(), used: new Set(), islands: [], foreigns: [] },
   };
 
   byId.set(id, created);
+  if (renderRoot !== null) {
+    const lists = listsByIsland.get(renderRoot) ?? new Set<ForState>();
+
+    listsByIsland.set(renderRoot, lists);
+    lists.add(created);
+  }
   // The island scope owns the list: disposing it must stop every row effect.
-  onCleanup(() => created.rows.forEach((row) => row.dispose()));
+  onCleanup(() => disposeList(created));
 
   return created;
 }
@@ -524,7 +562,10 @@ function diffRows(
   let live = 0;
 
   for (let index = 0; index < items.length; index += 1) {
-    const item = items[index];
+    // Rows get plain data even when the list itself was built outside state (a
+    // `.filter()` over the proxy yields an array of proxies): otherwise a row
+    // would subscribe to its INDEX path and every permutation would dirty it.
+    const item = toRaw(items[index]);
     // Untracked: the list scope subscribes to the CONTAINER, never to what a key
     // function or a row body happens to read.
     const key = keyOf === undefined ? item : untrack(() => keyOf(item, index));
@@ -787,5 +828,13 @@ function lisIndices(seq: number[]): Set<number> {
 
 /** Patches `root`'s children in place to match the JSX `children` of an island view. */
 export function reconcile(root: Element, children: unknown, pass: RenderPass): void {
-  reconcileChildren(root, children, pass);
+  const previous = renderRoot;
+
+  renderRoot = root;
+  try {
+    reconcileChildren(root, children, pass);
+  } finally {
+    renderRoot = previous;
+  }
+  sweepDetachedLists(root);
 }
