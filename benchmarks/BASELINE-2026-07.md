@@ -75,6 +75,23 @@ What actually moved, janux then → now, with react alongside:
 | news | hydrate | 0.41 | 0.41 | 2.86 ✅ +6.94× |
 | streaming-ssr | shell_staggered | 1.47 | 1.26 | 0.12 |
 
+**Cell-by-cell against the previous run**: 19 flipped `-`→`+`, 13 flipped
+`+`→`-`. The 19 are the intended ones (`reverse` -3.88→+1.18, `shuffle`
+-4.02→+1.05, `rotatef` -3.64→+2.58, `swap` -1.55→+3.17, todomvc `add100`
+-2.83→+1.15, `complete25` -2.38→+1.10, `destroy25` -3.10→+1.16, plus the two
+text-count ties) together with several parity cells settling on the good side
+(`mount_dashboard`, `controls_submit`, `lifecycle mount`/`cycle`, `store_write`).
+
+The 13 that went the other way are **every one of them inside ±1.21×**:
+`narrow_write`, `rapid_writes`, `zustand_broad`, `tanstack_query_mount`/`broad`,
+five `*_first_input` rows, `total_staggered` (-1.01×), `error_reveal`,
+`retry_recovery`. These are 15-45ms measurements whose two columns sit within a
+few percent of each other and which have flipped sign between runs before. I am
+recording them as noise rather than regressions because nothing in this change
+set touches the store-fanout or suspense-recovery paths — but that is an
+inference from the diff, not from a repeated run, and a second full run is the
+honest way to settle it.
+
 The remaining `-` cells fall into five groups, all with a named cause:
 
 1. **Per-attribute reactivity, not per-row** (`select` -13.8×, `toggleAllOn/Off`
