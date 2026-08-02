@@ -164,10 +164,10 @@ export const FormPanel = component({
 						<input
 							name={`field-${index}`}
 							data-field-index={index}
-							value={() => state.values[index]}
+							value={state.values[index]}
 							onInput={intents.setField.with({ index })}
 						/>
-						<output data-field-output={index}>{() => state.values[index]}</output>
+						<output data-field-output={index}>{state.values[index]}</output>
 					</label>
 				);
 			})}
