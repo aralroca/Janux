@@ -108,9 +108,9 @@ Janux is 0.x, so a **minor is the breaking bump**. Breaking changes are called o
 
   `PUBLISH_ORDER` publishes ten packages and `scripts/version.ts` requires the
   ten to agree on one version, but the `fixed` group in `.changeset/config.json`
-  names only eight — these two are outside it, so nothing bumps them along and
-  the release refuses to cut. Until the config lists all ten, they ride each
-  release explicitly.
+  still named the eight that existed when it was written — so nothing bumped
+  these two along and the release refused to cut. Both are in the group now,
+  and every package added from here has to join it.
 
 ### @janux/vite
 
@@ -197,9 +197,9 @@ Janux is 0.x, so a **minor is the breaking bump**. Breaking changes are called o
 
   `PUBLISH_ORDER` publishes ten packages and `scripts/version.ts` requires the
   ten to agree on one version, but the `fixed` group in `.changeset/config.json`
-  names only eight — these two are outside it, so nothing bumps them along and
-  the release refuses to cut. Until the config lists all ten, they ride each
-  release explicitly.
+  still named the eight that existed when it was written — so nothing bumped
+  these two along and the release refused to cut. Both are in the group now,
+  and every package added from here has to join it.
 
 ### create-janux
 

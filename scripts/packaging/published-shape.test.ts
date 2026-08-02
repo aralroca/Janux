@@ -73,3 +73,19 @@ describe.each([...PUBLISH_ORDER])('%s: published shape', (dir) => {
     Object.values(pkg.bin ?? {}).forEach((target) => expect(target).toEndWith('.ts'));
   });
 });
+
+/**
+ * A package that publishes but sits outside the `fixed` group breaks the
+ * release the first time it is the only one a changeset names: `version.ts`
+ * demands one version across `PUBLISH_ORDER`, changesets only moves the group,
+ * and the bump aborts halfway through with the manifests already rewritten.
+ * That is a bad moment to learn a package was never added.
+ */
+describe('the release train', () => {
+  test('every published package is in the changeset fixed group', async () => {
+    const config = await Bun.file('.changeset/config.json').json();
+    const names = await Promise.all(PUBLISH_ORDER.map(async (dir) => (await readManifest(dir)).name));
+
+    expect([...config.fixed[0]].sort()).toEqual([...names].sort());
+  });
+});

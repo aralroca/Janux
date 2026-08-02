@@ -7,7 +7,7 @@
   "updateInternalDependencies": "patch",
   "bumpVersionsWithWorkspaceProtocolOnly": true,
   "privatePackages": { "version": false, "tag": false },
-  "fixed": [["janux", "@janux/server", "@janux/agent", "@janux/vite", "@janux/tailwind", "@janux/cli", "@janux/vercel", "create-janux"]],
+  "fixed": [["janux", "@janux/server", "@janux/agent", "@janux/content", "@janux/vite", "@janux/tailwind", "@janux/cli", "@janux/vercel", "@janux/node", "create-janux"]],
   "linked": [],
   "ignore": []
 }
