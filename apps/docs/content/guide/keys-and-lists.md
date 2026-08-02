@@ -29,6 +29,57 @@ Without keys, reordering a list mutates every row in place: focus, scroll positi
 
 Keys must be **stable and unique among siblings**. Array indices are neither when the list can reorder — a deleted first item shifts every key by one, which is exactly the case keys exist to handle.
 
+## 1b. `<For>`: a reactive scope per row
+
+`{state.items.map(…)}` is one expression inside the island's single render
+effect. Changing one row re-runs the whole view — every JSX node rebuilt, every
+reactive path re-read — and reconciles the whole subtree. That cost does not
+depend on how much changed, which is why moving one row of a thousand used to
+cost the same as rebuilding all of them.
+
+`<For>` gives every row its **own** reactive scope. The list level only matches
+rows by key and moves nodes; a row's body re-runs when that row's data changes,
+or when a signal only that row reads changes.
+
+```tsx
+import { For } from 'janux';
+
+view: ({ state }) => (
+  <ul>
+    <For each={state.items} by={(item) => item.id}>
+      {(item) => (
+        <li>
+          {item.name} — {item.qty}
+        </li>
+      )}
+    </For>
+  </ul>
+),
+```
+
+- **`by`, not `key`.** JSX reserves `key` — the transform lifts it out of the
+  props object, so a `key` prop would never reach the component.
+- **Give it a stable field.** Writing `state.items` stores a defensive clone, so
+  the array elements are new objects every time and their identity means
+  nothing. `by={(item) => item.id}` is what lets a row survive a list write.
+- **Replace a row to update it.** A row re-renders when its item is no longer
+  deep-equal to the one it rendered. Mutating the item in place leaves the row
+  showing stale data — write `items = items.map((i) => (i.id === id ? { ...i, done } : i))`.
+  This is the same contract Solid's `<For>` and React's `memo` have.
+- **One node per row.** The body must render exactly one element, and it may not
+  contain a nested island or a `foreign()` root — those need the parent's key
+  bookkeeping, which a per-row scope cannot supply consistently.
+- **`index` is an accessor**, so a row that ignores its position does not
+  subscribe to it and a permutation re-renders nothing:
+  `{(item, index) => <li>{index()}: {item.name}</li>}`.
+
+On the server `<For>` is an ordinary component that expands to the rows, so the
+SSR markup is identical to the `.map()` it replaces; the client reconciler
+recognizes it and takes the fine-grained path instead.
+
+Rows still get keyed reconciliation from `by` — you do not add `key` to the row
+element as well.
+
 ## 2. Keys on islands: instance identity
 
 When the same component appears more than once on a page, each occurrence needs its own identity so state, snapshots and the agent surface stay separate:
