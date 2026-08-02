@@ -11,6 +11,204 @@ when release engineering was introduced, which is why they are coarser than what
 
 Janux is 0.x, so a **minor is the breaking bump**. Breaking changes are called out as such below.
 
+## 0.6.0
+
+### janux
+
+#### Minor Changes
+
+- `foreign()` maps React callback props onto intents, keeps portals alive across a navigation, and hands React plain
+  data so a foreign component cannot capture a live state proxy. State identity is stable across re-renders, which is
+  what data grids, charts and virtualization libraries assume.
+- Hovering a link warms the route manifest as well as the page, so the first navigation after a hover no longer waits
+  on a manifest fetch. Prefetching waits 60ms for intent, requests at low priority, and aborts when a navigation
+  starts, so a pointer crossing a nav bar no longer costs a request per link.
+- Strict CSP: `csp: true` mints a nonce per request and stamps it on every inline script and style the framework
+  emits — resume payload, island map, runtime, speculation rules, query hydration, suspense boundary swaps, inlined
+  CSS, JSON-LD, `meta.head` and `<script>`/`<style>` written in JSX — then sends
+  `script-src 'nonce-…' 'strict-dynamic'; object-src 'none'; base-uri 'none'`. No code path uses `eval` or
+  `new Function`, so `'unsafe-eval'` is never needed, and an app that does not configure `csp` gets byte-identical
+  HTML.
+
+  SPA navigation is where this is easy to get wrong: re-creating the scripts a navigated page brings is what gives
+  them a valid nonce, so doing it indiscriminately would launder an injected `<script>` into an executed one. The
+  response states its own nonce in `x-janux-nonce`, out of reach of its own markup, and only tags already carrying
+  that value are re-stamped. Nonces are validated against the CSP `base64-value` grammar, and a nonced document is
+  never kept in the shared response cache — a stored nonce is one every later visitor would share.
+
+- `worker()` — a new `janux/worker` entry point that runs a function on a Web Worker thread, so expensive work stops
+  blocking clicks, typing, scrolling and animation. It is marked **experimental** in `STABILITY.md`: the worker is
+  emitted by a source transform because Vite cannot emit a worker chunk from a plugin, and that strategy is expected
+  to change under the API.
+
+#### Patch Changes
+
+- `janux dev` shows a failure inside an `intent()`, `effect()` or `source()` with the chain that explains it — route,
+  `_layout` chain, island, the named behavior, and, for an invocation, the guard the pipeline resolved and the origin
+  it resolved it for — above the JS stack. The original error is still logged to the console, which a failed intent
+  previously never reached. The overlay is dev-only and eliminated from production builds.
+
+  Sourcemaps are on: full in dev, with the framework's own frames resolvable, and `hidden` in production, so `.map`
+  files exist for an error tracker without a `sourceMappingURL` reaching the browser.
+
+  `janux info` prints versions, the resolved config, detected adapters, active zero-config integrations and every
+  route as markdown to paste into an issue unedited.
+
+- The published packages ship compiled ESM with declarations and sourcemaps, instead of manifests pointing at
+  TypeScript source. Node refuses to strip types under `node_modules`, so every earlier release was unloadable from a
+  plain Node project; a Node install smoke test now runs on every change so it cannot regress.
+
+### @janux/server
+
+#### Minor Changes
+
+- A multipart body no longer has to fit in memory: `spoolMultipart()` streams parts to disk as they arrive, enforcing
+  the size limit inside the read loop rather than after it. A 4 GB upload now peaks at ~71 MB of RSS instead of
+  holding the whole body.
+- Strict CSP: `csp: true` mints a nonce per request and stamps it on every inline script and style the framework
+  emits — resume payload, island map, runtime, speculation rules, query hydration, suspense boundary swaps, inlined
+  CSS, JSON-LD, `meta.head` and `<script>`/`<style>` written in JSX — then sends
+  `script-src 'nonce-…' 'strict-dynamic'; object-src 'none'; base-uri 'none'`. No code path uses `eval` or
+  `new Function`, so `'unsafe-eval'` is never needed, and an app that does not configure `csp` gets byte-identical
+  HTML.
+
+  SPA navigation is where this is easy to get wrong: re-creating the scripts a navigated page brings is what gives
+  them a valid nonce, so doing it indiscriminately would launder an injected `<script>` into an executed one. The
+  response states its own nonce in `x-janux-nonce`, out of reach of its own markup, and only tags already carrying
+  that value are re-stamped. Nonces are validated against the CSP `base64-value` grammar, and a nonced document is
+  never kept in the shared response cache — a stored nonce is one every later visitor would share.
+
+#### Patch Changes
+
+- The published packages ship compiled ESM with declarations and sourcemaps, instead of manifests pointing at
+  TypeScript source. Node refuses to strip types under `node_modules`, so every earlier release was unloadable from a
+  plain Node project; a Node install smoke test now runs on every change so it cannot regress.
+- The invocation pipeline refuses cross-site calls, closing a CSRF hole that reached intents and `api()` over both
+  `POST` and `GET` — schema defaults meant an `<img src>` could invoke a handler. The check is on `Sec-Fetch-Site`
+  and treats only `same-origin` as safe: Chrome reports two localhost ports as `same-site`, so accepting that would
+  have let the real attack through.
+
+### @janux/agent
+
+#### Patch Changes
+
+- The published packages ship compiled ESM with declarations and sourcemaps, instead of manifests pointing at
+  TypeScript source. Node refuses to strip types under `node_modules`, so every earlier release was unloadable from a
+  plain Node project; a Node install smoke test now runs on every change so it cannot regress.
+- The invocation pipeline refuses cross-site calls, closing a CSRF hole that reached intents and `api()` over both
+  `POST` and `GET` — schema defaults meant an `<img src>` could invoke a handler. The check is on `Sec-Fetch-Site`
+  and treats only `same-origin` as safe: Chrome reports two localhost ports as `same-site`, so accepting that would
+  have let the real attack through.
+
+### @janux/content
+
+#### Minor Changes
+
+- Released with the rest of the workspace.
+
+  `PUBLISH_ORDER` publishes ten packages and `scripts/version.ts` requires the
+  ten to agree on one version, but the `fixed` group in `.changeset/config.json`
+  still named the eight that existed when it was written — so nothing bumped
+  these two along and the release refused to cut. Both are in the group now,
+  and every package added from here has to join it.
+
+### @janux/vite
+
+#### Minor Changes
+
+- `worker()` — a new `janux/worker` entry point that runs a function on a Web Worker thread, so expensive work stops
+  blocking clicks, typing, scrolling and animation. It is marked **experimental** in `STABILITY.md`: the worker is
+  emitted by a source transform because Vite cannot emit a worker chunk from a plugin, and that strategy is expected
+  to change under the API.
+
+#### Patch Changes
+
+- `janux dev` shows a failure inside an `intent()`, `effect()` or `source()` with the chain that explains it — route,
+  `_layout` chain, island, the named behavior, and, for an invocation, the guard the pipeline resolved and the origin
+  it resolved it for — above the JS stack. The original error is still logged to the console, which a failed intent
+  previously never reached. The overlay is dev-only and eliminated from production builds.
+
+  Sourcemaps are on: full in dev, with the framework's own frames resolvable, and `hidden` in production, so `.map`
+  files exist for an error tracker without a `sourceMappingURL` reaching the browser.
+
+  `janux info` prints versions, the resolved config, detected adapters, active zero-config integrations and every
+  route as markdown to paste into an issue unedited.
+
+- The published packages ship compiled ESM with declarations and sourcemaps, instead of manifests pointing at
+  TypeScript source. Node refuses to strip types under `node_modules`, so every earlier release was unloadable from a
+  plain Node project; a Node install smoke test now runs on every change so it cannot regress.
+- Strict CSP: `csp: true` mints a nonce per request and stamps it on every inline script and style the framework
+  emits — resume payload, island map, runtime, speculation rules, query hydration, suspense boundary swaps, inlined
+  CSS, JSON-LD, `meta.head` and `<script>`/`<style>` written in JSX — then sends
+  `script-src 'nonce-…' 'strict-dynamic'; object-src 'none'; base-uri 'none'`. No code path uses `eval` or
+  `new Function`, so `'unsafe-eval'` is never needed, and an app that does not configure `csp` gets byte-identical
+  HTML.
+
+  SPA navigation is where this is easy to get wrong: re-creating the scripts a navigated page brings is what gives
+  them a valid nonce, so doing it indiscriminately would launder an injected `<script>` into an executed one. The
+  response states its own nonce in `x-janux-nonce`, out of reach of its own markup, and only tags already carrying
+  that value are re-stamped. Nonces are validated against the CSP `base64-value` grammar, and a nonced document is
+  never kept in the shared response cache — a stored nonce is one every later visitor would share.
+
+### @janux/tailwind
+
+#### Patch Changes
+
+- The published packages ship compiled ESM with declarations and sourcemaps, instead of manifests pointing at
+  TypeScript source. Node refuses to strip types under `node_modules`, so every earlier release was unloadable from a
+  plain Node project; a Node install smoke test now runs on every change so it cannot regress.
+
+### @janux/cli
+
+#### Patch Changes
+
+- `janux dev` shows a failure inside an `intent()`, `effect()` or `source()` with the chain that explains it — route,
+  `_layout` chain, island, the named behavior, and, for an invocation, the guard the pipeline resolved and the origin
+  it resolved it for — above the JS stack. The original error is still logged to the console, which a failed intent
+  previously never reached. The overlay is dev-only and eliminated from production builds.
+
+  Sourcemaps are on: full in dev, with the framework's own frames resolvable, and `hidden` in production, so `.map`
+  files exist for an error tracker without a `sourceMappingURL` reaching the browser.
+
+  `janux info` prints versions, the resolved config, detected adapters, active zero-config integrations and every
+  route as markdown to paste into an issue unedited.
+
+- The published packages ship compiled ESM with declarations and sourcemaps, instead of manifests pointing at
+  TypeScript source. Node refuses to strip types under `node_modules`, so every earlier release was unloadable from a
+  plain Node project; a Node install smoke test now runs on every change so it cannot regress.
+- The invocation pipeline refuses cross-site calls, closing a CSRF hole that reached intents and `api()` over both
+  `POST` and `GET` — schema defaults meant an `<img src>` could invoke a handler. The check is on `Sec-Fetch-Site`
+  and treats only `same-origin` as safe: Chrome reports two localhost ports as `same-site`, so accepting that would
+  have let the real attack through.
+
+### @janux/vercel
+
+#### Patch Changes
+
+- The published packages ship compiled ESM with declarations and sourcemaps, instead of manifests pointing at
+  TypeScript source. Node refuses to strip types under `node_modules`, so every earlier release was unloadable from a
+  plain Node project; a Node install smoke test now runs on every change so it cannot regress.
+
+### @janux/node
+
+#### Minor Changes
+
+- Released with the rest of the workspace.
+
+  `PUBLISH_ORDER` publishes ten packages and `scripts/version.ts` requires the
+  ten to agree on one version, but the `fixed` group in `.changeset/config.json`
+  still named the eight that existed when it was written — so nothing bumped
+  these two along and the release refused to cut. Both are in the group now,
+  and every package added from here has to join it.
+
+### create-janux
+
+#### Patch Changes
+
+- The published packages ship compiled ESM with declarations and sourcemaps, instead of manifests pointing at
+  TypeScript source. Node refuses to strip types under `node_modules`, so every earlier release was unloadable from a
+  plain Node project; a Node install smoke test now runs on every change so it cannot regress.
+
 ## 0.5.0
 
 ### janux

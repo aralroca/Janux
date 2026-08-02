@@ -1,6 +1,6 @@
 {
   "name": "janux",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Core of Janux, the fullstack framework for the Agentic Web. One component, two faces: a view for humans, typed MCP tools & resources for AI agents.",
   "repository": {
     "type": "git",

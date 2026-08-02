@@ -1,6 +1,6 @@
 {
   "name": "@janux/node",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Deploy a Janux app to any Node 24+ host — a self-contained build/ directory, no Bun in production.",
   "repository": {
     "type": "git",

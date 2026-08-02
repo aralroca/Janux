@@ -1,6 +1,6 @@
 {
   "name": "@janux/content",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Typed content collections for Janux: frontmatter validated by the framework's own schema, with Markdown and MDX bodies.",
   "repository": {
     "type": "git",
