@@ -1,4 +1,5 @@
 import { JXE_PREFIX, markerAttrFor } from '../render/html';
+import type { JanuxInstance } from '../runtime/instance';
 import { mountIsland, type MountContext } from './mount';
 
 interface MarkerHit {
@@ -16,10 +17,35 @@ function markerTarget(event: Event, attr: string): MarkerHit | undefined {
   return { marker: el.getAttribute(attr)!, root, el };
 }
 
-function elementInput(el: Element): Record<string, unknown> {
+function reportEventError(message: string): void {
+  document.dispatchEvent(new CustomEvent('janux:error', { detail: `Janux: ${message}` }));
+}
+
+/**
+ * A `data-input` that is not JSON. Refusing the invocation is the fail-closed
+ * answer: running the intent without the input the markup declared would put a
+ * mutation through with the wrong arguments, and letting `JSON.parse` throw out
+ * of a document-level listener took the whole delegation pass down with it —
+ * every other marker of that dispatch included.
+ */
+const INVALID_INPUT = Symbol.for('janux.invalidInput');
+
+type ElementInput = Record<string, unknown> | undefined | typeof INVALID_INPUT;
+
+/** The element's own `data-input`: `undefined` when absent, `INVALID_INPUT` when unparseable. */
+function elementInput(el: Element): ElementInput {
   const raw = el.getAttribute('data-input');
 
-  return raw ? JSON.parse(raw) : {};
+  // Absent and empty are the same thing — "this element declares no input" —
+  // and only a non-empty value that fails to parse is a broken declaration.
+  if (raw === null || raw.trim() === '') return undefined;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    reportEventError(`ignored an event — "data-input" on <${el.tagName.toLowerCase()}> is not valid JSON`);
+
+    return INVALID_INPUT;
+  }
 }
 
 function controlValue(el: Element): unknown {
@@ -38,7 +64,10 @@ function keyboardPayload(event: KeyboardEvent): Record<string, unknown> {
 }
 
 /** Intent input derived from the event: `data-input` wins, then value/key/pointer facts. */
-function eventInput(event: Event, el: Element): Record<string, unknown> {
+function eventInput(event: Event, el: Element): Record<string, unknown> | typeof INVALID_INPUT {
+  const bound = elementInput(el);
+
+  if (bound === INVALID_INPUT) return INVALID_INPUT;
   const value = controlValue(el);
   const facts: Record<string, unknown> = value === undefined ? {} : { value };
 
@@ -46,14 +75,52 @@ function eventInput(event: Event, el: Element): Record<string, unknown> {
   // The whole mouse family (pointer, drag, dblclick…) reports where it happened.
   if (event instanceof MouseEvent) Object.assign(facts, { x: event.clientX, y: event.clientY });
 
-  return { ...facts, ...elementInput(el) };
+  return { ...facts, ...bound };
 }
 
-async function invokeMarker(marker: string, root: Element, mount: MountContext, input?: unknown) {
-  const [id = '', intentName = ''] = marker.split(':');
-  const instance = await mountIsland(id, root, mount);
+/**
+ * Events the platform never dispatches on a disabled form control, so a
+ * delegated listener must not either: a programmatic `.click()` — an agent's
+ * DOM fallback, a test, a userscript — is otherwise a way around a UI that
+ * says the action is unavailable, and the intent would run.
+ *
+ * Ported from React's `shouldPreventMouseEvent` (react-dom, DOMPluginEventSystem),
+ * extended to the pointer trio the HTML spec suppresses the same way.
+ */
+const DISABLEABLE_EVENTS = new Set([
+  'click',
+  'dblclick',
+  'mousedown',
+  'mouseup',
+  'mousemove',
+  'pointerdown',
+  'pointerup',
+  'pointermove',
+]);
+/** `fieldset[disabled]` counts: it disables every control inside it. */
+const DISABLED_CONTROL = 'button[disabled],input[disabled],select[disabled],textarea[disabled],fieldset[disabled]';
 
-  return instance.intents[intentName]?.(input);
+function suppressedByDisabled(type: string, hit: MarkerHit, target: EventTarget | null): boolean {
+  if (!DISABLEABLE_EVENTS.has(type)) return false;
+  if (hit.el.matches(DISABLED_CONTROL)) return true;
+
+  return target instanceof Element && !!target.closest(DISABLED_CONTROL);
+}
+
+/**
+ * Not `async`: an island that is already mounted — every event after the first
+ * — would otherwise pay two microtask hops and a wrapper promise to `await` a
+ * `Promise.resolve()`, once per event. A burst of a few hundred makes that
+ * visible, and the intent's own promise is the one the caller wants anyway.
+ */
+function invokeMarker(marker: string, root: Element, mount: MountContext, input?: unknown): Promise<unknown> {
+  const [id = '', intentName = ''] = marker.split(':');
+  const run = (instance: JanuxInstance) => instance.intents[intentName]?.(input);
+  const mounted = mount.registry.mounted.get(id);
+
+  if (mounted) return Promise.resolve(run(mounted));
+
+  return mountIsland(id, root, mount).then(run);
 }
 
 function formInput(form: HTMLFormElement): Record<string, unknown> {
@@ -98,11 +165,17 @@ function listenClicks(): void {
     const found = markerTarget(event, markerAttrFor('click'));
 
     if (!found) return;
+    if (suppressedByDisabled('click', found, event.target)) return;
+    // Prevented even when the input turns out to be unusable: the marker
+    // declares this element as intent-driven, so its platform default (a link
+    // navigating, a submit button posting) must not fire behind the refusal.
     event.preventDefault();
-    const raw = found.el.getAttribute('data-input');
+    const input = elementInput(found.el);
+
+    if (input === INVALID_INPUT) return;
     const { mount, track } = context();
 
-    track(invokeMarker(found.marker, found.root, mount, raw ? JSON.parse(raw) : undefined));
+    track(invokeMarker(found.marker, found.root, mount, input));
   });
 }
 
@@ -147,9 +220,10 @@ function listenInput(): void {
     const found = markerTarget(event, `${JXE_PREFIX}input`);
     const { mount, track } = context();
 
-    if (found && shouldCommit(found.el)) {
-      track(invokeMarker(found.marker, found.root, mount, eventInput(event, found.el)));
-    }
+    if (!found || !shouldCommit(found.el)) return;
+    const input = eventInput(event, found.el);
+
+    if (input !== INVALID_INPUT) track(invokeMarker(found.marker, found.root, mount, input));
   };
 
   document.addEventListener('input', (event) => {
@@ -190,10 +264,13 @@ function listenRich(type: string): void {
 
     if (!found) return;
     if (ENTER_LEAVE.has(type) && found.el !== event.target) return;
+    if (suppressedByDisabled(type, found, event.target)) return;
     // A handled drop must also cancel the browser default (navigating to a
     // dragged link or opening a dropped file over the page).
     if (type === 'drop') event.preventDefault();
-    track(invokeMarker(found.marker, found.root, mount, eventInput(event, found.el)));
+    const input = eventInput(event, found.el);
+
+    if (input !== INVALID_INPUT) track(invokeMarker(found.marker, found.root, mount, input));
   };
 
   // Bubbling events delegate in the bubble phase, so component code (e.g. an

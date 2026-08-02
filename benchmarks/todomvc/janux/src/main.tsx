@@ -1,9 +1,11 @@
-import { component, intent, schema, str, int, bool, list } from 'janux';
+import { component, For, intent, schema, str, int, bool, list } from 'janux';
 import { boot } from 'janux/client';
 
 // TodoMVC fixture (Janux) — same DOM contract as the sibling apps (see
 // ../../README.md). Authored idiomatically for Janux: one island whose intents
-// mutate schema-typed state through the reactive proxy, and the delegated
+// mutate schema-typed state through the reactive proxy, a fine-grained
+// `<For each by>` over the visible todos (Janux's per-row reactive scope, the
+// counterpart of the `<For>` the solid column uses), and the delegated
 // event system derives each intent's input from the event itself (`value`
 // from the dispatched control, `key` from keyboard events) merged with the
 // element's `.with()` payload — so the `.new-todo`/`.edit` inputs stay
@@ -32,11 +34,10 @@ function commitEdit(state: any, value: string): void {
 	const title = value.trim();
 
 	if (title === '') state.todos = state.todos.filter((todo: Todo) => todo.id !== id);
-	else {
-		const todo = state.todos.find((item: Todo) => item.id === id);
-
-		if (todo) todo.title = title;
-	}
+	// A retitle REPLACES the row object rather than mutating it in place: `<For>`
+	// tracks a row by identity-then-value, so a replacement is what tells it that
+	// exactly this row changed (the same reason the solid/react columns spread).
+	else state.todos = state.todos.map((todo: Todo) => (todo.id === id ? { ...todo, title } : todo));
 	state.editing = 0;
 }
 
@@ -66,18 +67,18 @@ export const TodoMvc = component({
 			description: 'Set one todo completed state from its checkbox',
 			input: schema({ id: int(), value: bool().default(false) }),
 			run: ({ state, input }: any) => {
-				const todo = state.todos.find((item: Todo) => item.id === input.id);
-
-				if (todo) todo.completed = input.value;
+				state.todos = state.todos.map((todo: Todo) =>
+					todo.id === input.id ? { ...todo, completed: input.value } : todo,
+				);
 			},
 		}),
 		toggleAll: intent({
 			description: 'Set every todo completed state from the toggle-all checkbox',
 			input: schema({ value: bool().default(false) }),
 			run: ({ state, input }: any) => {
-				for (const todo of state.todos) {
-					if (todo.completed !== input.value) todo.completed = input.value;
-				}
+				state.todos = state.todos.map((todo: Todo) =>
+					todo.completed === input.value ? todo : { ...todo, completed: input.value },
+				);
 			},
 		}),
 		destroy: intent({
@@ -130,7 +131,9 @@ export const TodoMvc = component({
 		let remaining = 0;
 
 		for (const todo of state.todos) if (!todo.completed) remaining += 1;
-		const visible =
+		// A THUNK, so the list owns its own effect: the filter and the todos are
+		// read inside it, not in this view.
+		const visible = () =>
 			state.filter === 'active'
 				? state.todos.filter((todo: Todo) => !todo.completed)
 				: state.filter === 'completed'
@@ -154,36 +157,40 @@ export const TodoMvc = component({
 							onChange={intents.toggleAll}
 						/>
 						<ul class="todo-list">
-							{visible.map((todo: Todo) => (
-								<li
-									key={todo.id}
-									class={
-										(todo.completed ? 'completed' : '') +
-										(state.editing === todo.id ? ' editing' : '')
-									}
-								>
-									<div class="view">
-										<input
-											class="toggle"
-											type="checkbox"
-											checked={todo.completed}
-											onChange={intents.toggle.with({ id: todo.id })}
-										/>
-										<label onDoubleClick={intents.startEdit.with({ id: todo.id })}>
-											{todo.title}
-										</label>
-										<button class="destroy" onClick={intents.destroy.with({ id: todo.id })} />
-									</div>
-									{state.editing === todo.id ? (
-										<input
-											class="edit"
-											value={todo.title}
-											onKeyDown={intents.editKeyDown}
-											onBlur={intents.editBlur}
-										/>
-									) : null}
-								</li>
-							))}
+							<For each={visible} by={(todo: Todo) => todo.id}>
+								{(todo: Todo) => (
+									<li
+										// Thunks: the row body reads neither `state.editing` nor the
+										// filter, so opening an editor rewrites one attribute per row
+										// instead of re-rendering every row.
+										class={() =>
+											(todo.completed ? 'completed' : '') +
+											(state.editing === todo.id ? ' editing' : '')
+										}
+									>
+										<div class="view">
+											<input
+												class="toggle"
+												type="checkbox"
+												checked={todo.completed}
+												onChange={intents.toggle.with({ id: todo.id })}
+											/>
+											<label onDoubleClick={intents.startEdit.with({ id: todo.id })}>
+												{todo.title}
+											</label>
+											<button class="destroy" onClick={intents.destroy.with({ id: todo.id })} />
+										</div>
+										{state.editing === todo.id ? (
+											<input
+												class="edit"
+												value={todo.title}
+												onKeyDown={intents.editKeyDown}
+												onBlur={intents.editBlur}
+											/>
+										) : null}
+									</li>
+								)}
+							</For>
 						</ul>
 					</section>
 				) : null}

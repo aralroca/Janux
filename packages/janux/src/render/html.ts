@@ -21,8 +21,28 @@ const ESCAPES: Record<string, string> = {
   '"': '&quot;',
 };
 
+const NEEDS_ESCAPE = /[&<>"]/g;
+
+/**
+ * Almost no string in a page contains one of these four characters, and this
+ * runs on every text node and every attribute value of every render. The scan
+ * bails on the first offending byte and hands the untouched string back —
+ * `replace` would run the regex machinery and cost ~13% of an SSR render even
+ * when it matches nothing.
+ */
 export function escapeHtml(value: unknown): string {
-  return String(value).replace(/[&<>"]/g, (char) => ESCAPES[char]!);
+  const text = typeof value === 'string' ? value : String(value);
+
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+
+    // & < > "
+    if (code === 38 || code === 60 || code === 62 || code === 34) {
+      return text.replace(NEEDS_ESCAPE, (char) => ESCAPES[char]!);
+    }
+  }
+
+  return text;
 }
 
 /** JSON safe to embed in an inline `<script>`: `<` escaped so `</script>` cannot break out. */
@@ -210,7 +230,7 @@ function isBlockedUrl(name: string, value: unknown): value is string {
 }
 
 /** Maps a JSX prop to an HTML attribute pair; `onX={intents.y}` becomes a data marker for delegation. */
-function propToAttr(name: string, value: unknown): [string, unknown] | undefined {
+export function propToAttr(name: string, value: unknown): [string, unknown] | undefined {
   if (name === 'children' || name === 'key' || name === 'dangerHTML') return undefined;
   if (name === 'on' || name === 'intent') {
     if ((value as any)?.$intent) {
@@ -293,45 +313,87 @@ function boundInputAttr(bound: [string, Record<string, unknown>][], explicit: un
 }
 
 /**
+ * A reactive binding: `class={() => state.selected === row.id ? 'danger' : ''}`.
+ *
+ * A thunk defers the read, so the enclosing view never subscribes to what it
+ * touches — the binding's own effect does, and a change rewrites ONE attribute
+ * instead of re-running the view. This is the attribute-level counterpart of
+ * `<For>`'s row-level scope, and the same thing Solid and vue-vapor compile to.
+ *
+ * `on*` is excluded (events bind to named intents, and an intent ref is itself
+ * callable), as are the two props that are never attributes.
+ */
+export function isBinding(name: string, value: unknown): value is () => unknown {
+  return (
+    typeof value === 'function' &&
+    name !== 'children' &&
+    name !== 'dangerHTML' &&
+    !ON_PREFIX.test(name) &&
+    (value as { $intent?: unknown }).$intent === undefined
+  );
+}
+
+/** The attribute a binding writes, so an attr diff knows not to reclaim it. */
+export function bindingAttr(name: string): string | undefined {
+  return propToAttr(name, '')?.[0];
+}
+
+/**
+ * One pass over the props instead of entries → map → filter → dedupe-filter →
+ * flatMap → spread. This is the single hottest function in an SSR render (~18%
+ * of one), and six intermediate arrays plus a Set per element was most of it.
+ *
+ * `resolveBindings` is the server/static path: it calls each thunk and emits the
+ * attribute. The client leaves them out and gives each one its own effect.
+ *
  * Alias spellings can collide on one marker (`onFocus`+`onFocusIn`,
  * `onDoubleClick`+`onDblClick`): the first prop wins — a duplicate attribute
  * would be invalid HTML the browser resolves the same way, silently.
  */
-function dedupeMarkers(entries: [string, unknown][]): [string, unknown][] {
-  const seen = new Set<string>();
+export function attrEntries(props: Record<string, unknown>, resolveBindings = false): [string, unknown][] {
+  const names = Object.keys(props);
+  const entries: [string, unknown][] = [];
+  // Both built lazily: the overwhelming majority of elements carry neither a
+  // delegation marker nor a `.with()` binding.
+  let markers: Set<string> | null = null;
+  const bound: [string, Record<string, unknown>][] = [];
 
-  return entries.filter(([name]) => {
-    if (!isMarkerAttr(name)) return true;
-    if (seen.has(name)) {
-      console.warn(`Janux: two event props resolve to the same marker "${name}" — the first one wins`);
+  for (let index = 0; index < names.length; index += 1) {
+    const name = names[index]!;
+    const raw = props[name];
+    const binding = isBinding(name, raw);
 
-      return false;
+    if (binding && !resolveBindings) continue;
+    const value = binding ? (raw as () => unknown)() : raw;
+    const pair = propToAttr(name, value);
+
+    if (pair !== undefined) {
+      if (!isMarkerAttr(pair[0])) entries.push(pair);
+      else if ((markers ??= new Set()).has(pair[0])) {
+        console.warn(`Janux: two event props resolve to the same marker "${pair[0]}" — the first one wins`);
+      } else {
+        markers.add(pair[0]);
+        entries.push(pair);
+      }
     }
-    seen.add(name);
-
-    return true;
-  });
-}
-
-export function attrEntries(props: Record<string, unknown>): [string, unknown][] {
-  const pairs = Object.entries(props);
-  const entries = dedupeMarkers(
-    pairs
-      .map(([name, value]) => propToAttr(name, value))
-      .filter((entry): entry is [string, unknown] => entry !== undefined),
-  );
-  const bound = pairs.flatMap(([name, value]) => {
     const input = boundInputOf(name, value);
 
-    return input ? [[name, input] as [string, Record<string, unknown>]] : [];
-  });
+    if (input !== undefined) bound.push([name, input]);
+  }
   const extra = boundInputAttr(bound, props['data-input']);
 
-  return extra ? [...entries, extra] : entries;
+  if (extra !== undefined) entries.push(extra);
+
+  return entries;
 }
 
 export function renderAttrs(props: Record<string, unknown>): string {
-  return attrEntries(props)
-    .map(([name, value]) => attrFor(name, value))
-    .join('');
+  // The server has no effects to hang a binding on: it emits the value the
+  // thunk has right now, exactly as the client's first render will.
+  const entries = attrEntries(props, true);
+  let out = '';
+
+  for (let index = 0; index < entries.length; index += 1) out += attrFor(entries[index]![0], entries[index]![1]);
+
+  return out;
 }

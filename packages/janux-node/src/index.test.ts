@@ -203,4 +203,45 @@ describe('the built app under node', () => {
   it('404s a path no route matches, rather than falling through to the static handler', async () => {
     expect((await fetch(`${BASE}/nothing-here`)).status).toBe(404);
   });
+
+  /** A HEAD is how a health check and a link checker ask: same headers, no body. */
+  it('answers a HEAD with the headers of the GET and nothing after them', async () => {
+    const head = await fetch(`${BASE}/`, { method: 'HEAD' });
+    const get = await fetch(`${BASE}/`);
+
+    expect(head.status).toBe(200);
+    expect(head.headers.get('content-type')).toBe(get.headers.get('content-type'));
+    expect(await head.text()).toBe('');
+  });
+
+  /** The page's markdown projection, at the URL a running server answers it on. */
+  it('serves the .md projection of a page, under node', async () => {
+    const response = await fetch(`${BASE}/catalog.md`);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('markdown');
+    expect(await response.text()).toContain('catalog rendered at');
+  });
+
+  /** The agent surface is a POST with a JSON body: the deployment has to read one. */
+  it('reads a request body, under node', async () => {
+    const response = await fetch(`${BASE}/_janux/api/catalog.listItems`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: BASE, 'x-janux-origin': 'agent' },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ ok: true, result: [{ id: 'n1' }, { id: 'n2' }] });
+  });
+
+  /** One connection, several requests: the bridge must not leave the socket unusable. */
+  it('serves request after request on the same connection', async () => {
+    const paths = ['/', '/catalog', '/client.js', '/'];
+    const statuses: number[] = [];
+
+    for (const path of paths) statuses.push((await fetch(`${BASE}${path}`)).status);
+
+    expect(statuses).toEqual([200, 200, 200, 200]);
+  });
 });

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { runtimeIncludes } from './deps';
+import { packageDir, runtimeIncludes } from './deps';
 
 /**
  * Regression: "Ask AI" in the docs answered `Local model unavailable (Failed to
@@ -93,5 +93,49 @@ describe('runtimeIncludes', () => {
 
   it('is empty where the framework itself does not resolve', () => {
     expect(runtimeIncludes(mkdtempSync(join(tmpdir(), 'janux-bare-')))).toEqual([]);
+  });
+});
+
+/**
+ * Where a package is installed, answered the way Node answers it. `Bun.resolveSync`
+ * would answer from the global install cache too, which reports packages the app
+ * never installed — and pre-bundling one of those is a dev start that warns on
+ * every run about an include Vite cannot resolve.
+ */
+describe('packageDir', () => {
+  /** The lookup follows symlinks, so the answer is under the real path — `/var` is `/private/var` on macOS. */
+  const real = (root: string, ...parts: string[]) => join(realpathSync(root), ...parts);
+
+  it('finds a package in the nearest node_modules', () => {
+    const root = appWith(['left-pad']);
+
+    expect(packageDir('left-pad', root)).toBe(real(root, 'node_modules/left-pad'));
+  });
+
+  it('walks up to an ancestor, the way a workspace resolves a hoisted dependency', () => {
+    const root = appWith(['left-pad']);
+    const nested = join(root, 'apps/web');
+
+    mkdirSync(nested, { recursive: true });
+    expect(packageDir('left-pad', nested)).toBe(real(root, 'node_modules/left-pad'));
+  });
+
+  it('reads the package out of a scoped or deep specifier', () => {
+    const root = appWith(['@scope/ui', 'react-dom']);
+
+    expect(packageDir('@scope/ui/button', root)).toBe(real(root, 'node_modules/@scope/ui'));
+    expect(packageDir('react-dom/client', root)).toBe(real(root, 'node_modules/react-dom'));
+  });
+
+  it('answers nothing for a package the app never installed', () => {
+    expect(packageDir('left-pad', appWith([]))).toBeUndefined();
+  });
+
+  /** A directory is not an installed package until it has a manifest to read. */
+  it('ignores a directory with no package.json in it', () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-stub-app-'));
+
+    mkdirSync(join(root, 'node_modules/left-pad'), { recursive: true });
+    expect(packageDir('left-pad', root)).toBeUndefined();
   });
 });

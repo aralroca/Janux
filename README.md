@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-4632%20passing-brightgreen" alt="4632 tests passing" />
+  <img src="https://img.shields.io/badge/tests-10756%20passing-brightgreen" alt="10756 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -226,7 +226,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 95 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 96 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -252,12 +252,17 @@ Dominic Gannaway; `js-framework` fixtures derive from
 
 | Category | Where Janux stands |
 |---|---|
-| Resume vs hydration | **0.13–0.24× react** — 0.33ms to make the news page interactive (react 2.58) |
-| Shipped JS | 24.2KB gzip total vs react 60.7 (preact 9.8 · solid 13.7 · svelte 17.9); islands-free pages ship 0KB |
-| Mass DOM work | 10k rows: 84.9ms vs react 131.8; clear 36.0 vs 48.4; 512-field reset 15.4 vs 39.0 |
-| Whole-app suites | parity: lifecycle 1.00×, store integrations 0.83–1.14× (TanStack invalidation outlier 1.62×), suspense recovery 1.0–1.1× |
-| Keyed micro-ops | behind: select-1-of-1000 7.7ms vs react 0.46 — needs the fine-grained list primitive (RFC) |
-| SSR throughput | behind: 4.5× react on buffered renders; streaming end-to-end at parity |
+| Resume vs hydration | **0.14× react** — 0.39ms to make the news page interactive (react 2.86); 10.70ms vs 57.62 at 6× throttle |
+| Shipped JS | 32.5KB gzip total vs react 60.7 (preact 9.8 · solid 13.7 · svelte 17.9 · vue-vapor 23.5); islands-free pages ship 0KB |
+| Fine-grained updates | `<For>` + `class={() => …}`: swap 1.10ms vs react 3.98; reverse 1.95 vs 2.24; rotate 0.51 vs 1.51 |
+| Mass DOM work | 10k rows: 68.94ms vs react 136.86; clear 38.40 vs 41.74; 512-field reset 14.74 vs 38.64; 512-field typing 16.84 vs 45.58 |
+| Whole-app suites | parity: lifecycle cycle 49.35ms vs 49.56, store integrations within ±1.4×, suspense recovery within 1.14× |
+| Building rows in bulk | behind: create-1000 6.56ms vs react 4.88 (solid 1.90) — a row carries an Owner, a signal and an effect |
+| SSR throughput | behind: buffered 0.26ms vs react 0.07; streaming end-to-end at parity (50.86 vs 51.06) |
+
+Across the 19 suites, 88 of 156 janux/react cells are ahead of react and 68 are
+behind — the full signed table is in
+[`benchmarks/BASELINE-2026-07.md`](benchmarks/BASELINE-2026-07.md).
 
 Full tables, methodology and machine specs:
 [docs page](apps/docs/content/more/benchmarks.md) · reproduce with

@@ -77,9 +77,34 @@ export function imageSrcSet(src: string, widths: number[], format: ImageFormat):
   return widths.map((width) => `${variantUrl(src, width, format)} ${width}w`).join(', ');
 }
 
-/** A source Janux would itself have linked: optimizable, app-rooted, and inside `public/`. */
+/**
+ * The path a file lookup would actually open, or `undefined` when the escaping
+ * is broken. `variantUrl` only ever emits valid encoding, so a malformed escape
+ * is by definition not a URL Janux produced.
+ */
+function decodedPath(src: string): string | undefined {
+  try {
+    return decodeURIComponent(src);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * A source Janux would itself have linked: optimizable, app-rooted, and inside
+ * `public/`.
+ *
+ * The traversal check runs on the *decoded* path, because that is the string
+ * the consumer opens a file with. `variantUrl` percent-encodes every segment,
+ * so a `..` can never arrive literally — it arrives as `%2e%2e`, or hides its
+ * separator as `..%2f`, and a check against the encoded form sees a segment
+ * called `%2e%2e` and waves it through. Both separators count: a decoded `\`
+ * walks up a directory too once a path join gets hold of it.
+ */
 function isKnownSource(src: string): boolean {
-  return isOptimizable(src) && !isRemote(src) && !src.split('/').includes('..');
+  const decoded = decodedPath(src);
+
+  return decoded !== undefined && isOptimizable(src) && !isRemote(src) && !decoded.split(/[/\\]/).includes('..');
 }
 
 /** Whether the ladder would ever have produced this width and format. */

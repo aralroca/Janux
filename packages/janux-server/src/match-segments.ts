@@ -26,7 +26,10 @@ function fixedParams(
   fixed: number,
   matchers: Record<string, Matcher>,
 ): Record<string, string> | undefined {
-  const params: Record<string, string> = {};
+  // Null prototype: `[__proto__].tsx` is a legal route file, and assigning to
+  // `params['__proto__']` on a plain object hits the prototype setter instead
+  // of creating the key — the param silently vanished.
+  const params: Record<string, string> = Object.create(null);
 
   for (let index = 0; index < fixed; index += 1) {
     const segment = route.segments[index]!;

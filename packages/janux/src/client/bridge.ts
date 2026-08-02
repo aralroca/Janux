@@ -1,5 +1,6 @@
 import { buildManifest, type Manifest } from '../manifest';
 import { resolveGuard } from '../runtime/intents';
+import { flushRenders } from '../runtime/render-queue';
 import type { JanuxInstance } from '../runtime/instance';
 import type { Proposal } from '../runtime/intents';
 import { ensureStore, mountIsland, type MountContext } from './mount';
@@ -298,7 +299,13 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
 
     async settled(scope) {
       do {
-        await Promise.all([...mount.inflight]);
+        flushRenders();
+        // `allSettled`: waiting for quiet must not rethrow a failure the app
+        // already received on `janux:error`. `inflight` holds the raw work
+        // promises, so `all` would reject here only when the caller wins the
+        // race against that entry being removed — a rejection you cannot
+        // reproduce twice in a row.
+        await Promise.allSettled([...mount.inflight]);
         const targets = scope
           ? [await instanceFor(scope.replace(/^(ui|store):\/\//, '').split('#')[0]!, mount)]
           : liveInstances(registry);

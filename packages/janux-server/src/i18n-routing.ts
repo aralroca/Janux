@@ -28,11 +28,30 @@ function matchLocale(tag: string, locales: string[]): string | undefined {
   );
 }
 
+/**
+ * Quality values order preference and `q=0` means "not acceptable"
+ * (RFC 7231 §5.3.5) — header order only breaks ties, so `en;q=0.5,es`
+ * prefers `es`. A missing or malformed `q` counts as 1; the sort is
+ * stable, which is what keeps equal qualities in header order.
+ */
+function quality(params: string[]): number {
+  const raw = params.map((param) => /^q=([0-9.]+)$/.exec(param.trim().toLowerCase())?.[1]).find(Boolean);
+  const q = raw === undefined ? 1 : Number(raw);
+
+  return Number.isNaN(q) ? 1 : q;
+}
+
 function acceptedTags(header: string | null): string[] {
   return (header ?? '')
     .split(',')
-    .map((part) => part.split(';')[0]!.trim().toLowerCase())
-    .filter((tag) => tag && tag !== '*');
+    .map((part) => {
+      const [tag = '', ...params] = part.split(';');
+
+      return { tag: tag.trim().toLowerCase(), q: quality(params) };
+    })
+    .filter(({ tag, q }) => tag && tag !== '*' && q > 0)
+    .sort((left, right) => right.q - left.q)
+    .map(({ tag }) => tag);
 }
 
 /** Locale detection for unprefixed requests: JANUX_LOCALE cookie → accept-language → defaultLocale. */

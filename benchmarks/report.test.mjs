@@ -10,11 +10,23 @@ const RESULT = {
 };
 
 describe('report', () => {
-	it('renders one row per op with scores and the janux/react ratio', () => {
+	it('renders one row per op with scores and a signed janux/react ratio', () => {
 		const md = renderSuite(RESULT);
 
 		expect(md).toContain('### demo');
-		expect(md).toContain('| run | 12.30ms | 6.15ms | 2.00× |');
+		expect(md).toContain('| run | 12.30ms | 6.15ms | -2.00× |');
+	});
+
+	it('signs the ratio positive when janux beats react', () => {
+		const md = renderSuite({
+			suite: 'win',
+			targets: [
+				{ name: 'janux', ops: { reset: { score: 15.42, median: 15.0, min: 14.0 } } },
+				{ name: 'react', ops: { reset: { score: 38.55, median: 38.0, min: 37.0 } } },
+			],
+		});
+
+		expect(md).toContain('| reset | 15.42ms | 38.55ms | +2.50× |');
 	});
 
 	it('formats byte ops as KB and surfaces gate failures', () => {

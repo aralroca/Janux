@@ -23,7 +23,7 @@ export function htmlToMarkdown(html: string): string {
     .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n### $1\n')
     .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '\n- $1')
     .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)')
-    .replace(/<(p|div|section|main|header|footer|ul|ol|tr)[^>]*>/gi, '\n')
+    .replace(/<\/?(p|div|section|main|header|footer|article|aside|nav|blockquote|ul|ol|table|tr|td|th)[^>]*>/gi, '\n')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, '')
     .split('\n')

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { mcpAuthOptions, publishAppRoot, resolveAppConfig } from './app-config';
+import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig } from './app-config';
 
 function app(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), 'janux-app-'));
@@ -197,6 +197,134 @@ describe('resolveAppConfig stylesheet', () => {
     const root = mkdtempSync(join(tmpdir(), 'janux-styles-'));
 
     expect((await resolveAppConfig(root)).stylesheet).toBeUndefined();
+  });
+});
+
+/**
+ * The conventions themselves. Every one of them is "the file is there, so the
+ * feature is on" — which is what makes a missed one silent: no config says the
+ * app has middleware, so nothing says it stopped running either.
+ */
+describe('resolveAppConfig conventions', () => {
+  function appWithSources(files: Record<string, string>): string {
+    const root = mkdtempSync(join(tmpdir(), 'janux-conv-'));
+
+    Object.entries(files).forEach(([name, content]) => {
+      mkdirSync(join(root, name, '..'), { recursive: true });
+      writeFileSync(join(root, name), content);
+    });
+
+    return root;
+  }
+
+  it('defaults the routes and server directories to the conventional ones', async () => {
+    const config = await resolveAppConfig(appWithSources({}));
+
+    expect(config.routesDir.endsWith('/src/routes')).toBe(true);
+    expect(config.serverDir.endsWith('/src/server')).toBe(true);
+  });
+
+  it('lets the config move the routes and server directories', async () => {
+    const root = appWithSources({ 'janux.config.ts': `export default { routesDir: 'app/pages', serverDir: 'app/rpc' };` });
+    const config = await resolveAppConfig(root);
+
+    expect(config.routesDir).toBe(join(root, 'app/pages'));
+    expect(config.serverDir).toBe(join(root, 'app/rpc'));
+  });
+
+  it('resolves the client entry only when the app wrote one', async () => {
+    expect((await resolveAppConfig(appWithSources({}))).clientEntry).toBe('');
+    expect((await resolveAppConfig(appWithSources({ 'src/client.ts': 'export {};' }))).clientEntry).toEndWith(
+      '/src/client.ts',
+    );
+  });
+
+  it('picks up the middleware, agent and stores conventions', async () => {
+    const config = await resolveAppConfig(
+      appWithSources({ 'src/middleware.ts': 'export default 1;', 'src/agent.ts': 'export default 1;', 'src/stores.ts': 'export default 1;' }),
+    );
+
+    expect(config.middlewareModule).toEndWith('/src/middleware.ts');
+    expect(config.agentModule).toEndWith('/src/agent.ts');
+    expect(config.storesModule).toEndWith('/src/stores.ts');
+  });
+
+  it('accepts i18n as a directory as well as a file', async () => {
+    const single = await resolveAppConfig(appWithSources({ 'src/i18n.ts': 'export default {};' }));
+    const nested = await resolveAppConfig(appWithSources({ 'src/i18n/index.ts': 'export default {};' }));
+
+    expect(single.i18nModule).toEndWith('/src/i18n.ts');
+    expect(nested.i18nModule).toEndWith('/src/i18n/index.ts');
+  });
+
+  it('picks up src/instrumentation.ts, which nothing else in the app declares', async () => {
+    const config = await resolveAppConfig(appWithSources({ 'src/instrumentation.ts': 'export function register() {}' }));
+
+    expect(config.instrumentationModule).toEndWith('/src/instrumentation.ts');
+    expect((await resolveAppConfig(appWithSources({}))).instrumentationModule).toBeUndefined();
+  });
+
+  it('links the favicon only when public/favicon.svg is really there', async () => {
+    expect((await resolveAppConfig(appWithSources({}))).favicon).toBeUndefined();
+    expect((await resolveAppConfig(appWithSources({ 'public/favicon.svg': '<svg/>' }))).favicon).toBe('/favicon.svg');
+  });
+
+  it('claims the http handlers directory only when the app has one', async () => {
+    expect((await resolveAppConfig(appWithSources({}))).httpHandlersDir).toBeUndefined();
+    expect((await resolveAppConfig(appWithSources({ 'src/api/webhook.ts': 'export {};' }))).httpHandlersDir).toEndWith(
+      '/src/api',
+    );
+  });
+
+  it('declares no fonts for an app that asked for none', async () => {
+    expect((await resolveAppConfig(appWithSources({}))).fonts).toEqual([]);
+  });
+
+  it('carries the shell policies through untouched', async () => {
+    const root = appWithSources({
+      'janux.config.ts': `export default { csp: true, cache: { swr: '1m' }, navigation: { prefetch: 'intent' }, siteUrl: 'https://x.dev' };`,
+    });
+    const config = await resolveAppConfig(root);
+
+    expect(config.csp).toBe(true);
+    expect(config.cache).toEqual({ swr: '1m' } as never);
+    expect(config.navigation).toEqual({ prefetch: 'intent' } as never);
+    expect(config.siteUrl).toBe('https://x.dev');
+  });
+});
+
+/**
+ * Which files become the agent-reachable api surface. The filter is the whole
+ * boundary: a file it claims by mistake is projected into fetch stubs in the
+ * browser bundle, and one it misses is a tool no agent can reach.
+ */
+describe('apiFiles', () => {
+  function serverDir(names: string[]): string {
+    const root = mkdtempSync(join(tmpdir(), 'janux-api-'));
+
+    mkdirSync(join(root, 'src/server'), { recursive: true });
+    names.forEach((name) => writeFileSync(join(root, 'src/server', name), 'export {};'));
+
+    return join(root, 'src/server');
+  }
+
+  it('takes the .api.ts and .api.js modules and nothing else', () => {
+    const dir = serverDir(['shop.api.ts', 'orders.api.js', 'helpers.ts', 'shop.api.tsx', 'notes.md']);
+
+    expect(apiFiles(dir).map((file) => file.slice(dir.length + 1)).sort()).toEqual(['orders.api.js', 'shop.api.ts']);
+  });
+
+  it('does not descend into subdirectories, so a nested file is not a tool by accident', () => {
+    const dir = serverDir(['shop.api.ts']);
+
+    mkdirSync(join(dir, 'internal'), { recursive: true });
+    writeFileSync(join(dir, 'internal/secret.api.ts'), 'export {};');
+
+    expect(apiFiles(dir).map((file) => file.slice(dir.length + 1))).toEqual(['shop.api.ts']);
+  });
+
+  it('is empty for an app with no server directory at all', () => {
+    expect(apiFiles(join(tmpdir(), 'janux-no-such-server-dir'))).toEqual([]);
   });
 });
 

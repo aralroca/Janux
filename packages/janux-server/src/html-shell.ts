@@ -147,7 +147,10 @@ function runtimeScripts(options: Omit<ShellOptions, 'html'>): string {
 
   return [
     `<script key="jx-islands"${cspAttr}>window.__JANUX_ISLANDS__=${safeJson(modules)}</script>`,
-    options.runtimeUrl ? `<script type="module" key="jx-runtime" src="${options.runtimeUrl}"${cspAttr}></script>` : '',
+    // `safeAttr` like every other href/src the shell emits: the value is a build
+    // output today, but an unescaped one is a hole waiting for the first adapter
+    // that derives it from a request — and escaping an honest URL changes nothing.
+    options.runtimeUrl ? `<script type="module" key="jx-runtime" src="${safeAttr(options.runtimeUrl)}"${cspAttr}></script>` : '',
   ].join('\n');
 }
 
@@ -157,8 +160,11 @@ function runtimeScripts(options: Omit<ShellOptions, 'html'>): string {
  * can be flushed as the response's first chunk.
  */
 export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
+  // The one shell URL assembled from the request itself (`?path=<pathname>`), so
+  // it is the one that most needs `safeAttr` — `encodeURIComponent` upstream is a
+  // caller's habit, not a guarantee this line can rely on.
   const manifestLink = options.manifestUrl
-    ? `<link rel="janux-manifest" id="jx-manifest" href="${options.manifestUrl}">`
+    ? `<link rel="janux-manifest" id="jx-manifest" href="${safeAttr(options.manifestUrl)}">`
     : '';
   // Stable ids key these head links across an SPA-navigation diff so the diff
   // matches them by identity instead of by position. Without a key, a page

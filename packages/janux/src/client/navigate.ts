@@ -289,6 +289,48 @@ function keepRuntimeStyles(): () => void {
 }
 
 /**
+ * What identifies a stylesheet across the two trees.
+ *
+ * `id` before text because the incoming node is still streaming: its content
+ * may not have arrived when the predicate is asked about it, and keying on a
+ * half-parsed `<style>` would fail to match its live twin and insert a copy.
+ */
+function sheetKey(node: Node | null): string | null {
+  const el = node as Element | null;
+  const tag = el?.tagName;
+
+  if (tag === 'LINK') return el!.getAttribute('rel') === 'stylesheet' ? `l:${el!.getAttribute('href')}` : null;
+  if (tag !== 'STYLE') return null;
+
+  return el!.id ? `i:${el!.id}` : `s:${el!.textContent}`;
+}
+
+/**
+ * Stylesheets the document already has, on BOTH sides of the diff.
+ *
+ * A `<link>` the browser has to re-acquire blocks rendering until it resolves,
+ * so detaching one — or dropping in the incoming page's copy of a sheet already
+ * applied — paints the page unstyled for a frame. That is the flash
+ * `keepRuntimeStyles` was undoing rather than preventing. Ignoring both copies
+ * leaves the live sheet untouched and its `<link>` element in place.
+ *
+ * Runtime-injected sheets (a lazy editor's CSS, the dev server's) exist only
+ * here, so the incoming page never lists them and the prune took them all —
+ * A sheet this page does not have yet is not in the set, so it still applies.
+ */
+function ignoreAppliedStyles(): (node: Node | null) => boolean {
+  const applied = new Set(
+    [...document.head.querySelectorAll('style, link[rel="stylesheet"]')].map(sheetKey),
+  );
+
+  return (node) => {
+    const key = sheetKey(node);
+
+    return key !== null && applied.has(key);
+  };
+}
+
+/**
  * Same story one level down: an agent feedback overlay, a portal root or any
  * node a runtime injected into the page belongs to the session, not to the
  * route, so the diff would drop it for good. Opt in with `data-janux-keep`.
@@ -417,7 +459,7 @@ async function applyPage(mount: MountContext, page: NavigablePage, options: Navi
      */
     await applyWithViewTransition(async () => {
       // The Navigation API drives the transition; diff directly (its own would be skipped).
-      await diff(document, source);
+      await diff(document, source, { shouldIgnoreNode: ignoreAppliedStyles() });
       /*
        * A superseded navigation must not report success: the diff can finish
        * cleanly on a cancelled stream, having applied only the part that arrived,

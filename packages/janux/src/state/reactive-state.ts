@@ -2,6 +2,9 @@ import { batch, signal, untrack, type Sig } from '../signals';
 import { assertMutable, createGate, type MutationGate } from './mutation-gate';
 import { ancestorsOf, childPath, parentOf } from './path';
 import { isPlainContainer, plainify } from './plainify';
+import { RAW } from './raw';
+
+export { RAW, toRaw } from './raw';
 
 const MUTATING_ARRAY_METHODS = new Set([
   'push',
@@ -116,7 +119,10 @@ export function createReactiveState<T extends object>(
   const wrapArrayMethod = (target: unknown[], path: string, method: string) => {
     return (...args: unknown[]) => {
       assertMutable(gate, path);
-      const result = (target as any)[method](...args.map((arg) => plainify(arg, path)));
+      // `sort`'s argument is a comparator, not data to store — every other
+      // mutator's arguments become array contents and go through the strict clone.
+      const stored = method === 'sort' ? args : args.map((arg) => plainify(arg, path, undefined, true));
+      const result = (target as any)[method](...stored);
 
       touch(path);
 
@@ -158,6 +164,7 @@ export function createReactiveState<T extends object>(
   };
 
   const readTrap = (raw: object, path: string, key: string | symbol): unknown => {
+    if (key === RAW) return raw;
     if (typeof key === 'symbol') return Reflect.get(raw, key);
     if (Array.isArray(raw) && MUTATING_ARRAY_METHODS.has(key)) {
       return wrapArrayMethod(raw as unknown[], path, key);
@@ -168,6 +175,10 @@ export function createReactiveState<T extends object>(
     // The hottest line in the state system: one `childPath` for both uses.
     const target = childPath(path, key);
 
+    // Unconditional, even with nothing tracking: proxy identity is keyed on the
+    // version signal, so skipping it for untracked reads would stop a write from
+    // minting a new identity for the changed subtree — the contract `foreign()`
+    // hands React. (Measured as a ~15% win on list writes, and reverted for it.)
     versionOf(target).value;
 
     return isPlainContainer(value) ? proxyFor(value, target) : value;
@@ -178,7 +189,7 @@ export function createReactiveState<T extends object>(
     const target = childPath(path, key);
 
     assertMutable(gate, target);
-    Reflect.set(raw, key, plainify(value, target));
+    Reflect.set(raw, key, plainify(value, target, undefined, true));
     touch(target);
 
     return true;

@@ -22,6 +22,14 @@ export interface ReadonlySig<T> {
 
 let active: Runner | null = null;
 let batching: Set<Runner> | null = null;
+/**
+ * Queued computeds, kept OUT of the effect queue. They used to share it and be
+ * found by rescanning the whole queue before every effect — O(effects²) per
+ * batch, invisible while an island was one effect and ~3s once `<For>` made a
+ * thousand rows a thousand effects. Two queues make "are any computeds
+ * pending?" a size check.
+ */
+let computeds: Set<Runner> | null = null;
 let owner: Owner | null = null;
 
 /** Disposal scope: effects/computeds created inside register here; child roots cascade. */
@@ -35,7 +43,9 @@ export function createRoot<T>(fn: (dispose: () => void) => T): T {
   const dispose = () => {
     if (root.disposed) return;
     root.disposed = true;
-    root.cleanups.splice(0).reverse().forEach((cleanup) => cleanup());
+    // Untracked: a dispose triggered from inside a running effect must not let
+    // the cleanups' signal reads subscribe that effect.
+    untrack(() => root.cleanups.splice(0).reverse().forEach((cleanup) => cleanup()));
   };
 
   owner?.cleanups.push(dispose);
@@ -45,7 +55,7 @@ export function createRoot<T>(fn: (dispose: () => void) => T): T {
 
 export function onCleanup(fn: () => void): void {
   // On an already-disposed scope the cleanup runs immediately — never silently dropped.
-  if (owner?.disposed) return fn();
+  if (owner?.disposed) return untrack(fn);
   owner?.cleanups.push(fn);
 }
 
@@ -71,15 +81,63 @@ function track(subs: Set<Runner>): void {
   active.deps.add(subs);
 }
 
-function notify(subs: Set<Runner>): void {
-  const runners = [...subs];
+function enqueue(runner: Runner): void {
+  (runner.computed === true ? computeds! : batching!).add(runner);
+}
 
+function notify(subs: Set<Runner>): void {
+  // Nothing reads this signal: no queue to seed, no drain to run. Worth the
+  // check because a single state write bumps the path, its descendants and
+  // every ancestor, and most of those signals have no reader at all.
+  if (subs.size === 0) return;
   if (batching !== null) {
-    runners.forEach((runner) => batching!.add(runner));
+    subs.forEach(enqueue);
 
     return;
   }
-  runners.forEach((runner) => runner.run());
+  // Every write flushes through the same queue a batch uses: computeds settle
+  // before any effect runs, so a diamond (a → b, a → c, effect reads b + c)
+  // never shows an effect one fresh branch and one stale one, and a cascade
+  // re-queues an already-queued effect instead of running it twice.
+  batching = new Set();
+  computeds = new Set();
+  subs.forEach(enqueue);
+  drain();
+}
+
+/** Runs queued computeds to a fixed point, then effects one at a time. */
+function drain(): void {
+  const queue = batching!;
+
+  try {
+    for (;;) {
+      flushComputeds();
+      const next = queue.values().next();
+
+      if (next.done) return;
+      queue.delete(next.value);
+      next.value.run();
+    }
+  } finally {
+    batching = null;
+    computeds = null;
+  }
+}
+
+/**
+ * Computeds are pure by contract, so settling them early is unobservable. Runs
+ * to a fixed point: a chain (c2 reads c1) re-queues c1's dependents here.
+ */
+function flushComputeds(): void {
+  const queue = computeds;
+
+  if (queue === null) return;
+  while (queue.size > 0) {
+    const next = queue.values().next().value!;
+
+    queue.delete(next);
+    next.run();
+  }
 }
 
 function detach(runner: Runner): void {
@@ -119,7 +177,13 @@ function runTracked(runner: Runner, fn: () => Cleanup): Cleanup {
   }
 }
 
-export function effect(fn: () => Cleanup | void): () => void {
+/**
+ * `schedule` defers re-runs (never the first one) to whenever it calls back —
+ * the seam the client render loop uses to collapse a burst of writes into one
+ * render. It must dedupe: a runner notified twice before it runs is scheduled
+ * twice.
+ */
+export function effect(fn: () => Cleanup | void, schedule?: (run: () => void) => void): () => void {
   let cleanup: Cleanup;
   let disposed = false;
   const scope = owner;
@@ -128,22 +192,42 @@ export function effect(fn: () => Cleanup | void): () => void {
   // Re-runs restore the creation-time owner and never outlive dispose — a
   // runner already queued in a notify/batch when its island is torn down
   // must not re-subscribe as a zombie.
-  runner.run = function runEffect() {
+  const runEffect = function runEffect() {
     if (disposed) return;
-    cleanup?.();
+    const previous = cleanup;
+
+    // Cleared BEFORE it runs, so a throwing cleanup can never run twice — the
+    // next notification re-runs the effect body instead of the dead cleanup.
+    // Untracked, so its signal reads never subscribe whatever effect is active.
+    cleanup = undefined;
+    if (previous) untrack(previous);
     // Only a FUNCTION is a cleanup: `watch(() => (title.value = x))` returns a
     // string through the arrow's implicit return, and calling that would throw.
     const result = runWithOwner(scope, () => runTracked(runner, fn as () => Cleanup));
 
+    // An effect that disposed itself mid-run re-subscribed while finishing and
+    // just returned a fresh cleanup nothing will ever call: release both now.
+    if (disposed) {
+      detach(runner);
+      if (typeof result === 'function') untrack(result);
+
+      return;
+    }
     cleanup = typeof result === 'function' ? result : undefined;
   };
-  runner.run();
+
+  runner.run = schedule === undefined ? runEffect : () => schedule(runEffect);
+  // The first run is always synchronous: a scheduled island must still paint
+  // its initial view before mount returns.
+  runEffect();
   const dispose = function dispose() {
     if (disposed) return;
     disposed = true;
-    cleanup?.();
+    const previous = cleanup;
+
     cleanup = undefined;
     detach(runner);
+    if (previous) untrack(previous);
   };
 
   owner?.cleanups.push(dispose);
@@ -177,20 +261,7 @@ export function computed<T>(fn: () => T): ReadonlySig<T> {
   // re-run, so draining just this runner would serve c2 its pre-batch value.
   // Computeds are pure by contract, so early evaluation is unobservable;
   // effects stay queued for the batch's own flush.
-  const fresh = () => {
-    if (batching === null) return;
-    let ran = true;
-
-    while (ran) {
-      ran = false;
-      for (const queued of [...batching]) {
-        if (!queued.computed) continue;
-        batching.delete(queued);
-        queued.run();
-        ran = true;
-      }
-    }
-  };
+  const fresh = () => flushComputeds();
 
   return {
     get value(): T {
@@ -210,13 +281,11 @@ export function computed<T>(fn: () => T): ReadonlySig<T> {
 export function batch<T>(fn: () => T): T {
   if (batching !== null) return fn();
   batching = new Set();
+  computeds = new Set();
   try {
     return fn();
   } finally {
-    const queued = batching;
-
-    batching = null;
-    queued.forEach((runner) => runner.run());
+    drain();
   }
 }
 

@@ -50,16 +50,22 @@ export interface ForeignDef {
 /** TSX-callable phantom signature, mirroring `component()`. */
 export type ForeignTag = ForeignDef & ((props?: Record<string, unknown>) => any);
 
+/**
+ * An empty name is no name. An anonymous component (`memo()`, `forwardRef()`,
+ * anything a factory returned) reports `''`, and a nameless island would render
+ * `data-jx="#default"` — a host the client registry can never match and a
+ * foreign root that therefore never mounts, with nothing to search for.
+ */
 function componentName(component: unknown): string {
-  const named = component as { displayName?: string; name?: string };
+  const named = (component ?? {}) as { displayName?: string; name?: string };
 
-  return named.displayName ?? named.name ?? 'foreign';
+  return named.displayName || named.name || 'foreign';
 }
 
 export function foreign(component: unknown, options: ForeignOptions = {}): ForeignTag {
   const def: ForeignDef = {
     kind: 'foreign',
-    name: options.name ?? componentName(component),
+    name: options.name || componentName(component),
     component,
     options: { hydrate: 'load', ...options },
   };

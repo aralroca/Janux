@@ -35,11 +35,20 @@ function positionals(argv: string[]): string[] {
     .filter((arg, index, all) => !arg.startsWith('--') && !VALUE_FLAGS.has(all[index - 1] ?? ''));
 }
 
+/** The TCP range, so a port that cannot be listened on is refused by the flag that named it. */
+const MAX_PORT = 65535;
+
 export function parseArgs(argv: string[], cwd: string): CliCommand {
   const command = COMMANDS.has(argv[0] ?? '') ? (argv[0] as CliCommand['command']) : 'help';
   const port = Number(flagValue(argv, '--port') ?? process.env.PORT ?? 3000);
 
-  if (Number.isNaN(port)) throw new Error('janux: --port must be a number');
+  // Checked here rather than left to the runtime: `Bun.serve` and
+  // `server.listen` both reject a fraction, a negative number and anything past
+  // the TCP range — from inside the server, with a message about sockets rather
+  // than about the flag that was typed. `NaN` fails every one of these.
+  if (!Number.isInteger(port) || port < 0 || port > MAX_PORT) {
+    throw new Error(`janux: --port must be a whole number between 0 and ${MAX_PORT}`);
+  }
 
   return {
     command,

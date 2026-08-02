@@ -1,5 +1,5 @@
-import { toJsonSchema, type Ctx } from 'janux';
-import type { ApiTool } from './api';
+import { toJsonSchema, type Ctx, type GuardValue } from 'janux';
+import { resolveApiGuard, type ApiTool } from './api';
 import { mcpLandingPage } from './mcp-landing';
 import { decorateResult, discoverResult, modernGate } from './mcp-modern';
 
@@ -43,13 +43,30 @@ function rpcError(id: RpcRequest['id'], code: number, message: string, data?: un
   return { jsonrpc: '2.0', id: id ?? null, error: { code, message, ...(data !== undefined ? { data } : {}) } };
 }
 
-function toolDescriptor(tool: ApiTool) {
+function toolDescriptor(tool: ApiTool, guard: GuardValue) {
   return {
     name: tool.name,
     description: tool.description ?? '',
     inputSchema: tool.input ? toJsonSchema(tool.input) : { type: 'object', properties: {} },
-    annotations: tool.guard === 'confirm' ? { requiresApproval: true } : undefined,
+    annotations: guard === 'confirm' ? { requiresApproval: true } : undefined,
   };
+}
+
+/**
+ * What this caller may be told exists — the same answer `apiManifestTools`
+ * gives the app's own pages.
+ *
+ * Listing every tool and refusing the forbidden ones at call time is not a
+ * gate: the name, the description and the input schema of a tool an agent may
+ * never call were handed to it anyway, which is exactly what `forbidden`
+ * exists to prevent. The guard is resolved once per listing, like
+ * `apiManifestTools` and `toolsFor` do it, so a guard that answers differently
+ * on each call cannot pass the filter and then be advertised as forbidden.
+ */
+function callableTools(tools: ApiTool[], ctx: Ctx): { tool: ApiTool; guard: GuardValue }[] {
+  return tools
+    .map((tool) => ({ tool, guard: resolveApiGuard(tool, ctx, 'agent') }))
+    .filter(({ guard }) => guard !== 'forbidden');
 }
 
 function pageUri(path: string): string {
@@ -74,7 +91,7 @@ async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx): Promise<R
     case 'server/discover':
       return rpcResult(id, discoverResult());
     case 'tools/list':
-      return rpcResult(id, { tools: deps.tools.map(toolDescriptor) });
+      return rpcResult(id, { tools: callableTools(deps.tools, ctx).map(({ tool, guard }) => toolDescriptor(tool, guard)) });
     case 'tools/call': {
       const name = params?.name as string;
 
@@ -126,7 +143,12 @@ export function createMcpEndpoint(deps: McpDeps) {
         return new Response(null, { status: 405, headers: { allow: 'POST' } });
       }
 
-      return new Response(mcpLandingPage(deps.serverName, new URL(req.url).href, deps.tools, deps.auth !== undefined), {
+      // The same list `tools/list` would answer with: the landing is generated
+      // from the app, and a page that names a tool the endpoint refuses to
+      // advertise would be both a drift and an unauthenticated inventory of it.
+      const listed = callableTools(deps.tools, ctx).map(({ tool }) => tool);
+
+      return new Response(mcpLandingPage(deps.serverName, new URL(req.url).href, listed, deps.auth !== undefined), {
         headers: { 'content-type': 'text/html;charset=utf-8' },
       });
     }

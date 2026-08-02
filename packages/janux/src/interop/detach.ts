@@ -1,4 +1,5 @@
-import { isPlainContainer, plainify } from '../state/plainify';
+import { untrack } from '../signals';
+import { isPlainContainer } from '../state/plainify';
 
 /**
  * The props boundary: what a foreign component receives is plain data, never the
@@ -36,14 +37,43 @@ function isPlainData(value: object): boolean {
   return (proto === Object.prototype || proto === null) && Object.getOwnPropertySymbols(value).length === 0;
 }
 
+function define(target: Record<string, unknown>, key: string, value: unknown): void {
+  Object.defineProperty(target, key, { value, enumerable: true, writable: true, configurable: true });
+}
+
+/**
+ * The plain-data test applies at EVERY level, not only to the prop itself.
+ * A generic deep clone here would turn a `Date` inside an array into `{}` and
+ * hand React a look-alike of every element in a `children` list — the same
+ * destruction `isPlainData` already refuses at the top, one level down, where
+ * mappers put lists.
+ *
+ * The clone is registered before its contents are walked, so a value that
+ * refers back to itself (a graph a mapper legitimately hands to a foreign
+ * component) is rebuilt as the same cycle instead of recursing forever, and two
+ * props sharing a subtree keep sharing it.
+ *
+ * `untrack` because the walk reads through state proxies: subscribing to every
+ * leaf would re-render the foreign root on writes its props never mentioned.
+ */
 function detach(value: unknown): unknown {
   if (!isPlainContainer(value) || !isPlainData(value)) return value;
   const cached = detached.get(value);
 
   if (cached !== undefined) return cached;
-  const plain = plainify(value);
+  const plain: any = Array.isArray(value) ? [] : {};
 
   detached.set(value, plain);
+  untrack(() => {
+    // Indexed, not `forEach`: a hole in a sparse array is skipped by every
+    // iteration helper, and skipping one shifts every later item onto the wrong
+    // index — a list silently rendered off by one.
+    if (Array.isArray(value)) for (let index = 0; index < value.length; index += 1) plain[index] = detach(value[index]);
+    // `defineProperty`, never assignment: a `__proto__` key in the source (any
+    // object that came from `JSON.parse`) would otherwise set the copy's
+    // prototype from untrusted data instead of copying a field.
+    else Object.entries(value).forEach(([key, nested]) => define(plain, key, detach(nested)));
+  });
 
   return plain;
 }

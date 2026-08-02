@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -86,6 +86,54 @@ describe('create-janux', () => {
     const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'My App'], { cwd });
 
     expect(result.exitCode).toBe(1);
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  /** Scaffolding into a directory that exists would merge into somebody's work. */
+  test('refuses to write into a directory that is already there', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+
+    mkdirSync(join(cwd, 'my-app'));
+    writeFileSync(join(cwd, 'my-app/keep.txt'), 'mine');
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app'], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain('already exists');
+    expect(readFileSync(join(cwd, 'my-app/keep.txt'), 'utf-8')).toBe('mine');
+    expect(existsSync(join(cwd, 'my-app/package.json'))).toBe(false);
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test('prints the usage line when it is given no name at all', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts')], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain('Usage: create-janux');
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  /** A flag that is not `--example` is a typo, not a name to scaffold from. */
+  test('refuses a flag it does not know', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app', '--template', 'blog'], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(existsSync(join(cwd, 'my-app'))).toBe(false);
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  /** The template is a working app, not a snippet: what it declares has to exist. */
+  test('scaffolds a template whose entry points are all there', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+
+    expect(Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app'], { cwd }).exitCode).toBe(0);
+    const pkg = JSON.parse(readFileSync(join(cwd, 'my-app/package.json'), 'utf-8'));
+
+    expect(Object.keys(pkg.scripts)).toContain('dev');
+    expect(existsSync(join(cwd, 'my-app/src/routes/index.tsx'))).toBe(true);
+    expect(existsSync(join(cwd, 'my-app/src/client.ts'))).toBe(true);
+    expect(existsSync(join(cwd, 'my-app/tsconfig.json'))).toBe(true);
     rmSync(cwd, { recursive: true, force: true });
   });
 });

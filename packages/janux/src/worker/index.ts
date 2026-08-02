@@ -63,6 +63,21 @@ function failAll(state: WorkerState, message: string): void {
   state.pending.clear();
 }
 
+/**
+ * A worker that failed at the thread level is dead: its module never finished
+ * evaluating (a syntax error in the shipped source), or the thread crashed. The
+ * handle is not — so the instance is dropped and the next call spawns a fresh
+ * thread. Keeping it would post into a worker whose `onmessage` was never
+ * installed, and that call never settles: a hang with no error anywhere, which
+ * is the worst possible shape for the failure that produced it.
+ */
+function discard(state: WorkerState, message: string): void {
+  state.instance = undefined;
+  if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
+  state.objectUrl = undefined;
+  failAll(state, message);
+}
+
 function spawn(state: WorkerState): Worker {
   const blob = new Blob([state.source], { type: 'text/javascript' });
 
@@ -76,7 +91,7 @@ function ensureWorker(state: WorkerState): Worker {
   const instance = spawn(state);
 
   instance.onmessage = (event: MessageEvent<Response>) => receive(state, event.data);
-  instance.onerror = (event: ErrorEvent) => failAll(state, event.message || 'Janux worker failed');
+  instance.onerror = (event: ErrorEvent) => discard(state, event.message || 'Janux worker failed');
   state.instance = instance;
 
   return instance;
@@ -101,15 +116,26 @@ function call<R>(state: WorkerState, args: unknown[]): Promise<R> {
 
 function terminate(state: WorkerState): void {
   state.instance?.terminate();
-  if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
-  state.instance = undefined;
-  state.objectUrl = undefined;
-  failAll(state, 'Janux worker terminated');
+  discard(state, 'Janux worker terminated');
 }
 
 /** SSR, and any runtime without Web Workers, runs the function inline instead. */
 function supportsWorkers(): boolean {
   return typeof Worker !== 'undefined' && typeof URL.createObjectURL === 'function';
+}
+
+/**
+ * The inline path must fail the same shape the threaded one does. A worker
+ * function that throws synchronously would otherwise throw out of the CALL on
+ * the server and reject on the client: identical code, and only the server
+ * needs the try/catch its author never wrote.
+ */
+function inline<A extends unknown[], R>(fn: (...args: A) => R | Promise<R>, args: A): Promise<R> {
+  try {
+    return Promise.resolve(fn(...args));
+  } catch (error) {
+    return Promise.reject(error);
+  }
 }
 
 /**
@@ -125,8 +151,7 @@ function supportsWorkers(): boolean {
  */
 export function worker<A extends unknown[], R>(fn: (...args: A) => R | Promise<R>): WorkerFunction<A, R> {
   const state: WorkerState = { source: workerSource(fn.toString()), pending: new Map(), seq: 0 };
-  const invoke = (...args: A): Promise<R> =>
-    supportsWorkers() ? call<R>(state, args) : Promise.resolve(fn(...args));
+  const invoke = (...args: A): Promise<R> => (supportsWorkers() ? call<R>(state, args) : inline(fn, args));
 
   return Object.assign(invoke, { terminate: () => terminate(state) });
 }

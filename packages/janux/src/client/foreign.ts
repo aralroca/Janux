@@ -138,7 +138,13 @@ export function mountForeign(
     // since SSR (interactions land before lazy hydration), so hydrateRoot
     // would race into mismatches. The SSR markup serves paint-before-JS.
     host.replaceChildren();
-    reactRoot = client.createRoot(host as any) as ReactRoot;
+    // A component that throws is caught by React, which empties the host and
+    // says so only on the console — the same silent blank the server used to
+    // produce. `onUncaughtError` routes it into Janux's own error channel, so
+    // the dev overlay names the island instead of leaving an empty box.
+    reactRoot = client.createRoot(host as any, {
+      onUncaughtError: (error: unknown) => reportError(`foreign <${def.name}>: ${error}`),
+    }) as ReactRoot;
     stopKeepingPortals = keepPortalsAcrossNavigation();
     stopRender = watch(() => reactRoot!.render(element()));
   };

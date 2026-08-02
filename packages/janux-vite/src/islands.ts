@@ -13,10 +13,28 @@ import { parseSync } from '@swc/core';
 const DEF_FACTORIES = new Set(['component', 'foreign']);
 const MODULE_PATH = /\.[jt]sx?$/;
 
+/**
+ * Nodes that wrap the call without changing it. `as const` is its own node type
+ * (`TsConstAssertion`, not `TsAsExpression`), which is exactly the kind of
+ * difference that costs an island: the def is declared, the catalog never hears
+ * about it, and a page whose islands all sit behind suspense ships no runtime.
+ */
+const WRAPPERS = new Set([
+  'TsAsExpression',
+  'TsSatisfiesExpression',
+  'TsConstAssertion',
+  'TsNonNullExpression',
+  'ParenthesisExpression',
+]);
+
+/** Looks through every wrapper, however many were written. */
+function unwrap(node: any): any {
+  return WRAPPERS.has(node?.type) ? unwrap(node.expression) : node;
+}
+
 /** The `name` of a `component({ ... })` / `foreign({ ... })` initializer, when statically written. */
 function declaredName(init: any): string | undefined {
-  // `component({...}) as const` / `satisfies X` wrap the call — look through.
-  const unwrapped = init?.type === 'TsAsExpression' || init?.type === 'TsSatisfiesExpression' ? init.expression : init;
+  const unwrapped = unwrap(init);
 
   if (unwrapped?.type !== 'CallExpression' || !DEF_FACTORIES.has(unwrapped.callee?.value)) return undefined;
   const config = unwrapped.arguments?.[0]?.expression;

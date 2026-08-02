@@ -52,12 +52,32 @@ export function collectApis(modules: Record<string, Record<string, unknown>>): A
   );
 }
 
+const GUARD_VALUES = new Set<GuardValue>(['auto', 'confirm', 'forbidden']);
+
+/**
+ * Anything that is not one of the three answers is not an answer.
+ *
+ * `guard === 'forbidden'` is false for a `Promise`, so an `async` guard — which
+ * the types forbid and JavaScript happily allows — used to resolve to a *pass*:
+ * the gate that exists to fail closed failed open, silently, for every agent
+ * call. Same for a typo'd value. Both deny here, and say so once so the author
+ * finds out from a log rather than from an incident.
+ */
+function normalizeGuard(tool: ApiTool, value: unknown): GuardValue {
+  if (GUARD_VALUES.has(value as GuardValue)) return value as GuardValue;
+  console.warn(
+    `Janux: the guard on "${tool.name}" answered ${JSON.stringify(String(value))} — expected "auto", "confirm" or "forbidden", so the tool is treated as forbidden`,
+  );
+
+  return 'forbidden';
+}
+
 export function resolveApiGuard(tool: ApiTool, ctx: Ctx, origin: Origin): GuardValue {
   const guard = tool.guard ?? 'auto';
 
-  if (typeof guard !== 'function') return guard;
+  if (typeof guard !== 'function') return normalizeGuard(tool, guard);
   try {
-    return guard({ ctx, origin });
+    return normalizeGuard(tool, guard({ ctx, origin }));
   } catch {
     // Denies when it cannot decide, like the component-side `resolveGuard`.
     // Propagating took the whole api manifest down with one bad guard.

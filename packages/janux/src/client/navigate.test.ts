@@ -290,6 +290,10 @@ describe('SPA navigation (streamed diff)', () => {
   it('keeps exactly one inlined stylesheet across a navigation', async () => {
     const sheet = '<style id="jx-style-0">body{color:red}</style>';
 
+    // Earlier tests leave their own <style> in the head, and a runtime style is
+    // now preserved across a navigation on purpose — so the head has to start
+    // clean for "exactly one" to be about this sheet.
+    document.head.querySelectorAll('style').forEach((node) => node.remove());
     document.write(await pageHtml('A', jsx('h1', { children: 'A' }), sheet));
     document.close();
     const client = boot({ defs: [] });
@@ -303,7 +307,7 @@ describe('SPA navigation (streamed diff)', () => {
 
     expect(document.querySelector('h1')!.textContent).toBe('B');
     expect(document.querySelectorAll('style#jx-style-0').length).toBe(1);
-    expect(document.querySelectorAll('head style').length).toBe(1);
+    expect(document.querySelectorAll("head style").length).toBe(1);
   });
 
   /**

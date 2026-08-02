@@ -53,6 +53,8 @@ interface Collected {
 
 /** Non-file parts are metadata and stay in memory, so they get their own ceiling. */
 const FIELD_BYTES = 1024 * 1024;
+/** Its own sentinel, so the 413 quotes the ceiling the caller actually broke. */
+const FIELD_OVER_LIMIT = new Error('multipart field exceeds the limit');
 /** How much of a part may sit in the sink before the read loop waits for the disk to catch up. */
 const FLUSH_BYTES = 4 * 1024 * 1024;
 
@@ -117,7 +119,7 @@ function spoolFile(headers: PartHeaders, path: string, add: (file: SpooledFile) 
 
 function appendField(chunks: Uint8Array[], state: { size: number }, chunk: Uint8Array): void {
   state.size += chunk.byteLength;
-  if (state.size > FIELD_BYTES) throw OVER_LIMIT;
+  if (state.size > FIELD_BYTES) throw FIELD_OVER_LIMIT;
   chunks.push(chunk);
 }
 
@@ -152,6 +154,7 @@ function formOf(dir: string, collected: Collected): SpooledForm {
 
 /** What the caller gets back for a body the parser refused. */
 function responseFor(error: unknown, maxBytes: number): Response {
+  if (error === FIELD_OVER_LIMIT) return Response.json({ error: `a form field exceeds the ${FIELD_BYTES}-byte limit` }, { status: 413 });
   if (error === OVER_LIMIT) return tooLarge(maxBytes);
   // A failed write (no space, no permission) is a broken deploy, not a bad request.
   if (error !== MALFORMED) throw error;

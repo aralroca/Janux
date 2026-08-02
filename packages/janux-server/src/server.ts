@@ -19,7 +19,7 @@ import { QueryClient } from 'janux/query';
 import { isTracing, reportError, withSpan, type JanuxSpan } from 'janux/observability';
 import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from './cache';
 import { createResponseCache } from './response-cache';
-import { createHttpHandlers, type HandlerModule } from './http-handlers';
+import { createHttpHandlers, readBodyWithin, type HandlerModule } from './http-handlers';
 import { createMcpEndpoint, type McpAuth } from './mcp';
 import { pageMarkdown } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
@@ -201,6 +201,34 @@ interface ResolvedDocument {
 }
 
 type ErrorPageKind = 'notFound' | 'serverError';
+
+/**
+ * Ceiling on the JSON bodies the invocation surface reads. A tool call and a
+ * proposal id are small by construction, so `req.json()` — which buffers
+ * whatever arrives — let an anonymous caller pick the server's memory ceiling.
+ * Generous on purpose: the point is that a ceiling exists and is applied
+ * BEFORE the bytes are buffered, not that it is tight.
+ */
+const INVOCATION_BODY_BYTES = 1024 * 1024;
+
+/**
+ * The parsed JSON body, or the 413 to answer with. Unparseable bytes still
+ * degrade to `{}` — an empty input is the schema's problem to report, and that
+ * is a 400 about the call rather than a 500 about the request.
+ */
+async function jsonBodyWithin(req: Request): Promise<unknown> {
+  const bytes = await readBodyWithin(req, INVOCATION_BODY_BYTES);
+
+  if (bytes instanceof Response) return bytes;
+  try {
+    // `ignoreBOM` KEEPS a leading byte-order mark instead of stripping it, so
+    // the same bodies parse here as parsed through `req.json()`: adding a size
+    // ceiling must not quietly widen what counts as valid JSON.
+    return JSON.parse(new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes));
+  } catch {
+    return {};
+  }
+}
 
 const ERROR_PAGE_STATUS: Record<ErrorPageKind, number> = { notFound: 404, serverError: 500 };
 /** The body an app with no `_404`/`_500` page answers with — the status line, in words. */
@@ -570,7 +598,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
     if (!tool) return json({ ok: false, error: `Unknown api "${name}"` }, 404);
     const origin = req.headers.get('x-janux-origin') === 'agent' ? 'agent' : 'human';
-    const input = await req.json().catch(() => ({}));
+    const input = await jsonBodyWithin(req);
+
+    if (input instanceof Response) return input;
     const ctx = await ctxWithAgent(req);
 
     if (origin === 'agent' && agentAuth?.policy === 'require' && !(ctx.agent as AgentIdentity | undefined)?.verified) {
@@ -604,7 +634,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const refused = refuseAgentSettlement(req);
 
     if (refused) return refused;
-    const { id } = (await req.json().catch(() => ({}))) as { id?: string };
+    const body = await jsonBodyWithin(req);
+
+    if (body instanceof Response) return body;
+    const { id } = body as { id?: string };
     const proposal = id ? proposals.get(id) : undefined;
 
     if (!proposal) return json({ ok: false, error: 'unknown proposal' }, 404);
@@ -856,7 +889,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
       const refused = refuseAgentSettlement(req);
 
       if (refused) return refused;
-      const { id } = (await req.json().catch(() => ({}))) as { id?: string };
+      const body = await jsonBodyWithin(req);
+
+      if (body instanceof Response) return body;
+      const { id } = body as { id?: string };
 
       return json({ ok: id ? proposals.delete(id) : false });
     }

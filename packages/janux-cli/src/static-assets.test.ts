@@ -139,6 +139,35 @@ describe('staticResponse', () => {
     expect(new Uint8Array(first)).toEqual(new Uint8Array(second));
     expect(compressedOnce(join(dir, 'sw.js'))).toBe(true);
   });
+
+  /**
+   * The static handler runs in front of the app on every deployment target, so
+   * a path that escapes the built client is a file read off the deployment box.
+   * `URL` collapses a literal `..`; an encoded one has to stay a filename.
+   */
+  it('refuses to walk out of the directory it serves', async () => {
+    expect(await get('/../package.json')).toBeUndefined();
+    expect(await get('/%2e%2e/%2e%2e/etc/passwd')).toBeUndefined();
+    expect(await get('/assets/../../package.json')).toBeUndefined();
+  });
+
+  it('leaves the app to answer the root, which is a page and not a file', async () => {
+    expect(await get('/')).toBeUndefined();
+  });
+
+  /** Only a compressed body varies by the request header, so only that one may say so. */
+  it('does not claim to vary when it sent the bytes as they are', async () => {
+    const response = (await get('/logo-e5f6a7b8.woff2', 'br, gzip'))!;
+
+    expect(response.headers.get('vary')).toBeNull();
+  });
+
+  it('serves a hashed asset with the type its extension promises', async () => {
+    const response = (await get('/logo-e5f6a7b8.woff2'))!;
+
+    expect(response.headers.get('content-type')).toBe('font/woff2');
+    expect(response.status).toBe(200);
+  });
 });
 
 /** The cache is the point: a 3 MB editor bundle cannot be re-compressed per request. */

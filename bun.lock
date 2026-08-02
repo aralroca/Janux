@@ -846,6 +846,10 @@
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^18.0.0",
+        "@types/react": "^19.2.0",
+        "diff-dom-streaming": "^0.6.10",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
         "web-bot-auth": "^0.1.3",
       },
     },
@@ -882,7 +886,7 @@
       "version": "0.5.0",
       "dependencies": {
         "csstype": "^3.2.3",
-        "diff-dom-streaming": "^0.6.9",
+        "diff-dom-streaming": "^0.6.10",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^18.0.0",
@@ -1948,7 +1952,7 @@
 
     "dfa": ["dfa@1.2.0", "", {}, "sha512-ED3jP8saaweFTjeGX8HQPjeC1YYyZs98jGNZx6IiBvxW7JG5v492kamAQB3m2wop07CvU/RQmzcKr6bgcC5D/Q=="],
 
-    "diff-dom-streaming": ["diff-dom-streaming@0.6.9", "", {}, "sha512-P77DwfYuO1R9frF7gW8Usufx/SwoCCs3wRr/wMzwRzQTPbHTb6j5ZUViVgpMmI+Agd3mSj/sTC/+5Qw4/sNGDg=="],
+    "diff-dom-streaming": ["diff-dom-streaming@0.6.10", "", {}, "sha512-MuXpq/AXJD6ag4SdyX4fi9wwy+5ndGNZbutC0UpL0tImDk4Q1UkMBAqdSzpL1UeJZ+Wb4eAyae44gDh4KElwRw=="],
 
     "dir-glob": ["dir-glob@3.0.1", "", { "dependencies": { "path-type": "^4.0.0" } }, "sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA=="],
 
