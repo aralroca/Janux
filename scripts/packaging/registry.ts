@@ -34,9 +34,15 @@ export async function alreadyPublished(name: string, version: string): Promise<b
   return response.status === 200;
 }
 
+/**
+ * `stdin` is inherited, not ignored: an account with 2FA answers a publish with
+ * `EOTP` and a prompt for the one-time password, and a closed stdin turns that
+ * question into a failed release. In CI there is nothing on stdin and the
+ * automation token never asks, so inheriting costs that path nothing.
+ */
 export function publish(tarball: string, options: PublishOptions): void {
   const args = publishArgs(tarball, options);
-  const run = Bun.spawnSync(['npm', ...args], { stdio: ['ignore', 'inherit', 'inherit'] });
+  const run = Bun.spawnSync(['npm', ...args], { stdio: ['inherit', 'inherit', 'inherit'] });
 
   if (!run.success) throw new Error(`npm ${args.join(' ')} exited ${run.exitCode}`);
 }
