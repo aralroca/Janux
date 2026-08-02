@@ -1,6 +1,6 @@
 {
   "name": "@janux/agent",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Janux embedded agent runtime: zero-config model resolution, provider routing and the ui/api tool loop.",
   "repository": {
     "type": "git",

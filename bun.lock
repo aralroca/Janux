@@ -855,7 +855,7 @@
     },
     "packages/create-janux": {
       "name": "create-janux",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "bin": {
         "create-janux": "./bin.ts",
       },
@@ -883,7 +883,7 @@
     },
     "packages/janux": {
       "name": "janux",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "dependencies": {
         "csstype": "^3.2.3",
         "diff-dom-streaming": "^0.6.10",
@@ -907,7 +907,7 @@
     },
     "packages/janux-agent": {
       "name": "@janux/agent",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "dependencies": {
         "@aralroca/gui-agent": "^0.5.0",
         "@janux/server": "workspace:*",
@@ -936,7 +936,7 @@
     },
     "packages/janux-cli": {
       "name": "@janux/cli",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "bin": {
         "janux": "./bin.ts",
       },
@@ -950,7 +950,7 @@
     },
     "packages/janux-content": {
       "name": "@janux/content",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "dependencies": {
         "rehype-raw": "^7.0.0",
         "yaml": "^2.6.0",
@@ -969,7 +969,7 @@
     },
     "packages/janux-node": {
       "name": "@janux/node",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "bin": {
         "janux-node": "./bin.ts",
       },
@@ -987,7 +987,7 @@
     },
     "packages/janux-server": {
       "name": "@janux/server",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "dependencies": {
         "janux": "workspace:*",
         "web-bot-auth": "^0.1.3",
@@ -995,7 +995,7 @@
     },
     "packages/janux-tailwind": {
       "name": "@janux/tailwind",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "dependencies": {
         "@tailwindcss/postcss": "^4.0.0",
         "tailwindcss": "^4.0.0",
@@ -1003,7 +1003,7 @@
     },
     "packages/janux-vercel": {
       "name": "@janux/vercel",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "bin": {
         "janux-vercel": "./bin.ts",
       },
@@ -1019,7 +1019,7 @@
     },
     "packages/janux-vite": {
       "name": "@janux/vite",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "dependencies": {
         "@capsizecss/metrics": "^3",
         "@capsizecss/unpack": "^2",
