@@ -166,6 +166,49 @@ describe('reactive prop bindings', () => {
     expect(el.value).toBe('b');
   });
 
+  it('a thunk CHILD is a text binding: the view never re-renders for it', () => {
+    const root = document.createElement('div');
+    const count = signal(0);
+    const loop = island(root, () => jsx('p', { children: ['n=', () => count.value] }));
+
+    expect(root.textContent).toBe('n=0');
+    count.value = 7;
+    flushRenders();
+    expect(root.textContent).toBe('n=7');
+    expect(loop.renders()).toBe(1);
+  });
+
+  it('a text binding adopts the server-rendered text node', () => {
+    const root = document.createElement('p');
+
+    root.innerHTML = 'hello';
+    const live = root.firstChild;
+    const name = signal('hello');
+
+    island(root, () => [() => name.value]);
+    expect(root.firstChild).toBe(live);
+    name.value = 'bye';
+    flushRenders();
+    expect(root.textContent).toBe('bye');
+  });
+
+  it('a text binding renders nullish and false as nothing', () => {
+    const root = document.createElement('div');
+    const value = signal<unknown>('x');
+
+    island(root, () => jsx('p', { children: () => value.value }));
+    expect(root.textContent).toBe('x');
+    value.value = null;
+    flushRenders();
+    expect(root.textContent).toBe('');
+    value.value = false;
+    flushRenders();
+    expect(root.textContent).toBe('');
+    value.value = 0;
+    flushRenders();
+    expect(root.textContent).toBe('0');
+  });
+
   it('an event prop is never a binding — it must name an intent', () => {
     const root = document.createElement('div');
 

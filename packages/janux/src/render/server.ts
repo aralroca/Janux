@@ -609,6 +609,9 @@ function renderInto(node: unknown, scope: RenderScope, emit: Emit): Rendered {
 
     return renderSiblings(node, scope, emit);
   }
+  // A reactive text binding: the server has no effects, so it renders the value
+  // the thunk has now — exactly what the client's first render will show.
+  if (typeof node === 'function') return renderInto((node as () => unknown)(), scope, emit);
   const jsxNode = node as JanuxNode;
 
   if (jsxNode.$t === Fragment) return renderInto(jsxNode.$p.children, scope, emit);

@@ -1,4 +1,4 @@
-import { bool, component, int, intent, schema, str } from 'janux';
+import { bool, component, For, int, intent, schema, str } from 'janux';
 import { CARDS, INITIAL_VALUE } from '../../../../hydration-interactivity/shared.js';
 
 export const HydrationApp = component({
@@ -50,27 +50,32 @@ export const HydrationApp = component({
 						id="hydration-input"
 						type="search"
 						autocomplete="off"
-						value={state.draft}
+						value={() => state.draft}
 						onInput={intents.type}
 					/>
 				) : (
 					<input id="hydration-input" type="search" autocomplete="off" onInput={intents.type} />
 				)}
-				<output id="hydration-output">{state.draft}</output>
+				<output id="hydration-output">{() => state.draft}</output>
 				<button id="hydration-action" type="button" onClick={intents.send} onFocus={intents.focus}>
 					Send search
 				</button>
-				<output id="hydration-clicks">{state.clicks}</output>
-				<output id="hydration-focuses">{state.focuses}</output>
-				<output id="hydration-submitted">{state.submitted}</output>
+				<output id="hydration-clicks">{() => state.clicks}</output>
+				<output id="hydration-focuses">{() => state.focuses}</output>
+				<output id="hydration-submitted">{() => state.submitted}</output>
 			</section>
+			{/* The card list never changes, so `<For>` with a thunk `each` diffs it
+			    once and then owns it: typing re-renders the editor above, not a
+			    hundred cards that could not have moved. */}
 			<ul id="hydration-cards">
-				{CARDS.map((card: any) => (
-					<li class="hydration-card" data-card-id={card.id} key={card.id}>
-						<h2>{card.title}</h2>
-						<p>{card.description}</p>
-					</li>
-				))}
+				<For each={() => CARDS} by={(card: any) => card.id}>
+					{(card: any) => (
+						<li class="hydration-card" data-card-id={card.id}>
+							<h2>{card.title}</h2>
+							<p>{card.description}</p>
+						</li>
+					)}
+				</For>
 			</ul>
 		</main>
 	),

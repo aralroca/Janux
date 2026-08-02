@@ -22,7 +22,9 @@ import { isIsland, isValueControl, keepRuntimeClasses, VALUE_CONTROL_TAGS } from
  * in `morph` — which remains the DOM-vs-DOM patcher for resumed markup.
  */
 
-type Slot = JanuxNode | string;
+/** A `() => …` in the children position is a reactive TEXT binding. */
+type TextBinding = () => unknown;
+type Slot = JanuxNode | string | TextBinding;
 
 /** Flattens a view tree into element/island/foreign/text slots, invoking plain function components. */
 function normalize(node: unknown, out: Slot[]): Slot[] {
@@ -34,6 +36,13 @@ function normalize(node: unknown, out: Slot[]): Slot[] {
   }
   if (Array.isArray(node)) {
     node.forEach((child) => normalize(child, out));
+
+    return out;
+  }
+  // `{() => state.total}` — the text counterpart of a bound attribute: its own
+  // effect owns one text node, so the view never subscribes to what it reads.
+  if (typeof node === 'function') {
+    out.push(node as TextBinding);
 
     return out;
   }
@@ -56,12 +65,52 @@ function normalize(node: unknown, out: Slot[]): Slot[] {
   return out;
 }
 
+function isTextSlot(slot: Slot): slot is TextBinding {
+  return typeof slot === 'function';
+}
+
+function isNodeSlot(slot: Slot): slot is JanuxNode {
+  return typeof slot !== 'string' && typeof slot !== 'function';
+}
+
 function isBoundarySlot(slot: Slot): boolean {
-  return typeof slot !== 'string' && (isComponentDef(slot.$t) || isForeignDef(slot.$t));
+  return isNodeSlot(slot) && (isComponentDef(slot.$t) || isForeignDef(slot.$t));
 }
 
 function isForSlot(slot: Slot): slot is JanuxNode {
-  return typeof slot !== 'string' && isFor(slot.$t);
+  return isNodeSlot(slot) && isFor(slot.$t);
+}
+
+/** The signal behind a bound text node, so a re-render swaps the closure instead of the node. */
+const textBindings = new WeakMap<Node, Sig<TextBinding>>();
+
+function textOf(value: unknown): string {
+  return value === null || value === undefined || value === false ? '' : String(value);
+}
+
+/** Adopts the live text node when there is one (hydration), otherwise makes one. */
+function textBindingTarget(thunk: TextBinding, live: Node | undefined): Node {
+  const reusable = live !== undefined && live.nodeType === Node.TEXT_NODE;
+  const bound = reusable ? textBindings.get(live) : undefined;
+
+  if (bound !== undefined) {
+    bound.value = thunk;
+
+    return live!;
+  }
+  const node = reusable ? live! : document.createTextNode('');
+  const sig = signal(thunk);
+
+  textBindings.set(node, sig);
+  onCleanup(
+    watch(() => {
+      const text = textOf(sig.value());
+
+      if (node.textContent !== text) node.textContent = text;
+    }, scheduleRender),
+  );
+
+  return node;
 }
 
 /**
@@ -445,7 +494,7 @@ function matchState(root: Element, slots: Slot[]): Match {
   slots.forEach((slot) => {
     // A `<For>`'s own key identifies the LIST among its siblings, not a node —
     // it must never enter the DOM-adoption key set.
-    if (typeof slot === 'string' || isFor(slot.$t)) return;
+    if (!isNodeSlot(slot) || isFor(slot.$t)) return;
     if (slot.$k !== undefined) (toKeys ??= new Set()).add(slot.$k);
   });
 
@@ -548,13 +597,17 @@ function assertPlainRow(pass: RenderPass): void {
 }
 
 /** The single node a row body must produce. */
-function rowSlot(slots: Slot[]): Slot {
-  if (slots.length === 1 && !isBoundarySlot(slots[0]!) && !isForSlot(slots[0]!)) return slots[0]!;
+function rowSlot(slots: Slot[]): JanuxNode | string {
+  const only = slots[0];
+
+  if (slots.length === 1 && only !== undefined && !isTextSlot(only) && !isBoundarySlot(only) && !isForSlot(only)) {
+    return only;
+  }
 
   throw new Error(`Janux: a <For> row must render exactly one element, got ${slots.length}`);
 }
 
-function rowNodeFor(slot: Slot, live: Node | null, pass: RenderPass, svg: boolean): Node {
+function rowNodeFor(slot: JanuxNode | string, live: Node | null, pass: RenderPass, svg: boolean): Node {
   if (typeof slot === 'string') {
     if (live !== null && live.nodeType === Node.TEXT_NODE) {
       if (live.textContent !== slot) live.textContent = slot;
@@ -894,6 +947,9 @@ function reconcileChildren(root: Element, children: unknown, pass: RenderPass, s
 
   slots.forEach((slot, index) => {
     if (typeof slot === 'string') return void targets.push(textTarget(slot, match, targets.length));
+    if (isTextSlot(slot)) {
+      return void targets.push(textBindingTarget(slot, match.fromKids[targets.length]));
+    }
     if (isForSlot(slot)) {
       keyed = true;
 
@@ -913,6 +969,7 @@ function appendSlots(root: Element, slots: Slot[], pass: RenderPass, svg: boolea
     const slot = slots[index]!;
 
     if (typeof slot === 'string') root.appendChild(document.createTextNode(slot));
+    else if (isTextSlot(slot)) root.appendChild(textBindingTarget(slot, undefined));
     else if (isBoundarySlot(slot)) root.appendChild(boundaryTarget(slot, null, pass, svg));
     else root.appendChild(createElementSlot(slot, pass, svg));
   }

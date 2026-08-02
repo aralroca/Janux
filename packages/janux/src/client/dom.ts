@@ -138,6 +138,7 @@ export function toDomNodes(node: unknown, pass?: RenderPass, svg?: boolean): Nod
     return [document.createTextNode(String(node))];
   }
   if (Array.isArray(node)) return node.flatMap((child) => toDomNodes(child, pass, svg));
+  if (typeof node === 'function') return toDomNodes((node as () => unknown)(), pass, svg);
   const jsxNode = node as JanuxNode;
 
   if (jsxNode.$t === Fragment) return toDomNodes(jsxNode.$p.children, pass, svg);
