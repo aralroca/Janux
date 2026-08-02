@@ -42,8 +42,19 @@ export const NAME_VALUE_CASES: AttrRow[] = [
   { id: 'nameval-array-holes-become-empty-slots', src: 'janux', props: { value: ['a', null, 'b'] }, expected: ' value="a,,b"' },
   { id: 'nameval-max-safe-integer-keeps-every-digit', src: 'janux', props: { value: Number.MAX_SAFE_INTEGER }, expected: ' value="9007199254740991"' },
 
-  // ── functions are dropped whatever the prop is called ───────────────────────
-  { id: 'nameval-function-under-a-plain-name-is-dropped-siblings-stay', src: 'janux', props: { title: () => 'x', id: 'k' }, expected: ' id="k"' },
+  // ── a function under a plain name is a REACTIVE BINDING ─────────────────────
+  // It used to be dropped. `class={() => …}` is now the attribute-level
+  // primitive (the counterpart of `<For>`'s per-row scope): the thunk defers
+  // the read so the enclosing view never subscribes to it, and on the server —
+  // which has no effects to hang it on — it is simply evaluated, so the markup
+  // is what the client's first render will produce. Only `on*` names still
+  // refuse a function, because an event must name an intent.
+  { id: 'nameval-function-under-a-plain-name-is-a-binding-siblings-stay', src: 'janux', props: { title: () => 'x', id: 'k' }, expected: ' title="x" id="k"' },
+  { id: 'nameval-a-binding-returning-undefined-writes-no-attribute', src: 'janux', props: { title: () => undefined, id: 'k' }, expected: ' id="k"' },
+  { id: 'nameval-a-binding-returning-false-writes-no-attribute', src: 'janux', props: { hidden: () => false, id: 'k' }, expected: ' id="k"' },
+  { id: 'nameval-a-binding-returning-true-writes-a-bare-attribute', src: 'janux', props: { hidden: () => true }, expected: ' hidden' },
+  { id: 'nameval-a-binding-value-is-escaped-like-any-other', src: 'janux', props: { title: () => '<a>&"' }, expected: ' title="&lt;a&gt;&amp;&quot;"' },
+  { id: 'nameval-a-binding-under-an-on-name-is-still-refused', src: 'janux', props: { onclick: () => 'alert(1)', id: 'k' }, expected: ' id="k"' },
 
   // ── value contents that must survive verbatim ───────────────────────────────
   { id: 'nameval-whitespace-only-value-is-kept', src: 'janux', props: { title: '   ' }, expected: ' title="   "' },

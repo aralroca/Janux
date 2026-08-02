@@ -230,7 +230,7 @@ function isBlockedUrl(name: string, value: unknown): value is string {
 }
 
 /** Maps a JSX prop to an HTML attribute pair; `onX={intents.y}` becomes a data marker for delegation. */
-function propToAttr(name: string, value: unknown): [string, unknown] | undefined {
+export function propToAttr(name: string, value: unknown): [string, unknown] | undefined {
   if (name === 'children' || name === 'key' || name === 'dangerHTML') return undefined;
   if (name === 'on' || name === 'intent') {
     if ((value as any)?.$intent) {
@@ -313,15 +313,44 @@ function boundInputAttr(bound: [string, Record<string, unknown>][], explicit: un
 }
 
 /**
+ * A reactive binding: `class={() => state.selected === row.id ? 'danger' : ''}`.
+ *
+ * A thunk defers the read, so the enclosing view never subscribes to what it
+ * touches — the binding's own effect does, and a change rewrites ONE attribute
+ * instead of re-running the view. This is the attribute-level counterpart of
+ * `<For>`'s row-level scope, and the same thing Solid and vue-vapor compile to.
+ *
+ * `on*` is excluded (events bind to named intents, and an intent ref is itself
+ * callable), as are the two props that are never attributes.
+ */
+export function isBinding(name: string, value: unknown): value is () => unknown {
+  return (
+    typeof value === 'function' &&
+    name !== 'children' &&
+    name !== 'dangerHTML' &&
+    !ON_PREFIX.test(name) &&
+    (value as { $intent?: unknown }).$intent === undefined
+  );
+}
+
+/** The attribute a binding writes, so an attr diff knows not to reclaim it. */
+export function bindingAttr(name: string): string | undefined {
+  return propToAttr(name, '')?.[0];
+}
+
+/**
  * One pass over the props instead of entries → map → filter → dedupe-filter →
  * flatMap → spread. This is the single hottest function in an SSR render (~18%
  * of one), and six intermediate arrays plus a Set per element was most of it.
+ *
+ * `resolveBindings` is the server/static path: it calls each thunk and emits the
+ * attribute. The client leaves them out and gives each one its own effect.
  *
  * Alias spellings can collide on one marker (`onFocus`+`onFocusIn`,
  * `onDoubleClick`+`onDblClick`): the first prop wins — a duplicate attribute
  * would be invalid HTML the browser resolves the same way, silently.
  */
-export function attrEntries(props: Record<string, unknown>): [string, unknown][] {
+export function attrEntries(props: Record<string, unknown>, resolveBindings = false): [string, unknown][] {
   const names = Object.keys(props);
   const entries: [string, unknown][] = [];
   // Both built lazily: the overwhelming majority of elements carry neither a
@@ -331,7 +360,11 @@ export function attrEntries(props: Record<string, unknown>): [string, unknown][]
 
   for (let index = 0; index < names.length; index += 1) {
     const name = names[index]!;
-    const value = props[name];
+    const raw = props[name];
+    const binding = isBinding(name, raw);
+
+    if (binding && !resolveBindings) continue;
+    const value = binding ? (raw as () => unknown)() : raw;
     const pair = propToAttr(name, value);
 
     if (pair !== undefined) {
@@ -355,7 +388,9 @@ export function attrEntries(props: Record<string, unknown>): [string, unknown][]
 }
 
 export function renderAttrs(props: Record<string, unknown>): string {
-  const entries = attrEntries(props);
+  // The server has no effects to hang a binding on: it emits the value the
+  // thunk has right now, exactly as the client's first render will.
+  const entries = attrEntries(props, true);
   let out = '';
 
   for (let index = 0; index < entries.length; index += 1) out += attrFor(entries[index]![0], entries[index]![1]);

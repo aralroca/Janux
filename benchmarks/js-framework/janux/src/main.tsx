@@ -213,7 +213,10 @@ export const Bench = component({
 				<tbody>
 					<For each={state.rows} by={(row: Row) => row.id}>
 						{(row: Row) => (
-							<tr class={state.selected === row.id ? 'danger' : ''}>
+							// A THUNK, not a value: the row body never reads `state.selected`, so
+							// selecting a row re-runs one attribute write per row instead of a
+							// thousand row bodies. Same shape solid/vue-vapor compile to.
+							<tr class={() => (state.selected === row.id ? 'danger' : '')}>
 								<td class="col-md-1">{row.id}</td>
 								<td class="col-md-4">
 									<a onClick={intents.select.with({ id: row.id })}>{row.label}</a>

@@ -1,5 +1,5 @@
 import { Fragment, type JanuxNode } from '../jsx-runtime';
-import { attrEntries } from '../render/html';
+import { attrEntries, bindingAttr, isBinding, propToAttr } from '../render/html';
 import { isForeignDef } from '../interop';
 import { isFor, readEach, type ForProps } from '../for';
 import { toRaw } from '../state/raw';
@@ -110,6 +110,9 @@ function sameValue(a: unknown, b: unknown): boolean {
 
     return sameRecord(inputA ?? {}, inputB ?? {});
   }
+  // Two thunks are the same PROP: the value they produce belongs to the
+  // binding's own effect, so a fresh closure must not force an attr diff.
+  if (typeof a === 'function' && typeof b === 'function') return true;
   // A mutable object (a `style`, an arbitrary bag) can be edited in place, so
   // its identity proves nothing — always re-serialize.
   if (typeof a === 'object' && a !== null) return false;
@@ -131,12 +134,15 @@ function sameRecord(a: Record<string, unknown>, b: Record<string, unknown>): boo
 function syncControl(el: Element, props: Record<string, unknown>): void {
   if (!isValueControl(el) || document.activeElement === el) return;
   if (el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio')) {
+    // A binding owns this property and writes it from its own effect.
+    if (isBinding('checked', props.checked)) return;
     const checked = props.checked === true;
 
     if (el.checked !== checked) el.checked = checked;
 
     return;
   }
+  if (isBinding('value', props.value)) return;
   const children = props.children;
   const value =
     props.value !== null && props.value !== undefined
@@ -148,9 +154,121 @@ function syncControl(el: Element, props: Record<string, unknown>): void {
   if (value !== null && el.value !== value) el.value = value;
 }
 
+/**
+ * One live effect per reactive prop. `class={() => …}` reads its state inside
+ * THIS effect, so the enclosing view never subscribes to it: a write re-runs one
+ * attribute write per element instead of one view render. Solid and vue-vapor
+ * compile to the same shape; a thunk is how you write it without a compiler.
+ */
+interface Binding {
+  /** The newest thunk. Setting it re-runs the binding — closures are fresh every render. */
+  thunk: Sig<() => unknown>;
+  /** Last value written. A shared signal re-runs every row's binding; almost none change. */
+  last: unknown;
+}
+
+/** No value a thunk can return, so the first run always writes. */
+const UNWRITTEN = Symbol('unwritten');
+
+const bindings = new WeakMap<Element, Map<string, Binding>>();
+
+/** Writes one bound prop, mapped to its attribute exactly as SSR would write it. */
+function applyBinding(el: Element, name: string, value: unknown, binding: Binding): void {
+  // Selecting one row of a thousand re-runs a thousand bindings and changes
+  // two. Comparing the VALUE first skips the attribute mapping and the DOM read
+  // for the other 998.
+  if (Object.is(value, binding.last)) return;
+  binding.last = value;
+  const pair = propToAttr(name, value);
+
+  if (pair === undefined) return;
+  const [attr, raw] = pair;
+  const write = () => {
+    if (raw === false || raw === null || raw === undefined) return void el.removeAttribute(attr);
+    const next = raw === true ? '' : String(raw);
+
+    ensureListenerForAttr(attr);
+    if (el.getAttribute(attr) !== next) el.setAttribute(attr, next);
+  };
+
+  // Only `class` can collide with the runtime's own classes, and the guard is
+  // not free on a path that runs once per bound attribute per change.
+  if (attr === 'class') keepRuntimeClasses(el, write);
+  else write();
+  // `value`/`checked` are PROPERTIES on a live control: the attribute alone is
+  // only a default, and `<select>.value` selects nothing without it.
+  if ((name === 'value' || name === 'checked') && isValueControl(el)) writeControlProp(el, name, value);
+}
+
+/** The property half of a bound `value`/`checked`, never touching the focused control. */
+function writeControlProp(el: Element, name: string, value: unknown): void {
+  if (document.activeElement === el) return;
+  if (name === 'checked') {
+    if (!(el instanceof HTMLInputElement)) return;
+    const checked = value === true;
+
+    if (el.checked !== checked) el.checked = checked;
+
+    return;
+  }
+  const next = value === null || value === undefined ? '' : String(value);
+  const control = el as HTMLInputElement;
+
+  if (control.value !== next) control.value = next;
+}
+
+/** Attaches (or refreshes) the effect behind every thunk prop on this element. */
+function bindProps(el: Element, props: Record<string, unknown>): void {
+  const names = Object.keys(props);
+
+  for (let index = 0; index < names.length; index += 1) {
+    const name = names[index]!;
+    const thunk = props[name];
+
+    if (!isBinding(name, thunk)) continue;
+    let map = bindings.get(el);
+
+    if (map === undefined) {
+      map = new Map();
+      bindings.set(el, map);
+    }
+    const live = map.get(name);
+
+    // A re-render brings a fresh closure over fresh data; the effect stays, so
+    // whatever it already subscribed to is re-tracked from the new body.
+    if (live !== undefined) {
+      live.thunk.value = thunk;
+      continue;
+    }
+    const sig = signal(thunk);
+    const binding: Binding = { thunk: sig, last: UNWRITTEN };
+
+    map.set(name, binding);
+    onCleanup(watch(() => applyBinding(el, name, sig.value(), binding), scheduleRender));
+  }
+}
+
+/** The attributes this element's bindings own — an attr diff must not reclaim them. */
+function boundAttrs(props: Record<string, unknown>): Set<string> | null {
+  const names = Object.keys(props);
+  let owned: Set<string> | null = null;
+
+  for (let index = 0; index < names.length; index += 1) {
+    const name = names[index]!;
+
+    if (!isBinding(name, props[name])) continue;
+    const attr = bindingAttr(name);
+
+    if (attr !== undefined) (owned ??= new Set()).add(attr);
+  }
+
+  return owned;
+}
+
 /** Diffs the element's attributes against the serialized form of `props`, like SSR/`elementFor` write them. */
 function syncAttrs(el: Element, props: Record<string, unknown>): void {
   const desired = new Map<string, string>();
+  const owned = boundAttrs(props);
 
   attrEntries(props).forEach(([name, value]) => {
     if (value === false || value === null || value === undefined) return;
@@ -158,7 +276,7 @@ function syncAttrs(el: Element, props: Record<string, unknown>): void {
   });
   keepRuntimeClasses(el, () => {
     el.getAttributeNames()
-      .filter((name) => !desired.has(name))
+      .filter((name) => !desired.has(name) && owned?.has(name) !== true)
       .forEach((name) => el.removeAttribute(name));
     desired.forEach((value, name) => {
       // A client render can bind an event the page had never used before this pass.
@@ -175,10 +293,15 @@ function syncElement(el: Element, node: JanuxNode, pass: RenderPass, svg: boolea
   prevJsx.set(el, node);
   if (node.$k !== undefined) setNodeKey(el, node.$k);
   if (!sameProps(prev?.$p, node.$p)) syncAttrs(el, node.$p);
+  bindProps(el, node.$p);
   if (typeof node.$p.dangerHTML === 'string') {
     if (el.innerHTML !== node.$p.dangerHTML) el.innerHTML = node.$p.dangerHTML;
   } else {
-    reconcileChildren(el, node.$p.children, pass, svgChildren(node, svg));
+    const text = primitiveText(node.$p.children);
+
+    if (text === null || !syncTextChild(el, text)) {
+      reconcileChildren(el, node.$p.children, pass, svgChildren(node, svg));
+    }
   }
   // AFTER the children: `<select>.value` can only select an <option> that
   // already exists — written first, a value+options change in one pass left
@@ -195,7 +318,11 @@ function createElementSlot(node: JanuxNode, pass: RenderPass, svg: boolean): Ele
   const el = elementShell(node, svg);
 
   prevJsx.set(el, node);
+  bindProps(el, node.$p);
+  const text = primitiveText(node.$p.children);
+
   if (typeof node.$p.dangerHTML === 'string') el.innerHTML = node.$p.dangerHTML;
+  else if (text !== null) el.textContent = text;
   else reconcileChildren(el, node.$p.children, pass, svgChildren(node, svg));
   // `elementShell` writes `value` as an ATTRIBUTE, which selects nothing on a
   // fresh <select> (and is only a default for <textarea>) — the property write
@@ -203,6 +330,23 @@ function createElementSlot(node: JanuxNode, pass: RenderPass, svg: boolean): Ele
   if (VALUE_CONTROL_TAGS.has(node.$t as string)) syncControl(el, node.$p);
 
   return el;
+}
+
+/** `{row.label}` / `{row.id}` — the overwhelmingly common child shape. */
+function primitiveText(children: unknown): string | null {
+  if (typeof children === 'string') return children === '' ? null : children;
+
+  return typeof children === 'number' ? String(children) : null;
+}
+
+/** Retargets a lone text child in place; false when the element's shape is anything else. */
+function syncTextChild(el: Element, text: string): boolean {
+  const first = el.firstChild;
+
+  if (first === null || first.nextSibling !== null || first.nodeType !== Node.TEXT_NODE) return false;
+  if (first.textContent !== text) first.textContent = text;
+
+  return true;
 }
 
 /** A boundary slot reuses a live host with the same id; the placeholder path assigns ids in pass order. */
@@ -700,6 +844,11 @@ function reconcileChildren(root: Element, children: unknown, pass: RenderPass, s
   const slots = normalize(children, []);
 
   if (slots.length === 1 && isForSlot(slots[0]!)) return reconcileForOnly(root, slots[0]!, pass, svg);
+  // A freshly created element has nothing to match against and nothing to
+  // reorder — building a 1,000-row table is almost entirely this path. A list
+  // sharing the container with siblings still needs the general path, which is
+  // what places its rows among them.
+  if (root.firstChild === null && !slots.some(isForSlot)) return appendSlots(root, slots, pass, svg);
   const match = matchState(root, slots);
   const targets: Node[] = [];
   // A list always takes the keyed ordering path: its rows carry no DOM key, and
@@ -719,6 +868,17 @@ function reconcileChildren(root: Element, children: unknown, pass: RenderPass, s
   });
 
   orderChildren(root, targets, match.fromKids, keyed);
+}
+
+/** Straight-line creation into an empty container. */
+function appendSlots(root: Element, slots: Slot[], pass: RenderPass, svg: boolean): void {
+  for (let index = 0; index < slots.length; index += 1) {
+    const slot = slots[index]!;
+
+    if (typeof slot === 'string') root.appendChild(document.createTextNode(slot));
+    else if (isBoundarySlot(slot)) root.appendChild(boundaryTarget(slot, null, pass, svg));
+    else root.appendChild(createElementSlot(slot, pass, svg));
+  }
 }
 
 /**
