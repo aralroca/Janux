@@ -246,6 +246,23 @@ async function renderBoundaryContent(def: ComponentDef, instance: JanuxInstance,
 const IDLE = Symbol('idle');
 
 /**
+ * "The microtask queue has drained" — the signal that a boundary's content is
+ * genuinely waiting on I/O rather than on a few more `.then`s.
+ *
+ * `setTimeout(…, 0)` says that too, but Node clamps a zero timer to 1ms, and
+ * that 1ms landed whole on the shell's time-to-first-byte: every streaming page
+ * paid ~1.4ms to emit a shell React emits in 0.06ms. `setImmediate` fires in
+ * the check phase of the SAME loop turn, after microtasks, so the race stays
+ * exactly as deterministic and stops costing a timer tick.
+ */
+function afterMicrotasks(): Promise<typeof IDLE> {
+  return new Promise<typeof IDLE>((resolve) => {
+    if (typeof setImmediate === 'function') setImmediate(() => resolve(IDLE));
+    else setTimeout(() => resolve(IDLE), 0);
+  });
+}
+
+/**
  * Streaming suspense: the real content renders concurrently; if it settles
  * before the fallback would even flush, it is inlined and no boundary exists.
  * The race is deterministic, not load-dependent: the macrotask timer can only
@@ -255,10 +272,7 @@ const IDLE = Symbol('idle');
  */
 async function renderSuspended(def: ComponentDef, instance: JanuxInstance, scope: RenderScope, emit: Emit, id: string, open: string): Promise<void> {
   const content = renderBoundaryContent(def, instance, scope);
-  const first = await Promise.race([
-    content,
-    new Promise<typeof IDLE>((resolve) => setTimeout(() => resolve(IDLE), 0)),
-  ]);
+  const first = await Promise.race([content, afterMicrotasks()]);
 
   if (first !== IDLE) return emitBoundaryInline(first, emit, id, open, scope.nonce);
   emit(`${open} data-jx-pending>`);
@@ -414,22 +428,35 @@ function localizedProps(node: JanuxNode, scope: RenderScope): Record<string, unk
  */
 const NONCEABLE_TAGS = new Set(['script', 'style']);
 
-async function renderElement(node: JanuxNode, scope: RenderScope, emit: Emit): Promise<void> {
+function renderElement(node: JanuxNode, scope: RenderScope, emit: Emit): Rendered {
   const tag = node.$t as string;
   const props = localizedProps(node, scope);
   const attrs = renderAttrs(props);
   const cspAttr = NONCEABLE_TAGS.has(tag) && props.nonce === undefined ? nonceAttr(scope.nonce) : '';
 
-  if (VOID_ELEMENTS.has(tag)) return emit(`<${tag}${attrs}/>`);
+  if (VOID_ELEMENTS.has(tag)) return void emit(`<${tag}${attrs}/>`);
   emit(`<${tag}${attrs}${cspAttr}>`);
+  const close = `</${tag}>`;
+  let children: Rendered = undefined;
+
   try {
     if (typeof node.$p.dangerHTML === 'string') emit(node.$p.dangerHTML);
-    else await renderInto(node.$p.children, scope, emit);
-  } finally {
-    // Also on a throw: elements close as the stack unwinds, so an error
-    // boundary up the tree always receives balanced markup.
-    emit(`</${tag}>`);
+    else children = renderInto(node.$p.children, scope, emit);
+  } catch (error) {
+    // Elements close as the stack unwinds, so an error boundary up the tree
+    // always receives balanced markup.
+    emit(close);
+    throw error;
   }
+  if (!isPending(children)) return void emit(close);
+
+  return children.then(
+    () => emit(close),
+    (error) => {
+      emit(close);
+      throw error;
+    },
+  );
 }
 
 /**
@@ -441,30 +468,101 @@ async function renderElement(node: JanuxNode, scope: RenderScope, emit: Emit): P
  * emits straight through, later siblings buffer until every child before them
  * has finished.
  */
-async function renderSiblings(nodes: unknown[], scope: RenderScope, emit: Emit): Promise<void> {
-  const buffers: string[][] = nodes.map(() => []);
-  const finished: boolean[] = nodes.map(() => false);
+/**
+ * The common case: every child finishes synchronously, so they emit straight
+ * through in document order and none of the ordering machinery below is even
+ * allocated. Only the first child that actually parks hands over to
+ * `renderSiblingsFrom`.
+ */
+function renderSiblings(nodes: unknown[], scope: RenderScope, emit: Emit): Rendered {
+  for (let index = 0; index < nodes.length; index += 1) {
+    let rendered: Rendered = undefined;
+    let failure: { error: unknown } | undefined;
+
+    try {
+      rendered = renderInto(nodes[index], scope, emit);
+    } catch (error) {
+      failure = { error };
+    }
+    if (failure !== undefined) return renderSiblingsFrom(nodes, index, scope, emit, Promise.reject(failure.error));
+    if (isPending(rendered)) return renderSiblingsFrom(nodes, index, scope, emit, rendered);
+  }
+
+  return;
+}
+
+/**
+ * From the first child that parked onwards. That child is the live cursor, so
+ * it keeps emitting straight through; every later sibling still STARTS now (the
+ * key-assignment order the client's depth-first walk recomputes depends on it)
+ * but buffers its output until every child before it has finished.
+ */
+function renderSiblingsFrom(
+  nodes: unknown[],
+  start: number,
+  scope: RenderScope,
+  emit: Emit,
+  first: Promise<void>,
+): Rendered {
+  const rest = nodes.length - start;
+  const buffers: string[][] = Array.from({ length: rest }, () => []);
+  const finished: boolean[] = new Array(rest).fill(false);
   let live = 0;
   const advanceLive = () => {
-    while (finished[live] && live < nodes.length) {
+    while (finished[live] && live < rest) {
       live += 1;
       buffers[live]?.forEach(emit);
       if (buffers[live]) buffers[live] = [];
     }
   };
+  // Also on rejection: a failed child releases the cursor, so what its later
+  // siblings rendered still reaches the page before the throw does.
+  const settle = (index: number) => {
+    finished[index] = true;
+    if (index === live) advanceLive();
+  };
+  const track = (index: number, rendered: Promise<void>) =>
+    rendered.then(
+      () => settle(index),
+      (error) => {
+        settle(index);
+        throw error;
+      },
+    );
+  const renders: Promise<void>[] = [track(0, first)];
 
-  const renders = nodes.map((child, index) =>
-    renderInto(child, scope, (chunk) => {
-      if (index === live) emit(chunk);
-      else buffers[index]!.push(chunk);
-    }).finally(() => {
-      // Also on rejection: a failed child releases the cursor, so what its
-      // later siblings rendered still reaches the page before the throw does.
-      finished[index] = true;
-      if (index === live) advanceLive();
-    }),
-  );
+  for (let offset = 1; offset < rest; offset += 1) {
+    const index = offset;
+    let rendered: Rendered = undefined;
+    let failure: { error: unknown } | undefined;
 
+    // A child that throws on the spot must not stop its later siblings from
+    // starting, and must still surface as a rejection — which is what the
+    // all-async renderer got for free from `async`.
+    try {
+      rendered = renderInto(nodes[start + index], scope, (chunk) => {
+        if (index === live) emit(chunk);
+        else buffers[index]!.push(chunk);
+      });
+    } catch (error) {
+      failure = { error };
+    }
+    if (failure !== undefined) {
+      settle(index);
+      renders.push(Promise.reject(failure.error));
+      continue;
+    }
+    if (!isPending(rendered)) {
+      settle(index);
+      continue;
+    }
+    renders.push(track(index, rendered));
+  }
+
+  return awaitSiblings(renders, scope);
+}
+
+async function awaitSiblings(renders: Promise<void>[], scope: RenderScope): Promise<void> {
   // Into a discardable buffer, fail fast: nothing has streamed, the whole
   // buffer is dropped by the boundary above, and waiting would park the error
   // view behind a sibling that may never settle. Into the stream, wait for
@@ -482,12 +580,28 @@ async function renderSiblings(nodes: unknown[], scope: RenderScope, emit: Emit):
   }
 }
 
-async function renderInto(node: unknown, scope: RenderScope, emit: Emit): Promise<void> {
+/**
+ * A render that is either already finished or still pending. Most of a page is
+ * plain markup, and making every node an `async` function charged it one promise
+ * and one microtask each — which is the whole shell-emission cost, not the
+ * string work. Only islands, foreign roots and suspense boundaries actually
+ * await anything.
+ */
+type Rendered = void | Promise<void>;
+
+/** Thenable, not `!== undefined`: `emit` is often `parts.push`, which returns a number. */
+function isPending(rendered: Rendered): rendered is Promise<void> {
+  return typeof (rendered as Promise<void> | undefined)?.then === 'function';
+}
+
+function renderInto(node: unknown, scope: RenderScope, emit: Emit): Rendered {
   if (scope.halted?.()) return;
   if (node === null || node === undefined || typeof node === 'boolean') return;
   // `bigint` renders as text like `number` does (React ≥19 and Vue agree) —
   // falling through used to reach `renderElement` and crash on `node.$p`.
-  if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') return emit(escapeHtml(node));
+  if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
+    return void emit(escapeHtml(node));
+  }
   if (Array.isArray(node)) {
     // One child needs no buffering machinery — and single-child arrays are
     // what JSX produces most of the time.
@@ -498,7 +612,9 @@ async function renderInto(node: unknown, scope: RenderScope, emit: Emit): Promis
   const jsxNode = node as JanuxNode;
 
   if (jsxNode.$t === Fragment) return renderInto(jsxNode.$p.children, scope, emit);
-  if (isForeignDef(jsxNode.$t)) return emit(await renderForeign(jsxNode.$t, jsxNode, scope));
+  if (isForeignDef(jsxNode.$t)) {
+    return renderForeign(jsxNode.$t, jsxNode, scope).then((html) => emit(html));
+  }
   if (typeof jsxNode.$t === 'function') {
     return renderInto((jsxNode.$t as any)(jsxNode.$p), scope, emit);
   }

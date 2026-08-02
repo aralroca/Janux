@@ -301,7 +301,7 @@ function matchState(root: Element, slots: Slot[]): Match {
   slots.forEach((slot) => {
     // A `<For>`'s own key identifies the LIST among its siblings, not a node —
     // it must never enter the DOM-adoption key set.
-    if (typeof slot === 'string' || isForSlot(slot)) return;
+    if (typeof slot === 'string' || isFor(slot.$t)) return;
     if (slot.$k !== undefined) (toKeys ??= new Set()).add(slot.$k);
   });
 
