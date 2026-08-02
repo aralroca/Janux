@@ -211,7 +211,7 @@ export const Bench = component({
 			</div>
 			<table class="table table-hover table-striped test-data">
 				<tbody>
-					<For each={state.rows} by={(row: Row) => row.id}>
+					<For each={() => state.rows} by={(row: Row) => row.id}>
 						{(row: Row) => (
 							// A THUNK, not a value: the row body never reads `state.selected`, so
 							// selecting a row re-runs one attribute write per row instead of a

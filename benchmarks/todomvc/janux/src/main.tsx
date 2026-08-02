@@ -131,7 +131,9 @@ export const TodoMvc = component({
 		let remaining = 0;
 
 		for (const todo of state.todos) if (!todo.completed) remaining += 1;
-		const visible =
+		// A THUNK, so the list owns its own effect: the filter and the todos are
+		// read inside it, not in this view.
+		const visible = () =>
 			state.filter === 'active'
 				? state.todos.filter((todo: Todo) => !todo.completed)
 				: state.filter === 'completed'
@@ -158,7 +160,10 @@ export const TodoMvc = component({
 							<For each={visible} by={(todo: Todo) => todo.id}>
 								{(todo: Todo) => (
 									<li
-										class={
+										// Thunks: the row body reads neither `state.editing` nor the
+										// filter, so opening an editor rewrites one attribute per row
+										// instead of re-rendering every row.
+										class={() =>
 											(todo.completed ? 'completed' : '') +
 											(state.editing === todo.id ? ' editing' : '')
 										}

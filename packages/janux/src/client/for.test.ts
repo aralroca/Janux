@@ -276,6 +276,35 @@ describe('<For>', () => {
     expect(root.querySelectorAll('li').length).toBe(2);
   });
 
+  it('each={() => …} gives the list its own effect: the view stops re-rendering', () => {
+    const root = document.createElement('div');
+    const rows = signal(rowsOf([1, 2]));
+    const bodies: number[] = [];
+    const loop = island(root, () => [
+      jsx('h1', { children: 'title' }),
+      jsx('ul', {
+        children: jsx(For, {
+          each: () => rows.value,
+          by: (row: Row) => row.id,
+          children: (row: Row) => {
+            bodies.push(row.id);
+
+            return jsx('li', { children: row.label });
+          },
+        }),
+      }),
+    ]);
+
+    expect(loop.renders()).toBe(1);
+    bodies.length = 0;
+    rows.value = rowsOf([1, 2, 3]);
+    flushRenders();
+    // The list re-diffed and built ONE row; the view around it never re-ran.
+    expect(loop.renders()).toBe(1);
+    expect(bodies).toEqual([3]);
+    expect(root.querySelectorAll('li').length).toBe(3);
+  });
+
   it('refuses a row body that renders more than one node', () => {
     const root = document.createElement('tbody');
 

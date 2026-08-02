@@ -483,6 +483,15 @@ interface ForState {
   root: Element;
   rows: Map<unknown, RowScope>;
   stamp: number;
+  /** The newest `<For>` node — its props, read non-reactively by the list effect. */
+  node: JanuxNode;
+  svg: boolean;
+  /**
+   * Set when `each` is a thunk: the list then owns a LIST-LEVEL effect and the
+   * enclosing view never subscribes to the array at all. A write to the list
+   * re-runs the key diff, not the page around it.
+   */
+  stop: (() => void) | null;
   /**
    * One pass object for the whole list instead of one per row per render. Rows
    * may not contain islands or foreign roots (see `assertPlainRow`), so nothing
@@ -508,6 +517,8 @@ const listsByIsland = new WeakMap<Element, Set<ForState>>();
 let renderRoot: Element | null = null;
 
 function disposeList(state: ForState): void {
+  state.stop?.();
+  state.stop = null;
   state.rows.forEach((row) => row.dispose());
   state.rows.clear();
 }
@@ -669,6 +680,9 @@ function forStateFor(root: Element, id: string | number, parent: RenderPass['par
     root,
     rows: new Map(),
     stamp: 0,
+    node: null as unknown as JanuxNode,
+    svg: false,
+    stop: null,
     pass: { parent, seq: new Map(), used: new Set(), islands: [], foreigns: [] },
   };
 
@@ -753,7 +767,30 @@ function stampPositions(order: RowScope[]): void {
  */
 function reconcileForOnly(root: Element, node: JanuxNode, pass: RenderPass, svg: boolean): void {
   const state = forStateFor(root, node.$k ?? 0, pass.parent);
+
+  state.node = node;
+  state.svg = svg;
+  // `each={() => state.rows}` hands the list its own effect: the enclosing view
+  // stops subscribing to the array, so a list write re-runs the key diff and
+  // nothing else on the page. Already owned ⇒ the effect keeps it current.
+  if (state.stop !== null) return;
+  if (typeof node.$p.each === 'function') {
+    let stop = () => {};
+
+    stop = watch(() => forPass(state), scheduleRender);
+    state.stop = stop;
+    onCleanup(stop);
+
+    return;
+  }
+  forPass(state);
+}
+
+function forPass(state: ForState): void {
+  const root = state.root;
   const stamp = (state.stamp += 1);
+  const node = state.node;
+  const svg = state.svg;
   const order: RowScope[] = [];
   const seq: number[] = [];
   let adopting = stamp === 1 ? root.firstChild : null;
