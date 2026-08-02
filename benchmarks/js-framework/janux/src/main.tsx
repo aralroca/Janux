@@ -1,4 +1,4 @@
-import { component, intent, schema, str, int, list } from 'janux';
+import { component, For, intent, schema, str, int, list } from 'janux';
 import { boot } from 'janux/client';
 
 // Janux js-framework-benchmark fixture (keyed). Same DOM contract as the
@@ -8,9 +8,13 @@ import { boot } from 'janux/client';
 // keyed-reorder matrix driven by ../../run-reorder.mjs.
 //
 // Authored idiomatically for Janux: one island whose intents mutate schema-typed
-// state through the reactive proxy; every permutation op replaces `state.rows`
-// with a fresh array REUSING the same row objects, and the keyed morph moves
-// the existing <tr> nodes rather than rebuilding them.
+// state through the reactive proxy, and a fine-grained `<For each key>` for the
+// rows — Janux's per-row reactive scope, the counterpart of Solid's `<For>`.
+// Every permutation op replaces `state.rows` with a fresh array carrying the
+// SAME rows (same `id`, same field values), so `<For>` matches each row by key,
+// finds its data unchanged, and MOVES the existing <tr> rather than rebuilding
+// it. `update` replaces the touched row objects (like the react/solid columns),
+// so only those 100 rows re-render.
 //
 // Janux intents resolve through a microtask (the delegated click handler mounts
 // lazily and invokes an async intent), so the fixture exposes
@@ -94,11 +98,12 @@ export const Bench = component({
 		run: rowsIntent('Create 1,000 rows', () => buildData(1000)),
 		runLots: rowsIntent('Create 10,000 rows', () => buildData(10000)),
 		add: rowsIntent('Append 1,000 rows', (rows) => rows.concat(buildData(1000))),
-		update: intent({
-			description: 'Update every 10th row label',
-			run: ({ state }: any) => {
-				for (let i = 0; i < state.rows.length; i += 10) state.rows[i].label += ' !!!';
-			},
+		update: rowsIntent('Update every 10th row label', (rows) => {
+			const out = rows.slice();
+
+			for (let i = 0; i < out.length; i += 10) out[i] = { id: out[i]!.id, label: `${out[i]!.label} !!!` };
+
+			return out;
 		}),
 		clear: rowsIntent('Clear all rows', () => []),
 		swapRows: rowsIntent('Swap rows 1 and 998', (rows) => {
@@ -206,20 +211,22 @@ export const Bench = component({
 			</div>
 			<table class="table table-hover table-striped test-data">
 				<tbody>
-					{state.rows.map((row: Row) => (
-						<tr key={row.id} class={state.selected === row.id ? 'danger' : ''}>
-							<td class="col-md-1">{row.id}</td>
-							<td class="col-md-4">
-								<a onClick={intents.select.with({ id: row.id })}>{row.label}</a>
-							</td>
-							<td class="col-md-1">
-								<a onClick={intents.remove.with({ id: row.id })}>
-									<span class="glyphicon glyphicon-remove" aria-hidden="true" />
-								</a>
-							</td>
-							<td class="col-md-6" />
-						</tr>
-					))}
+					<For each={state.rows} by={(row: Row) => row.id}>
+						{(row: Row) => (
+							<tr class={state.selected === row.id ? 'danger' : ''}>
+								<td class="col-md-1">{row.id}</td>
+								<td class="col-md-4">
+									<a onClick={intents.select.with({ id: row.id })}>{row.label}</a>
+								</td>
+								<td class="col-md-1">
+									<a onClick={intents.remove.with({ id: row.id })}>
+										<span class="glyphicon glyphicon-remove" aria-hidden="true" />
+									</a>
+								</td>
+								<td class="col-md-6" />
+							</tr>
+						)}
+					</For>
 				</tbody>
 			</table>
 			<span class="preloadicon glyphicon glyphicon-remove" aria-hidden="true" />

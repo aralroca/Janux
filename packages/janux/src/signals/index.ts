@@ -22,6 +22,14 @@ export interface ReadonlySig<T> {
 
 let active: Runner | null = null;
 let batching: Set<Runner> | null = null;
+/**
+ * Queued computeds, kept OUT of the effect queue. They used to share it and be
+ * found by rescanning the whole queue before every effect — O(effects²) per
+ * batch, invisible while an island was one effect and ~3s once `<For>` made a
+ * thousand rows a thousand effects. Two queues make "are any computeds
+ * pending?" a size check.
+ */
+let computeds: Set<Runner> | null = null;
 let owner: Owner | null = null;
 
 /** Disposal scope: effects/computeds created inside register here; child roots cascade. */
@@ -73,13 +81,17 @@ function track(subs: Set<Runner>): void {
   active.deps.add(subs);
 }
 
+function enqueue(runner: Runner): void {
+  (runner.computed === true ? computeds! : batching!).add(runner);
+}
+
 function notify(subs: Set<Runner>): void {
   // Nothing reads this signal: no queue to seed, no drain to run. Worth the
   // check because a single state write bumps the path, its descendants and
   // every ancestor, and most of those signals have no reader at all.
   if (subs.size === 0) return;
   if (batching !== null) {
-    subs.forEach((runner) => batching!.add(runner));
+    subs.forEach(enqueue);
 
     return;
   }
@@ -87,7 +99,9 @@ function notify(subs: Set<Runner>): void {
   // before any effect runs, so a diamond (a → b, a → c, effect reads b + c)
   // never shows an effect one fresh branch and one stale one, and a cascade
   // re-queues an already-queued effect instead of running it twice.
-  batching = new Set(subs);
+  batching = new Set();
+  computeds = new Set();
+  subs.forEach(enqueue);
   drain();
 }
 
@@ -97,7 +111,7 @@ function drain(): void {
 
   try {
     for (;;) {
-      flushComputeds(queue);
+      flushComputeds();
       const next = queue.values().next();
 
       if (next.done) return;
@@ -106,21 +120,23 @@ function drain(): void {
     }
   } finally {
     batching = null;
+    computeds = null;
   }
 }
 
-/** Computeds are pure by contract, so settling them early is unobservable. */
-function flushComputeds(queue: Set<Runner>): void {
-  let ran = true;
+/**
+ * Computeds are pure by contract, so settling them early is unobservable. Runs
+ * to a fixed point: a chain (c2 reads c1) re-queues c1's dependents here.
+ */
+function flushComputeds(): void {
+  const queue = computeds;
 
-  while (ran) {
-    ran = false;
-    for (const runner of [...queue]) {
-      if (!runner.computed) continue;
-      queue.delete(runner);
-      runner.run();
-      ran = true;
-    }
+  if (queue === null) return;
+  while (queue.size > 0) {
+    const next = queue.values().next().value!;
+
+    queue.delete(next);
+    next.run();
   }
 }
 
@@ -245,9 +261,7 @@ export function computed<T>(fn: () => T): ReadonlySig<T> {
   // re-run, so draining just this runner would serve c2 its pre-batch value.
   // Computeds are pure by contract, so early evaluation is unobservable;
   // effects stay queued for the batch's own flush.
-  const fresh = () => {
-    if (batching !== null) flushComputeds(batching);
-  };
+  const fresh = () => flushComputeds();
 
   return {
     get value(): T {
@@ -267,6 +281,7 @@ export function computed<T>(fn: () => T): ReadonlySig<T> {
 export function batch<T>(fn: () => T): T {
   if (batching !== null) return fn();
   batching = new Set();
+  computeds = new Set();
   try {
     return fn();
   } finally {

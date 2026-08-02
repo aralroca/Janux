@@ -58,15 +58,35 @@ function createElement(tag: string, svg: boolean): Element {
   return svg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
 }
 
-function elementFor(node: JanuxNode, pass?: RenderPass, svg?: boolean): Element {
+/**
+ * The element itself — tag, render key, attributes — with no children.
+ *
+ * The reconciler fills the children itself rather than letting `toDomNodes`
+ * recurse: a `<For>` in a freshly created subtree has to take the fine-grained
+ * path, and `toDomNodes` only knows how to expand it as a plain component.
+ */
+export function elementShell(node: JanuxNode, svg?: boolean): Element {
   const tag = node.$t as string;
-  const inSvg = svg || tag === 'svg';
-  const el = createElement(tag, inSvg);
+  const el = createElement(tag, svg || tag === 'svg');
 
   if (node.$k !== undefined) setNodeKey(el, node.$k);
   attrEntries(node.$p).forEach(([name, value]) => setAttr(el, name, value));
+
+  return el;
+}
+
+/** Whether this element's children keep inheriting the SVG namespace. */
+export function svgChildren(node: JanuxNode, svg?: boolean): boolean {
+  const tag = node.$t as string;
+
+  return (svg || tag === 'svg') && tag !== 'foreignObject';
+}
+
+function elementFor(node: JanuxNode, pass?: RenderPass, svg?: boolean): Element {
+  const el = elementShell(node, svg);
+
   if (typeof node.$p.dangerHTML === 'string') el.innerHTML = node.$p.dangerHTML;
-  else appendChildren(el, node.$p.children, pass, inSvg && tag !== 'foreignObject');
+  else appendChildren(el, node.$p.children, pass, svgChildren(node, svg));
 
   return el;
 }

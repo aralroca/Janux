@@ -25,6 +25,20 @@ export interface ReactiveState<T extends object = Record<string, unknown>> {
 /** Writes between prune sweeps: keeps the sweep cost amortized O(1) per write. */
 const PRUNE_EVERY = 256;
 
+/**
+ * Escape hatch to the plain object behind a state proxy. `<For>` walks the list
+ * ONCE per render to diff it: going through the proxy would register a tracked
+ * path (and build a child proxy) for every index on every pass, which is the
+ * whole cost the primitive exists to remove. The values it hands rows are plain
+ * data by construction — state is JSON-safe by schema.
+ */
+export const RAW = Symbol.for('janux.raw');
+
+/** The plain value behind a state proxy; anything else passes through. */
+export function toRaw<T>(value: T): T {
+  return (value as { [RAW]?: T } | null | undefined)?.[RAW] ?? value;
+}
+
 export function createReactiveState<T extends object>(
   initial: T,
   gate: MutationGate = createGate(),
@@ -161,6 +175,7 @@ export function createReactiveState<T extends object>(
   };
 
   const readTrap = (raw: object, path: string, key: string | symbol): unknown => {
+    if (key === RAW) return raw;
     if (typeof key === 'symbol') return Reflect.get(raw, key);
     if (Array.isArray(raw) && MUTATING_ARRAY_METHODS.has(key)) {
       return wrapArrayMethod(raw as unknown[], path, key);
