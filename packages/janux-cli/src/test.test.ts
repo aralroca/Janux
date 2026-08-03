@@ -15,7 +15,12 @@ function appWith(tests: Record<string, string>): string {
   return root;
 }
 
-const previousExitCode = process.exitCode;
+/**
+ * `testCommand` reports a failing suite the way `eval` and `verify` do — by
+ * setting the runner's own exit code — so the test that proves it must put the
+ * code back, or this file alone would fail the whole run.
+ */
+const previousExitCode = process.exitCode ?? 0;
 
 afterEach(() => {
   process.exitCode = previousExitCode;
