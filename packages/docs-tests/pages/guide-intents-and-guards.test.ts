@@ -31,7 +31,7 @@ const desk = component({
 
 describe('guide/intents-and-guards.md — errors and audit', () => {
   it('the documented audit subscription runs as written', async () => {
-    await docExample('apps/docs/content/guide/intents-and-guards.md', 2);
+    await docExample('apps/docs/content/guide/intents-and-guards.md', 3);
   });
 
   it('onAudit and janux:audit see the same entries, tagged with the origin', async () => {

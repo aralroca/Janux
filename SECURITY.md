@@ -21,7 +21,7 @@ You will get an acknowledgement within a few days. Coordinated disclosure is app
 Areas of particular interest for reports:
 
 - **Guard bypasses** — any way for an agent-origin call to execute a `confirm`/`forbidden` intent or api without a human approval.
-- **Proposal replay** — executing an approved proposal more than once.
+- **Proposal token bypasses** — settling an approved proposal outside its guarantees: replay (a token is single-use), past its TTL, from a session other than the proposing one, or with a payload other than the proposed one. These are tested guarantees, not open questions — the attacker corpus lives in `packages/conformance/security/proposal-tokens.cases.ts` and `packages/janux-server/src/proposals.test.ts`, and the threat model in the [intents and guards guide](apps/docs/content/guide/intents-and-guards.md). A reproducible break of any of them is a high-severity report.
 - **Client bundle leaks** — server code from `*.api.ts` reaching the browser bundle through the SWC stub transform.
 - **XSS** — escaping gaps in the SSR renderer or `dangerHTML` misuse the framework could prevent.
 - **Manifest scoping** — tools/resources visible to a context that should not see them.
