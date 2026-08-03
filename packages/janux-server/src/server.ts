@@ -15,6 +15,7 @@ import {
   type PageMeta,
   type RenderResult,
 } from 'janux';
+import { pathToFileURL } from 'node:url';
 import { QueryClient } from 'janux/query';
 import { isTracing, reportError, withSpan, type JanuxSpan } from 'janux/observability';
 import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from './cache';
@@ -306,6 +307,17 @@ function documentStream(
   });
 }
 
+/**
+ * The specifier a route file is imported by, which is a URL and never a path.
+ *
+ * The router answers native paths, and on Windows `C:\app\src\routes\index.tsx`
+ * parses as a URL whose scheme is `c:`: Node's loader refuses it, so every page
+ * of an app served by `janux start` fails to load.
+ */
+export function routeSpecifier(filePath: string): string {
+  return pathToFileURL(filePath).href;
+}
+
 /** The Janux fullstack server: pages, api() endpoints, manifest, proposals and the agent mount. */
 export function createJanuxServer(options: ServerOptions = {}) {
   const csp = resolveCsp(options.csp, options.staticExport);
@@ -314,7 +326,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const httpHandlers = options.httpHandlers
     ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers, cache: options.cache })
     : undefined;
-  const loadRoute = options.loadRoute ?? ((filePath: string) => import(/* @vite-ignore */ filePath));
+  const loadRoute = options.loadRoute ?? ((filePath: string) => import(/* @vite-ignore */ routeSpecifier(filePath)));
   /**
    * Inert until a route declares `scope: 'public'` — it only ever holds what a
    * response told a shared cache it could hold, which is why it is on by
