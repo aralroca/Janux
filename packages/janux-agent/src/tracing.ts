@@ -62,12 +62,18 @@ export function tracedAgentTurn<T>(model: ResolvedModel, run: (span: JanuxSpan) 
   return withSpan('invoke_agent janux', () => baseAttributes(model, 'invoke_agent'), run);
 }
 
-/** Turn-level totals for the `invoke_agent` span — the round sums, as the same semconv attributes. */
+/**
+ * Turn-level totals for the `invoke_agent` span, under `janux.turn.*` and
+ * deliberately NOT under the semconv keys the rounds already carry. A turn's
+ * totals ARE the sum of its `chat` children, so repeating `gen_ai.usage.*` on
+ * the parent would double every token — and every dollar — in the standard
+ * `sum(...)` dashboard query the GenAI conventions exist to make possible.
+ */
 export function turnUsageAttributes(bill: { inputTokens: number; outputTokens: number; costUsd?: number }): SpanAttributes {
   return {
-    'gen_ai.usage.input_tokens': bill.inputTokens,
-    'gen_ai.usage.output_tokens': bill.outputTokens,
-    'janux.cost.usd': bill.costUsd,
+    'janux.turn.input_tokens': bill.inputTokens,
+    'janux.turn.output_tokens': bill.outputTokens,
+    'janux.turn.cost.usd': bill.costUsd,
   };
 }
 

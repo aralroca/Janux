@@ -150,6 +150,20 @@ describe('agent loop', () => {
     expect(body.usage.costUsd).toBeCloseTo(0.0096, 6);
   });
 
+  /**
+   * "Ran out of rounds" wears the same `type: 'text'` as a real answer, so
+   * without a marker an eval step reads a give-up as a pass.
+   */
+  it('marks the turn-limit give-up with a stopReason, so it cannot pass for an answer', async () => {
+    const looping = () => anthropicReply([{ type: 'tool_use', id: 't1', name: 'api__shop__search', input: { q: 'x' } }]);
+    const { fetchImpl } = scriptedFetch(Array.from({ length: 8 }, looping));
+    const server = buildServer(defineAgent({ maxTurns: 2 }, { env, fetchImpl }));
+    const body: any = await (await ask(server, { messages: [{ role: 'user', content: 'search' }] })).json();
+
+    expect(body.type).toBe('text');
+    expect(body.stopReason).toBe('max_turns');
+  });
+
   it('leaves usage off the envelope when the provider never reported any', async () => {
     const { fetchImpl } = scriptedFetch([anthropicReply([{ type: 'text', text: 'Hello!' }])]);
     const server = buildServer(defineAgent({}, { env, fetchImpl }));

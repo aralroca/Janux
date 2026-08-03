@@ -136,10 +136,33 @@ describe('the agent loop emits gen_ai spans', () => {
 
     // Two rounds of 1200 in / 300 out each: the turn is the sum, per punto-18 traces.
     expect(turnSpan.attributes).toMatchObject({
-      'gen_ai.usage.input_tokens': 2400,
-      'gen_ai.usage.output_tokens': 600,
+      'janux.turn.input_tokens': 2400,
+      'janux.turn.output_tokens': 600,
     });
-    expect(turnSpan.attributes['janux.cost.usd']).toBeCloseTo(0.0162, 6);
+    expect(turnSpan.attributes['janux.turn.cost.usd']).toBeCloseTo(0.0162, 6);
+  });
+
+  /**
+   * The turn totals are the sum of its rounds, so they must NOT reuse the keys
+   * the rounds already carry: `sum(gen_ai.usage.input_tokens)` over a trace is
+   * the standard GenAI dashboard query, and a parent repeating its children's
+   * keys doubles every token and every dollar in it.
+   */
+  it('keeps turn totals off the per-round semconv keys, so summing a trace cannot double-count', async () => {
+    const tracer = recordingTracer();
+    const agent = defineAgent(
+      { model: 'anthropic/claude-fable-5', cost: { input: 3, output: 15 } },
+      { env, fetchImpl: scriptedFetch([]) },
+    );
+
+    setTracer(tracer);
+    await ask(buildServer(agent), turn);
+
+    const turnSpan = tracer.spans.find((span) => span.name === 'invoke_agent janux')!;
+
+    expect(turnSpan.attributes['gen_ai.usage.input_tokens']).toBeUndefined();
+    expect(turnSpan.attributes['gen_ai.usage.output_tokens']).toBeUndefined();
+    expect(turnSpan.attributes['janux.cost.usd']).toBeUndefined();
   });
 
   it('records a provider failure on the span with the semconv error type', async () => {

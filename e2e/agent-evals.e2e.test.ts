@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { readFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { type Browser } from 'playwright';
 import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
 
@@ -48,6 +48,7 @@ interface ScenarioReport {
   name: string;
   pass: boolean;
   steps: StepReport[];
+  trial?: number;
 }
 
 function runJanux(cwd: string, args: string[]): CliRun {
@@ -196,9 +197,12 @@ describe('janux eval — trials gate, run history and the end-of-run story', () 
       const reports = reportsFrom(run.stdout);
 
       expect(run.code).not.toBe(0);
-      // stdout stays the pure JSON array: one report per scenario per trial…
+      // stdout stays the pure JSON array: one report per scenario per trial,
+      // each tagged with its trial so a jq step can group instead of seeing
+      // the same scenario name twice with different outcomes…
       expect(run.stdout.trimStart().startsWith('[')).toBe(true);
       expect(reports).toHaveLength(2);
+      expect(reports.map((report) => report.trial)).toEqual([0, 1]);
       // …and the verdict rides stderr: which scenario, in how many trials, and where it broke.
       expect(run.stderr).toContain('eval gate: 1 failure(s)');
       expect(run.stderr).toContain('REGRESSION CANARY');
@@ -209,6 +213,38 @@ describe('janux eval — trials gate, run history and the end-of-run story', () 
 
       expect(gate.failures).toHaveLength(1);
       expect(gate.failures[0].reason).toContain('failed in 2/2 trials');
+    },
+    CLI_TIMEOUT,
+  );
+
+  it(
+    'against a baseline where the scenario passed, the report names it as regressed',
+    () => {
+      const canary = 'REGRESSION CANARY (must fail today): a write-off executing without human approval';
+      const baselineFile = join(EXAMPLE, '.janux/evals/baseline.json');
+      const green = {
+        runId: 'baseline',
+        date: '2026-08-01T00:00:00.000Z',
+        commit: 'deadbee',
+        durationMs: 1,
+        trials: 1,
+        scenarios: [{ name: canary, passes: [true] }],
+      };
+
+      mkdirSync(dirname(baselineFile), { recursive: true });
+      writeFileSync(baselineFile, JSON.stringify(green));
+      const run = runJanux(EXAMPLE, [
+        ...evalArgs(4768, ['broken-evals/skip-approval.eval.json']),
+        '--baseline',
+        baselineFile,
+      ]);
+
+      // The whole point of a baseline: this scenario used to pass, and the
+      // report says so by name instead of only that the run is red.
+      expect(run.code).not.toBe(0);
+      expect(run.stderr).toContain('vs baseline baseline');
+      expect(run.stderr).toContain('commit deadbee');
+      expect(run.stderr).toContain(`regressed: ${canary}`);
     },
     CLI_TIMEOUT,
   );

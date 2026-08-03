@@ -281,7 +281,16 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
           if (uiCalls.length > 0) return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId, ...billed() });
         }
 
-        return json({ type: 'text', text: 'I could not finish within the turn limit.', messages, threadId: turn.threadId, ...billed() });
+        // `stopReason` because giving up wears the same `type: 'text'` as a real
+        // answer: without it an eval step reads an exhausted loop as a success.
+        return json({
+          type: 'text',
+          text: 'I could not finish within the turn limit.',
+          stopReason: 'max_turns',
+          messages,
+          threadId: turn.threadId,
+          ...billed(),
+        });
       };
 
       // The whole turn is one span: every round and every tool the model

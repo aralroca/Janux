@@ -50,6 +50,8 @@ export interface ScenarioReport {
   steps: StepReport[];
   /** Totals over the scenario's turn steps; absent when no step reported usage. */
   usage?: TurnUsage;
+  /** Which run this report came from, present only under `--trials N` (N > 1). */
+  trial?: number;
 }
 
 const REF_PATTERN = /^\$steps\[(\d+)\]\.(.+)$/;
@@ -80,8 +82,10 @@ export function resolveRefs(value: unknown, outcomes: StepOutcome[]): unknown {
 const ABSENT = '$absent';
 
 /**
- * `{ "$some": X }` matches any array item; `{ "$not": X }` inverts a match.
- * Both are single-key wrappers — mixed with literal keys they are plain keys.
+ * `{ "$some": X }` matches any array item; `{ "$not": X }` inverts a match;
+ * `{ "$contains": "s" }` matches a substring — the way to assert on a tool
+ * result, which travels through a turn's transcript as a JSON *string*.
+ * All are single-key wrappers — mixed with literal keys they are plain keys.
  * `undefined` means "no matcher here".
  */
 function matcherResult(expected: Record<string, unknown>, actual: unknown): boolean | undefined {
@@ -90,6 +94,7 @@ function matcherResult(expected: Record<string, unknown>, actual: unknown): bool
   if (rest.length > 0) return undefined;
   if (key === '$not') return !deepSubset(expected['$not'], actual);
   if (key === '$some') return Array.isArray(actual) && actual.some((item) => deepSubset(expected['$some'], item));
+  if (key === '$contains') return typeof actual === 'string' && actual.includes(String(expected['$contains']));
 
   return undefined;
 }
@@ -167,11 +172,28 @@ async function performStep(step: EvalStep, outcomes: StepOutcome[], baseUrl: str
   return { status: res.status, ok: envelope.ok === true, result: envelope.result, error: envelope.error };
 }
 
-/** The agent envelope IS the result, so evals assert on `{ type: "text" | "refusal" | ... }`. */
-function turnOutcome(status: number, envelope: { type?: string; error?: string; usage?: TurnUsage }): StepOutcome {
+/** A turn is `ok` only when the agent actually answered — see ANSWERED. */
+const ANSWERED = new Set(['text', 'ui_calls']);
+
+/** Giving up wears `type: 'text'` too; only `stopReason` tells them apart. */
+const answered = (envelope: { type?: string; stopReason?: string }) =>
+  ANSWERED.has(envelope.type ?? '') && envelope.stopReason !== 'max_turns';
+
+/**
+ * The agent envelope IS the result, so evals assert on `{ type: "text" | … }`.
+ * `ok` is deliberately narrow: an unconfigured model (`setup`), a refusal or a
+ * provider failure all answer with a 200-ish envelope, and letting those pass
+ * the default `{ ok: true }` would make a keyless CI green without ever
+ * reaching a model. "Could not run" must never read as "passed" — assert those
+ * outcomes explicitly (`{ ok: false, result: { type: 'refusal' } }`).
+ */
+function turnOutcome(
+  status: number,
+  envelope: { type?: string; error?: string; stopReason?: string; usage?: TurnUsage },
+): StepOutcome {
   return {
     status,
-    ok: status < 400 && envelope.type !== 'error',
+    ok: status < 400 && answered(envelope),
     result: envelope,
     error: envelope.error,
     usage: envelope.usage,

@@ -2,8 +2,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { execSync, spawn, type ChildProcess } from 'node:child_process';
-import { gateFailures, verdictLines, GATE_FILE } from './eval-gate';
-import { appendHistory, buildRecord, comparisonLines, readBaseline, type RunMeta } from './eval-history';
+import { gateFailures, verdictLines, GATE_FILE, type GateFailure } from './eval-gate';
+import { appendHistory, buildRecord, comparisonLines, readBaseline, type RunMeta, type RunRecord } from './eval-history';
 import { runScenario, type EvalScenario, type ScenarioReport } from './eval-runner';
 import type { CliCommand } from './args';
 
@@ -114,22 +114,37 @@ async function runTrials(files: string[], parsed: CliCommand, app: AppHandle): P
   return trials;
 }
 
+/** Fail-open like the history: an unwritable gate file must not redden a green run on its own. */
+function writeGateFile(root: string, failures: GateFailure[]): void {
+  try {
+    writeFileSync(resolve(root, GATE_FILE), `${JSON.stringify({ failures }, null, 2)}\n`);
+  } catch (error) {
+    console.error(`janux eval: could not write ${GATE_FILE} (${error}) — the verdict below still stands.`);
+  }
+}
+
 /**
  * The gate + the story, all on stderr and local files: stdout stays the pure
  * JSON array CI parsers already consume (didit-gate's stdout compatibility
  * rule). The verdict, the baseline comparison and the bill are for humans and
  * the CI log; `eval-gate.json` is for the workflow step that needs structure.
  */
-function settleRun(trials: ScenarioReport[][], parsed: CliCommand, started: number): boolean {
+function settleRun(trials: ScenarioReport[][], parsed: CliCommand, started: number, baseline?: RunRecord): boolean {
   const failures = gateFailures(trials);
   const record = buildRecord(trials, runMeta(parsed.root, started));
-  const baseline = readBaseline(parsed.root, parsed.baseline);
 
-  writeFileSync(resolve(parsed.root, GATE_FILE), `${JSON.stringify({ failures }, null, 2)}\n`);
+  writeGateFile(parsed.root, failures);
   appendHistory(parsed.root, record);
   [...verdictLines(failures), ...comparisonLines(record, baseline)].forEach((line) => console.error(line));
 
   return failures.length === 0;
+}
+
+/** One report per scenario per trial; `trial` only when there is more than one, so the default shape is unchanged. */
+function stdoutReports(trials: ScenarioReport[][]): ScenarioReport[] {
+  if (trials.length < 2) return trials.flat();
+
+  return trials.flatMap((reports, trial) => reports.map((report) => ({ ...report, trial })));
 }
 
 export async function evalCommand(parsed: CliCommand): Promise<void> {
@@ -137,18 +152,21 @@ export async function evalCommand(parsed: CliCommand): Promise<void> {
   const started = Date.now();
 
   if (files.length === 0) throw new Error('janux eval: no scenario files found (evals/**/*.eval.json)');
+  // Read before spawning anything: a mistyped --baseline should cost a second,
+  // not a full run whose comparison then turns out to be impossible.
+  const baseline = readBaseline(parsed.root, parsed.baseline);
   const app: AppHandle = { proc: spawnApp(parsed) };
 
   try {
     if (app.proc) await waitFor(responds(parsed.url), `server at ${parsed.url} did not respond`);
     const trials = await runTrials(files, parsed, app);
-    const results = trials.flat();
+    const reports = stdoutReports(trials);
 
-    if (parsed.json) console.log(JSON.stringify(results, null, 2));
-    else reportHuman(results);
+    if (parsed.json) console.log(JSON.stringify(reports, null, 2));
+    else reportHuman(reports);
     // With one trial this is exactly the old exit rule: any failing scenario is
     // a 1/1-trials failure. More trials make the gate reproducible-only.
-    if (!settleRun(trials, parsed, started)) process.exitCode = 1;
+    if (!settleRun(trials, parsed, started, baseline)) process.exitCode = 1;
   } finally {
     if (app.proc) stopApp(app.proc);
   }

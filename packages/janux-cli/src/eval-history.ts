@@ -37,14 +37,28 @@ export interface RunComparison {
   regressed: string[];
 }
 
+/**
+ * What actually answered, not what the environment suggested: inside the app
+ * `defineAgent({ model })` outranks `JANUX_MODEL`, so the env var the runner
+ * can read is a guess — and a baseline labelled with the wrong model cannot be
+ * compared against anything. The turn envelope reports the resolved one.
+ */
+function answeringModel(trials: ScenarioReport[][]): string | undefined {
+  const results = trials.flat().flatMap((report) => report.steps.map((step) => step.outcome.result));
+  const reported = results.find((result) => typeof (result as { model?: unknown })?.model === 'string');
+
+  return (reported as { model?: string } | undefined)?.model;
+}
+
 export function buildRecord(trials: ScenarioReport[][], meta: RunMeta): RunRecord {
   const scenarios = (trials[0] ?? []).map((report, index) => ({
     name: report.name,
     passes: trials.map((trial) => trial[index]!.pass),
   }));
   const usage = sumUsage(trials.flat().map((report) => report.usage));
+  const model = answeringModel(trials) ?? meta.model;
 
-  return { ...meta, trials: trials.length, scenarios, ...(usage && { usage }) };
+  return { ...meta, model, trials: trials.length, scenarios, ...(usage && { usage }) };
 }
 
 /** Fail-open: losing a history line must never fail the eval run that produced it. */
@@ -59,20 +73,50 @@ export function appendHistory(root: string, record: RunRecord): void {
   }
 }
 
-/** An explicit `--baseline` file wins; otherwise the last locally recorded run. */
-export function readBaseline(root: string, baselineFile?: string): RunRecord | undefined {
-  try {
-    if (baselineFile) return JSON.parse(readFileSync(baselineFile, 'utf8'));
-    const line = readFileSync(join(root, HISTORY_FILE), 'utf8').split('\n').filter(Boolean).at(-1);
+const isRunRecord = (value: unknown): value is RunRecord =>
+  typeof value === 'object' && value !== null && Array.isArray((value as RunRecord).scenarios);
 
-    return line ? JSON.parse(line) : undefined;
+/** The local history is a cache: a truncated last line loses a comparison, never a run. */
+function lastRecorded(root: string): RunRecord | undefined {
+  try {
+    const line = readFileSync(join(root, HISTORY_FILE), 'utf8').split('\n').filter(Boolean).at(-1);
+    const parsed = line ? JSON.parse(line) : undefined;
+
+    return isRunRecord(parsed) ? parsed : undefined;
   } catch {
     return undefined;
   }
 }
 
+/**
+ * An explicit `--baseline` file wins; otherwise the last locally recorded run.
+ * A named baseline that cannot be used is an error and not silence: a renamed
+ * file would otherwise stop the comparison while CI stayed reassuringly green.
+ */
+export function readBaseline(root: string, baselineFile?: string): RunRecord | undefined {
+  if (!baselineFile) return lastRecorded(root);
+  const raw = ((): unknown => {
+    try {
+      return JSON.parse(readFileSync(baselineFile, 'utf8'));
+    } catch {
+      throw new Error(`janux eval: --baseline ${baselineFile} could not be read as JSON`);
+    }
+  })();
+
+  if (!isRunRecord(raw)) throw new Error(`janux eval: --baseline ${baselineFile} is not a run record`);
+
+  return raw;
+}
+
 /** Same rule as the gate: passing any trial is passing the run. */
 const runPass = (scenario: RunScenario) => scenario.passes.some(Boolean);
+
+/*
+ * Compared by name, not by position: a baseline is worth having precisely when
+ * the scenario set has drifted, and a file added at the top must not report
+ * every scenario after it as changed. Scenarios new on either side are simply
+ * absent from the story — there is nothing to compare them against.
+ */
 
 export function compareRuns(baseline: RunRecord, current: RunRecord): RunComparison {
   const before = new Map(baseline.scenarios.map((scenario) => [scenario.name, runPass(scenario)]));
@@ -86,6 +130,20 @@ export function compareRuns(baseline: RunRecord, current: RunRecord): RunCompari
 
 const formatCost = (cost: number) => `$${Number(cost.toFixed(6))}`;
 
+/**
+ * Runs are compared per trial, never by raw total: the recipe puts a nightly on
+ * `--trials 3` against a baseline committed from a 1-trial run, and comparing
+ * the totals would print a permanent 3x "cost regression" nothing could clear.
+ */
+const perTrial = (record: RunRecord) => (record.usage?.costUsd ?? 0) / (record.trials || 1);
+
+function priceParts(current: RunRecord, baseline?: RunRecord): string[] {
+  const rate = current.trials > 1 ? [`${formatCost(perTrial(current))} per trial`] : [];
+  const base = baseline?.usage?.costUsd === undefined ? [] : [`baseline ${formatCost(perTrial(baseline))} per trial`];
+
+  return [formatCost(current.usage!.costUsd!), ...rate, ...base];
+}
+
 function costLine(current: RunRecord, baseline?: RunRecord): string[] {
   const usage = current.usage;
 
@@ -93,10 +151,8 @@ function costLine(current: RunRecord, baseline?: RunRecord): string[] {
   const tokens = `cost: ${usage.inputTokens ?? 0} in / ${usage.outputTokens ?? 0} out tokens`;
 
   if (usage.costUsd === undefined) return [tokens];
-  const base = baseline?.usage?.costUsd;
-  const priced = base === undefined ? formatCost(usage.costUsd) : `${formatCost(usage.costUsd)}, baseline ${formatCost(base)}`;
 
-  return [`${tokens} (${priced})`];
+  return [`${tokens} (${priceParts(current, baseline).join(', ')})`];
 }
 
 function diffLines(current: RunRecord, baseline: RunRecord): string[] {

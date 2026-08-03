@@ -147,10 +147,12 @@ uses — and a `reject` step its mirror (`POST /_janux/reject`), answering
 `expect` checks any of `ok` (default `true` when omitted), `status`, `error`
 (substring) and `result` (deep subset match).
 
-Inside `result`, three matchers extend the positional subset match:
+Inside `result`, four matchers extend the positional subset match:
 `{ "$some": {…} }` passes when *any* item of an array matches, `{ "$not": {…} }`
-inverts a match, and the value `"$absent"` requires the field to be missing.
-`$some`/`$not` are single-key wrappers — never mixed with literal keys. A
+inverts a match, `{ "$contains": "…" }` matches a substring of a string (how a
+tool result, which travels as JSON text, is asserted), and the value
+`"$absent"` requires the field to be missing. All three wrappers are
+single-key — never mixed with literal keys. A
 `throw` inside a tool's `run()` surfaces as `{ "ok": false, "status": 500 }`
 with `error` starting `"Error: …"`, assertable like any other outcome.
 
@@ -158,7 +160,12 @@ A step can also be a whole agent turn: `{ "turn": "Add two units of p1",
 "path": "/shop" }` POSTs the message to `/_janux/agent` and the reply envelope
 is the outcome (`result` matches `type`, `calls`, `messages`…), with the
 turn's token `usage` (and `costUsd` when the app declared its model's cost)
-accounted per scenario and per run.
+accounted per scenario and per run. A turn is `ok` only when the agent
+answered — `text` or `ui_calls`, and not the `stopReason: "max_turns"` give-up.
+An unconfigured model (`setup`), a refusal, a provider failure and an exhausted
+loop are **not** ok, so a run without a key fails loudly instead of passing
+green; assert those on purpose with
+`{ "ok": false, "result": { "type": "refusal" } }`.
 
 Scenario files run sorted by filename, and a scenario with `"reset": true`
 reboots the `--start` app first, so it starts from seed state (without
@@ -168,12 +175,20 @@ silenced — the report is the only thing on stdout, safe to pipe.
 `--trials N` replays the whole set N times and the gate fails **only on
 scenarios that fail every trial** — a real regression reproduces, a wobble
 does not block. The verdict (which scenario, how many trials, which step)
-goes to stderr and, structured, to `eval-gate.json`. Every run is appended to
-`.janux/evals/history.jsonl` with its metadata (commit, model, date, usage),
-and the end of the run compares against the previous one — or against
-`--baseline <file>` — saying what improved, what regressed and what it cost.
-The [agent evals in CI](/docs/recipes/agent-evals-in-ci) recipe wires all of
-it into a workflow.
+goes to stderr and, structured, to `eval-gate.json`. Above one trial each
+stdout report also carries its `trial` index, so the extra dimension is
+legible rather than a silently duplicated name; at the default single trial
+the JSON is unchanged.
+
+Every run is appended to `.janux/evals/history.jsonl` with its metadata
+(commit, the model that actually answered, date, usage), and the end of the
+run compares against the previous one — or against `--baseline <file>` —
+saying what improved, what regressed and what it cost. Costs are compared
+**per trial**, so a nightly on `--trials 3` is not a permanent 3× regression
+against a single-trial baseline. A `--baseline` that cannot be read as a run
+record is an error, never silence: a renamed baseline must not quietly stop
+comparing. The [agent evals in CI](/docs/recipes/agent-evals-in-ci) recipe
+wires all of it into a workflow.
 
 ## create-janux
 
