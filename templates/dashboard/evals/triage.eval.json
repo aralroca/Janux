@@ -1,0 +1,24 @@
+{
+  "name": "agent triages an incident using only the agent surface",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.ops.board",
+      "expect": { "result": { "maintenance": false, "incidents": [{ "id": "INC-101" }, { "id": "INC-102" }, { "id": "INC-103" }] } }
+    },
+    {
+      "tool": "api.ops.acknowledge",
+      "input": { "id": "INC-102" },
+      "expect": { "result": { "id": "INC-102", "status": "acknowledged" } }
+    },
+    {
+      "tool": "api.ops.resolve",
+      "input": { "id": "INC-102" },
+      "expect": { "result": { "id": "INC-102", "status": "resolved" } }
+    },
+    {
+      "tool": "api.ops.board",
+      "expect": { "result": { "incidents": { "$some": { "id": "INC-102", "status": "resolved" } } } }
+    }
+  ]
+}

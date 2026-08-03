@@ -1,0 +1,30 @@
+{
+  "name": "the surface defends itself: invalid input is rejected before anything runs",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.customers.create",
+      "input": { "name": "No Email", "email": "not-an-email" },
+      "expect": { "ok": false, "status": 500, "error": "not an email" }
+    },
+    {
+      "tool": "api.customers.create",
+      "input": { "name": "Ada Again", "email": "ada@example.com" },
+      "expect": { "ok": false, "status": 500, "error": "already exists" }
+    },
+    {
+      "tool": "api.customers.update",
+      "input": { "id": "cus_999", "plan": "pro" },
+      "expect": { "ok": false, "status": 500, "error": "Unknown customer" }
+    },
+    {
+      "tool": "api.customers.remove",
+      "input": { "id": "cus_101", "reason": "x" },
+      "expect": { "ok": false, "status": 400, "error": "reason" }
+    },
+    {
+      "tool": "api.customers.list",
+      "expect": { "result": { "customers": [{ "id": "cus_101" }, { "id": "cus_102" }, { "id": "cus_103" }] } }
+    }
+  ]
+}
