@@ -11,7 +11,10 @@ import {
 
 describe('what a target cannot serve', () =>
   runCases(CAPABILITY_CASES, (row) => {
-    const config = { websocketModule: row.websocketModule ? '/app/src/ws.ts' : undefined };
+    const config = {
+      websocketModule: row.websocketModule ? '/app/src/ws.ts' : undefined,
+      schedulesDir: row.schedulesDir ? '/app/src/schedules' : undefined,
+    };
     const gaps = unsupportedFeatures(config as never, row.capabilities);
 
     // The feature, not the flag: an app author reads this, not an adapter author.

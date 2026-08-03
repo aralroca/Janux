@@ -1,4 +1,4 @@
-import { unsupportedFeatures } from '../../janux-cli/src/adapter';
+import { unsupportedFeatures, type AdapterCapabilities } from '../../janux-cli/src/adapter';
 import { vercelConfig } from '../../janux-vercel/src/index';
 import { parseVercelArgs } from '../../janux-vercel/src/cli';
 import type { Case } from '../support/case';
@@ -19,7 +19,9 @@ import type { Case } from '../support/case';
 export interface CapabilityCase {
   /** `true` when the app has a `src/ws.ts`. */
   websocketModule: boolean;
-  capabilities: { websocket: boolean; streaming: boolean; filesystem: boolean };
+  /** `true` when the app has a `src/schedules/`. */
+  schedulesDir?: boolean;
+  capabilities: AdapterCapabilities;
   /** The feature each gap must name, in order. */
   gaps: string[];
 }
@@ -29,56 +31,82 @@ export type CapabilityRow = Case<CapabilityCase>;
 const WS = 'src/ws.ts';
 const STREAM = 'streaming SSR';
 const SPOOL = 'spoolMultipart()';
+const SCHEDULES = 'src/schedules/';
 
 export const CAPABILITY_CASES: CapabilityRow[] = [
   {
     id: 'build2-target-that-can-do-everything-warns-about-nothing',
     src: 'janux',
     websocketModule: true,
-    capabilities: { websocket: true, streaming: true, filesystem: true },
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'process' },
     gaps: [],
   },
   {
     id: 'build2-target-without-websockets-names-the-app-file-it-breaks',
     src: 'janux',
     websocketModule: true,
-    capabilities: { websocket: false, streaming: true, filesystem: true },
+    capabilities: { websocket: false, streaming: true, filesystem: true, schedules: 'process' },
     gaps: [WS],
   },
   {
     id: 'build2-an-app-with-no-websockets-hears-nothing-about-them',
     src: 'janux',
     websocketModule: false,
-    capabilities: { websocket: false, streaming: true, filesystem: true },
+    capabilities: { websocket: false, streaming: true, filesystem: true, schedules: 'process' },
     gaps: [],
   },
   {
     id: 'build2-a-buffering-target-says-so-whatever-the-app-does',
     src: 'janux',
     websocketModule: false,
-    capabilities: { websocket: true, streaming: false, filesystem: true },
+    capabilities: { websocket: true, streaming: false, filesystem: true, schedules: 'process' },
     gaps: [STREAM],
   },
   {
     id: 'build2-a-read-only-target-names-the-upload-primitive',
     src: 'janux',
     websocketModule: false,
-    capabilities: { websocket: true, streaming: true, filesystem: false },
+    capabilities: { websocket: true, streaming: true, filesystem: false, schedules: 'process' },
     gaps: [SPOOL],
   },
   {
     id: 'build2-every-gap-is-reported-in-one-pass',
     src: 'janux',
     websocketModule: true,
-    capabilities: { websocket: false, streaming: false, filesystem: false },
+    capabilities: { websocket: false, streaming: false, filesystem: false, schedules: 'process' },
     gaps: [WS, STREAM, SPOOL],
   },
   {
     id: 'build2-streaming-and-uploads-are-reported-without-a-websocket-module',
     src: 'janux',
     websocketModule: false,
-    capabilities: { websocket: true, streaming: false, filesystem: false },
+    capabilities: { websocket: true, streaming: false, filesystem: false, schedules: 'process' },
     gaps: [STREAM, SPOOL],
+  },
+  {
+    id: 'build2-a-target-that-cannot-trigger-jobs-names-the-schedules-directory',
+    src: 'janux',
+    websocketModule: false,
+    schedulesDir: true,
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: false },
+    gaps: [SCHEDULES],
+  },
+  {
+    id: 'build2-an-app-with-no-schedules-hears-nothing-about-them',
+    src: 'janux',
+    websocketModule: false,
+    schedulesDir: false,
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: false },
+    gaps: [],
+  },
+  {
+    /** Either trigger runs them, so neither is a gap — only the difference in how. */
+    id: 'build2-a-cron-triggered-target-is-not-a-gap-for-an-app-with-schedules',
+    src: 'janux',
+    websocketModule: false,
+    schedulesDir: true,
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'http' },
+    gaps: [],
   },
 ];
 

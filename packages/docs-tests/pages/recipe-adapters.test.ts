@@ -40,7 +40,7 @@ describe('recipes/adapters.md — the API it documents is the API that exists', 
     expect(declared).toEqual(documented);
   });
 
-  it('lists the three capability flags, all of them', () => {
+  it('lists every capability flag, all of them', () => {
     Object.keys(nodeCapabilities).forEach((flag) => expect(ADAPTERS).toContain(flag));
   });
 
@@ -69,8 +69,20 @@ describe('recipes/adapters.md — the worked Deno adapter is a valid JanuxAdapte
 describe('recipes/deploying.md — the matrix matches what the adapters declare', () => {
   /** A row that flatters a target is worse than no row: it is a promise production breaks. */
   it('says Node supports WebSockets, because @janux/node declares it', () => {
-    expect(nodeCapabilities).toEqual({ websocket: true, streaming: true, filesystem: true });
+    expect(nodeCapabilities).toEqual({ websocket: true, streaming: true, filesystem: true, schedules: 'process' });
     expect(DEPLOYING).toMatch(/\*\*Node 24\+\*\*.*`@janux\/node`.*✅.*✅.*✅/);
+  });
+
+  /**
+   * The row that would flatter hardest: a serverless target has no process to
+   * tick with, and a ✅ here would be a promise nothing keeps.
+   */
+  it('says Vercel triggers schedules by platform cron, because that is what it declares', () => {
+    expect(vercelCapabilities.schedules).toBe('http');
+    expect(nodeCapabilities.schedules).toBe('process');
+    expect(DEPLOYING).toMatch(/\*\*Vercel\*\*.*⏱ platform cron/);
+    expect(DEPLOYING).toContain('/_janux/schedules/tick');
+    expect(DEPLOYING).toContain('JANUX_CRON_SECRET');
   });
 
   it('says Vercel does not, because a serverless invocation cannot hold one open', () => {

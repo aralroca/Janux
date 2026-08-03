@@ -27,6 +27,7 @@ const PATH_FIELDS = new Set([
   'ctxModule',
   'matchersModule',
   'websocketModule',
+  'schedulesDir',
   'httpHandlersDir',
   'stylesheet',
 ]);
@@ -58,8 +59,13 @@ export function appModules(app: JanuxAppConfig): string[] {
     app.websocketModule,
   ];
   const handlers = app.httpHandlersDir ? walkFiles(app.httpHandlersDir) : [];
+  // The whole directory, `_config.ts` and shared `_helpers` included: the
+  // schedule modules import them, so the bundle has to carry them too.
+  const schedules = app.schedulesDir ? walkFiles(app.schedulesDir) : [];
 
-  return [...new Set([...routes, ...apiFiles(app.serverDir), ...handlers, ...singles].filter(Boolean) as string[])];
+  return [
+    ...new Set([...routes, ...apiFiles(app.serverDir), ...handlers, ...schedules, ...singles].filter(Boolean) as string[]),
+  ];
 }
 
 /** `'/app/src/routes/index.tsx'` → `path('src/routes/index.tsx')`, evaluated at runtime. */
@@ -82,7 +88,12 @@ function importSpecifier(root: string, file: string): string {
   return `../${relative(root, file).replace(/\.[jt]sx?$/, '')}`;
 }
 
-export function generateApp(root: string, app: JanuxAppConfig, adapter = 'the Janux adapter'): string {
+export function generateApp(
+  root: string,
+  app: JanuxAppConfig,
+  adapter = 'the Janux adapter',
+  scheduleTrigger?: 'process' | 'http',
+): string {
   const files = appModules(app);
   const imports = files.map((file, index) => `import * as m${index} from '${importSpecifier(root, file)}';`);
   const modules = files.map((file, index) => `  [${pathExpression(root, file)}]: m${index},`);
@@ -99,6 +110,8 @@ export function generateApp(root: string, app: JanuxAppConfig, adapter = 'the Ja
     '',
     'const app: JanuxApp = {',
     '  root,',
+    // 'process' is what a plain `janux start` gets, so only the exception is recorded.
+    ...(scheduleTrigger === 'http' ? ["  scheduleTrigger: 'http',"] : []),
     '  config: {',
     ...configEntries(root, app),
     '  },',

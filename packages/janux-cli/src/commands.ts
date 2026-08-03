@@ -195,7 +195,9 @@ async function writeNotFound(server: PageServer, outDir: string): Promise<void> 
 /** `output: "static"`: prerenders every concrete page into dist/client. */
 async function prerenderStatic(root: string): Promise<void> {
   publishAppRoot(root);
-  const options = await prodServerOptions(root);
+  // A build renders pages; it does not serve, so it must not run the app's
+  // background jobs — see `ProdOptions`.
+  const options = await prodServerOptions(root, undefined, { schedules: false });
   const server = createJanuxServer({ ...options, staticExport: true });
   const outDir = join(root, 'dist/client');
   const count = await prerenderPages(server, outDir);

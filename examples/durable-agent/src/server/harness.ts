@@ -7,11 +7,12 @@ import {
   createRedisCounterStore,
   type CounterStore,
   type HarnessStorage,
+  type ScheduleStore,
 } from '@janux/agent';
 import { RATE_LIMIT } from './config';
 import { SAFE_REFUSAL, guardrails } from './guardrails';
 
-export type DurableStorage = HarnessStorage & { close?: () => Promise<void> };
+export type DurableStorage = HarnessStorage & ScheduleStore & { close?: () => Promise<void> };
 
 /** Redis stores expose `close()` (they own a connection); the in-memory one has nothing to close. */
 export type DurableCounterStore = CounterStore & { close?: () => Promise<void> };

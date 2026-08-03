@@ -9,15 +9,17 @@ A Janux app in production is a **`Request → Response` function plus `dist/clie
 
 ## Adapters
 
-| Target | Adapter | Command | WebSockets | Streaming | Filesystem |
-|---|---|---|---|---|---|
-| **Bun** | built in | `bun run build && bun run start` | ✅ | ✅ | ✅ |
-| **Node 24+** | `@janux/node` | `bun run build && bunx janux-node` → `node build/index.js` | ✅ | ✅ | ✅ |
-| **Vercel** | `@janux/vercel` | `bun run build && bunx janux-vercel` | ❌ serverless | ✅ | ✅ `/tmp` |
-| **Any static host** | `output: "static"` | `bun run build` → upload `dist/client` | ❌ | — | ❌ |
-| Cloudflare, Netlify, Deno | *not shipped* | [write one](/docs/recipes/adapters) | — | — | — |
+| Target | Adapter | Command | WebSockets | Streaming | Filesystem | Schedules |
+|---|---|---|---|---|---|---|
+| **Bun** | built in | `bun run build && bun run start` | ✅ | ✅ | ✅ | ✅ in-process |
+| **Node 24+** | `@janux/node` | `bun run build && bunx janux-node` → `node build/index.js` | ✅ | ✅ | ✅ | ✅ in-process |
+| **Vercel** | `@janux/vercel` | `bun run build && bunx janux-vercel` | ❌ serverless | ✅ | ✅ `/tmp` | ⏱ platform cron |
+| **Any static host** | `output: "static"` | `bun run build` → upload `dist/client` | ❌ | — | ❌ | ❌ |
+| Cloudflare, Netlify, Deno | *not shipped* | [write one](/docs/recipes/adapters) | — | — | — | — |
 
 Bun and Node are full parity: same app, same features, different `node_modules`. Vercel trades WebSockets for a CDN and zero servers. `output: "static"` gives up the server entirely.
+
+The schedules column is the one that is not a simple yes/no. A persistent process ticks [`src/schedules/`](/docs/reference/agent-schedules) itself; a serverless target has no process to tick with, so the platform's cron calls `/_janux/schedules/tick` instead (Vercel with a `GET`) and `JANUX_CRON_SECRET` — or Vercel's own `CRON_SECRET` — gates it. Same schedules, same store, different trigger — the adapter declares which, and the difference is not hidden from you.
 
 A ❌ is not something you discover in production: an adapter *declares* what it supports, and `janux build` prints the app features a missing capability disables.
 

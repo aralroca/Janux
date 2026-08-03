@@ -21,6 +21,7 @@ import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from 
 import { createResponseCache } from './response-cache';
 import { createHttpHandlers, readBodyWithin, type HandlerModule } from './http-handlers';
 import { createMcpEndpoint, type McpAuth } from './mcp';
+import { handleScheduleTick, type SchedulesConfig } from './schedules';
 import { pageMarkdown } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
 import type { ShellI18n } from './html-shell';
@@ -98,6 +99,8 @@ export interface ServerOptions {
   apis?: Record<string, Record<string, unknown>>;
   storeDefs?: Record<string, ComponentDef>;
   agent?: AgentMount;
+  /** Scheduled jobs and how this deployment fires them — see `schedules.ts`. */
+  schedules?: SchedulesConfig;
   ctxFor?: (req: Request) => Ctx | Promise<Ctx>;
   runtimeUrl?: string;
   islandModules?: Record<string, string>;
@@ -308,6 +311,10 @@ function documentStream(
 
 /** The Janux fullstack server: pages, api() endpoints, manifest, proposals and the agent mount. */
 export function createJanuxServer(options: ServerOptions = {}) {
+  // A persistent process holds the tick loop itself; an 'http' deployment gets
+  // the `/_janux/schedules/tick` endpoint below instead — the platform's cron
+  // is the trigger there, and pretending otherwise would hide the difference.
+  if (options.schedules?.trigger === 'process') options.schedules.mount.start();
   const csp = resolveCsp(options.csp, options.staticExport);
   const apiTools = collectApis(options.apis ?? {});
   const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
@@ -934,6 +941,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
         return new Response(markdown, { headers: { 'content-type': 'text/markdown; charset=utf-8' } });
       }
     }
+    if (pathname === '/_janux/schedules/tick' && options.schedules?.trigger === 'http') {
+      return handleScheduleTick(req, options.schedules.mount);
+    }
     if (pathname === '/_janux/llm' && options.agent?.handleLlm) {
       return options.agent.handleLlm(req);
     }
@@ -996,5 +1006,8 @@ export function createJanuxServer(options: ServerOptions = {}) {
     drain: options.websocket?.drain,
   };
 
-  return { fetch, serve, websocket, apiTools, manifestFor, listPages, notFoundPage };
+  /** Releases what the server started for itself — today, the schedule loop. */
+  const stop = (): void => options.schedules?.mount.stop();
+
+  return { fetch, serve, websocket, stop, apiTools, manifestFor, listPages, notFoundPage };
 }

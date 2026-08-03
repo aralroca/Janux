@@ -75,7 +75,8 @@ function report(findings: VerifyFinding[]): void {
 }
 
 export async function verify({ root }: CliCommand): Promise<void> {
-  const options = await prodServerOptions(root);
+  // A check must not run the app's background jobs — see `ProdOptions`.
+  const options = await prodServerOptions(root, undefined, { schedules: false });
   const server = createJanuxServer(options);
   const patterns = createFsRouter(options.routesDir!).routes.map((route) => route.pattern);
   const findings = await collectFindings(patterns, (path) => server.manifestFor(path, {}));

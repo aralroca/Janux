@@ -1,4 +1,4 @@
-import type { HarnessStorage, MessageRecord, ThreadRecord } from './storage';
+import type { HarnessStorage, MessageRecord, ScheduleRecord, ScheduleStore, ThreadRecord } from './storage';
 
 /**
  * Postgres storage adapter (RFC 0002 §21): the production backend for harness
@@ -34,6 +34,16 @@ CREATE TABLE IF NOT EXISTS janux_snapshots (
   run_id TEXT PRIMARY KEY,
   snapshot JSONB NOT NULL
 );
+CREATE TABLE IF NOT EXISTS janux_schedules (
+  name TEXT PRIMARY KEY,
+  cron TEXT NOT NULL,
+  next_run BIGINT NOT NULL,
+  locked_until BIGINT,
+  state JSONB,
+  last_run BIGINT,
+  last_status TEXT,
+  last_error TEXT
+);
 `;
 
 interface PgPool {
@@ -51,7 +61,22 @@ function toThread(row: any): ThreadRecord {
   };
 }
 
-export async function createPgStorage(options: PgStorageOptions): Promise<HarnessStorage & { close(): Promise<void> }> {
+function toSchedule(row: any): ScheduleRecord {
+  return {
+    name: row.name,
+    cron: row.cron,
+    nextRun: Number(row.next_run),
+    lease: row.locked_until === null ? undefined : Number(row.locked_until),
+    state: row.state ?? undefined,
+    lastRun: row.last_run === null ? undefined : Number(row.last_run),
+    lastStatus: row.last_status ?? undefined,
+    lastError: row.last_error ?? undefined,
+  };
+}
+
+export async function createPgStorage(
+  options: PgStorageOptions,
+): Promise<HarnessStorage & ScheduleStore & { close(): Promise<void> }> {
   const { Pool } = (await import('pg')).default ?? (await import('pg'));
   const pool: PgPool = new Pool({ connectionString: options.connectionString, max: options.max ?? 20 });
 
@@ -118,6 +143,48 @@ export async function createPgStorage(options: PgStorageOptions): Promise<Harnes
     },
     async deleteSnapshot(runId) {
       await pool.query('DELETE FROM janux_snapshots WHERE run_id = $1', [runId]);
+    },
+    async syncSchedules(seeds) {
+      await pool.query('DELETE FROM janux_schedules WHERE name <> ALL($1)', [seeds.map((seed) => seed.name)]);
+      for (const seed of seeds) {
+        await pool.query(
+          `INSERT INTO janux_schedules (name, cron, next_run) VALUES ($1, $2, $3)
+           ON CONFLICT (name) DO UPDATE SET cron = $2,
+             next_run = CASE WHEN janux_schedules.cron = $2 THEN janux_schedules.next_run ELSE $3 END,
+             locked_until = CASE WHEN janux_schedules.cron = $2 THEN janux_schedules.locked_until ELSE NULL END`,
+          [seed.name, seed.cron, seed.nextRun],
+        );
+      }
+    },
+    async claimDueSchedules(now, leaseMs) {
+      // A single UPDATE … RETURNING is the atomic lease: a concurrent worker
+      // blocks on the row lock, re-evaluates the WHERE, and walks away empty.
+      const { rows } = await pool.query(
+        `UPDATE janux_schedules SET locked_until = $1 + $2
+         WHERE next_run <= $1 AND (locked_until IS NULL OR locked_until <= $1)
+         RETURNING *`,
+        [now, leaseMs],
+      );
+
+      return rows.map(toSchedule);
+    },
+    async settleSchedule(name, outcome, lease) {
+      // `locked_until IS NOT DISTINCT FROM` rather than `=`: a caller with no
+      // lease to prove writes unconditionally, one with a stale lease writes
+      // nothing — its claim belongs to somebody else now.
+      await pool.query(
+        `UPDATE janux_schedules
+         SET locked_until = NULL, next_run = $2, last_run = $3, last_status = $4, last_error = $5
+         WHERE name = $1 AND ($6::BIGINT IS NULL OR locked_until IS NOT DISTINCT FROM $6)`,
+        [name, outcome.nextRun, outcome.lastRun, outcome.lastStatus, outcome.lastError ?? null, lease ?? null],
+      );
+    },
+    async saveScheduleState(name, state, lease) {
+      await pool.query(
+        `UPDATE janux_schedules SET state = $2
+         WHERE name = $1 AND ($3::BIGINT IS NULL OR locked_until IS NOT DISTINCT FROM $3)`,
+        [name, JSON.stringify(state), lease ?? null],
+      );
     },
     close: () => pool.end(),
   };

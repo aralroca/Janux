@@ -20,6 +20,7 @@ import {
   type JanuxPluginOptions,
 } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
+import { scheduleServerOptions } from './schedules';
 import { collectIslands, islandCatalogFromDir } from './islands';
 import { attachDevWebSocket } from './dev-websocket';
 import { DEV_ROUTE_PATH, devRouteHandler } from './dev-route-info';
@@ -71,6 +72,8 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     }),
     llmsTxt: app.llmsTxt,
     websocket: websocketModule?.default as ServerOptions['websocket'],
+    // Dev is a persistent process, so schedules tick in-process, like prod on Bun.
+    schedules: await scheduleServerOptions(app, (file) => vite.ssrLoadModule(file) as any),
     mcpAuth: mcpAuthOptions(app.mcpAuth),
     agents: app.agents,
     i18n: i18nModule?.default as ServerOptions['i18n'],
@@ -227,9 +230,21 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
         return cached;
       };
 
-      vite.watcher.on('change', () => {
+      /**
+       * A rebuilt server brings a new scheduler with it, so the old one has to
+       * be stopped: nothing else ever will, and a day of editing would leave a
+       * tick loop per save — each running the handlers it was built with, all
+       * competing for the same claims.
+       */
+      const discardServer = () => {
+        const previous = cached;
+
         cached = undefined;
-      });
+        previous?.then((server) => server.stop()).catch(() => undefined);
+      };
+
+      vite.watcher.on('change', discardServer);
+      vite.httpServer?.on('close', discardServer);
 
       const loadWebSocket = async () => {
         const app = await resolveAppConfig(vite.config.root, options);

@@ -6,6 +6,7 @@ The complete `@janux/agent` harness wired the way you would deploy it: state in 
 - **Redis rate limiting** — `createRedisCounterStore` shares one fixed-window budget (5 requests/min per identity) across every instance; the sixth question inside a window gets a `429 rate_limited`.
 - **Guardrails** — `unicodeNormalizer` plus an `injectionGuard` classifier screen every turn; hostile input is aborted with a typed refusal carrying the app's own `refusalMessage`, the model never sees it.
 - **Durable workflow** — `provisioning` suspends on a human question and resumes from a snapshot in the same storage — hours later, in another process, state intact.
+- **A schedule that triggers it** — `src/schedules/provision-sweep.ts` runs every five minutes, opens a provisioning run and remembers its id; the next occurrence *resumes that run* rather than starting a second one. `SIGKILL` the process mid-flight and the claim reopens when its lease expires, so the work is picked up rather than lost — which is what `e2e/durable-agent.e2e.test.ts` kills a real process to prove.
 - **No model key required** — the copilot answers with a setup card until you configure one, while memory, guardrails and rate limiting stay fully active.
 
 ```bash
@@ -39,6 +40,8 @@ export default defineAgent({
 | `src/server/harness.ts` | Storage, counter store, memory, limiter and identity — Postgres/Redis when configured, in-memory fallback otherwise |
 | `src/server/guardrails.ts` | The processor chain, the injection classifier and the `refusalMessage` the refusal carries |
 | `src/server/workflow.ts` | The `provisioning` workflow: suspend on a human question, resume after a restart |
+| `src/schedules/provision-sweep.ts` | The cron trigger for that workflow, remembering its run id so a re-run resumes instead of restarting |
+| `src/schedules/_config.ts` | Which store backs the scheduler — the same durable adapter the harness uses |
 | `src/server/config.ts` | Rate-limit knobs and the backend summary the page renders |
 | `src/routes/index.tsx` | The SSR page reporting which backend each piece runs on |
 | `docker-compose.yml` | Postgres 16 + Redis 7 matching `.env.example` |

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'bun:test';
+import type { Subprocess } from 'bun';
+import { join } from 'node:path';
 import { RATE_LIMIT } from '../examples/durable-agent/src/server/config';
 import { SAFE_REFUSAL, classifyPrompt } from '../examples/durable-agent/src/server/guardrails';
 import { conversationMemory, counterStore, durableStorage, requestLimiter } from '../examples/durable-agent/src/server/harness';
@@ -131,6 +133,122 @@ pgSuite('examples/durable-agent workflow (real Postgres)', () => {
     expect(finished.state.activatedAt).toBeGreaterThan(0);
     await second.close?.();
   });
+});
+
+pgSuite('examples/durable-agent schedule → durable workflow across a SIGKILL (real processes)', () => {
+  const NAME = 'provision-sweep';
+  const APP_DIR = join(import.meta.dir, '../examples/durable-agent');
+  /** Its own port: a developer's `bun run dev` on the example must not break the suite. */
+  const PORT = 4399;
+
+  // pg is a devDep of @janux/agent, not hoisted to the root — resolve it from there.
+  async function pgPool() {
+    const imported = await import(Bun.resolveSync('pg', `${import.meta.dir}/../packages/janux-agent`));
+    const { Pool } = imported.default ?? imported;
+
+    return new Pool({ connectionString: PG_URL, max: 2 });
+  }
+
+  /**
+   * The real production server (`janux start`), as its own OS process.
+   *
+   * The CLI is spawned directly rather than through `bun run start`: the script
+   * runner is a parent process, so killing it leaves the actual server orphaned
+   * and still holding its schedule lease — a kill test that never kills the
+   * thing under test.
+   */
+  async function launch() {
+    await poll(undefined, async () => ((await portTaken()) ? undefined : true));
+    const app = Bun.spawn([join(APP_DIR, 'node_modules/.bin/janux'), 'start', '--port', String(PORT)], {
+      cwd: APP_DIR,
+      env: { ...process.env, DATABASE_URL: PG_URL, SCHEDULE_TICK_MS: '200', SCHEDULE_LEASE_MS: '1000' },
+      stdout: 'ignore',
+      stderr: 'inherit',
+    });
+
+    await poll(app, async () => (await portTaken()) || undefined);
+
+    return app;
+  }
+
+  const portTaken = () =>
+    fetch(`http://localhost:${PORT}/`, { signal: AbortSignal.timeout(500) }).then(
+      () => true,
+      (error) => !/ECONNREFUSED|ConnectionRefused|Unable to connect/i.test(`${error?.code ?? ''} ${error.cause ?? error}`),
+    );
+
+  /**
+   * Polls the store, and gives up the moment the app process dies — a server
+   * that could not take its port would otherwise show up as a 30s timeout with
+   * nothing to read.
+   */
+  async function poll<T>(app: Subprocess | undefined, read: () => Promise<T | undefined>): Promise<T> {
+    const deadline = Date.now() + 30_000;
+
+    while (Date.now() < deadline) {
+      const value = await read();
+
+      if (value !== undefined) return value;
+      if (app?.exitCode != null) throw new Error(`the app exited early (code ${app.exitCode})`);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    throw new Error('condition never became true');
+  }
+
+  it(
+    'the schedule fires, the app dies mid-workflow, and the relaunched app resumes the same run',
+    async () => {
+      const pool = await pgPool();
+      const rowOf = async () => {
+        const { rows } = await pool.query('SELECT state FROM janux_schedules WHERE name = $1', [NAME]);
+
+        return rows[0] as { state?: { runId?: string; completed?: string } } | undefined;
+      };
+      const memoryOf = async () => (await rowOf())?.state;
+      const snapshotsOf = async (runId: string) =>
+        (await pool.query('SELECT 1 FROM janux_snapshots WHERE run_id = $1', [runId])).rows;
+      // Brings the next occurrence forward: five minutes is real life, not CI.
+      // It has to be an UPDATE — boot-time sync deliberately preserves the clock
+      // of a schedule whose cron has not changed.
+      const makeDue = () =>
+        pool.query('UPDATE janux_schedules SET next_run = 1, locked_until = NULL WHERE name = $1', [NAME]);
+
+      await pool.query('DELETE FROM janux_schedules WHERE name = $1', [NAME]);
+
+      // Life 1: booting registers the schedule; once it is due the sweep claims
+      // it, opens a provisioning run that suspends on its human question, and
+      // the remembered run id lands in the store.
+      const first = await launch();
+
+      await poll(first, rowOf);
+      await makeDue();
+      const runId = (await poll(first, async () => (await memoryOf())?.runId))!;
+
+      expect(await snapshotsOf(runId)).toHaveLength(1);
+      first.kill('SIGKILL');
+      await first.exited;
+
+      // Life 2: a brand-new process. Only the store connects it to the first.
+      const second = await launch();
+
+      await poll(second, rowOf);
+      await makeDue();
+      const completed = await poll(second, async () => (await memoryOf())?.completed);
+
+      // Resumed, not restarted: same run id, and its snapshot was consumed.
+      expect(completed).toBe(runId);
+      expect(await snapshotsOf(runId)).toHaveLength(0);
+      // Still serving, not a process that ticked once on its way down.
+      expect(second.exitCode).toBeNull();
+      expect(await portTaken()).toBe(true);
+
+      second.kill('SIGKILL');
+      await second.exited;
+      await pool.query('DELETE FROM janux_schedules WHERE name = $1', [NAME]);
+      await pool.end();
+    },
+    60_000,
+  );
 });
 
 redisSuite('examples/durable-agent rate limit (real Redis)', () => {

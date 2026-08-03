@@ -52,6 +52,14 @@ export interface AdapterCapabilities {
   streaming: boolean;
   /** Has a writable filesystem while serving — `spoolMultipart` can spool uploads to disk. */
   filesystem: boolean;
+  /**
+   * How `src/schedules/` fires on this target: 'process' when something
+   * persistent can hold the tick loop, 'http' when the platform's cron has to
+   * POST `/_janux/schedules/tick` instead, `false` when it cannot trigger them
+   * at all. Serverless has no persistent process — an adapter declares that
+   * rather than letting production discover it.
+   */
+  schedules: 'process' | 'http' | false;
 }
 
 /** The entry an adapter asks the builder to generate. */
@@ -135,6 +143,9 @@ export function unsupportedFeatures(config: JanuxAppConfig, capabilities: Adapte
   const gaps: string[] = [];
 
   if (config.websocketModule && !capabilities.websocket) gaps.push('src/ws.ts — this target cannot hold WebSockets open');
+  if (config.schedulesDir && !capabilities.schedules) {
+    gaps.push('src/schedules/ — this target has no way to trigger scheduled jobs');
+  }
   if (!capabilities.streaming) gaps.push('streaming SSR — responses will be buffered before they are sent');
   if (!capabilities.filesystem) gaps.push('spoolMultipart() — this target has no writable filesystem for uploads');
 

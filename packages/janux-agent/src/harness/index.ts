@@ -1,4 +1,24 @@
-export { createMemoryStorage, type HarnessStorage, type ThreadRecord, type MessageRecord } from './storage';
+export {
+  createMemoryStorage,
+  type HarnessStorage,
+  type ThreadRecord,
+  type MessageRecord,
+  type ScheduleSeed,
+  type ScheduleRecord,
+  type ScheduleOutcome,
+  type ScheduleStore,
+} from './storage';
+export { isValidCron, nextOccurrence } from './cron';
+export {
+  createScheduler,
+  defineSchedule,
+  defineScheduleConfig,
+  type Scheduler,
+  type SchedulerOptions,
+  type ScheduleConfig,
+  type ScheduleContext,
+  type ScheduleDef,
+} from './schedule';
 export { createMemory, type HarnessMemory, type MemoryOptions } from './memory';
 export {
   runProcessors,
