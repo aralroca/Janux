@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/with-local-llm exists to demonstrate: a copilot whose model
@@ -13,13 +14,12 @@ import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './
  * actual GPU inference remains the README's manual check.
  */
 
-const BUILT = isBuilt('examples/with-local-llm');
+const BUILT = isBuilt(appRoot('examples/with-local-llm'));
 /** Everything `resolveModel` reads — scrubbed so `/_janux/llm` answers its setup card deterministically. */
 const MODEL_ENV = ['JANUX_MODEL', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY', 'OPENROUTER_API_KEY'];
 const savedEnv = new Map<string, string | undefined>();
 
-let server: Awaited<ReturnType<typeof ssrApp>>['server'];
-let get: Awaited<ReturnType<typeof ssrApp>>['get'];
+let app: Awaited<ReturnType<typeof createTestApp>>;
 let BASE = '';
 let stop: (() => void) | undefined;
 let browser: Browser | undefined;
@@ -86,9 +86,9 @@ beforeAll(async () => {
     savedEnv.set(key, process.env[key]);
     delete process.env[key];
   });
-  ({ server, get } = await ssrApp('examples/with-local-llm'));
+  app = await createTestApp(appRoot('examples/with-local-llm'));
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt('examples/with-local-llm'));
+  ({ url: BASE, stop } = await startTestServer(appRoot('examples/with-local-llm')));
   browser = await launchChrome();
 });
 
@@ -102,7 +102,7 @@ afterAll(() => {
 
 describe('examples/with-local-llm server side', () => {
   it('renders the task list and the copilot shell server-side, cloud-neutral', async () => {
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<title>Janux — local LLM copilot</title>');
     ['Ship the release notes', 'Review the onboarding PR', 'Book the offsite room'].forEach((task) =>
@@ -117,7 +117,7 @@ describe('examples/with-local-llm server side', () => {
   });
 
   it('exposes the task tools to agents — and never the chat panel', async () => {
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const names = manifest.tools.map((tool: any) => tool.name);
     const toggle = manifest.tools.find((tool: any) => tool.name === 'tasks.toggle');
 
@@ -130,7 +130,7 @@ describe('examples/with-local-llm server side', () => {
   });
 
   it('answers /_janux/llm with the setup card when no model is configured', async () => {
-    const response = await server.fetch(
+    const response = await app.server.fetch(
       new Request('http://test/_janux/llm', {
         method: 'POST',
         // The browser-side agent loop calls this from the app's own page.

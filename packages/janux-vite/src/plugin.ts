@@ -55,6 +55,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
   const ctxModule = app.ctxModule ? await vite.ssrLoadModule(app.ctxModule) : undefined;
   const matchersModule = app.matchersModule ? await vite.ssrLoadModule(app.matchersModule) : undefined;
   const websocketModule = app.websocketModule ? await vite.ssrLoadModule(app.websocketModule) : undefined;
+  const feedModule = app.feedModule ? await vite.ssrLoadModule(app.feedModule) : undefined;
 
   return {
     routesDir: app.routesDir,
@@ -71,6 +72,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
       fontPreloads: fontPreloadHrefs(fonts),
     }),
     llmsTxt: app.llmsTxt,
+    feed: feedModule?.default as ServerOptions['feed'],
     websocket: websocketModule?.default as ServerOptions['websocket'],
     // Dev is a persistent process, so schedules tick in-process, like prod on Bun.
     schedules: await scheduleServerOptions(app, (file) => vite.ssrLoadModule(file) as any),

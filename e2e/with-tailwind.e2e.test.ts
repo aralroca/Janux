@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Browser } from 'playwright';
-import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * `@janux/tailwind` zero-config, against the with-tailwind pricing example:
@@ -11,7 +12,7 @@ import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage, serveBuilt, ssrApp }
  * Chrome the billing island recalculates every tier when the toggle flips.
  */
 
-const BUILT = isBuilt('examples/with-tailwind');
+const BUILT = isBuilt(appRoot('examples/with-tailwind'));
 
 let BASE = '';
 let stop: (() => void) | undefined;
@@ -19,7 +20,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt('examples/with-tailwind'));
+  ({ url: BASE, stop } = await startTestServer(appRoot('examples/with-tailwind')));
   browser = await launchChrome();
 });
 
@@ -29,8 +30,8 @@ afterAll(async () => {
 
 describe('tailwind SSR (examples/with-tailwind)', () => {
   it('links the stylesheet and renders utility classes in the HTML', async () => {
-    const { get } = await ssrApp('examples/with-tailwind');
-    const html = await (await get('/')).text();
+    const app = await createTestApp(appRoot('examples/with-tailwind'));
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('rel="stylesheet"');
     expect(html).toContain('/styles.css');

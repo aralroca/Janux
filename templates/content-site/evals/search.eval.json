@@ -1,0 +1,26 @@
+{
+  "name": "agent searches the site and drafts never leak",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.site.search",
+      "input": { "q": "agent" },
+      "expect": { "result": { "hits": { "$some": { "slug": "agents-read-this-site", "url": "/posts/agents-read-this-site", "markdown": "/posts/agents-read-this-site.md" } } } }
+    },
+    {
+      "tool": "api.site.search",
+      "input": { "q": "frontmatter" },
+      "expect": { "result": { "hits": { "$some": { "slug": "writing-in-markdown" } } } }
+    },
+    {
+      "tool": "api.site.search",
+      "input": { "q": "xylophone" },
+      "expect": { "result": { "hits": [] } }
+    },
+    {
+      "tool": "api.site.search",
+      "input": { "q": "" },
+      "expect": { "ok": false, "status": 400, "error": "q" }
+    }
+  ]
+}

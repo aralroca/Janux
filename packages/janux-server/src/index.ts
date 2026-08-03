@@ -1,4 +1,5 @@
-export { api, collectApis, invokeApi, apiManifestTools, isApi, type ApiDef, type ApiTool } from './api';
+export { api, collectApis, invokeApi, apiManifestTools, isApi, type ApiDef, type ApiTool, type CallableApi } from './api';
+export { mockApi, resetApiMocks } from './api-mocks';
 export {
   createJanuxServer,
   NAVIGATION_HEADER,

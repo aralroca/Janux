@@ -11,10 +11,13 @@ description: "Every command, flag and exit code the Janux CLI ships with: dev, b
 janux dev   [--port 3000]    # Vite dev server: SSR, HMR, api stubs, agent endpoint
 janux build                  # client bundle + styles + public/ → dist/client (+ prerendered HTML with output: "static")
 janux start [--port 3000]    # production server on Bun (no Vite at runtime)
+janux test  [files...]       # the app's suite via bun test (flags pass through)
 janux verify                 # agent-surface contract checks (CI-friendly)
 janux eval [files...]        # scripted agent-task scenarios against a live app
 janux info                   # versions, resolved config and routes — paste into an issue
 ```
+
+All of these run the `janux` bin that `@janux/cli` installs into your app's `node_modules` — there is no global install. Apps scaffolded by `create-janux` wrap the common ones as package scripts (`bun run dev`); for the rest, prefix with `bunx`: `bunx janux info`.
 
 `PORT` env is honored when `--port` is absent.
 
@@ -68,7 +71,7 @@ integrations are actually installed, and every route the file-system router
 found:
 
 ```bash
-janux info
+bunx janux info
 ```
 
 ```markdown
@@ -102,6 +105,10 @@ configured *by being installed*, so nothing in your own source says whether
 Tailwind is on. Paths are reported relative to the app root and the root itself
 is never printed — there is nothing to redact before posting.
 
+## janux test
+
+`bun test`, run from the app root. Everything after the command name goes through verbatim — file filters, `--watch`, `--coverage`, `-t` — and the exit code is the suite's. Janux does not ship a test runner: `bun:test` covers components and routes (see [`@janux/testing`](/docs/reference/testing-api)), Playwright covers the browser. The command exists so every project drives its suite the same way, whatever the package manager scripts look like.
+
 ## janux verify
 
 Renders every route's manifest and fails (exit 1) when an agent-reachable tool
@@ -115,12 +122,15 @@ surface cannot be verified).
 
 "Can an agent actually complete this task through my tools?" as a repeatable
 CI check. Runs `evals/**/*.eval.json` (or explicit files) against a live app
-and exits 1 on any failed expectation.
+and exits 1 when the regression gate fails — with one trial (the default),
+that is any failed expectation.
 
 ```bash
 janux eval --start "janux start"        # boots the app, runs, stops it
 janux eval --url http://localhost:3000  # against a server you manage
 janux eval evals/checkout.eval.json --json
+janux eval --trials 2                   # gate only on reproducible failures
+janux eval --baseline evals/baseline.json  # compare against a committed run
 ```
 
 ```jsonc
@@ -144,17 +154,48 @@ uses — and a `reject` step its mirror (`POST /_janux/reject`), answering
 `expect` checks any of `ok` (default `true` when omitted), `status`, `error`
 (substring) and `result` (deep subset match).
 
-Inside `result`, three matchers extend the positional subset match:
+Inside `result`, four matchers extend the positional subset match:
 `{ "$some": {…} }` passes when *any* item of an array matches, `{ "$not": {…} }`
-inverts a match, and the value `"$absent"` requires the field to be missing.
-`$some`/`$not` are single-key wrappers — never mixed with literal keys. A
+inverts a match, `{ "$contains": "…" }` matches a substring of a string (how a
+tool result, which travels as JSON text, is asserted), and the value
+`"$absent"` requires the field to be missing. All three wrappers are
+single-key — never mixed with literal keys. A
 `throw` inside a tool's `run()` surfaces as `{ "ok": false, "status": 500 }`
 with `error` starting `"Error: …"`, assertable like any other outcome.
+
+A step can also be a whole agent turn: `{ "turn": "Add two units of p1",
+"path": "/shop" }` POSTs the message to `/_janux/agent` and the reply envelope
+is the outcome (`result` matches `type`, `calls`, `messages`…), with the
+turn's token `usage` (and `costUsd` when the app declared its model's cost)
+accounted per scenario and per run. A turn is `ok` only when the agent
+answered — `text` or `ui_calls`, and not the `stopReason: "max_turns"` give-up.
+An unconfigured model (`setup`), a refusal, a provider failure and an exhausted
+loop are **not** ok, so a run without a key fails loudly instead of passing
+green; assert those on purpose with
+`{ "ok": false, "result": { "type": "refusal" } }`.
 
 Scenario files run sorted by filename, and a scenario with `"reset": true`
 reboots the `--start` app first, so it starts from seed state (without
 `--start`, `reset` is ignored). With `--json` the booted app's stdout is
 silenced — the report is the only thing on stdout, safe to pipe.
+
+`--trials N` replays the whole set N times and the gate fails **only on
+scenarios that fail every trial** — a real regression reproduces, a wobble
+does not block. The verdict (which scenario, how many trials, which step)
+goes to stderr and, structured, to `eval-gate.json`. Above one trial each
+stdout report also carries its `trial` index, so the extra dimension is
+legible rather than a silently duplicated name; at the default single trial
+the JSON is unchanged.
+
+Every run is appended to `.janux/evals/history.jsonl` with its metadata
+(commit, the model that actually answered, date, usage), and the end of the
+run compares against the previous one — or against `--baseline <file>` —
+saying what improved, what regressed and what it cost. Costs are compared
+**per trial**, so a nightly on `--trials 3` is not a permanent 3× regression
+against a single-trial baseline. A `--baseline` that cannot be read as a run
+record is an error, never silence: a renamed baseline must not quietly stop
+comparing. The [agent evals in CI](/docs/recipes/agent-evals-in-ci) recipe
+wires all of it into a workflow.
 
 ## create-janux
 
@@ -181,6 +222,7 @@ Everything is convention over configuration — each of these is optional:
 | `src/ctx.ts` | `export default` a `(req) => ctx` — per-request [context and auth](/docs/recipes/auth-and-context) |
 | `src/middleware.ts` | `export default` a `(req) => Response \| undefined` — runs before routing |
 | `src/matchers.ts` | Named exports = custom `[param=matcher]` matchers |
+| `src/feed.ts` | `export default` a `FeedConfig` — serves `GET /rss.xml` (see [RSS](/docs/reference/server-api#rss)) |
 | `src/client.ts` | `boot({ defs })` — omit for fully static apps (0 KB JS) |
 | `src/styles.css` | App stylesheet, linked automatically |
 | `public/` | Static assets served at `/` (favicon.svg auto-linked) |
@@ -208,6 +250,7 @@ Everything is optional — the defaults are the [conventional layout](#project-c
 | `lang` | `'en'` | `<html lang>` for the whole app. An [i18n](/docs/guide/i18n) app ignores it: each page declares its own locale and direction |
 | `siteUrl` | — | Public origin (`https://janux.dev`). Resolves a route's relative `image`/`canonical` into the absolute URLs Open Graph needs (see [PageMeta](/docs/reference/server-api)), and opts into `/sitemap.xml` + `/robots.txt` |
 | `llmsTxt` | off | `{ title?, description? }` — opt into serving `GET /llms.txt` |
+| `feed` | off | `{ title?, description?, items }` — opt into serving `GET /rss.xml`. `items()` returns `{ url, title, description?, date?, author? }[]`, typically a [content collection](/docs/guide/content-collections) mapped, newest first. Needs `siteUrl`; every page advertises the feed with a `rel="alternate"` link |
 | `inlineStyles` | `false` | Inline the built stylesheet into every page instead of linking it: one less render-blocking round trip before the first paint, at the cost of a cacheable request. Production only — dev keeps the link so CSS hot-reload works |
 | `csp` | off | `true` for a strict [Content Security Policy](/docs/recipes/csp): a fresh nonce per request on every inline script and style the framework emits, plus the header. `{ nonce?, header? }` to bring your own. Ignored by `output: 'static'`, which has no per-request anything |
 | `output` | `'bun'` | `'bun'` or `'static'` — see [output](#output) |

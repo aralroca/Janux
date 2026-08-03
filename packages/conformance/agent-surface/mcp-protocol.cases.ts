@@ -675,7 +675,8 @@ export const MCP_PROTOCOL_CASES: ScenarioCase[] = [
       const answer = await called('shop.pay', { amount: 1 });
       const { id } = JSON.parse(answer.slice('ok '.length));
 
-      log.push(`shape=${/^prop_api_[0-9a-f-]{36}$/.test(id)}`);
+      // Random id, then the vault's HMAC — 32 bytes as base64url is 43 chars.
+      log.push(`shape=${/^prop_api_[0-9a-f-]{36}\.[A-Za-z0-9_-]{43}$/.test(id)}`);
     },
     expected: ['shape=true'],
   },

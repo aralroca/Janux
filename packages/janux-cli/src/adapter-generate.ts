@@ -28,6 +28,7 @@ const PATH_FIELDS = new Set([
   'matchersModule',
   'websocketModule',
   'schedulesDir',
+  'feedModule',
   'httpHandlersDir',
   'stylesheet',
 ]);
@@ -57,6 +58,7 @@ export function appModules(app: JanuxAppConfig): string[] {
     app.ctxModule,
     app.matchersModule,
     app.websocketModule,
+    app.feedModule,
   ];
   const handlers = app.httpHandlersDir ? walkFiles(app.httpHandlersDir) : [];
   // The whole directory, `_config.ts` and shared `_helpers` included: the

@@ -1,0 +1,68 @@
+{
+  "name": "@janux/testing",
+  "version": "0.6.0",
+  "description": "Testing utilities for Janux apps — a route harness, api() mocks and settled-based Playwright fixtures. No sleeps: quiescence is observable.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aralroca/Janux.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Aral Roca Gomez",
+    "email": "contact@aralroca.com"
+  },
+  "homepage": "https://github.com/aralroca/Janux#readme",
+  "bugs": "https://github.com/aralroca/Janux/issues",
+  "keywords": [
+    "janux",
+    "testing",
+    "playwright",
+    "harness",
+    "mocks"
+  ],
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./playwright": "./src/playwright.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/src/index.js",
+    "module": "./dist/src/index.js",
+    "types": "./dist/src/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/src/index.d.ts",
+        "default": "./dist/src/index.js"
+      },
+      "./playwright": {
+        "types": "./dist/src/playwright.d.ts",
+        "default": "./dist/src/playwright.js"
+      }
+    }
+  },
+  "dependencies": {
+    "@janux/cli": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/vite": "workspace:*"
+  },
+  "peerDependencies": {
+    "playwright": "^1.40.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "janux": "workspace:*",
+    "playwright": "^1.62.0"
+  },
+  "scripts": {
+    "prepublishOnly": "bun ../../scripts/prepublish-guard.ts"
+  }
+}

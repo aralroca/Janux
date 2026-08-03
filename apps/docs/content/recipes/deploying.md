@@ -110,6 +110,7 @@ dist/client/docs/guide/getting-started.md     # markdown projection of each page
 dist/client/404.html                          # src/routes/_404.tsx, when the app has one
 dist/client/llms.txt                          # agent index, when llmsTxt is configured
 dist/client/sitemap.xml, robots.txt           # when siteUrl is configured
+dist/client/rss.xml                           # when siteUrl is set and the app has src/feed.ts
 dist/client/client.js, styles.css, ...        # islands still hydrate on interaction
 ```
 

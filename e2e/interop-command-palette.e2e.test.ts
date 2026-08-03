@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The command-palette category: `cmdk` mounted unchanged.
@@ -11,7 +12,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * neither can invent a command that does not exist.
  */
 
-const APP = 'examples/interop-command-palette';
+const APP = appRoot('examples/interop-command-palette');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -20,7 +21,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -33,8 +34,8 @@ const log = (page: Page) => page.locator('.palette-shell .palette-log').textCont
 
 describe('examples/interop-command-palette server side', () => {
   it('server-renders the whole palette, cmdk internals and all', async () => {
-    const { get } = await ssrApp(APP);
-    const html = await (await get('/')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<janux-foreign');
     expect(html).toContain('cmdk-root');
@@ -44,8 +45,8 @@ describe('examples/interop-command-palette server side', () => {
   });
 
   it('the palette IS the tool schema: every command is in the enum', async () => {
-    const { get } = await ssrApp(APP);
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const app = await createTestApp(APP);
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
     expect(guards['palette.run']).toBe('auto');
@@ -53,7 +54,7 @@ describe('examples/interop-command-palette server side', () => {
     expect(guards['palette.clear']).toBe('confirm');
 
     const run = manifest.tools.find((tool: any) => tool.name === 'palette.run');
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
     const rendered = [...html.matchAll(/data-command="([a-z-]+)"/g)].map((match) => match[1]);
 
     // The two lists are the same list — this is the whole claim of the example.

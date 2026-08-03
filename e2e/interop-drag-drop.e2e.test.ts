@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The drag-and-drop category: `@dnd-kit/core` + `/sortable` mounted unchanged.
@@ -12,7 +13,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * which is also the tool an agent calls: reordering without dragging anything.
  */
 
-const APP = 'examples/interop-drag-drop';
+const APP = appRoot('examples/interop-drag-drop');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -21,7 +22,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -56,7 +57,7 @@ async function dragCard(page: Page, id: string, deltaY: number): Promise<void> {
 
 describe('examples/interop-drag-drop server side', () => {
   it('server-renders the sortable list with its accessibility wiring intact', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
     const html = await (await get('/')).text();
 
     expect(html).toContain('<janux-foreign');
@@ -69,7 +70,7 @@ describe('examples/interop-drag-drop server side', () => {
   });
 
   it('exposes move as the agent surface with the real card ids, reset guarded', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
     const manifest: any = await (await get('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 

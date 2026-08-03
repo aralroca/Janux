@@ -9,6 +9,7 @@ export default defineConfig({
     title: 'Janux Static Blog',
     description: 'A fully static markdown blog. Read any post as markdown at /posts/<slug>.md.',
   },
+  // The feed itself lives in src/feed.ts — see the RSS section of the docs.
   // `janux build` prerenders every page into dist/client — deploy without a server.
   output: 'static',
   navigation: {
@@ -16,7 +17,7 @@ export default defineConfig({
     // document-wide speculation rules do the prefetch-on-hover work.
     speculationRules: {
       eagerness: 'moderate',
-      exclude: ['/llms.txt', '/sitemap.xml'],
+      exclude: ['/llms.txt', '/sitemap.xml', '/rss.xml'],
     },
   },
 });

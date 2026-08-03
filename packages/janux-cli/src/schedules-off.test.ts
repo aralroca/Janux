@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { createJanuxServer } from '@janux/server';
+import { parseArgs } from './args';
 import { prodServerOptions } from './prod';
 import { verify } from './verify';
 import { storage } from './__fixtures__/scheduled-app/src/schedules/_config';
@@ -55,7 +56,9 @@ describe('schedules and the commands that do not serve', () => {
 
     // Genuinely due, the way it would be on a Monday morning build.
     await storage.syncSchedules([{ name: 'marker', cron: '* * * * *', nextRun: 1 }]);
-    await verify({ command: 'verify', root: FIXTURE, port: 0, files: [], url: '', json: false });
+    // Built by the parser rather than by hand, so a new CliCommand field does
+    // not break this test the day it is added.
+    await verify(parseArgs(['verify'], FIXTURE));
     // The tick a mount would have started is fire-and-forget; give it room to
     // land, so this test fails for the right reason rather than by racing.
     await new Promise((resolve) => setTimeout(resolve, 50));

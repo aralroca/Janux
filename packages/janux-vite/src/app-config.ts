@@ -6,6 +6,7 @@ import type {
   AgentsAuthConfig,
   CacheConfig,
   CspConfig,
+  FeedConfig,
   FontConfig,
   JanuxConfig,
   JanuxOutput,
@@ -41,6 +42,8 @@ export interface JanuxAppConfig {
   websocketModule?: string;
   /** `src/schedules/`, when the app has one — each file is a schedule (see `schedules.ts`). */
   schedulesDir?: string;
+  /** `src/feed.ts`, whose default export is the app's `FeedConfig`. */
+  feedModule?: string;
   /** `src/instrumentation.ts`, loaded and `register()`ed before the server serves. */
   instrumentationModule?: string;
   mcpAuth?: McpAuthConfig;
@@ -132,6 +135,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
     websocketModule: options.websocket ? resolve(root, options.websocket) : optional(resolve(root, 'src/ws.ts')),
     schedulesDir: optional(resolve(root, 'src/schedules')),
+    feedModule: optional(resolve(root, 'src/feed.ts')),
     instrumentationModule: optional(resolve(root, 'src/instrumentation.ts')),
     mcpAuth: options.mcpAuth,
     agents: options.agents,

@@ -122,6 +122,7 @@ export async function prodServerOptions(
   const ctxModule = await optionalModule(load, app.ctxModule);
   const matchersModule = await optionalModule(load, app.matchersModule);
   const websocketModule = await optionalModule(load, app.websocketModule);
+  const feedModule = await optionalModule(load, app.feedModule);
 
   return {
     routesDir: app.routesDir,
@@ -136,6 +137,7 @@ export async function prodServerOptions(
     ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : [], builtFontAssets(join(root, 'dist/client'))),
     inlineStyles,
     llmsTxt: app.llmsTxt,
+    feed: feedModule?.default,
     i18n: i18nModule?.default,
     middleware: middlewareModule?.default,
     ctxFor: ctxModule?.default,

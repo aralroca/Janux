@@ -154,6 +154,44 @@ describe('headTags escape hatch', () => {
   });
 });
 
+describe('headTags typed og, twitter and robots', () => {
+  it('maps camelCase og keys to the property names a literal key cannot carry', () => {
+    const html = headTags({ og: { siteName: 'Janux', imageAlt: 'A poster' } }, ctx);
+
+    expect(html).toContain('<meta property="og:site_name" id="jx-og-site_name" content="Janux">');
+    expect(html).toContain('<meta property="og:image:alt" id="jx-og-image:alt" content="A poster">');
+  });
+
+  it('emits article times under their own prefix, never og:article:*', () => {
+    const html = headTags({ og: { type: 'article', publishedTime: '2026-07-01', modifiedTime: '2026-07-02' } }, ctx);
+
+    expect(html).toContain(
+      '<meta property="article:published_time" id="jx-article-published_time" content="2026-07-01">',
+    );
+    expect(html).toContain('<meta property="article:modified_time" id="jx-article-modified_time" content="2026-07-02">');
+    expect(html).not.toContain('og:article');
+  });
+
+  it('maps twitter imageAlt to twitter:image:alt', () => {
+    expect(headTags({ twitter: { imageAlt: 'A poster' } }, ctx)).toContain(
+      '<meta name="twitter:image:alt" id="jx-twitter-image:alt" content="A poster">',
+    );
+  });
+
+  it('serializes a typed robots object in a stable directive order', () => {
+    expect(headTags({ robots: { index: false, follow: false } }, ctx)).toContain(
+      '<meta name="robots" id="jx-robots" content="noindex, nofollow">',
+    );
+    expect(headTags({ robots: { index: true, maxSnippet: 20, maxImagePreview: 'large' } }, ctx)).toContain(
+      'content="index, max-snippet:20, max-image-preview:large"',
+    );
+  });
+
+  it('emits no robots tag for an empty robots object', () => {
+    expect(headTags({ robots: {} }, ctx)).not.toContain('name="robots"');
+  });
+});
+
 describe('headTags with no meta', () => {
   it('contributes nothing at all', () => {
     expect(headTags(undefined, ctx)).toBe('');

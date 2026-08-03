@@ -94,6 +94,7 @@ export function Layout({ children, current, sidebar = true }: { children: unknow
         <nav class="top-links">
           <a href="/docs/getting-started/what-is-janux">Docs</a>
           <a href="/playground">Playground</a>
+          <a href="/docs/more/templates">Templates</a>
           <a href="/docs/more/examples">Examples</a>
           <a href="https://github.com/aralroca/Janux" target="_blank" rel="noopener">GitHub</a>
           <a href="https://www.npmjs.com/package/janux" target="_blank" rel="noopener">npm</a>
