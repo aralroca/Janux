@@ -6,6 +6,7 @@ import type {
   AgentsAuthConfig,
   CacheConfig,
   CspConfig,
+  FeedConfig,
   FontConfig,
   JanuxConfig,
   JanuxOutput,
@@ -50,6 +51,7 @@ export interface JanuxAppConfig {
   siteUrl?: string;
   inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
+  feed?: FeedConfig;
   output: JanuxOutput;
   /** Fonts to self-host, as declared in janux.config.ts. */
   fonts: FontConfig[];
@@ -139,6 +141,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     siteUrl: options.siteUrl,
     inlineStyles: options.inlineStyles,
     llmsTxt: options.llmsTxt,
+    feed: options.feed,
     output: options.output ?? 'bun',
     fonts: options.fonts ?? [],
     navigation: options.navigation,

@@ -1,4 +1,4 @@
-import { notFound, type PageMeta } from 'janux';
+import { articleJsonLd, breadcrumbJsonLd, notFound, type PageMeta } from 'janux';
 import { Layout } from '../../../components/Layout';
 import { docEntry, docIndex, groupLabel, sectionLabel } from '../../../server/docs.api';
 import { renderMarkdown, type TocEntry } from '../../../server/markdown';
@@ -25,21 +25,12 @@ function docJsonLd({ title, path, section, slug, description }: DocMeta) {
   const trail = [sectionLabel(section), groupLabel(section, slug)].filter(Boolean).join(' / ');
 
   return [
+    breadcrumbJsonLd([
+      { name: 'Docs', url: absolute('/') },
+      { name: title, url: absolute(path) },
+    ]),
     {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Docs', item: absolute('/') },
-        { '@type': 'ListItem', position: 2, name: title, item: absolute(path) },
-      ],
-    },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'TechArticle',
-      headline: title,
-      description,
-      articleSection: trail,
-      url: absolute(path),
+      ...articleJsonLd({ type: 'TechArticle', headline: title, description, section: trail, url: absolute(path) }),
       isPartOf: { '@type': 'WebSite', name: 'Janux', url: absolute('/') },
     },
   ];

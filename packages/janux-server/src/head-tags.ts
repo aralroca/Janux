@@ -50,26 +50,46 @@ export function absoluteUrl(value: string | undefined, siteUrl: string | undefin
 
 const NO_ENTRIES: Record<string, string> = {};
 
-/** Unprefixed keys are the contract (`{ type: 'article' }`), but an already-prefixed key still works. */
-function unprefixed(entries: Record<string, string> | undefined, prefix: string): Record<string, string> {
+/** The properties a typed literal key cannot name — see `OpenGraphMeta`/`TwitterMeta`. */
+const OG_ALIASES: Record<string, string> = {
+  siteName: 'og:site_name',
+  imageAlt: 'og:image:alt',
+  publishedTime: 'article:published_time',
+  modifiedTime: 'article:modified_time',
+};
+
+const TWITTER_ALIASES: Record<string, string> = { imageAlt: 'twitter:image:alt' };
+
+/**
+ * Unprefixed keys are the contract (`{ type: 'article' }`), but an
+ * already-prefixed key still works, and camelCase aliases resolve to the real
+ * property — which may live outside the map's own prefix (`article:*`).
+ */
+function fullNames(
+  entries: Record<string, string | undefined> | undefined,
+  prefix: string,
+  aliases: Record<string, string>,
+): Record<string, string> {
   if (!entries) return NO_ENTRIES;
   const marker = `${prefix}:`;
 
   return Object.fromEntries(
-    Object.entries(entries).map(([key, value]) => [key.startsWith(marker) ? key.slice(marker.length) : key, value]),
+    Object.entries(entries)
+      .filter((entry): entry is [string, string] => entry[1] !== undefined)
+      .map(([key, value]) => [aliases[key] ?? (key.startsWith(marker) ? key : marker + key), value]),
   );
 }
 
-function tag(attr: 'property' | 'name', prefix: string, key: string, content: string): string {
-  const name = safeAttr(`${prefix}:${key}`);
-
-  return `<meta ${attr}="${name}" id="jx-${safeAttr(prefix)}-${safeAttr(key)}" content="${safeAttr(content)}">`;
+// The id replaces only the first `:` — `og:image:alt` → `jx-og-image:alt` — so
+// every id existing pages produced before typed keys stays byte-identical.
+function tag(attr: 'property' | 'name', property: string, content: string): string {
+  return `<meta ${attr}="${safeAttr(property)}" id="jx-${safeAttr(property.replace(':', '-'))}" content="${safeAttr(content)}">`;
 }
 
-function cardTags(attr: 'property' | 'name', prefix: string, values: Record<string, string>): string {
+function cardTags(attr: 'property' | 'name', values: Record<string, string>): string {
   return Object.entries(values)
     .filter(([, content]) => content !== '')
-    .map(([key, content]) => tag(attr, prefix, key, content))
+    .map(([property, content]) => tag(attr, property, content))
     .join('');
 }
 
@@ -77,25 +97,40 @@ function cardTags(attr: 'property' | 'name', prefix: string, values: Record<stri
 // conditional spread — `''` says the same thing and reads the same as the rest.
 function openGraph(meta: PageMeta, ctx: HeadContext, image?: string, url?: string): string {
   const derived = {
-    type: 'website',
-    title: meta.title ?? ctx.title ?? '',
-    description: meta.description ?? ctx.description ?? '',
-    url: url ?? '',
-    image: image ?? '',
+    'og:type': 'website',
+    'og:title': meta.title ?? ctx.title ?? '',
+    'og:description': meta.description ?? ctx.description ?? '',
+    'og:url': url ?? '',
+    'og:image': image ?? '',
   };
 
-  return cardTags('property', 'og', { ...derived, ...unprefixed(meta.og, 'og') });
+  return cardTags('property', { ...derived, ...fullNames(meta.og, 'og', OG_ALIASES) });
 }
 
 function twitterCard(meta: PageMeta, ctx: HeadContext, image?: string): string {
   const derived = {
-    card: image ? 'summary_large_image' : 'summary',
-    title: meta.title ?? ctx.title ?? '',
-    description: meta.description ?? ctx.description ?? '',
-    image: image ?? '',
+    'twitter:card': image ? 'summary_large_image' : 'summary',
+    'twitter:title': meta.title ?? ctx.title ?? '',
+    'twitter:description': meta.description ?? ctx.description ?? '',
+    'twitter:image': image ?? '',
   };
 
-  return cardTags('name', 'twitter', { ...derived, ...unprefixed(meta.twitter, 'twitter') });
+  return cardTags('name', { ...derived, ...fullNames(meta.twitter, 'twitter', TWITTER_ALIASES) });
+}
+
+/** A typed robots object → its content string; a string passes through as written. */
+function robotsContent(robots: PageMeta['robots']): string | undefined {
+  if (!robots || typeof robots === 'string') return robots || undefined;
+  const directives = [
+    robots.index === undefined ? undefined : robots.index ? 'index' : 'noindex',
+    robots.follow === undefined ? undefined : robots.follow ? 'follow' : 'nofollow',
+    robots.noarchive ? 'noarchive' : undefined,
+    robots.nosnippet ? 'nosnippet' : undefined,
+    robots.maxSnippet === undefined ? undefined : `max-snippet:${robots.maxSnippet}`,
+    robots.maxImagePreview === undefined ? undefined : `max-image-preview:${robots.maxImagePreview}`,
+  ].filter(Boolean);
+
+  return directives.length > 0 ? directives.join(', ') : undefined;
 }
 
 function jsonLdScripts(jsonLd: PageMeta['jsonLd'], nonce?: string): string {
@@ -150,10 +185,11 @@ export function headTags(meta: PageMeta | undefined, ctx: HeadContext): string {
   if (!meta) return '';
   const image = absoluteUrl(meta.image, ctx.siteUrl);
   const canonical = absoluteUrl(meta.canonical, ctx.siteUrl);
+  const robots = robotsContent(meta.robots);
 
   return [
     canonical ? `<link rel="canonical" id="jx-canonical" href="${safeAttr(canonical)}">` : '',
-    meta.robots ? `<meta name="robots" id="jx-robots" content="${safeAttr(meta.robots)}">` : '',
+    robots ? `<meta name="robots" id="jx-robots" content="${safeAttr(robots)}">` : '',
     openGraph(meta, ctx, image, canonical),
     twitterCard(meta, ctx, image),
     jsonLdScripts(meta.jsonLd, ctx.nonce),

@@ -115,6 +115,7 @@ export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): P
     ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : [], builtFontAssets(join(root, 'dist/client'))),
     inlineStyles,
     llmsTxt: app.llmsTxt,
+    feed: app.feed,
     i18n: i18nModule?.default,
     middleware: middlewareModule?.default,
     ctxFor: ctxModule?.default,

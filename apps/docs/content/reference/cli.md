@@ -208,6 +208,7 @@ Everything is optional — the defaults are the [conventional layout](#project-c
 | `lang` | `'en'` | `<html lang>` for the whole app. An [i18n](/docs/guide/i18n) app ignores it: each page declares its own locale and direction |
 | `siteUrl` | — | Public origin (`https://janux.dev`). Resolves a route's relative `image`/`canonical` into the absolute URLs Open Graph needs (see [PageMeta](/docs/reference/server-api)), and opts into `/sitemap.xml` + `/robots.txt` |
 | `llmsTxt` | off | `{ title?, description? }` — opt into serving `GET /llms.txt` |
+| `feed` | off | `{ title?, description?, items }` — opt into serving `GET /rss.xml`. `items()` returns `{ url, title, description?, date?, author? }[]`, typically a [content collection](/docs/guide/content-collections) mapped, newest first. Needs `siteUrl`; every page advertises the feed with a `rel="alternate"` link |
 | `inlineStyles` | `false` | Inline the built stylesheet into every page instead of linking it: one less render-blocking round trip before the first paint, at the cost of a cacheable request. Production only — dev keeps the link so CSS hot-reload works |
 | `csp` | off | `true` for a strict [Content Security Policy](/docs/recipes/csp): a fresh nonce per request on every inline script and style the framework emits, plus the header. `{ nonce?, header? }` to bring your own. Ignored by `output: 'static'`, which has no per-request anything |
 | `output` | `'bun'` | `'bun'` or `'static'` — see [output](#output) |

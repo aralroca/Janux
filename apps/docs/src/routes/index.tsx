@@ -1,4 +1,4 @@
-import { buildManifest, component, intent, schema, int, type PageMeta } from 'janux';
+import { buildManifest, component, intent, organizationJsonLd, schema, int, type PageMeta } from 'janux';
 import { Layout } from '../components/Layout';
 import { renderMarkdown } from '../server/markdown';
 import { absolute, SOCIAL_IMAGE } from '../site';
@@ -31,6 +31,12 @@ export const meta: PageMeta = {
       license: 'https://opensource.org/licenses/MIT',
       author: { '@type': 'Person', name: 'Aral Roca Gómez', url: 'https://aralroca.com' },
     },
+    organizationJsonLd({
+      name: 'Janux',
+      url: absolute('/'),
+      logo: absolute('/favicon.svg'),
+      sameAs: ['https://github.com/aralroca/Janux'],
+    }),
   ],
   // The hero video's poster is the largest paint on this page; without the hint
   // the browser only discovers it after parsing the <video>.

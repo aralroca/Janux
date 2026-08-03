@@ -9,6 +9,7 @@ import {
   type ComponentDef,
   type CspConfig,
   type Ctx,
+  type FeedConfig,
   type I18n,
   type I18nConfig,
   type NavigationConfig,
@@ -39,6 +40,7 @@ import {
 import { nonceAttr, safeJson } from './html-escape';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
+import { buildRssFeed, feedTitle } from './feed';
 import { refuseCrossSite } from './csrf';
 import { NONCE_HEADER, resolveCsp } from './csp';
 
@@ -114,6 +116,8 @@ export interface ServerOptions {
   fontFaces?: string;
   favicon?: string;
   llmsTxt?: LlmsTxtConfig;
+  /** RSS feed at `/rss.xml` (see `feed` in janux.config.ts). Needs `siteUrl`. */
+  feed?: FeedConfig;
   agents?: AgentsConfig;
   onAudit?: (entry: AuditEntry) => void;
   i18n?: I18nConfig;
@@ -367,10 +371,15 @@ export function createJanuxServer(options: ServerOptions = {}) {
   // sitemap" instead of throwing on every render.
   const siteUrl = validSiteUrl(options.siteUrl);
 
+  // The head advertises the feed only where /rss.xml will actually resolve.
+  const feedShell = options.feed && siteUrl ? { title: feedTitle(options.feed, options.title) } : undefined;
+
   let llmsTxtBody: string | undefined;
   // Same reason llms.txt is memoized: building it walks every route and, for a
   // docs-shaped app, reads every content file off disk through `staticParams`.
   let sitemapBody: string | undefined;
+  // And the feed's `items()` typically reads a whole content collection.
+  let rssBody: string | undefined;
 
   const expandRoute = async (route: Route): Promise<string[]> => {
     if (!route.pattern.includes('[')) return [route.pattern];
@@ -812,6 +821,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
         fontPreloads: navigating ? undefined : options.fontPreloads,
         fontFaces: navigating ? undefined : options.fontFaces,
         favicon: options.favicon,
+        feed: feedShell,
         i18n: shellI18n(locale, result),
         navigation: options.navigation,
         navigating,
@@ -911,6 +921,16 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return new Response(buildRobotsTxt(siteUrl), {
         headers: { 'content-type': 'text/plain; charset=utf-8' },
       });
+    }
+    if (pathname === '/rss.xml' && siteUrl && options.feed) {
+      const channel = {
+        title: feedTitle(options.feed, options.title),
+        description: options.feed.description ?? '',
+      };
+
+      rssBody ??= buildRssFeed(siteUrl, channel, await options.feed.items());
+
+      return new Response(rssBody, { headers: { 'content-type': 'application/rss+xml; charset=utf-8' } });
     }
     if (pathname === '/_janux/manifest') {
       const ctx = await resolveCtx(req);

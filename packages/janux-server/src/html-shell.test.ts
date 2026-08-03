@@ -38,6 +38,15 @@ describe('htmlDocument head keying (SPA-navigation FOUC guard)', () => {
 
     expect(html.indexOf('id="jx-style-0"')).toBeLessThan(html.indexOf('name="description"'));
   });
+
+  it('advertises the RSS feed with a keyed alternate link, only when the app has one', () => {
+    const html = htmlDocument({ ...base, feed: { title: 'Janux Blog' } });
+
+    expect(html).toContain(
+      '<link rel="alternate" id="jx-feed" type="application/rss+xml" title="Janux Blog" href="/rss.xml">',
+    );
+    expect(htmlDocument(base)).not.toContain('application/rss+xml');
+  });
 });
 
 /**

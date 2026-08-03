@@ -70,6 +70,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
       fontPreloads: fontPreloadHrefs(fonts),
     }),
     llmsTxt: app.llmsTxt,
+    feed: app.feed,
     websocket: websocketModule?.default as ServerOptions['websocket'],
     mcpAuth: mcpAuthOptions(app.mcpAuth),
     agents: app.agents,

@@ -191,3 +191,35 @@ describe('docs home — the advertised MCP endpoint', () => {
     result.tools.forEach((tool: any) => expect(page).toContain(tool.name));
   });
 });
+
+/**
+ * The content-site surface: canonical, social card, structured data and the
+ * feed. Google's validator wants every ld+json block parseable with a @context
+ * and a @type; readers want the alternate link on the page they landed on.
+ */
+describe('docs home — SEO surface', () => {
+  it('emits a canonical URL and a full social card', () => {
+    expect(home).toContain('<link rel="canonical" id="jx-canonical" href="https://janux.build/">');
+    expect(home).toContain('property="og:title"');
+    expect(home).toContain('property="og:image"');
+    expect(home).toContain('name="twitter:card"');
+  });
+
+  it('emits JSON-LD blocks that all parse, the Organization among them', () => {
+    const blocks = [...home.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map(
+      ([, block]) => JSON.parse(block),
+    );
+
+    expect(blocks.map((block) => block['@type'])).toContain('Organization');
+    blocks.forEach((block) => expect(block['@context']).toBe('https://schema.org'));
+  });
+
+  it('advertises the RSS feed and serves every doc page through it', async () => {
+    const response = await get('/rss.xml');
+    const body = await response.text();
+
+    expect(home).toContain('type="application/rss+xml"');
+    expect(response.status).toBe(200);
+    expect(body).toContain('<link>https://janux.build/docs/');
+  });
+});

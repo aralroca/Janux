@@ -130,6 +130,30 @@ export interface CspConfig {
   header?: boolean | ((nonce: string) => string);
 }
 
+/** One entry of the RSS feed — typically a content-collection entry, mapped. */
+export interface FeedItem {
+  /** Root-relative (`/posts/x`) or absolute URL. */
+  url: string;
+  title: string;
+  description?: string;
+  /** ISO date (`2026-07-20`), as content collections store it. Becomes `pubDate`. */
+  date?: string;
+  /** Author name. Emitted as `dc:creator` — RSS reserves `<author>` for an email. */
+  author?: string;
+}
+
+/**
+ * The RSS feed — the same idea as `llms.txt` and the `.md` projections, for
+ * human readers: the site's content, machine-readable, at a well-known URL.
+ */
+export interface FeedConfig {
+  /** Channel title. Falls back to the app `title`. */
+  title?: string;
+  description?: string;
+  /** The entries, newest first. Called when the feed is first requested, not at boot. */
+  items: () => FeedItem[] | Promise<FeedItem[]>;
+}
+
 export interface JanuxConfig {
   routesDir?: string;
   serverDir?: string;
@@ -158,6 +182,8 @@ export interface JanuxConfig {
    */
   inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
+  /** RSS feed at `/rss.xml`. Needs `siteUrl` — a feed of relative links is invalid. */
+  feed?: FeedConfig;
   output?: JanuxOutput;
   /** Fonts to self-host, subset, preload and give an adjusted fallback. */
   fonts?: FontConfig[];

@@ -210,7 +210,7 @@ async function prerenderStatic(root: string): Promise<void> {
  * ask, so the build asks for it. Each is opt-in server-side (`llmsTxt`,
  * `siteUrl`), and a 404 simply means the app didn't ask for it.
  */
-const GENERATED_FILES = ['llms.txt', 'sitemap.xml', 'robots.txt'];
+const GENERATED_FILES = ['llms.txt', 'sitemap.xml', 'robots.txt', 'rss.xml'];
 
 async function writeGeneratedFiles(
   server: { fetch(req: Request): Promise<Response> },

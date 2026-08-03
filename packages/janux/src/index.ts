@@ -62,6 +62,8 @@ export {
   type AgentsAuthConfig,
   type CacheConfig,
   type FontConfig,
+  type FeedConfig,
+  type FeedItem,
   type JanuxConfig,
   type JanuxOutput,
   type McpAuthConfig,
@@ -98,7 +100,16 @@ export {
   type CachePolicyDef,
   type CacheScope,
 } from './cache/policy';
-export type { PageMeta, HeadTag } from './meta';
+export type { PageMeta, HeadTag, RobotsMeta, OpenGraphMeta, TwitterMeta } from './meta';
+export {
+  articleJsonLd,
+  breadcrumbJsonLd,
+  organizationJsonLd,
+  type JsonLd,
+  type ArticleLd,
+  type BreadcrumbLd,
+  type OrganizationLd,
+} from './jsonld';
 export { isNotFoundError, notFound } from './not-found';
 export {
   translateCore,
