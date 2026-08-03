@@ -121,18 +121,32 @@ const sidebarLink = (page: Page, href: string) => page.locator(`a[href="${href}"
 describe.skipIf(!BUILT)('navigation in a real browser (apps/docs)', () => {
   it('applies a navigation as it streams: the new heading paints before the page ends', async () => {
     const { page } = await openDocsWithAssistant();
-    const navigation = page.evaluate((path) => (window as any).janux.navigate(path), `/slow${SECOND}`);
-
-    // Halfway through the pause: the tail of the page provably has not
-    // arrived. The marker lives near the end of Quick start and appears
-    // nowhere on the page navigated from.
+    // The marker lives near the end of Quick start and appears nowhere on the
+    // page navigated from.
     const TAIL_MARKER = 'Make your first change';
 
-    await page.waitForTimeout(CHUNK_PAUSE_MS / 2);
-    const midStream = await page.evaluate((marker) => ({
-      heading: document.querySelector('h1')?.textContent ?? '',
-      tailLanded: !!document.body.textContent?.includes(marker),
-    }), TAIL_MARKER);
+    // Sampled the instant the new heading paints, rather than at a fraction of
+    // the pause: on a loaded runner the diff can land later than half way, and
+    // waiting a guessed number of milliseconds then reads the page before it.
+    await page.evaluate((marker) => {
+      const record = () => {
+        if (!document.querySelector('h1')?.textContent?.includes('Quick start')) return false;
+        (window as any).__midStream ??= {
+          heading: document.querySelector('h1')?.textContent ?? '',
+          tailLanded: !!document.body.textContent?.includes(marker),
+        };
+
+        return true;
+      };
+      const observer = new MutationObserver(() => record() && observer.disconnect());
+
+      if (!record()) observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    }, TAIL_MARKER);
+
+    const navigation = page.evaluate((path) => (window as any).janux.navigate(path), `/slow${SECOND}`);
+
+    await page.waitForFunction(() => (window as any).__midStream !== undefined, null, { timeout: 10_000 });
+    const midStream = await page.evaluate(() => (window as any).__midStream);
 
     await navigation;
 
