@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The virtualization category: `@tanstack/react-virtual` mounted unchanged.
@@ -12,7 +13,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * DOM — the row does not exist. It asks the island instead, which is the point.
  */
 
-const APP = 'examples/interop-virtual-list';
+const APP = appRoot('examples/interop-virtual-list');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -21,7 +22,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -34,7 +35,7 @@ const summary = (page: Page) => page.locator('.list-shell .list-summary').textCo
 
 describe('examples/interop-virtual-list server side', () => {
   it('server-renders the first window at the full scroll height', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
     const html = await (await get('/')).text();
 
     expect(html).toContain('<janux-foreign');
@@ -51,7 +52,7 @@ describe('examples/interop-virtual-list server side', () => {
   });
 
   it('exposes select and scroll as the agent surface, clear guarded', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
     const manifest: any = await (await get('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 

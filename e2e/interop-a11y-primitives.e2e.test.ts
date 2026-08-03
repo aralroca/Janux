@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The a11y-primitives category: `@radix-ui/react-dialog` mounted unchanged.
@@ -14,7 +15,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * page could not be scrolled. Both halves are asserted below.
  */
 
-const APP = 'examples/interop-a11y-primitives';
+const APP = appRoot('examples/interop-a11y-primitives');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -23,7 +24,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -36,7 +37,7 @@ const status = (page: Page) => page.locator('.dialog-shell .dialog-status').text
 
 describe('examples/interop-a11y-primitives server side', () => {
   it('server-renders the trigger with its ARIA contract intact', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
     const html = await (await get('/')).text();
 
     expect(html).toContain('<janux-foreign');
@@ -47,7 +48,7 @@ describe('examples/interop-a11y-primitives server side', () => {
   });
 
   it('exposes the dialog state as the agent surface, deletion guarded', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
     const manifest: any = await (await get('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 

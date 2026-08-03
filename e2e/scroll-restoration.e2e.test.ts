@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt } from './support/app';
+import { isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * Scroll restoration across SPA navigations, against a page that streams.
@@ -17,7 +18,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt } from 
  * scroll, so this cannot live in the happy-dom suites.
  */
 
-const APP = 'examples/hacker-news';
+const APP = appRoot('examples/hacker-news');
 const BUILT = isBuilt(APP);
 const LIST = '/news/1';
 
@@ -30,7 +31,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 

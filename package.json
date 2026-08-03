@@ -65,6 +65,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",
+    "@janux/testing": "workspace:*",
     "@swc/core": "^1.9.0",
     "@types/bun": "^1.2.0",
     "lighthouse": "^13.4.1",

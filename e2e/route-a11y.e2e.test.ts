@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt } from './support/app';
+import { isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What a screen-reader user experiences when an SPA navigation replaces the
@@ -14,7 +15,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt } from './support/
  * https://www.gatsbyjs.com/blog/2019-07-11-user-testing-accessible-client-routing/
  */
 
-const BUILT = isBuilt('apps/docs');
+const BUILT = isBuilt(appRoot('apps/docs'));
 const FIRST = '/docs/getting-started/what-is-janux';
 const SECOND = '/docs/getting-started/quick-start';
 
@@ -26,9 +27,9 @@ let BASE = '';
 
 beforeAll(async () => {
   if (!BUILT) return;
-  const served = await serveBuilt('apps/docs');
+  const served = await startTestServer(appRoot('apps/docs'));
 
-  BASE = served.base;
+  BASE = served.url;
   stop = served.stop;
   // Chrome proper: the Navigation API is what turns these clicks into SPA
   // navigations, and it is the engine that ships it.

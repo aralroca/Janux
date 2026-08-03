@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Browser } from 'playwright';
-import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage, serveBuilt } from './support/app';
+import { isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The acceptance test for the image primitive, against the archetype that needs
@@ -17,7 +18,7 @@ import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage, serveBuilt } from '.
 
 const APP = 'examples/with-images';
 const DIST = join(appRoot(APP), 'dist/client');
-const BUILT = isBuilt(APP);
+const BUILT = isBuilt(appRoot(APP));
 
 let BASE = '';
 let stop: (() => void) | undefined;
@@ -25,7 +26,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(appRoot(APP)));
   browser = await launchChrome();
 });
 

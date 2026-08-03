@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * examples/agent-evals exists to prove the CI gate itself: `janux eval` replays
@@ -14,7 +15,7 @@ import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage as newPage, serveBuil
 const EXAMPLE = appRoot('examples/agent-evals');
 const SHOP = appRoot('examples/shop');
 const CLI_TIMEOUT = 120_000;
-const BUILT = isBuilt('examples/agent-evals');
+const BUILT = isBuilt(EXAMPLE);
 
 let BASE = '';
 let stop: (() => void) | undefined;
@@ -22,7 +23,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt('examples/agent-evals'));
+  ({ url: BASE, stop } = await startTestServer(EXAMPLE));
   browser = await launchChrome();
 });
 
@@ -68,14 +69,14 @@ describe('examples/agent-evals — janux eval as the CI gate', () => {
   it(
     'serves the stockroom SSR and a manifest with the expected mixed guards',
     async () => {
-      const { get } = await ssrApp('examples/agent-evals');
-      const html = await (await get('/')).text();
+      const app = await createTestApp(EXAMPLE);
+      const html = await (await app.fetch('/')).text();
 
       expect(html).toContain('Warehouse');
       expect(html).toContain('TSHIRT');
       expect(html).toContain('Ceramic Mug');
 
-      const manifest: any = await (await get('/_janux/manifest')).json();
+      const manifest: any = await (await app.fetch('/_janux/manifest')).json();
       const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
       expect(guards).toEqual({

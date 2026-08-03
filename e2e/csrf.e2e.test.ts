@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt } from './support/app';
+import { isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The one half of the CSRF defence that no unit test can assert: that a real
@@ -21,7 +22,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt } from './support/
  * Without the guard this test wires 999999 cents to "Attacker LLC".
  */
 
-const APP = 'examples/human-in-the-loop';
+const APP = appRoot('examples/human-in-the-loop');
 const BUILT = isBuilt(APP);
 
 let browser: Browser | undefined;
@@ -64,12 +65,14 @@ beforeAll(async () => {
    * — `res.json()` resolves to `null` — so the ledger read failed with "null is
    * not an object" and blamed the CSRF guard for a plumbing problem.
    */
-  const app = await serveBuilt(APP, (req, res) => {
-    seen.push({ site: req.headers.get('sec-fetch-site'), origin: req.headers.get('origin'), status: res.status });
+  const app = await startTestServer(APP, {
+    observe: (req, res) => {
+      seen.push({ site: req.headers.get('sec-fetch-site'), origin: req.headers.get('origin'), status: res.status });
+    },
   });
 
   ({ stop: stopVictim } = app);
-  victim = app.base;
+  victim = app.url;
   attacker = Bun.serve({ port: 0, fetch: () => new Response(forgeryPage(victim), { headers: { 'content-type': 'text/html' } }) });
   browser = await launchChrome();
 });

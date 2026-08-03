@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/data-cache exists to demonstrate: the catalog filter lives in
@@ -10,7 +11,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * and a history stack, hence the built-app half of this suite.
  */
 
-const APP = 'examples/data-cache';
+const APP = appRoot('examples/data-cache');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -19,7 +20,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -39,7 +40,7 @@ const waitForCount = (page: Page, total: number) =>
 
 describe('examples/data-cache server side', () => {
   it('ships the filter UI from the server, query pending until the client resumes', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
     const html = await (await get('/')).text();
 
     expect(html).toContain('<title>Janux — data cache &amp; URL state</title>');
@@ -49,7 +50,7 @@ describe('examples/data-cache server side', () => {
   });
 
   it('exposes the filter intent and the products api as agent tools', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
     const manifest: any = await (await get('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
@@ -66,15 +67,15 @@ describe('examples/data-cache server side', () => {
  */
 describe('examples/data-cache HTTP cache', () => {
   /** A request the way a real one goes: the body is read, so the entry commits. */
-  const fetchPage = async (get: (path: string, headers?: Record<string, string>) => Promise<Response>, path: string, headers?: Record<string, string>) => {
-    const res = await get(path, headers ?? {});
+  const fetchPage = async (get: (path: string, init?: RequestInit) => Promise<Response>, path: string, headers?: Record<string, string>) => {
+    const res = await get(path, { headers: headers ?? {} });
     const body = await res.text();
 
     return { state: res.headers.get('x-janux-cache'), control: res.headers.get('cache-control'), tag: res.headers.get('cache-tag'), body };
   };
 
   it('serves the public route from the shared cache on the second request', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
 
     const first = await fetchPage(get, '/catalog');
     const second = await fetchPage(get, '/catalog');
@@ -88,7 +89,7 @@ describe('examples/data-cache HTTP cache', () => {
   });
 
   it('revalidating the tag makes the very next request re-render', async () => {
-    const { get, server } = await ssrApp(APP);
+    const { fetch: get, server } = await createTestApp(APP);
 
     await fetchPage(get, '/catalog');
     expect((await fetchPage(get, '/catalog')).state).toBe('HIT');
@@ -109,7 +110,7 @@ describe('examples/data-cache HTTP cache', () => {
   });
 
   it('never marks a page that depends on the request as public', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
     const account = await fetchPage(get, '/account', { cookie: 'session=ada' });
 
     expect(account.control).toBe('private, no-store');
@@ -121,7 +122,7 @@ describe('examples/data-cache HTTP cache', () => {
   });
 
   it('keeps the SPA navigation body out of the entry a cold load would get', async () => {
-    const { get } = await ssrApp(APP);
+    const { fetch: get } = await createTestApp(APP);
 
     const cold = await fetchPage(get, '/catalog');
     const navigation = await fetchPage(get, '/catalog', { 'x-janux-navigation': '1' });

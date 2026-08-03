@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, serveBuilt } from './support/app';
+import { isBuilt, launchChrome, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * View transitions can only be observed in an engine that has them: happy-dom
@@ -16,20 +17,20 @@ import { TIMEOUT, isBuilt, launchChrome, serveBuilt } from './support/app';
  * https://developer.mozilla.org/docs/Web/API/View_Transition_API
  */
 
-const SHOP_BUILT = isBuilt('examples/shop');
-const DOCS_BUILT = isBuilt('apps/docs');
+const SHOP_BUILT = isBuilt(appRoot('examples/shop'));
+const DOCS_BUILT = isBuilt(appRoot('apps/docs'));
 
 const SHOP = '/shop';
 const ORDER = '/orders/o_1';
 const OTHER_ORDER = '/orders/o_2';
 
 let browser: Browser | undefined;
-let shop: Awaited<ReturnType<typeof serveBuilt>> | undefined;
-let docs: Awaited<ReturnType<typeof serveBuilt>> | undefined;
+let shop: Awaited<ReturnType<typeof startTestServer>> | undefined;
+let docs: Awaited<ReturnType<typeof startTestServer>> | undefined;
 
 beforeAll(async () => {
-  if (SHOP_BUILT) shop = await serveBuilt('examples/shop');
-  if (DOCS_BUILT) docs = await serveBuilt('apps/docs');
+  if (SHOP_BUILT) shop = await startTestServer(appRoot('examples/shop'));
+  if (DOCS_BUILT) docs = await startTestServer(appRoot('apps/docs'));
   if (SHOP_BUILT || DOCS_BUILT) browser = await launchChrome();
 });
 
@@ -102,7 +103,7 @@ const liveTransitionAnimations = (page: Page) =>
 
 describe.skipIf(!SHOP_BUILT)('view transitions (examples/shop, opted in)', () => {
   it('animates the navigation with a single view transition', async () => {
-    const page = await openPage(shop!.base, SHOP);
+    const page = await openPage(shop!.url, SHOP);
 
     await navigate(page, ORDER);
     await settled(page, ORDER);
@@ -120,7 +121,7 @@ describe.skipIf(!SHOP_BUILT)('view transitions (examples/shop, opted in)', () =>
    * carries one into the other instead of cross-fading it with the page.
    */
   it('pairs the shared element by view-transition-name across both routes', async () => {
-    const page = await openPage(shop!.base, SHOP);
+    const page = await openPage(shop!.url, SHOP);
     const wordmark = () =>
       page.evaluate(() => getComputedStyle(document.querySelector('.brand')!).viewTransitionName);
 
@@ -134,7 +135,7 @@ describe.skipIf(!SHOP_BUILT)('view transitions (examples/shop, opted in)', () =>
 
   /** Not negotiable: asked for less motion means the API is never invoked. */
   it('starts no transition at all under prefers-reduced-motion: reduce', async () => {
-    const page = await openPage(shop!.base, SHOP, 'reduce');
+    const page = await openPage(shop!.url, SHOP, 'reduce');
 
     await navigate(page, ORDER);
     await settled(page, ORDER);
@@ -151,7 +152,7 @@ describe.skipIf(!SHOP_BUILT)('view transitions (examples/shop, opted in)', () =>
    * the superseded transition has to be skipped, not waited out.
    */
   it('navigating again mid-transition leaves no frozen frame', async () => {
-    const page = await openPage(shop!.base, SHOP);
+    const page = await openPage(shop!.url, SHOP);
 
     await startNavigating(page, ORDER);
     await page.waitForFunction(() => (window as any).__vt.calls >= 1);
@@ -171,7 +172,7 @@ describe.skipIf(!SHOP_BUILT)('view transitions (examples/shop, opted in)', () =>
 
   /** Point 15 runs after the transition, never during it. */
   it('announces and focuses only once the transition has finished', async () => {
-    const page = await openPage(shop!.base, SHOP);
+    const page = await openPage(shop!.url, SHOP);
 
     await navigate(page, ORDER);
     await settled(page, ORDER);
@@ -193,7 +194,7 @@ describe.skipIf(!SHOP_BUILT)('view transitions (examples/shop, opted in)', () =>
 
 describe.skipIf(!DOCS_BUILT)('view transitions are opt-in (apps/docs, not configured)', () => {
   it('never starts a transition for an app that did not ask for one', async () => {
-    const page = await openPage(docs!.base, '/docs/getting-started/what-is-janux');
+    const page = await openPage(docs!.url, '/docs/getting-started/what-is-janux');
 
     await page.locator('a[href="/docs/getting-started/quick-start"]:visible').first().click();
     await settled(page, '/docs/getting-started/quick-start');
