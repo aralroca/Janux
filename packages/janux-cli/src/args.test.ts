@@ -11,6 +11,8 @@ describe('janux CLI args', () => {
       url: 'http://localhost:3000',
       startCommand: undefined,
       json: false,
+      trials: 1,
+      baseline: undefined,
     });
     expect(parseArgs(['build'], '/app').command).toBe('build');
     expect(parseArgs(['start'], '/app').command).toBe('start');
@@ -37,6 +39,21 @@ describe('janux CLI args', () => {
     expect(parsed.command).toBe('test');
     expect(parsed.files).toEqual(['src/cart.test.ts', 'src/routes.test.ts']);
     expect(parseArgs(['test'], '/app').files).toEqual([]);
+  });
+
+  it('parses --trials and --baseline without leaking their values into files', () => {
+    const parsed = parseArgs(['eval', '--trials', '2', '--baseline', 'evals/baseline.json'], '/app');
+
+    expect(parsed.trials).toBe(2);
+    expect(parsed.baseline).toBe('evals/baseline.json');
+    expect(parsed.files).toEqual([]);
+  });
+
+  it('defaults to a single trial and refuses a count that is not a whole number of runs', () => {
+    expect(parseArgs(['eval'], '/app').trials).toBe(1);
+    expect(() => parseArgs(['eval', '--trials', '0'], '/app')).toThrow(/--trials/);
+    expect(() => parseArgs(['eval', '--trials', 'two'], '/app')).toThrow(/--trials/);
+    expect(() => parseArgs(['eval', '--trials', '1.5'], '/app')).toThrow(/--trials/);
   });
 
   it('falls back to help on unknown commands', () => {

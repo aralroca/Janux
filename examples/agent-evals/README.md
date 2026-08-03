@@ -8,6 +8,8 @@ A small warehouse manager whose real product is not the page: it is the **agent 
 - **Validation as part of the contract** — `evals/validation.eval.json` asserts that malformed input answers a structured `400` naming the offending field, even on the `confirm`-guarded tool — and that a business `throw` inside `run()` answers `500` with `"Error: …"`.
 - **Isolation on demand** — `evals/write-off.eval.json` carries `"reset": true`, so under `--start` the app reboots before it and the scenario always starts from seed stock.
 - **A canary that must fail** — `broken-evals/skip-approval.eval.json` (outside the `evals/` glob on purpose) expects a write-off to execute without approval; the e2e suite runs it and asserts a non-zero exit. Green means something because red is proven reachable.
+- **A gate that only reddens on reproducible failures** — with `--trials 2` a scenario blocks CI only when it fails *every* trial; the verdict on stderr (and in `eval-gate.json`) says which scenario regressed and where. A gate that turns red on its own is a gate people learn to ignore.
+- **Run history and baseline** — each run is appended to `.janux/evals/history.jsonl` (commit, model, date, per-scenario passes, usage), and the end of every run says what improved, what regressed and what it cost vs the previous run or an explicit `--baseline` file.
 - **`janux verify`** — the description contract: every agent-reachable tool must say when to use it, or CI fails before any eval runs.
 
 ```bash
@@ -32,7 +34,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run build
       - run: bunx janux verify
-      - run: bunx janux eval --json --start "bunx janux start --port 3000" --url http://localhost:3000
+      - run: bunx janux eval --json --trials 2 --start "bunx janux start --port 3000" --url http://localhost:3000
 ```
 
 The guard that makes the write-off eval interesting is one line in the tool definition — remove it and `evals/write-off.eval.json` fails while the canary starts passing:

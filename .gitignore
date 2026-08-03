@@ -2,6 +2,7 @@ node_modules/
 dist/
 out/
 .janux/
+eval-gate.json
 *.log
 .DS_Store
 .env
