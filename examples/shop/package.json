@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "janux dev --port 4321",
     "build": "janux build",
+    "test": "janux test",
     "start": "janux start --port 4321",
     "build:node": "janux build && janux-node",
     "start:node": "node build/index.js"
@@ -15,6 +16,7 @@
     "@janux/server": "workspace:*",
     "@janux/agent": "workspace:*",
     "@janux/cli": "workspace:*",
+    "@janux/testing": "workspace:*",
     "@janux/node": "workspace:*"
   }
 }

@@ -21,9 +21,9 @@
     "benchmarks/*/*"
   ],
   "scripts": {
-    "test": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-testing packages/janux-vercel packages/janux-node packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts",
+    "test": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-testing packages/janux-vercel packages/janux-node packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts examples/shop/tests examples/with-advanced-routing/tests examples/hacker-news/tests",
     "test:e2e": "bun test e2e",
-    "test:coverage": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-testing packages/janux-vercel packages/janux-node packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts --coverage",
+    "test:coverage": "bun test packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-testing packages/janux-vercel packages/janux-node packages/conformance packages/docs-tests apps/docs scripts packages/create-janux/bin.test.ts examples/shop/tests examples/with-advanced-routing/tests examples/hacker-news/tests --coverage",
     "test:census": "bun scripts/test-census.ts",
     "test:lighthouse": "bun run --cwd apps/docs build && bun scripts/lighthouse.ts",
     "typecheck": "for p in packages/janux packages/janux-server packages/janux-agent packages/janux-content packages/janux-vite packages/janux-cli packages/janux-tailwind packages/janux-testing packages/janux-vercel packages/janux-node packages/create-janux packages/conformance scripts examples/*; do bunx tsc --noEmit -p $p || exit 1; done",
