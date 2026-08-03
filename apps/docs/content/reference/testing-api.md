@@ -43,3 +43,35 @@ mockApi(target: CallableApi | string, run: ApiDef['run']): () => void
 ## `resetApiMocks()`
 
 Drops every registered mock at once — call it from `afterEach`.
+
+## `startTestServer(root, options?)`
+
+Serves the built app like `janux start` does — static assets from `dist/client` first, the app after — on an auto-assigned port.
+
+```
+startTestServer(root: string, options?: TestServerOptions): Promise<TestServer>  // { url, stop() }
+
+interface TestServerOptions {
+  observe?: (req: Request, res: Response) => void;   // every request, paired with its response
+}
+```
+
+Behind it, `@janux/cli` exposes the same building blocks (`prodServerOptions`, `staticResponse`) for custom wiring.
+
+## `startNodeServer(root, port)`
+
+Serves a `janux-node` build the way a deployment does: `node build/index.js`, in its own process, no Bun anywhere in it. Returns `{ url, output, stop() }` — `output.text` accumulates the server's stdout.
+
+## `isBuilt(root)` / `hasNodeBuild(root)`
+
+Whether `janux build` (respectively the node adapter) ran for the app — suites that need artifacts skip cleanly otherwise.
+
+## `settled(page, options?)` / `gotoSettled(page, url, options?)`
+
+The quiescence barrier: resolves when the page's Janux runtime reports no pending work — sources, effects, debounced intents, in-flight navigations, suspense boundaries. `gotoSettled` is `page.goto` + the barrier. Default `timeout`: 10 s.
+
+This is the call that replaces every sleep in an e2e suite: quiet is observable, so waiting a guessed number of milliseconds is never needed.
+
+## `launchChrome()` / `openPage(browser)`
+
+One shared Chrome for the whole test process (launch/teardown churn is what makes `goto` flake under load), and a page that records uncaught `pageerror`s for the final assertion: `openPage` returns `{ page, errors }`.

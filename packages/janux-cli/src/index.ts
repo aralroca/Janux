@@ -7,6 +7,8 @@ import { info } from './info';
 export { parseArgs, HELP_TEXT } from './args';
 /** The ServerOptions `janux start` builds from an app's conventions — for custom servers. */
 export { prodServerOptions } from './prod';
+/** Static-asset resolution for a built `dist/client` — what `janux start` serves before the app. */
+export { staticResponse } from './static-assets';
 
 export async function runCli(argv: string[]): Promise<void> {
   const parsed = parseArgs(argv, process.cwd());

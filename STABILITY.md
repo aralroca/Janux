@@ -107,13 +107,13 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `@janux/cli`
 
-- **Stable** — `HELP_TEXT`, `parseArgs`, `prodServerOptions`, `runCli`
+- **Stable** — `HELP_TEXT`, `parseArgs`, `prodServerOptions`, `runCli`, `staticResponse`
 - **Experimental** — _none_
 - **Internal** — _none_
 
 ### `@janux/testing`
 
-- **Stable** — `createTestApp`, `mockApi`, `resetApiMocks`
+- **Stable** — `createTestApp`, `gotoSettled`, `hasNodeBuild`, `isBuilt`, `launchChrome`, `mockApi`, `openPage`, `resetApiMocks`, `settled`, `startNodeServer`, `startTestServer`
 - **Experimental** — _none_
 - **Internal** — _none_
 
