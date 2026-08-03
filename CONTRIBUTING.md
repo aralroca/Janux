@@ -85,12 +85,19 @@ Every folder under `examples/` is a claim about the framework, and the suite hol
 
 1. **Scaffold** the usual shape: `package.json` (name `janux-example-<dir>`, scripts `janux dev --port 4321` / `janux build` / `janux start --port 4321`, framework deps as `workspace:*`), `tsconfig.json` extending `../../tsconfig.base.json`, `README.md`, `public/favicon.svg`, `src/client.ts`, `src/routes/`, `src/styles.css`. Naming: `with-<feature>` for focused examples, a domain name for full apps.
 2. **No workarounds.** If the example needs something the framework can't do, extend the framework first — failing test in `packages/*`, then the fix, then a docs page — and only then use it in the example. An example must never paper over a gap.
-3. **Tests are not optional.** The e2e suite (`e2e/`) must gain a dedicated `<name>.e2e.test.ts` exercising what the example demonstrates, using the shared helper (`e2e/support/app.ts`: `ssrApp` for server-only suites, `serveBuilt` + `launchChrome` behind `describe.skipIf(!isBuilt(...))` for browser ones). These guards fail CI until you comply:
+3. **Tests are not optional.** The e2e suite (`e2e/`) must gain a dedicated `<name>.e2e.test.ts` exercising what the example demonstrates, using the shared helper (`e2e/support/app.ts`: `ssrApp` for server-only suites, `serveBuilt` + `launchBrowser` behind `describe.skipIf(!isBuilt(...))` for browser ones). These guards fail CI until you comply:
    - `e2e/examples-smoke.e2e.test.ts` — discovers every example dir; it must boot, serve `/` and `/_janux/manifest`.
    - `e2e/examples-coverage.test.ts` — every example needs a dedicated suite (or a deliberate entry in `e2e/untested-examples.ts`) and must be listed in `README.md` and `apps/docs/content/more/examples.md`.
    - `bun run typecheck` includes `examples/*`.
    - CI builds every example (discovered matrix) and any example a browser suite gates on with `isBuilt()`/`serveBuilt()`.
 4. **README snippets are compiled** by `packages/docs-tests` — code fences must import only what the packages really export.
+
+   Browser suites run on Chromium, Firefox and WebKit (`JANUX_E2E_BROWSER` picks one; unset means the Chrome channel). Two things about the driver, not about the engines, decide how you write a click:
+
+   - `locator.click()` waits for the document to finish loading before it delivers, which under WebKit is seconds into a streamed page. A case that must interact *while* a boundary is still pending has to place the click itself with `page.mouse.click()`.
+   - `locator.click()` also waits for "scheduled navigations to finish", and under WebKit a navigation the page cancels is reported as scheduled and never as cleared — so clicking a link the router cancels never returns. Use `page.mouse.click()` there too.
+
+   Both were measured against framework-free pages: real WebKit accepts input on a streaming document and cancels navigations correctly. Reach for `page.mouse.click()` when one of those two shapes applies, not by default.
 5. Add a `dev:<name>` script to the root `package.json`.
 
 ## Pull requests

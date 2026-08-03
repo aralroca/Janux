@@ -101,7 +101,14 @@ describe.skipIf(!BUILT)('Ask AI persistence across the docs menu (apps/docs)', (
     await page.evaluate(() => {
       (window as any).__sameDocument = true;
     });
-    await visibleLink(page, DOCS_PAGE).click();
+    // By hand again, and for a different reason than the streaming suite:
+    // `locator.click()` waits for "scheduled navigations to finish", and under
+    // Playwright's WebKit a navigation the page cancels is reported as
+    // scheduled and never as cleared — so the wait never returns. Cancelling is
+    // exactly what this case asserts the router does.
+    const box = (await visibleLink(page, DOCS_PAGE).boundingBox())!;
+
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     // A no-op yields nothing to await; a reload would blank the panel quickly.
     await page.waitForTimeout(1_000);
 

@@ -52,7 +52,15 @@ describe.skipIf(!BUILT)('streaming suspense (examples/with-suspense)', () => {
     // The page is interactive WHILE a boundary is still pending: the runtime
     // ships in the interlude, before the trailing chunks, and the counter
     // island mounts and reacts with the stream still open.
-    await page.click('.counter');
+    //
+    // A real mouse click, placed by hand rather than via `page.click()`: under
+    // Playwright's WebKit the high-level click does not deliver until the
+    // document finishes loading (~2.5s here, measured), which is *after* the
+    // boundary this case needs to still be pending. The engine itself accepts
+    // input on a streaming document exactly like Chromium does.
+    const counter = (await page.locator('.counter').boundingBox())!;
+
+    await page.mouse.click(counter.x + counter.width / 2, counter.y + counter.height / 2);
     await page.waitForFunction(
       () => document.querySelector('.counter')?.textContent?.includes('clicks: 1'),
       null,

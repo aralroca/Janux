@@ -60,3 +60,5 @@ The framework is developed test-first with `bun:test` + happy-dom (10770 tests, 
 - The SWC stub transform is tested to never leak server code client-side.
 
 Run everything with `bun test packages` at the repo root.
+
+CI runs that suite on Linux, Windows and macOS, and on both ends of the supported Bun range — the floor `engines` declares as well as the latest release, because a floor nothing exercises is not a claim. The browser end-to-end suite runs the same cases on Chromium, Firefox and WebKit. Nothing in the framework is known to be degraded on any of them; where an engine differs it has been in the automation driver rather than the engine, and those cases are written up in `CONTRIBUTING.md` so the next author does not rediscover them.
