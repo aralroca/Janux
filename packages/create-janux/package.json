@@ -18,7 +18,9 @@
   "files": [
     "dist",
     "template",
-    "examples"
+    "examples",
+    "templates",
+    "tsconfig.base.json"
   ],
   "publishConfig": {
     "access": "public",

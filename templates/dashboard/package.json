@@ -1,0 +1,19 @@
+{
+  "name": "janux-template-dashboard",
+  "description": "An ops dashboard whose copilot really drives the UI — and degrades to a scripted demo without a model key",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev --port 4321",
+    "build": "janux build",
+    "start": "janux start --port 4321",
+    "eval": "janux build && janux eval --start \"janux start --port 4321\" --url http://localhost:4321"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*"
+  }
+}

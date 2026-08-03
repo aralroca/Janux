@@ -1,0 +1,19 @@
+{
+  "name": "janux-template-back-office",
+  "description": "A CRUD back office where agents propose, humans approve, and one audit trail remembers who did what",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev --port 4321",
+    "build": "janux build",
+    "start": "janux start --port 4321",
+    "eval": "janux build && janux eval --start \"janux start --port 4321\" --url http://localhost:4321"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*"
+  }
+}
