@@ -135,6 +135,44 @@ describe('agent loop', () => {
     expect(toolResult.content[0].content).toBe('["found:shoes"]');
   });
 
+  it('accounts the turn bill in the envelope: tokens summed across rounds, priced when cost is declared', async () => {
+    const priced = (blocks: unknown[], usage: unknown) =>
+      new Response(JSON.stringify({ content: blocks, usage }), { status: 200 });
+    const { fetchImpl } = scriptedFetch([
+      priced([{ type: 'tool_use', id: 't1', name: 'api__shop__search', input: { q: 'shoes' } }], { input_tokens: 1000, output_tokens: 100 }),
+      priced([{ type: 'text', text: 'Found' }], { input_tokens: 1400, output_tokens: 60 }),
+    ]);
+    const server = buildServer(defineAgent({ cost: { input: 3, output: 15 } }, { env, fetchImpl }));
+    const body: any = await (await ask(server, { messages: [{ role: 'user', content: 'search' }] })).json();
+
+    expect(body.usage).toMatchObject({ inputTokens: 2400, outputTokens: 160 });
+    // 2400/1e6 * $3 + 160/1e6 * $15, in USD per million tokens.
+    expect(body.usage.costUsd).toBeCloseTo(0.0096, 6);
+  });
+
+  it('leaves usage off the envelope when the provider never reported any', async () => {
+    const { fetchImpl } = scriptedFetch([anthropicReply([{ type: 'text', text: 'Hello!' }])]);
+    const server = buildServer(defineAgent({}, { env, fetchImpl }));
+    const body: any = await (await ask(server, { messages: [{ role: 'user', content: 'hi' }] })).json();
+
+    expect(body.usage).toBeUndefined();
+  });
+
+  it('a ui_calls envelope carries the bill so far, unpriced without a declared cost', async () => {
+    const withUsage = new Response(
+      JSON.stringify({
+        content: [{ type: 'tool_use', id: 't2', name: 'counter__rename', input: { label: 'x' } }],
+        usage: { input_tokens: 500, output_tokens: 50 },
+      }),
+      { status: 200 },
+    );
+    const server = buildServer(defineAgent({}, { env, fetchImpl: scriptedFetch([withUsage]).fetchImpl }));
+    const body: any = await (await ask(server, { messages: [{ role: 'user', content: 'rename' }] })).json();
+
+    expect(body.type).toBe('ui_calls');
+    expect(body.usage).toEqual({ inputTokens: 500, outputTokens: 50 });
+  });
+
   it('returns ui_calls for UI tools so the client bridge executes them', async () => {
     const { fetchImpl } = scriptedFetch([
       anthropicReply([{ type: 'tool_use', id: 't2', name: 'counter__rename', input: { label: 'x' } }]),

@@ -58,8 +58,17 @@ function settle(span: JanuxSpan, reply: Round, cost?: ModelCost): void {
 }
 
 /** The whole turn: every round of the loop and every tool it called hang off this span. */
-export function tracedAgentTurn<T>(model: ResolvedModel, run: () => Promise<T>): Promise<T> {
+export function tracedAgentTurn<T>(model: ResolvedModel, run: (span: JanuxSpan) => Promise<T>): Promise<T> {
   return withSpan('invoke_agent janux', () => baseAttributes(model, 'invoke_agent'), run);
+}
+
+/** Turn-level totals for the `invoke_agent` span — the round sums, as the same semconv attributes. */
+export function turnUsageAttributes(bill: { inputTokens: number; outputTokens: number; costUsd?: number }): SpanAttributes {
+  return {
+    'gen_ai.usage.input_tokens': bill.inputTokens,
+    'gen_ai.usage.output_tokens': bill.outputTokens,
+    'janux.cost.usd': bill.costUsd,
+  };
 }
 
 /** One round: the model call itself, priced. Tools the model asked for are traced by their own pipeline. */
