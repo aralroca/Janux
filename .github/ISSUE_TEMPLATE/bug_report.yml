@@ -16,7 +16,7 @@ body:
     attributes:
       label: "`janux info` output"
       description: >-
-        Run `janux info` in your app and paste the markdown unedited — it
+        Run `bunx janux info` in your app and paste the markdown unedited — it
         reports versions, resolved config, integrations and routes, and never
         prints your machine's paths. If the bug is in this repo itself,
         `bun --version` is enough.
