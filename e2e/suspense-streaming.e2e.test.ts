@@ -86,7 +86,10 @@ describe.skipIf(!BUILT)('streaming suspense (examples/with-suspense)', () => {
     await page.waitForSelector('janux-island[data-jx-pending]', { timeout: 5_000 });
 
     // Interacting while the page still streams: the island mounts mid-diff.
-    await page.click('.counter');
+    // Placed by hand for the same reason as the first-load case above.
+    const counter = (await page.locator('.counter').boundingBox())!;
+
+    await page.mouse.click(counter.x + counter.width / 2, counter.y + counter.height / 2);
     await page.waitForFunction(
       () => document.querySelector('.counter')?.textContent?.includes('clicks: 1'),
       null,
