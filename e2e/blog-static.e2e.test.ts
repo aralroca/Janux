@@ -52,6 +52,7 @@ describe('examples/blog-static end to end', () => {
     expect(html).toContain('"eagerness":"moderate"');
     expect(html).toContain('"not":{"href_matches":"/llms.txt"}');
     expect(html).toContain('"not":{"href_matches":"/sitemap.xml"}');
+    expect(html).toContain('"not":{"href_matches":"/rss.xml"}');
   });
 
   it('enumerates every post through listPages (drives the static prerender)', async () => {
@@ -84,6 +85,26 @@ describe('examples/blog-static end to end', () => {
     expect(response.status).toBe(200);
     SLUGS.forEach((slug) => expect(body).toContain(`https://blog-static.janux.build/posts/${slug}`));
   });
+
+  it('serves an RSS feed with absolute post urls, newest first, dated', async () => {
+    const response = await app.fetch('/rss.xml');
+    const body = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/rss+xml');
+    SLUGS.forEach((slug) => expect(body).toContain(`<link>https://blog-static.janux.build/posts/${slug}</link>`));
+    expect(body).toContain('<pubDate>');
+
+    const positions = SLUGS.map((slug) => body.indexOf(`/posts/${slug}</link>`));
+
+    expect([...positions].sort((first, second) => first - second)).toEqual(positions);
+  });
+
+  it('advertises the feed on every page, so readers can autodiscover it', async () => {
+    expect(await (await app.fetch('/')).text()).toContain(
+      '<link rel="alternate" id="jx-feed" type="application/rss+xml" title="Janux Static Blog" href="/rss.xml">',
+    );
+  });
 });
 
 describe.skipIf(!isBuilt(appRoot('examples/blog-static')))('examples/blog-static static build', () => {
@@ -109,12 +130,13 @@ describe.skipIf(!isBuilt(appRoot('examples/blog-static')))('examples/blog-static
     expect(html).toContain('There is no page at this address.');
   });
 
-  it('emits llms.txt and sitemap.xml beside the pages', () => {
+  it('emits llms.txt, sitemap.xml and rss.xml beside the pages', () => {
     const llms = readFileSync(join(DIST, 'llms.txt'), 'utf8');
 
     expect(llms).toContain('/posts/hello-janux');
     expect(existsSync(join(DIST, 'sitemap.xml'))).toBe(true);
     expect(existsSync(join(DIST, 'robots.txt'))).toBe(true);
+    expect(readFileSync(join(DIST, 'rss.xml'), 'utf8')).toContain('/posts/hello-janux</link>');
   });
 
   it('emits the .md projection of every page, at the URL a running server answers', () => {

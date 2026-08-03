@@ -255,6 +255,53 @@ export const HEAD_SOCIAL_CASES: HeadSocialRow[] = [
       tw('card', 'summary_large_image') + tw('image', 'https://site.test/derived.png'),
   },
 
+  // Typed keys.
+  {
+    /** CamelCase spellings exist for the properties a typed literal key cannot name. */
+    id: 'head-social-camelcase-og-aliases',
+    src: 'janux',
+    meta: { og: { siteName: 'Janux', imageAlt: 'Poster' } },
+    ctx: {},
+    expected: og('type', 'website') + og('site_name', 'Janux') + og('image:alt', 'Poster') + tw('card', 'summary'),
+  },
+  {
+    /** `article:*` is its own vocabulary: the alias escapes the `og:` prefix entirely. */
+    id: 'head-social-article-times-escape-the-og-prefix',
+    src: 'janux',
+    meta: { og: { publishedTime: '2026-07-01' } },
+    ctx: {},
+    expected:
+      og('type', 'website') +
+      '<meta property="article:published_time" id="jx-article-published_time" content="2026-07-01">' +
+      tw('card', 'summary'),
+  },
+  {
+    id: 'head-social-twitter-image-alt-alias',
+    src: 'janux',
+    meta: { twitter: { imageAlt: 'Poster' } },
+    ctx: {},
+    expected: og('type', 'website') + tw('card', 'summary') + tw('image:alt', 'Poster'),
+  },
+  {
+    /** A typed robots object serializes in one stable order, so the tag never reorders. */
+    id: 'head-social-typed-robots-object',
+    src: 'janux',
+    meta: { robots: { index: false, follow: false, maxImagePreview: 'none' } },
+    ctx: {},
+    expected:
+      '<meta name="robots" id="jx-robots" content="noindex, nofollow, max-image-preview:none">' +
+      og('type', 'website') +
+      tw('card', 'summary'),
+  },
+  {
+    /** An empty robots object asks for nothing, so nothing is emitted. */
+    id: 'head-social-empty-robots-object',
+    src: 'janux',
+    meta: { robots: {} },
+    ctx: {},
+    expected: og('type', 'website') + tw('card', 'summary'),
+  },
+
   // Escaping.
   {
     /** Quotes would close the attribute, `<` would open a tag; `>` needs neither. */

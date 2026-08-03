@@ -1,4 +1,6 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { createTestApp } from '@janux/testing';
 import { appRoot } from './support/app';
 
@@ -189,5 +191,72 @@ describe('docs home — the advertised MCP endpoint', () => {
     expect(res.status).toBe(200);
     expect(page).toContain('claude mcp add --transport http');
     result.tools.forEach((tool: any) => expect(page).toContain(tool.name));
+  });
+});
+
+/**
+ * The content-site surface: canonical, social card, structured data and the
+ * feed. Google's validator wants every ld+json block parseable with a @context
+ * and a @type; readers want the alternate link on the page they landed on.
+ */
+describe('docs home — SEO surface', () => {
+  it('emits a canonical URL and a full social card', () => {
+    expect(home).toContain('<link rel="canonical" id="jx-canonical" href="https://janux.build/">');
+    expect(home).toContain('property="og:title"');
+    expect(home).toContain('property="og:image"');
+    expect(home).toContain('name="twitter:card"');
+  });
+
+  /**
+   * What a shared link actually looks like: the card image is the one drawn from
+   * the logo (absolute, since a crawler has no page to resolve against), sized
+   * so the platform reserves the right box before it loads, described for the
+   * people who hear it rather than see it, and attributed to the site.
+   */
+  it('shares the 1200×630 card drawn from the logo, sized, described and attributed', async () => {
+    expect(home).toContain('<meta property="og:image" id="jx-og-image" content="https://janux.build/og.png">');
+    expect(home).toContain('content="1200"');
+    expect(home).toContain('content="630"');
+    expect(home).toContain('property="og:image:alt"');
+    expect(home).toContain('<meta property="og:site_name" id="jx-og-site_name" content="Janux">');
+    expect(home).toContain('<meta property="og:locale" id="jx-og-locale" content="en_US">');
+    // The card is a real asset, not a URL that 404s once shared. Checked on disk
+    // rather than over HTTP: `public/` is served from `dist/client` by the built
+    // app, and this suite boots the server without a build.
+    expect(existsSync(join(appRoot('apps/docs'), 'public/og.png'))).toBe(true);
+  });
+
+  /** The largest paint stays the hero poster: preloading a card only crawlers fetch would spend the first connection on it. */
+  it('preloads the hero poster, not the social card', () => {
+    expect(home).toContain('rel="preload"');
+    expect(home).toContain('href="/demo-poster.jpg"');
+    expect(home).not.toContain('rel="preload" as="image" href="/og.png"');
+  });
+
+  it('gives a doc page an article card that names the site', async () => {
+    const page = await (await app.fetch('/docs/getting-started/what-is-janux')).text();
+
+    expect(page).toContain('<meta property="og:type" id="jx-og-type" content="article">');
+    expect(page).toContain('<meta property="og:site_name" id="jx-og-site_name" content="Janux">');
+    expect(page).toContain('content="https://janux.build/og.png"');
+    expect(page).toContain('name="twitter:card" id="jx-twitter-card" content="summary_large_image"');
+  });
+
+  it('emits JSON-LD blocks that all parse, the Organization among them', () => {
+    const blocks = [...home.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map(
+      ([, block]) => JSON.parse(block),
+    );
+
+    expect(blocks.map((block) => block['@type'])).toContain('Organization');
+    blocks.forEach((block) => expect(block['@context']).toBe('https://schema.org'));
+  });
+
+  it('advertises the RSS feed and serves every doc page through it', async () => {
+    const response = await app.fetch('/rss.xml');
+    const body = await response.text();
+
+    expect(home).toContain('type="application/rss+xml"');
+    expect(response.status).toBe(200);
+    expect(body).toContain('<link>https://janux.build/docs/');
   });
 });

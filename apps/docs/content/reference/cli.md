@@ -222,6 +222,7 @@ Everything is convention over configuration — each of these is optional:
 | `src/ctx.ts` | `export default` a `(req) => ctx` — per-request [context and auth](/docs/recipes/auth-and-context) |
 | `src/middleware.ts` | `export default` a `(req) => Response \| undefined` — runs before routing |
 | `src/matchers.ts` | Named exports = custom `[param=matcher]` matchers |
+| `src/feed.ts` | `export default` a `FeedConfig` — serves `GET /rss.xml` (see [RSS](/docs/reference/server-api#rss)) |
 | `src/client.ts` | `boot({ defs })` — omit for fully static apps (0 KB JS) |
 | `src/styles.css` | App stylesheet, linked automatically |
 | `public/` | Static assets served at `/` (favicon.svg auto-linked) |
