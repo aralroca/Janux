@@ -28,14 +28,27 @@ afterEach(() => {
 
 describe('janux test', () => {
   it('delegates to bun test rather than reinventing a runner', () => {
-    expect(testArgv({ files: [] })).toEqual(['bun', 'test']);
-    expect(testArgv({ files: ['src/cart.test.ts'] })).toEqual(['bun', 'test', 'src/cart.test.ts']);
+    expect(testArgv([])).toEqual(['bun', 'test']);
+    expect(testArgv(['src/cart.test.ts'])).toEqual(['bun', 'test', 'src/cart.test.ts']);
+  });
+
+  /** The command fronts `bun test`; a flag it swallowed would be a flag that silently did nothing. */
+  it('passes bun test flags straight through', () => {
+    expect(testArgv(['--watch'])).toEqual(['bun', 'test', '--watch']);
+    expect(testArgv(['src/cart.test.ts', '--coverage', '-t', 'adds'])).toEqual([
+      'bun',
+      'test',
+      'src/cart.test.ts',
+      '--coverage',
+      '-t',
+      'adds',
+    ]);
   });
 
   it('runs the app suite from the app root and reports success', async () => {
     const root = appWith({ 'pass.test.ts': `import { expect, it } from 'bun:test';\nit('passes', () => expect(1).toBe(1));\n` });
 
-    await testCommand(command(root));
+    await testCommand(command(root), []);
 
     expect(process.exitCode ?? 0).toBe(0);
   });
@@ -43,7 +56,7 @@ describe('janux test', () => {
   it('propagates a failing suite through the exit code', async () => {
     const root = appWith({ 'fail.test.ts': `import { expect, it } from 'bun:test';\nit('fails', () => expect(1).toBe(2));\n` });
 
-    await testCommand(command(root));
+    await testCommand(command(root), []);
 
     expect(process.exitCode).toBe(1);
   });

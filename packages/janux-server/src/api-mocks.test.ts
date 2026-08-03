@@ -52,6 +52,15 @@ describe('mockApi by function reference', () => {
     );
   });
 
+  it('leaves a newer mock alone when an older restore() runs', async () => {
+    const stale = mockApi(greet, () => ({ message: 'first' }));
+
+    mockApi(greet, () => ({ message: 'second' }));
+    stale();
+
+    expect(await greet({ name: 'Ada' })).toEqual({ message: 'second' });
+  });
+
   it('returns a restore() that removes just that mock', async () => {
     const restore = mockApi(greet, () => ({ message: 'mocked' }));
 

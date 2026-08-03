@@ -1,17 +1,19 @@
 import type { CliCommand } from './args';
 
 /** The argv `janux test` hands to Bun — `bun:test` IS the runner, this is the front door. */
-export function testArgv(parsed: Pick<CliCommand, 'files'>): string[] {
-  return ['bun', 'test', ...parsed.files];
+export function testArgv(passthrough: string[]): string[] {
+  return ['bun', 'test', ...passthrough];
 }
 
 /**
- * Runs the app's suite with `bun test` from the app root, file filters passed
- * through verbatim. The exit code is the suite's — CI reads it, so a failing
- * test fails the command.
+ * Runs the app's suite with `bun test` from the app root.
+ *
+ * Everything after the command name goes through verbatim, flags included: a
+ * front door that quietly dropped `--watch` or `--coverage` would be worse than
+ * no front door. The exit code is the suite's, which is what CI reads.
  */
-export async function testCommand(parsed: CliCommand): Promise<void> {
-  const child = Bun.spawn(testArgv(parsed), { cwd: parsed.root, stdout: 'inherit', stderr: 'inherit' });
+export async function testCommand(parsed: CliCommand, passthrough: string[]): Promise<void> {
+  const child = Bun.spawn(testArgv(passthrough), { cwd: parsed.root, stdout: 'inherit', stderr: 'inherit' });
   const code = await child.exited;
 
   if (code !== 0) process.exitCode = code;

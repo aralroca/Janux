@@ -1,6 +1,7 @@
 import { prodServerOptions } from '@janux/cli/prod';
 import { createJanuxServer, type ServerOptions } from '@janux/server';
 import { publishAppRoot } from '@janux/vite';
+import { restoreAppRoot } from './test-server';
 import type { Ctx } from 'janux';
 
 export interface TestAppOptions {
@@ -23,7 +24,10 @@ export interface TestApp {
   render(path: string, init?: RequestInit): Promise<RenderedPage>;
   /** The agent manifest of a rendered page: islands, tools, route patterns. */
   manifest(path: string): Promise<unknown>;
-  /** Restores the app root the harness published. */
+  /**
+   * Puts back the app root this harness published. It is process-global, so
+   * apps opened in one process must be closed in reverse order.
+   */
   close(): void;
 }
 
@@ -60,8 +64,7 @@ export async function createTestApp(root: string, options: TestAppOptions = {}):
       return response.json();
     },
     close() {
-      if (previousRoot === undefined) delete process.env.JANUX_APP_ROOT;
-      else process.env.JANUX_APP_ROOT = previousRoot;
+      restoreAppRoot(previousRoot);
     },
   };
 }

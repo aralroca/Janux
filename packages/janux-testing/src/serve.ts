@@ -11,7 +11,4 @@ import { startTestServer } from './test-server';
 const root = process.argv[2];
 
 if (!root) throw new Error('@janux/testing: serve <appRoot>');
-
-const { url } = await startTestServer(root);
-
-console.log(url);
+console.log((await startTestServer(root)).url);

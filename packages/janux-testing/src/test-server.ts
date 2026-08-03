@@ -30,8 +30,17 @@ export interface TestServerOptions {
   observe?: (req: Request, res: Response) => void;
 }
 
-/** Serves the built app like `janux start` does, on an auto-assigned port. */
+/**
+ * Serves the built app like `janux start` does, on an auto-assigned port.
+ *
+ * The app root it publishes is process-global, so `stop()` puts back whatever
+ * was there before: two servers for different apps otherwise leave the loser
+ * resolving content collections, fonts and instrumentation against the winner's
+ * directory.
+ */
 export async function startTestServer(root: string, options: TestServerOptions = {}): Promise<TestServer> {
+  const previousRoot = process.env.JANUX_APP_ROOT;
+
   publishAppRoot(root);
   const app = createJanuxServer(await prodServerOptions(root));
   const staticDir = join(root, 'dist/client');
@@ -46,7 +55,19 @@ export async function startTestServer(root: string, options: TestServerOptions =
     },
   });
 
-  return { url: `http://localhost:${server.port}`, stop: () => server.stop(true) };
+  return {
+    url: `http://localhost:${server.port}`,
+    stop: () => {
+      server.stop(true);
+      restoreAppRoot(previousRoot);
+    },
+  };
+}
+
+/** Puts `JANUX_APP_ROOT` back, deleting it when there was none to begin with. */
+export function restoreAppRoot(previous: string | undefined): void {
+  if (previous === undefined) delete process.env.JANUX_APP_ROOT;
+  else process.env.JANUX_APP_ROOT = previous;
 }
 
 export interface NodeServer {
@@ -55,10 +76,25 @@ export interface NodeServer {
   stop(): void;
 }
 
-async function collectStdout(stream: ReadableStream<Uint8Array>, output: { text: string }): Promise<void> {
+async function collect(stream: ReadableStream<Uint8Array>, output: { text: string }): Promise<void> {
   const decoder = new TextDecoder();
 
   for await (const chunk of stream) output.text += decoder.decode(chunk, { stream: true });
+}
+
+/** Polls until the server answers, so the caller gets a running app or a real error. */
+async function waitForUp(url: string, attempts = 150): Promise<boolean> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      await fetch(url);
+
+      return true;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -66,6 +102,11 @@ async function collectStdout(stream: ReadableStream<Uint8Array>, output: { text:
  * process, with no Bun anywhere in it. The other helpers run the server in
  * *this* process, which cannot answer the question this one exists for — a
  * bundle that only works because Bun happened to import it would pass them all.
+ *
+ * Both pipes are drained for the process's whole life, not just on failure: an
+ * undrained one fills its OS buffer and blocks the server mid-suite, which
+ * looks like a hang rather than a failure. `console.error` output is a normal
+ * thing for an app to produce, so this is a matter of when, not if.
  */
 export async function startNodeServer(root: string, port: number): Promise<NodeServer> {
   const child = Bun.spawn(['node', join(root, 'build/index.js')], {
@@ -76,18 +117,14 @@ export async function startNodeServer(root: string, port: number): Promise<NodeS
   });
   const url = `http://localhost:${port}`;
   const output = { text: '' };
+  const drained = Promise.all([
+    collect(child.stdout as ReadableStream<Uint8Array>, output),
+    collect(child.stderr as ReadableStream<Uint8Array>, output),
+  ]);
 
-  collectStdout(child.stdout as ReadableStream<Uint8Array>, output).catch(() => {});
+  if (await waitForUp(url)) return { url, output, stop: () => child.kill() };
 
-  for (let attempt = 0; attempt < 150; attempt += 1) {
-    try {
-      await fetch(url);
-
-      return { url, output, stop: () => child.kill() };
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-  }
   child.kill();
-  throw new Error(`${root}: the node server never came up.\n${await new Response(child.stderr).text()}`);
+  await drained.catch(() => {});
+  throw new Error(`${root}: the node server never came up.\n${output.text}`);
 }

@@ -25,7 +25,10 @@ export function mockApi(target: CallableApi | string, run: ApiDef['run']): () =>
   mocksByRun.set(target.run, run);
   registeredRuns.add(target.run);
 
+  // Identity-checked: re-mocking the same tool replaces the entry, and the
+  // older disposer must not then remove the newer mock.
   return () => {
+    if (mocksByRun.get(target.run) !== run) return;
     mocksByRun.delete(target.run);
     registeredRuns.delete(target.run);
   };

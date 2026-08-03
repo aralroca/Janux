@@ -50,3 +50,22 @@ describe('startTestServer serves the built app like janux start', () => {
     stop();
   });
 });
+
+/**
+ * The app root is process-global (`JANUX_APP_ROOT`), so a server that publishes
+ * one and never puts it back points every OTHER live app's root-relative
+ * lookups — content collections, fonts, instrumentation — at its own directory.
+ */
+describe('startTestServer and the published app root', () => {
+  it('restores the root it published when the server stops', async () => {
+    process.env.JANUX_APP_ROOT = '/srv/other';
+    buildFixture();
+    const { stop } = await startTestServer(FIXTURE);
+
+    expect(process.env.JANUX_APP_ROOT).toBe(FIXTURE);
+    stop();
+
+    expect(process.env.JANUX_APP_ROOT).toBe('/srv/other');
+    delete process.env.JANUX_APP_ROOT;
+  });
+});
