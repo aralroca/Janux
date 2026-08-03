@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/with-optimistic-ui exists to demonstrate: `mutation()` writes
@@ -10,7 +11,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * and then disappears, with a notice. Only a real browser shows that window.
  */
 
-const BUILT = isBuilt('examples/with-optimistic-ui');
+const BUILT = isBuilt(appRoot('examples/with-optimistic-ui'));
 
 let BASE = '';
 let stop: (() => void) | undefined;
@@ -18,7 +19,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt('examples/with-optimistic-ui'));
+  ({ url: BASE, stop } = await startTestServer(appRoot('examples/with-optimistic-ui')));
   browser = await launchChrome();
 });
 
@@ -57,7 +58,7 @@ const starAndSettle = async (page: Page, name: string, total: number) => {
 
 describe('examples/with-optimistic-ui server side', () => {
   it('ships the item list from the server, favorites pending until the client resumes', async () => {
-    const { get } = await ssrApp('examples/with-optimistic-ui');
+    const { fetch: get } = await createTestApp(appRoot('examples/with-optimistic-ui'));
     const html = await (await get('/')).text();
 
     expect(html).toContain('<title>Janux — optimistic UI</title>');
@@ -66,7 +67,7 @@ describe('examples/with-optimistic-ui server side', () => {
   });
 
   it('exposes the star intent and the favorites api as agent tools', async () => {
-    const { get } = await ssrApp('examples/with-optimistic-ui');
+    const { fetch: get } = await createTestApp(appRoot('examples/with-optimistic-ui'));
     const manifest: any = await (await get('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 

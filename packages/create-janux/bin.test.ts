@@ -113,12 +113,113 @@ describe('create-janux', () => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
-  /** A flag that is not `--example` is a typo, not a name to scaffold from. */
+  /** A flag that is not `--example` or `--template` is a typo, not a name to scaffold from. */
   test('refuses a flag it does not know', () => {
     const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
-    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app', '--template', 'blog'], { cwd });
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app', '--tempalte', 'blog'], { cwd });
 
     expect(result.exitCode).toBe(1);
+    expect(existsSync(join(cwd, 'my-app'))).toBe(false);
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test('scaffolds a product template with --template, rewriting workspace deps', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-ops', '--template', 'dashboard'], { cwd });
+
+    expect(result.exitCode).toBe(0);
+    const pkg = JSON.parse(readFileSync(join(cwd, 'my-ops', 'package.json'), 'utf-8'));
+
+    expect(pkg.name).toBe('my-ops');
+    expect(JSON.stringify(pkg)).not.toContain('workspace:*');
+    expect(existsSync(join(cwd, 'my-ops', 'src/routes/index.tsx'))).toBe(true);
+    expect(existsSync(join(cwd, 'my-ops', 'node_modules'))).toBe(false);
+    expect(existsSync(join(cwd, 'my-ops', '.janux'))).toBe(false);
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  /** A template starts a product: it must ship its own README and agent evals. */
+  test.each(['dashboard', 'back-office', 'content-site'])('the %s template ships a README and evals', (template) => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app', '--template', template], { cwd });
+
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(join(cwd, 'my-app', 'README.md'))).toBe(true);
+    expect(existsSync(join(cwd, 'my-app', 'evals'))).toBe(true);
+    expect(readFileSync(join(cwd, 'my-app', 'README.md'), 'utf-8')).toContain('janux eval');
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  /**
+   * `extends: "../../tsconfig.base.json"` resolves inside the monorepo and
+   * nowhere else: scaffolded, it is a path to a file that is not there, and
+   * Vite answers every request with a 500 instead of the app. Same class as
+   * `workspace:*` deps — a monorepo-relative reference that cannot survive the
+   * copy — so it is resolved by the same scaffolder, for templates and examples alike.
+   */
+  test.each([
+    ['--template', 'dashboard'],
+    ['--example', 'shop'],
+  ])('%s %s scaffolds a tsconfig that resolves outside the monorepo', (flag, source) => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+
+    expect(Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app', flag, source], { cwd }).exitCode).toBe(0);
+    const tsconfig = JSON.parse(readFileSync(join(cwd, 'my-app/tsconfig.json'), 'utf-8'));
+
+    expect(tsconfig.extends).toBeUndefined();
+    // Inlined, not dropped: the JSX runtime is what makes the app's own .tsx compile.
+    expect(tsconfig.compilerOptions.jsxImportSource).toBe('janux');
+    expect(tsconfig.compilerOptions.strict).toBe(true);
+    expect(tsconfig.include).toBeDefined();
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  /** The product wears YOUR name: the placeholder is stamped in sources too, not just the manifest. */
+  test('a scaffolded template has no __APP_NAME__ placeholders anywhere', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'acme-ops', '--template', 'dashboard'], { cwd });
+
+    expect(result.exitCode).toBe(0);
+    const page = readFileSync(join(cwd, 'acme-ops', 'src/routes/index.tsx'), 'utf-8');
+
+    expect(page).not.toContain('__APP_NAME__');
+    expect(page).toContain('acme-ops');
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test('unknown template fails listing the available ones', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app', '--template', 'nope'], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain('dashboard');
+    expect(existsSync(join(cwd, 'my-app'))).toBe(false);
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  /** Bare `--template` lists the gallery and reads the pick from stdin. */
+  test('--template with no name is an interactive pick', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app', '--template'], {
+      cwd,
+      stdin: Buffer.from('3\n'),
+    });
+
+    expect(result.exitCode).toBe(0);
+    // Listed sorted, with a one-line pitch each: back-office, content-site, dashboard.
+    for (const template of ['back-office', 'content-site', 'dashboard']) {
+      expect(result.stdout.toString()).toContain(template);
+    }
+    expect(readFileSync(join(cwd, 'my-app', 'README.md'), 'utf-8')).toContain('dashboard');
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test('--template with no name and no input fails listing the available ones', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app', '--template'], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain('content-site');
     expect(existsSync(join(cwd, 'my-app'))).toBe(false);
     rmSync(cwd, { recursive: true, force: true });
   });

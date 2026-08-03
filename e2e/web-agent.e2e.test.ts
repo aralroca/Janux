@@ -1,17 +1,17 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
 import { planFor } from '../examples/with-web-agent/src/demo-plan';
-import { ssrApp } from './support/app';
+import { createTestApp } from '@janux/testing';
+import { appRoot } from './support/app';
 
-let server: Awaited<ReturnType<typeof ssrApp>>['server'];
-let get: Awaited<ReturnType<typeof ssrApp>>['get'];
+let app: Awaited<ReturnType<typeof createTestApp>>;
 
 beforeAll(async () => {
-  ({ server, get } = await ssrApp('examples/with-web-agent'));
+  app = await createTestApp(appRoot('examples/with-web-agent'));
 });
 
 describe('examples/with-web-agent end to end', () => {
   it('renders the whole console server-side, before any JS runs', async () => {
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<title>Janux — web agent console</title>');
     ['Users', 'Team', 'Profile', 'Workflows'].forEach((tab) => expect(html).toContain(`>${tab}<`));
@@ -25,7 +25,7 @@ describe('examples/with-web-agent end to end', () => {
   });
 
   it('exposes exactly the console it means to expose', async () => {
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
     expect(guards).toEqual({
@@ -44,7 +44,7 @@ describe('examples/with-web-agent end to end', () => {
   });
 
   it('advertises addStep with the label it needs and the workflow it starts from', async () => {
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const addStep = manifest.tools.find((tool: any) => tool.name === 'workflow.addStep');
     const workflow = manifest.resources.find((entry: any) => entry.uri.startsWith('ui://workflow'));
 

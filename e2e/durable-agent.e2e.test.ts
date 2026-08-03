@@ -3,7 +3,8 @@ import { RATE_LIMIT } from '../examples/durable-agent/src/server/config';
 import { SAFE_REFUSAL, classifyPrompt } from '../examples/durable-agent/src/server/guardrails';
 import { conversationMemory, counterStore, durableStorage, requestLimiter } from '../examples/durable-agent/src/server/harness';
 import { provisioning, provisioningRunner } from '../examples/durable-agent/src/server/workflow';
-import { ssrApp } from './support/app';
+import { createTestApp } from '@janux/testing';
+import { appRoot } from './support/app';
 
 const PG_URL = process.env.JANUX_TEST_PG ?? 'postgres://assistant:assistant@localhost:5432/janux_harness_test';
 const REDIS_URL = process.env.JANUX_TEST_REDIS ?? 'redis://:localdev@localhost:6379/15';
@@ -30,19 +31,19 @@ const redisSuite = redisProbe ? describe : describe.skip;
 
 describe('examples/durable-agent SSR', () => {
   it('serves the home page and the agent manifest', async () => {
-    const { get } = await ssrApp('examples/durable-agent');
-    const home = await get('/');
+    const app = await createTestApp(appRoot('examples/durable-agent'));
+    const home = await app.fetch('/');
 
     expect(home.status).toBe(200);
     const html = await home.text();
 
     expect(html).toContain('<html');
     expect(html).toContain('Durable agent');
-    expect((await get('/_janux/manifest')).status).toBe(200);
+    expect((await app.fetch('/_janux/manifest')).status).toBe(200);
   });
 
   it('rate-limits the agent mount: request N+1 in the window is a 429', async () => {
-    const { server } = await ssrApp('examples/durable-agent');
+    const { server } = await createTestApp(appRoot('examples/durable-agent'));
     const ask = () =>
       server.fetch(
         new Request('http://test/_janux/agent', {
@@ -67,7 +68,7 @@ describe('examples/durable-agent guardrails', () => {
     process.env.JANUX_MODEL = 'anthropic/never-called';
     process.env.ANTHROPIC_API_KEY = 'unused-e2e-key';
     try {
-      const { server } = await ssrApp('examples/durable-agent');
+      const { server } = await createTestApp(appRoot('examples/durable-agent'));
       const response = await server.fetch(
         new Request('http://test/_janux/agent', {
           method: 'POST',

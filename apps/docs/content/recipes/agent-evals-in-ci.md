@@ -93,14 +93,14 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run build
       - run: bunx janux verify
-      - run: bunx janux eval --start "bunx janux start --port 3000"
+      - run: bunx janux eval --trials 2 --start "bunx janux start --port 3000"
 ```
 
 `--start` boots the app, waits for it, runs every scenario and stops it; the exit code is the gate. This is the layer that catches a renamed tool, a broken guard, a validation regression or an approval flow that stopped working. Scenario files run sorted by filename — the gate's order is deterministic — and with `--json` the booted app's stdout is silenced, so the report is the only thing on stdout and a CI step can pipe it straight into `jq`.
 
 ### The expect language, beyond happy paths
 
-Positional array matching is fragile when order is an implementation detail. `{ "$some": {…} }` passes when *any* item matches, `{ "$not": {…} }` inverts a match, and the value `"$absent"` asserts a field is missing — so you can state what must **not** have happened. `$some` and `$not` are single-key wrappers; never mix them with literal keys in the same object.
+Positional array matching is fragile when order is an implementation detail. `{ "$some": {…} }` passes when *any* item matches, `{ "$not": {…} }` inverts a match, `{ "$contains": "…" }` matches a substring of a string, and the value `"$absent"` asserts a field is missing — so you can state what must **not** have happened. All three are single-key wrappers; never mix them with literal keys in the same object.
 
 A proposal is settled by a human one of two ways, and both deserve a scenario: `approve` executes it, `reject` (`POST /_janux/reject`) discards it. Reject answers `{ "ok": true }` when the proposal existed, `{ "ok": false }` (status 200) once it is gone — and a rejected proposal must be unapprovable afterwards:
 
@@ -127,53 +127,66 @@ Business errors are part of the contract too. A `throw` inside a tool's `run()` 
   "expect": { "ok": false, "status": 500, "error": "Error: Unknown SKU" } }
 ```
 
-Scenarios share one live app on purpose — a checkout that builds on the catalog eval's state is realistic. When a scenario must not inherit state, give it `"reset": true`: `janux eval` reboots the `--start` app before running it, so it starts from seed (without `--start` there is nothing to reboot and the flag is ignored).
+Scenarios share one live app on purpose — a checkout that builds on the catalog eval's state is realistic. When a scenario must not inherit state, give it `"reset": true`: `janux eval` reboots the `--start` app before running it, so it starts from seed (without `--start` there is nothing to reboot and the flag is ignored). Under `--trials` the whole set replays, so mutating scenarios should declare `reset` — every trial then starts from seed too.
+
+### The regression gate: trials, history, baseline
+
+A gate that turns red on its own is a gate people learn to ignore — that is the design criterion behind everything in this section.
+
+`--trials N` runs the whole scenario set N times, and the gate fails **only when a scenario fails in every trial**. Reproducibility is the discriminator: a real regression fails all trials, a wobble or a transient hiccup does not — it stays visible in the report without blocking the merge. With one trial (the default) the rule collapses to the old behavior: any failure is a 1/1-trials failure.
+
+The verdict rides **stderr**, so stdout stays the pure JSON array your CI already parses:
+
+```
+eval gate: 1 failure(s)
+  x shop agent checkout: failed in 2/2 trials — api.shop.pay: result mismatch, got {"status":"executed"}
+```
+
+The same failures land structured in `eval-gate.json` for any workflow step that wants them (add it to your `.gitignore` — it is a run artifact), and the exit code follows the gate: a PR that breaks a scenario reproducibly goes red with a message that says exactly what regressed. Above one trial each stdout report also carries its `trial` index, so a `jq` step can group by it instead of seeing the same scenario name twice; at the default single trial the JSON is byte-for-byte what it always was.
+
+Every run is also appended to `.janux/evals/history.jsonl` — one JSON line per run with its metadata (`runId`, `date`, `commit`, `model`, trials, per-scenario passes, token usage and cost, duration). It is a local file: no external service anywhere, and `.janux/` is already gitignored. At the end of each run `janux eval` compares against the previous recorded run and tells the story:
+
+```
+eval gate: clean
+vs baseline 3f9c21aa (2026-08-02T04:12:09.331Z, commit 1ef9ced):
+  improved: shop agent checkout
+cost: 5120 in / 384 out tokens ($0.0021, baseline $0.0038)
+```
+
+To compare against a fixed reference instead of "whatever ran last here" — the shape CI wants — commit one run record and point at it with `--baseline evals/baseline.json` (any single `RunRecord` JSON, e.g. `tail -1 .janux/evals/history.jsonl` from a green run on `main`). A `--baseline` that cannot be read as a run record fails the command by name rather than falling back to silence, because a baseline that quietly stopped comparing is worse than none. Costs are compared **per trial**, so a nightly on `--trials 3` never reads as a 3× regression against a single-trial baseline.
 
 ## Layer 3 — a real model, nightly, never gating
 
 What layers 1–2 cannot tell you: whether a model reading your `description` fields picks the right tool with the right input. That is a property of your *prose*, and it's worth measuring — but it costs tokens and it is **not deterministic**.
 
-It needs a key and a running server, so it is **not** part of the default suite — a test that can only ever skip is noise. Make it a script you run on purpose, point it at a live app, and assert **what changed**, never what the model said:
+It needs a key and a running server, so it is **not** part of the default suite — a test that can only ever skip is noise. But it is the *same* `janux eval`: a step can be a whole agent turn instead of a tool call. `{ "turn": "…" }` POSTs the message to `/_janux/agent` and the reply envelope is the outcome, so the model — and the prose it reads — is what's under eval, through the same runner, the same matchers and the same gate:
 
-```ts title="model-evals/run.ts"
-const BASE = process.env.EVAL_URL;
-const KEY = process.env.OPENROUTER_API_KEY;
-
-if (!BASE || !KEY) {
-  console.error('model-evals: needs EVAL_URL and a provider API key.');
-  process.exit(1);           // missing inputs are a failure, never a silent pass
-}
-
-const ask = async (prompt: string, path: string) => {
-  const response = await fetch(`${BASE}/_janux/agent`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], path }),
-  });
-
-  return response.json() as any;
-};
-
-/** A tool result travels as a JSON *string* — parse it, don't grep it. */
-const toolResults = (body: any): any[] =>
-  (body.messages ?? []).filter((message: any) => message.role === 'tool').map((message: any) => JSON.parse(message.content));
-
-async function picksTheRightTool(): Promise<boolean> {
-  const body = await ask('Add two units of product p1 to my cart.', '/shop');
-
-  return body.type === 'ui_calls' && body.calls[0]?.name === 'cart.addItem' && body.calls[0]?.input?.qty === 2;
-}
-
-async function cannotPayUnattended(): Promise<boolean> {
-  const body = await ask('Pay the cart total of 5999 cents.', '/shop');
-
-  return toolResults(body).some((result) => result.status === 'proposal' && result.tool === 'shop.pay');
+```jsonc title="model-evals/catalog.eval.json"
+{
+  "name": "the model reads the catalog through the tool instead of answering from memory",
+  "steps": [
+    { "turn": "Which products are in the catalog? List their ids.", "path": "/shop",
+      "expect": { "result": {
+        "type": "text",
+        "messages": { "$some": { "role": "tool", "content": { "$contains": "p1" } } }
+      } } }
+  ]
 }
 ```
 
-Run the scenarios, print a line each, and exit non-zero if any failed — that exit code is all the nightly workflow needs.
+Keep these **outside** the `evals/**` glob — `model-evals/` next to it — so the deterministic gate never picks them up, and run them on purpose:
 
-A working runner lives at [`examples/shop/model-evals`](https://github.com/aralroca/Janux/tree/main/examples/shop/model-evals). If you'd rather keep these inside your test suite, wrap them in `describe.skipIf(!process.env.OPENROUTER_API_KEY || !process.env.EVAL_URL)` so a PR, a fork or a laptop without the key skips instead of failing — just know that every green run then hides a skip.
+```bash
+JANUX_MODEL=openrouter/google/gemini-2.5-flash-lite \
+OPENROUTER_API_KEY=… bunx janux eval model-evals/*.eval.json --trials 3 \
+  --start "bunx janux start --port 3000" --url http://localhost:3000
+```
+
+Two things that shape the assertions. A tool result travels through the transcript as a JSON **string**, which is what `$contains` is for; and `expect.result` matches the envelope itself (`type`, `calls`, `messages`), so you assert the capability — which tool the model reached for — rather than the words it chose. Follow-up `tool` steps assert resulting **state**, which is sharper still.
+
+`--trials 3` replaces the retry loop every one of these scripts used to hand-roll: the gate believes a failure only when it reproduces in all three. Each turn's reply also carries `usage` — input/output tokens, plus `costUsd` when the app declared [what its model costs](/docs/reference/observability-api) — totalled per scenario and per run, so the history answers "what did tonight cost?" with no tracer anywhere.
+
+Working scenarios live at [`examples/shop/model-evals`](https://github.com/aralroca/Janux/tree/main/examples/shop/model-evals).
 
 ### Two things the shape above is built around
 
@@ -185,20 +198,8 @@ So:
 
 - **never gate merges on it.** Nightly `schedule` plus `workflow_dispatch`, and a red run is a signal to read, not a build to fix.
 - **assert capability, not text.** Goal state, or the tool call and its input.
-- **retry before believing a failure**, and treat the pass rate over time as the metric:
-
-```ts
-/** Capability, not single-shot: a model may miss once. Three tries, then believe it. */
-async function eventually(attempt: () => Promise<boolean>, tries = 3): Promise<boolean> {
-  for (let attempted = 0; attempted < tries; attempted += 1) {
-    if (await attempt()) return true;
-  }
-
-  return false;
-}
-```
-
-- **cap the cost**: a small model, `maxTurns`, a handful of scenarios.
+- **retry before believing a failure** — that is `--trials 3`, and the pass rate over time is the metric. The run history keeps it for you.
+- **cap the cost**: a small model, `maxTurns`, a handful of scenarios — and read the per-run bill the report prints.
 
 ### What a red run is actually telling you
 
@@ -227,12 +228,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - run: bunx janux start --port 3000 &
-      - run: bun model-evals/run.ts
+      - run: bunx janux eval model-evals/*.eval.json --trials 3
+               --start "bunx janux start --port 3000" --url http://localhost:3000
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           JANUX_MODEL: openrouter/google/gemini-2.5-flash-lite
-          EVAL_URL: http://localhost:3000
 ```
 
 ## Why layer 3 earns its keep anyway

@@ -17,7 +17,7 @@
  */
 import { existsSync, rmSync } from 'node:fs';
 import { buildPackage } from './packaging/build';
-import { withExamples } from './packaging/examples';
+import { withScaffolding } from './packaging/examples';
 import { publishManifest, releaseVersions, withManifest } from './packaging/manifest';
 import { PACKED, packageDir, PUBLISH_ORDER, readManifest } from './packaging/packages';
 import { alreadyPublished, canAttestProvenance, publish } from './packaging/registry';
@@ -61,7 +61,7 @@ async function pack(dir: string, versions: Map<string, string>): Promise<string>
 
   // Packed with the compiled manifest on disk, uploaded after it is restored:
   // npm reads the tarball, which already carries it, not the workspace.
-  return withExamples(dir, () => withManifest(root, published, () => packAndVerify(root, published, `${PACKED}/${dir}`)));
+  return withScaffolding(dir, () => withManifest(root, published, () => packAndVerify(root, published, `${PACKED}/${dir}`)));
 }
 
 const versions = await releaseVersions();

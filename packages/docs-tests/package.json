@@ -9,6 +9,7 @@
     "@janux/content": "workspace:*",
     "@janux/server": "workspace:*",
     "@janux/tailwind": "workspace:*",
+    "@janux/testing": "workspace:*",
     "@janux/vercel": "workspace:*",
     "@janux/node": "workspace:*",
     "@janux/vite": "workspace:*",

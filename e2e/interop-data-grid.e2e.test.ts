@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The data-grid category: `@tanstack/react-table` mounted unchanged.
@@ -13,7 +14,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * lands as a typed `grid.sort` an agent can call the same way.
  */
 
-const APP = 'examples/interop-data-grid';
+const APP = appRoot('examples/interop-data-grid');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -22,7 +23,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -37,8 +38,8 @@ const names = (page: Page) => page.locator('.grid-row td:first-child').allTextCo
 
 describe('examples/interop-data-grid server side', () => {
   it('server-renders the TanStack table inside the foreign host', async () => {
-    const { get } = await ssrApp(APP);
-    const html = await (await get('/')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<janux-foreign');
     expect(html).toContain('data-grid');
@@ -50,8 +51,8 @@ describe('examples/interop-data-grid server side', () => {
   });
 
   it('exposes the grid controls as the agent surface, reset guarded', async () => {
-    const { get } = await ssrApp(APP);
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const app = await createTestApp(APP);
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
     expect(guards['grid.sort']).toBe('auto');

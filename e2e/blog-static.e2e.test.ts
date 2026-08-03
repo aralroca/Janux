@@ -1,24 +1,24 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { appRoot, isBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt } from '@janux/testing';
+import { appRoot } from './support/app';
 
 const DIST = join(appRoot('examples/blog-static'), 'dist/client');
 const SLUGS = ['agent-readable-pages', 'zero-js-by-default', 'hello-janux'];
 const PAGES = ['/', ...SLUGS.map((slug) => `/posts/${slug}`)];
 
-let server: Awaited<ReturnType<typeof ssrApp>>['server'];
-let get: Awaited<ReturnType<typeof ssrApp>>['get'];
+let app: Awaited<ReturnType<typeof createTestApp>>;
 
 beforeAll(async () => {
-  ({ server, get } = await ssrApp('examples/blog-static'));
+  app = await createTestApp(appRoot('examples/blog-static'));
 });
 
 const distPage = (page: string) => readFileSync(join(DIST, page.slice(1), 'index.html'), 'utf8');
 
 describe('examples/blog-static end to end', () => {
   it('lists every post on the index, newest first', async () => {
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
     const positions = SLUGS.map((slug) => html.indexOf(`href="/posts/${slug}"`));
 
     expect(html).toContain('Latest posts');
@@ -27,7 +27,7 @@ describe('examples/blog-static end to end', () => {
   });
 
   it('renders a post markdown body as HTML', async () => {
-    const html = await (await get('/posts/hello-janux')).text();
+    const html = await (await app.fetch('/posts/hello-janux')).text();
 
     expect(html).toContain('<title>Hello, Janux — Janux Static Blog</title>');
     expect(html).toContain('<h2>Files as the source of truth</h2>');
@@ -36,7 +36,7 @@ describe('examples/blog-static end to end', () => {
   });
 
   it('answers a slug with no post with the 404 page, not a 200 that says so', async () => {
-    const response = await get('/posts/never-written');
+    const response = await app.fetch('/posts/never-written');
     const html = await response.text();
 
     expect(response.status).toBe(404);
@@ -46,7 +46,7 @@ describe('examples/blog-static end to end', () => {
   });
 
   it('emits the configured speculation rules on every page', async () => {
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<script type="speculationrules"');
     expect(html).toContain('"eagerness":"moderate"');
@@ -56,11 +56,11 @@ describe('examples/blog-static end to end', () => {
   });
 
   it('enumerates every post through listPages (drives the static prerender)', async () => {
-    expect((await server.listPages()).sort()).toEqual([...PAGES].sort());
+    expect((await app.server.listPages()).sort()).toEqual([...PAGES].sort());
   });
 
   it('serves llms.txt with the concrete post pages', async () => {
-    const response = await get('/llms.txt');
+    const response = await app.fetch('/llms.txt');
     const body = await response.text();
 
     expect(response.status).toBe(200);
@@ -69,7 +69,7 @@ describe('examples/blog-static end to end', () => {
   });
 
   it('serves any post as markdown through the .md projection', async () => {
-    const response = await get('/posts/agent-readable-pages.md');
+    const response = await app.fetch('/posts/agent-readable-pages.md');
     const body = await response.text();
 
     expect(response.status).toBe(200);
@@ -79,7 +79,7 @@ describe('examples/blog-static end to end', () => {
   });
 
   it('serves a sitemap with absolute post urls', async () => {
-    const response = await get('/sitemap.xml');
+    const response = await app.fetch('/sitemap.xml');
     const body = await response.text();
 
     expect(response.status).toBe(200);
@@ -107,7 +107,7 @@ describe('examples/blog-static end to end', () => {
   });
 });
 
-describe.skipIf(!isBuilt('examples/blog-static'))('examples/blog-static static build', () => {
+describe.skipIf(!isBuilt(appRoot('examples/blog-static')))('examples/blog-static static build', () => {
   it('prerenders one html file per page with its content', () => {
     expect(distPage('/')).toContain('Latest posts');
     SLUGS.forEach((slug) => expect(distPage(`/posts/${slug}`)).toContain('<h1>'));

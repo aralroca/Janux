@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/human-in-the-loop exists to demonstrate: the `confirm` guard as
@@ -9,16 +10,16 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * audit trail records both, each tagged with the origin that did it.
  */
 
-const BUILT = isBuilt('examples/human-in-the-loop');
+const APP = appRoot('examples/human-in-the-loop');
+const BUILT = isBuilt(APP);
 
-let server: Awaited<ReturnType<typeof ssrApp>>['server'];
-let get: Awaited<ReturnType<typeof ssrApp>>['get'];
+let app: Awaited<ReturnType<typeof createTestApp>>;
 let BASE = '';
 let stop: (() => void) | undefined;
 let browser: Browser | undefined;
 
 const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
-  server.fetch(
+  app.server.fetch(
     new Request(`http://test${path}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', ...headers },
@@ -43,9 +44,9 @@ const proposeTransfer = async () => {
 };
 
 beforeAll(async () => {
-  ({ server, get } = await ssrApp('examples/human-in-the-loop'));
+  app = await createTestApp(APP);
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt('examples/human-in-the-loop'));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -78,7 +79,7 @@ const callAsAgent = async (page: Page, tool: string) => {
 
 describe('examples/human-in-the-loop server side', () => {
   it('server-renders the desk: seeded drafts, an empty inbox, an empty audit trail', async () => {
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('Acme Corp');
     expect(html).toContain('120.00€');
@@ -88,7 +89,7 @@ describe('examples/human-in-the-loop server side', () => {
   });
 
   it('advertises the contract: send/transfer confirm, draft/ledger auto, approve/reject invisible', async () => {
-    const manifest: any = await (await get('/_janux/manifest?path=/')).json();
+    const manifest: any = await (await app.fetch('/_janux/manifest?path=/')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
     expect(guards).toEqual({
@@ -104,7 +105,7 @@ describe('examples/human-in-the-loop server side', () => {
   });
 
   it('advertises payloads that are runnable as shown: real defaults, and only ids still pending', async () => {
-    const manifest: any = await (await get('/_janux/manifest?path=/')).json();
+    const manifest: any = await (await app.fetch('/_janux/manifest?path=/')).json();
     const propertiesOf = (name: string) => manifest.tools.find((tool: any) => tool.name === name).input.properties;
 
     // A default is what the tool means in general…

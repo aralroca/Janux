@@ -1,0 +1,21 @@
+{
+  "name": "subscribing works once and refuses loudly the second time",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.site.subscribe",
+      "input": { "email": "reader@example.com" },
+      "expect": { "result": { "email": "reader@example.com", "subscribed": true } }
+    },
+    {
+      "tool": "api.site.subscribe",
+      "input": { "email": "reader@example.com" },
+      "expect": { "ok": false, "status": 500, "error": "already subscribed" }
+    },
+    {
+      "tool": "api.site.subscribe",
+      "input": { "email": "not-an-email" },
+      "expect": { "ok": false, "status": 500, "error": "not an email" }
+    }
+  ]
+}

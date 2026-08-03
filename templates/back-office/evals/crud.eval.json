@@ -1,0 +1,28 @@
+{
+  "name": "agent runs routine CRUD and the audit trail names it as the actor",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.customers.list",
+      "expect": { "result": { "customers": [{ "id": "cus_101" }, { "id": "cus_102" }, { "id": "cus_103" }] } }
+    },
+    {
+      "tool": "api.customers.create",
+      "input": { "name": "Marie Curie", "email": "marie@example.com", "plan": "pro" },
+      "expect": { "result": { "name": "Marie Curie", "plan": "pro" } }
+    },
+    {
+      "tool": "api.customers.list",
+      "expect": { "result": { "customers": { "$some": { "email": "marie@example.com" } } } }
+    },
+    {
+      "tool": "api.customers.update",
+      "input": { "id": "$steps[1].result.id", "plan": "enterprise" },
+      "expect": { "result": { "name": "Marie Curie", "plan": "enterprise" } }
+    },
+    {
+      "tool": "api.customers.trail",
+      "expect": { "result": { "entries": { "$some": { "tool": "customers.create", "actor": "agent" } } } }
+    }
+  ]
+}

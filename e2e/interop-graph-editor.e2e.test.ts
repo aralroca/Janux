@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The graph-editor category: `@xyflow/react` mounted unchanged, in both
@@ -13,7 +14,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * mount, so `hydrate: 'only'` is the correct answer rather than a workaround.
  */
 
-const APP = 'examples/interop-graph-editor';
+const APP = appRoot('examples/interop-graph-editor');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -22,7 +23,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -35,8 +36,8 @@ const summary = (page: Page) => page.locator('.graph-shell .graph-summary').text
 
 describe('examples/interop-graph-editor server side', () => {
   it('ships an empty host on purpose, with the graph still readable in the HTML', async () => {
-    const { get } = await ssrApp(APP);
-    const html = await (await get('/')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<janux-foreign');
     expect(html).toContain('graph-canvas');
@@ -49,8 +50,8 @@ describe('examples/interop-graph-editor server side', () => {
   });
 
   it('exposes the whole editing vocabulary as tools, clear guarded', async () => {
-    const { get } = await ssrApp(APP);
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const app = await createTestApp(APP);
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
     expect(guards['graph.addNode']).toBe('auto');

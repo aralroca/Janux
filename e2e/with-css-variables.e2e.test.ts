@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * Runtime theming against the with-css-variables example. Asserting the custom
@@ -8,7 +9,8 @@ import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './
  * pixels — so every case checks the *computed* style that came out of it.
  */
 
-const BUILT = isBuilt('examples/with-css-variables');
+const APP = appRoot('examples/with-css-variables');
+const BUILT = isBuilt(APP);
 
 let BASE = '';
 let stop: (() => void) | undefined;
@@ -16,7 +18,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt('examples/with-css-variables'));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -34,8 +36,8 @@ const themed = (page: Page) =>
 
 describe('css variables SSR (examples/with-css-variables)', () => {
   it('renders the custom properties inline on the server', async () => {
-    const { get } = await ssrApp('examples/with-css-variables');
-    const html = await (await get('/')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('--brand');
     expect(html).toContain('#0062ff');

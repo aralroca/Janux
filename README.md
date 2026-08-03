@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-10806%20passing-brightgreen" alt="10806 tests passing" />
+  <img src="https://img.shields.io/badge/tests-10923%20passing-brightgreen" alt="10923 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -62,6 +62,7 @@ Named after **Janus**, the two-faced Roman god of doorways: one face toward the 
 - [Packages](#packages)
 - [Documentation](#documentation)
 - [Benchmarks](#benchmarks)
+- [Templates](#templates)
 - [Examples](#examples)
 - [Develop](#develop)
 - [Contributing](#contributing)
@@ -226,7 +227,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 96 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 98 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -234,7 +235,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 | **Guide** | [Components](apps/docs/content/guide/components.md) · [Views and JSX](apps/docs/content/guide/views-and-jsx.md) · [Intents and guards](apps/docs/content/guide/intents-and-guards.md) · [Navigation](apps/docs/content/guide/navigation.md) · [The agent and your copilot](apps/docs/content/guide/agent-and-copilot.md) |
 | **Tutorial** | [A task board with two faces](apps/docs/content/tutorial/tasks-app-part-1.md) (3 parts) |
 | **Reference** | one page per export: [reactivity](apps/docs/content/reference/signal.md), [client](apps/docs/content/reference/client-state.md), [data cache](apps/docs/content/reference/data-cache-api.md), [agent harness](apps/docs/content/reference/agent-memory.md), [CLI](apps/docs/content/reference/cli.md) |
-| **Recipes** | [Testing components](apps/docs/content/recipes/testing-components.md) · [Forms](apps/docs/content/recipes/forms.md) · [Optimistic UI](apps/docs/content/recipes/optimistic-ui.md) · [Error handling](apps/docs/content/recipes/error-handling.md) · [Custom server](apps/docs/content/recipes/custom-server.md) · [Docker](apps/docs/content/recipes/docker.md) · [Monorepo](apps/docs/content/recipes/monorepo-setup.md) · [Tailwind](apps/docs/content/styles/tailwind.md) · [Local model copilot](apps/docs/content/recipes/local-model-copilot.md) |
+| **Recipes** | [Testing](apps/docs/content/recipes/testing-components.md) · [Forms](apps/docs/content/recipes/forms.md) · [Optimistic UI](apps/docs/content/recipes/optimistic-ui.md) · [Error handling](apps/docs/content/recipes/error-handling.md) · [Custom server](apps/docs/content/recipes/custom-server.md) · [Docker](apps/docs/content/recipes/docker.md) · [Monorepo](apps/docs/content/recipes/monorepo-setup.md) · [Tailwind](apps/docs/content/styles/tailwind.md) · [Local model copilot](apps/docs/content/recipes/local-model-copilot.md) |
 | **More** | [Examples](apps/docs/content/more/examples.md) · [Comparison](apps/docs/content/more/comparison.md) · [Benchmarks](apps/docs/content/more/benchmarks.md) · [FAQ](apps/docs/content/more/faq.md) · [Glossary](apps/docs/content/more/glossary.md) |
 
 Agents read the same docs at `/llms.txt` and any page as Markdown by appending `.md`.
@@ -267,6 +268,29 @@ behind — the full signed table is in
 Full tables, methodology and machine specs:
 [docs page](apps/docs/content/more/benchmarks.md) · reproduce with
 `bun run bench` from [`benchmarks/`](benchmarks/).
+
+## Templates
+
+An example teaches a feature; a **template starts a product**. Each one is a complete app
+with its own README, a one-command deploy, and agent evals that prove its agent surface
+works — scaffold one and you have something to ship, not something to read.
+
+```bash
+bun create janux my-app --template dashboard
+cd my-app && bun install && bun run dev
+```
+
+Run `--template` with no name and the gallery lists itself. Every template starts with **no
+API key**: the copilot degrades to a setup card plus a no-model demo that drives the page
+with real tool calls.
+
+| Template | What you start with |
+|---|---|
+| [`dashboard`](templates/dashboard) | Incident triage whose copilot really operates the board — it acknowledges and resolves through the same tools the buttons call, and maintenance mode is `confirm`-guarded, so its call becomes a proposal a human approves. |
+| [`back-office`](templates/back-office) | A customers CRUD where who is asking changes what happens: routine edits execute, deleting parks in an approvals inbox, and one audit trail records the actor from the invocation origin. |
+| [`content-site`](templates/content-site) | Markdown with a typed frontmatter contract, served twice: pages for people, and `llms.txt` + per-page `.md` projections + a typed `search` tool for agents — the same code as the search box. |
+
+Full gallery with screenshots: **[janux.build/docs/more/templates](https://janux.build/docs/more/templates)**.
 
 ## Examples
 

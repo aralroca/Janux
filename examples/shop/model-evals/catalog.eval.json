@@ -1,0 +1,15 @@
+{
+  "name": "the model reads the catalog through the tool instead of answering from memory",
+  "steps": [
+    {
+      "turn": "Which products are in the catalog? List their ids.",
+      "path": "/shop",
+      "expect": {
+        "result": {
+          "type": "text",
+          "messages": { "$some": { "role": "tool", "content": { "$contains": "p1" } } }
+        }
+      }
+    }
+  ]
+}
