@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { readFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 import { type Browser } from 'playwright';
 import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
 
@@ -166,6 +168,75 @@ describe('examples/agent-evals — janux eval as the CI gate', () => {
       expect(reports.length).toBeGreaterThan(0);
       expect(reports.every((report) => report.pass)).toBe(true);
       expect(reports.map((report) => report.name)).toContain('shop agent checkout');
+    },
+    CLI_TIMEOUT,
+  );
+});
+
+/**
+ * The team layer over the same gate: trials make the gate reproducible-only
+ * (a regression fails every trial; a wobble does not block), every run lands
+ * in a local history file with its metadata, and the end of the run tells the
+ * story vs the previous one. All of it rides stderr and local files — stdout
+ * stays the pure JSON array CI parsers already consume.
+ */
+describe('janux eval — trials gate, run history and the end-of-run story', () => {
+  const HISTORY = join(EXAMPLE, '.janux/evals/history.jsonl');
+  const GATE = join(EXAMPLE, 'eval-gate.json');
+
+  beforeAll(() => {
+    rmSync(join(EXAMPLE, '.janux/evals'), { recursive: true, force: true });
+    rmSync(GATE, { force: true });
+  });
+
+  it(
+    '--trials 2: a reproducible regression turns the gate red and the verdict says what regressed',
+    () => {
+      const run = runJanux(EXAMPLE, [...evalArgs(4765, ['broken-evals/skip-approval.eval.json']), '--trials', '2']);
+      const reports = reportsFrom(run.stdout);
+
+      expect(run.code).not.toBe(0);
+      // stdout stays the pure JSON array: one report per scenario per trial…
+      expect(run.stdout.trimStart().startsWith('[')).toBe(true);
+      expect(reports).toHaveLength(2);
+      // …and the verdict rides stderr: which scenario, in how many trials, and where it broke.
+      expect(run.stderr).toContain('eval gate: 1 failure(s)');
+      expect(run.stderr).toContain('REGRESSION CANARY');
+      expect(run.stderr).toContain('failed in 2/2 trials');
+      expect(run.stderr).toContain('result mismatch');
+
+      const gate = JSON.parse(readFileSync(GATE, 'utf8'));
+
+      expect(gate.failures).toHaveLength(1);
+      expect(gate.failures[0].reason).toContain('failed in 2/2 trials');
+    },
+    CLI_TIMEOUT,
+  );
+
+  it(
+    'every run lands in .janux/evals/history.jsonl with its metadata, and the next one compares against it',
+    () => {
+      rmSync(join(EXAMPLE, '.janux/evals'), { recursive: true, force: true });
+      const first = runJanux(EXAMPLE, evalArgs(4766, ['evals/reject.eval.json']));
+
+      expect(first.code).toBe(0);
+      expect(first.stderr).toContain('eval gate: clean');
+      expect(first.stderr).toContain('no baseline');
+
+      const second = runJanux(EXAMPLE, evalArgs(4767, ['evals/reject.eval.json']));
+
+      expect(second.stderr).toContain('vs baseline');
+      expect(second.stderr).toContain('no changes');
+
+      const records = readFileSync(HISTORY, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+
+      expect(records).toHaveLength(2);
+      expect(records[0].trials).toBe(1);
+      expect(records[0].scenarios[0].passes).toEqual([true]);
+      expect(records[0].scenarios[0].name).toContain('rejected write-off');
+      expect(records[0].date).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      // The e2e runs inside the Janux checkout, so the commit is recordable.
+      expect(records[0].commit).toMatch(/^[0-9a-f]{7,}$/);
     },
     CLI_TIMEOUT,
   );

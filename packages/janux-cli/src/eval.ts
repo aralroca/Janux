@@ -1,6 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { execSync, spawn, type ChildProcess } from 'node:child_process';
+import { gateFailures, verdictLines, GATE_FILE } from './eval-gate';
+import { appendHistory, buildRecord, comparisonLines, readBaseline, type RunMeta } from './eval-history';
 import { runScenario, type EvalScenario, type ScenarioReport } from './eval-runner';
 import type { CliCommand } from './args';
 
@@ -83,19 +86,69 @@ async function runFiles(files: string[], parsed: CliCommand, app: AppHandle): Pr
   return results;
 }
 
+/** Best-effort: outside a git checkout the record simply carries no commit. */
+function gitCommit(root: string): string | undefined {
+  try {
+    return execSync('git rev-parse --short HEAD', { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return undefined;
+  }
+}
+
+function runMeta(root: string, started: number): RunMeta {
+  return {
+    runId: randomUUID().slice(0, 8),
+    date: new Date().toISOString(),
+    commit: gitCommit(root),
+    model: process.env.JANUX_MODEL,
+    durationMs: Date.now() - started,
+  };
+}
+
+async function runTrials(files: string[], parsed: CliCommand, app: AppHandle): Promise<ScenarioReport[][]> {
+  const trials: ScenarioReport[][] = [];
+
+  // Mutating scenarios should declare `"reset": true` so every trial replays from seed state.
+  for (let trial = 0; trial < parsed.trials; trial += 1) trials.push(await runFiles(files, parsed, app));
+
+  return trials;
+}
+
+/**
+ * The gate + the story, all on stderr and local files: stdout stays the pure
+ * JSON array CI parsers already consume (didit-gate's stdout compatibility
+ * rule). The verdict, the baseline comparison and the bill are for humans and
+ * the CI log; `eval-gate.json` is for the workflow step that needs structure.
+ */
+function settleRun(trials: ScenarioReport[][], parsed: CliCommand, started: number): boolean {
+  const failures = gateFailures(trials);
+  const record = buildRecord(trials, runMeta(parsed.root, started));
+  const baseline = readBaseline(parsed.root, parsed.baseline);
+
+  writeFileSync(resolve(parsed.root, GATE_FILE), `${JSON.stringify({ failures }, null, 2)}\n`);
+  appendHistory(parsed.root, record);
+  [...verdictLines(failures), ...comparisonLines(record, baseline)].forEach((line) => console.error(line));
+
+  return failures.length === 0;
+}
+
 export async function evalCommand(parsed: CliCommand): Promise<void> {
   const files = scenarioFiles(parsed);
+  const started = Date.now();
 
   if (files.length === 0) throw new Error('janux eval: no scenario files found (evals/**/*.eval.json)');
   const app: AppHandle = { proc: spawnApp(parsed) };
 
   try {
     if (app.proc) await waitFor(responds(parsed.url), `server at ${parsed.url} did not respond`);
-    const results = await runFiles(files, parsed, app);
+    const trials = await runTrials(files, parsed, app);
+    const results = trials.flat();
 
     if (parsed.json) console.log(JSON.stringify(results, null, 2));
     else reportHuman(results);
-    if (results.some((result) => !result.pass)) process.exitCode = 1;
+    // With one trial this is exactly the old exit rule: any failing scenario is
+    // a 1/1-trials failure. More trials make the gate reproducible-only.
+    if (!settleRun(trials, parsed, started)) process.exitCode = 1;
   } finally {
     if (app.proc) stopApp(app.proc);
   }

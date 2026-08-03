@@ -134,4 +134,71 @@ describe('runScenario', () => {
     expect(report.steps[0]?.pass).toBe(false);
     expect(report.steps[1]?.pass).toBe(true);
   });
+
+  it('keeps usage absent for tool-only scenarios, so existing reports do not change shape', async () => {
+    const report = await runScenario(
+      { name: 'pay flow', steps: [{ tool: 'api.shop.pay', input: { total: 5999 } }] },
+      'http://test',
+      fakeServer(),
+    );
+
+    expect(report.usage).toBeUndefined();
+    expect(report.steps[0]?.outcome.usage).toBeUndefined();
+  });
+});
+
+function fakeAgent(): typeof fetch {
+  const turns = [
+    { type: 'text', text: 'Restocked.', usage: { inputTokens: 120, outputTokens: 8, costUsd: 0.002 } },
+    { type: 'text', text: 'Done.', usage: { inputTokens: 90, outputTokens: 4, costUsd: 0.003 } },
+    { type: 'error', error: 'provider_error', detail: 'model unreachable' },
+  ];
+
+  return (async (url: any, init: any) => {
+    expect(String(url)).toEndWith('/_janux/agent');
+    const body = JSON.parse(init.body);
+
+    expect(body.messages[0]).toEqual({ role: 'user', content: expect.any(String) });
+    const turn = turns.shift()!;
+
+    return new Response(JSON.stringify(turn), {
+      status: turn.type === 'error' ? 502 : 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }) as typeof fetch;
+}
+
+describe('runScenario — turn steps drive the agent itself', () => {
+  it('posts the message to /_janux/agent, checks the envelope and accounts usage per turn and per eval', async () => {
+    const report = await runScenario(
+      {
+        name: 'restock via agent',
+        steps: [
+          { turn: 'restock 5 TSHIRT', expect: { result: { type: 'text' } } },
+          { turn: 'now discard 2 MUG', expect: { result: { type: 'text' } } },
+        ],
+      },
+      'http://test',
+      fakeAgent(),
+    );
+
+    expect(report.pass).toBe(true);
+    expect(report.steps[0]?.label).toBe('turn "restock 5 TSHIRT"');
+    expect(report.steps[0]?.outcome.usage).toEqual({ inputTokens: 120, outputTokens: 8, costUsd: 0.002 });
+    expect(report.usage?.inputTokens).toBe(210);
+    expect(report.usage?.outputTokens).toBe(12);
+    expect(report.usage?.costUsd).toBeCloseTo(0.005, 10);
+  });
+
+  it('a provider error turn is not ok and carries the error through', async () => {
+    const agent = fakeAgent();
+    const drain = { name: 'drain', steps: [{ turn: 'a' }, { turn: 'b' }] };
+
+    await runScenario(drain, 'http://test', agent);
+    const report = await runScenario({ name: 'errored', steps: [{ turn: 'restock' }] }, 'http://test', agent);
+
+    expect(report.pass).toBe(false);
+    expect(report.steps[0]?.outcome.ok).toBe(false);
+    expect(report.steps[0]?.outcome.error).toBe('provider_error');
+  });
 });

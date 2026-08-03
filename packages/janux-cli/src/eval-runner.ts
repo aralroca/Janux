@@ -1,3 +1,5 @@
+import { sumUsage, type TurnUsage } from './eval-usage';
+
 export interface EvalExpect {
   ok?: boolean;
   status?: number;
@@ -9,9 +11,15 @@ export interface EvalStep {
   tool?: string;
   approve?: string;
   reject?: string;
+  /** A whole agent turn: the message is POSTed to `/_janux/agent` and the envelope is the outcome. */
+  turn?: string;
+  /** Page whose manifest the agent turn should see (turn steps only). */
+  path?: string;
   input?: unknown;
   expect?: EvalExpect;
 }
+
+export type { TurnUsage };
 
 export interface EvalScenario {
   name: string;
@@ -26,6 +34,7 @@ export interface StepOutcome {
   ok: boolean;
   result?: unknown;
   error?: string;
+  usage?: TurnUsage;
 }
 
 export interface StepReport {
@@ -39,6 +48,8 @@ export interface ScenarioReport {
   name: string;
   pass: boolean;
   steps: StepReport[];
+  /** Totals over the scenario's turn steps; absent when no step reported usage. */
+  usage?: TurnUsage;
 }
 
 const REF_PATTERN = /^\$steps\[(\d+)\]\.(.+)$/;
@@ -113,6 +124,12 @@ function checkExpect(expect: EvalExpect | undefined, outcome: StepOutcome): stri
 }
 
 function stepRequest(step: EvalStep, outcomes: StepOutcome[]): { path: string; body: unknown; headers: Record<string, string> } {
+  // A turn step drives the agent itself, so the model (and its prompt) is under eval.
+  if (step.turn) {
+    const message = { role: 'user', content: resolveRefs(step.turn, outcomes) };
+
+    return { path: '/_janux/agent', body: { messages: [message], ...(step.path && { path: step.path }) }, headers: {} };
+  }
   // Settlement steps (approve/reject) are HUMAN acts: no agent header, on purpose.
   if (step.approve) {
     return { path: '/_janux/approve', body: { id: resolveRefs(step.approve, outcomes) }, headers: {} };
@@ -120,7 +137,7 @@ function stepRequest(step: EvalStep, outcomes: StepOutcome[]): { path: string; b
   if (step.reject) {
     return { path: '/_janux/reject', body: { id: resolveRefs(step.reject, outcomes) }, headers: {} };
   }
-  if (!step.tool) throw new Error('step needs "tool", "approve" or "reject"');
+  if (!step.tool) throw new Error('step needs "tool", "turn", "approve" or "reject"');
 
   return {
     path: `/_janux/api/${step.tool.replace(/^api\./, '')}`,
@@ -145,10 +162,24 @@ async function performStep(step: EvalStep, outcomes: StepOutcome[], baseUrl: str
   });
   const envelope = (await res.json().catch(() => ({}))) as { ok?: boolean; result?: unknown; error?: string };
 
+  if (step.turn) return turnOutcome(res.status, envelope);
+
   return { status: res.status, ok: envelope.ok === true, result: envelope.result, error: envelope.error };
 }
 
+/** The agent envelope IS the result, so evals assert on `{ type: "text" | "refusal" | ... }`. */
+function turnOutcome(status: number, envelope: { type?: string; error?: string; usage?: TurnUsage }): StepOutcome {
+  return {
+    status,
+    ok: status < 400 && envelope.type !== 'error',
+    result: envelope,
+    error: envelope.error,
+    usage: envelope.usage,
+  };
+}
+
 function stepLabel(step: EvalStep, index: number): string {
+  if (step.turn) return `turn "${step.turn}"`;
   if (step.approve) return `approve ${step.approve}`;
   if (step.reject) return `reject ${step.reject}`;
 
@@ -176,6 +207,7 @@ export async function runScenario(scenario: EvalScenario, baseUrl: string, fetch
     outcomes.push(report.outcome);
     steps.push(report);
   }
+  const usage = sumUsage(steps.map((step) => step.outcome.usage));
 
-  return { name: scenario.name, pass: steps.every((step) => step.pass), steps };
+  return { name: scenario.name, pass: steps.every((step) => step.pass), steps, ...(usage && { usage }) };
 }
