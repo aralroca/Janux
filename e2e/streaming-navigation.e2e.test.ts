@@ -4,7 +4,7 @@ import { type Browser, type Page } from 'playwright';
 import { createJanuxServer } from '../packages/janux-server/src/index';
 import { prodServerOptions } from '../packages/janux-cli/src/prod';
 import { staticResponse } from '../packages/janux-cli/src/static-assets';
-import { isBuilt, launchBrowser } from '@janux/testing';
+import { isBuilt, launchBrowser, settled } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -248,6 +248,9 @@ describe.skipIf(!BUILT)('navigation in a real browser (apps/docs)', () => {
 
     await sidebarLink(page, SECOND).click();
     await page.waitForFunction((path) => location.pathname === path, SECOND);
+    // `intercept()` commits the URL before the new document renders, so the
+    // pathname alone is satisfied while the old <html> is still in place.
+    await settled(page);
 
     expect(
       await page.evaluate(() => ({
