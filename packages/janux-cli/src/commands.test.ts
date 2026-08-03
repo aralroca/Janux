@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'bun:test';
 import { createJanuxServer } from '@janux/server';
 import { jsx } from 'janux';
@@ -49,7 +49,10 @@ describe('bundleInputs', () => {
  * `styles2.css` and linked by nobody.
  */
 describe('cssAssetName', () => {
-  const name = cssAssetName('/app', '/app/src/styles.css');
+  // An app root is whatever the OS calls absolute — `/app` here, `D:\app` on
+  // Windows — and the sheet is derived from it, as `resolveAppConfig` derives it.
+  const ROOT = resolve('/app');
+  const name = cssAssetName(ROOT, join(ROOT, 'src/styles.css'));
 
   it('gives the fixed name to the app stylesheet only', () => {
     expect(name({ names: ['styles.css'], originalFileNames: ['src/styles.css'] })).toBe('styles.css');
@@ -66,7 +69,7 @@ describe('cssAssetName', () => {
     expect(name({ names: ['logo.svg'], originalFileNames: ['public/logo.svg'] })).toBe(
       'assets/[name]-[hash][extname]',
     );
-    expect(cssAssetName('/app', undefined)({ names: ['styles.css'], originalFileNames: ['src/styles.css'] })).toBe(
+    expect(cssAssetName(ROOT, undefined)({ names: ['styles.css'], originalFileNames: ['src/styles.css'] })).toBe(
       'assets/[name]-[hash][extname]',
     );
   });

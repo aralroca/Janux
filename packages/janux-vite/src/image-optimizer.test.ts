@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { IMAGE_FORMATS, IMAGE_WIDTHS } from 'janux';
@@ -42,7 +42,10 @@ describe('writing the variants a build ships', () => {
    */
   it('never upscales past the source, yet still writes the file the srcset names', async () => {
     const sharp = (await import('sharp')).default;
-    const big = await sharp(join(outDir, VARIANTS, '1920.webp')).metadata();
+    // The bytes, not the path: a sharp instance holds its input file open until
+    // it is finalized, and Windows refuses to remove a directory that still has
+    // an open handle in it — the teardown below would fail with EBUSY.
+    const big = await sharp(readFileSync(join(outDir, VARIANTS, '1920.webp'))).metadata();
 
     expect(big.width).toBe(1000);
   });

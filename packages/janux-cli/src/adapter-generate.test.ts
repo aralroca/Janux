@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { resolveAppConfig } from '@janux/vite/config';
+import { resolveAppConfig, toPosix } from '@janux/vite/config';
 import { appModules, generateApp } from './adapter-generate';
 import { bundlerPath } from './adapter-build';
 
@@ -34,7 +34,8 @@ describe('appModules', () => {
     write('src/api/webhook.ts', 'export const GET = 1;');
     write('src/ws.ts', 'export default {};');
 
-    const modules = appModules(await resolveAppConfig(root)).map((file) => file.slice(root.length + 1));
+    // `appModules` answers native paths; these name the app files forward-slash.
+    const modules = appModules(await resolveAppConfig(root)).map((file) => toPosix(file.slice(root.length + 1)));
 
     expect(modules).toContain('src/server/shop.api.ts');
     expect(modules).toContain('src/api/webhook.ts');
