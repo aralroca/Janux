@@ -10,12 +10,13 @@ import type { Case } from '../support/case';
  *
  * The proposal endpoints are stateful, which is the interesting part: a proposal
  * is single-use, an agent may not settle its own, a rejected one cannot be
- * approved afterwards, and the id is a UUID precisely because the map is
- * server-wide and a guessable id would let any caller approve someone else's
- * `confirm`.
+ * approved afterwards, and the token is a random id plus the vault's signature —
+ * the map is server-wide, so a guessable credential would let any caller approve
+ * someone else's `confirm`. The attacker's corpus (replay, expiry, foreign
+ * session, payload swap) lives in `security/proposal-tokens.cases.ts`.
  *
- * Sources: janux server.ts (`handleApi`, `handleApprove`, `/_janux/reject`) and
- * http.ts (`errorStatus`, `proposalId`).
+ * Sources: janux server.ts (`handleApi`, `handleApprove`, `/_janux/reject`),
+ * http.ts (`errorStatus`) and proposals.ts (`createProposalVault`).
  */
 export interface HttpCase {
   /** The steps this row performs against one fresh server, in order. */

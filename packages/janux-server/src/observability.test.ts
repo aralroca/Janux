@@ -137,6 +137,9 @@ describe('the agentic round trip reads as one story', () => {
     await (await get('/')).text();
     const proposed = await (await post('/_janux/api/shop.checkout', { sku: 'JX-1' }, agent)).json();
     const { id } = proposed.result;
+    // Spans carry the bare id: the signed token is a capability, and a trace
+    // that contained it would let anyone reading logs approve the proposal.
+    const [bareId] = id.split('.');
     const approved = await (await post('/_janux/approve', { id })).json();
 
     expect(approved.result).toEqual({ ordered: 'JX-1' });
@@ -153,10 +156,10 @@ describe('the agentic round trip reads as one story', () => {
 
     const [, , , , proposal, , approval, execution] = tracer.spans;
 
-    expect(proposal!.attributes).toMatchObject({ 'janux.guard': 'confirm', 'janux.origin': 'agent', 'janux.proposal.id': id });
-    expect(approval!.attributes).toMatchObject({ 'janux.proposal.id': id, 'janux.origin': 'human' });
+    expect(proposal!.attributes).toMatchObject({ 'janux.guard': 'confirm', 'janux.origin': 'agent', 'janux.proposal.id': bareId });
+    expect(approval!.attributes).toMatchObject({ 'janux.proposal.id': bareId, 'janux.origin': 'human' });
     // The approval is human; the execution still ran on the agent's behalf.
-    expect(execution!.attributes).toMatchObject({ 'janux.origin': 'agent', 'janux.proposal.id': id });
+    expect(execution!.attributes).toMatchObject({ 'janux.origin': 'agent', 'janux.proposal.id': bareId });
     expect(tracer.spans[execution!.parent]!.name).toBe('janux.proposal.approve');
   });
 });
