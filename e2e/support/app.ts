@@ -1,12 +1,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { chromium, type Browser, type Page } from 'playwright';
+import type { Browser, Page } from 'playwright';
 import { createJanuxServer } from '../../packages/janux-server/src/index';
 import { prodServerOptions } from '../../packages/janux-cli/src/prod';
 import { publishAppRoot } from '../../packages/janux-vite/src/app-config';
 import { staticResponse } from '../../packages/janux-cli/src/static-assets';
 
-/** Driving a real Chrome does not fit bun's 5s default. */
+/** Driving a real browser does not fit bun's 5s default. */
 export const TIMEOUT = 60_000;
 
 const REPO_ROOT = join(import.meta.dir, '../..');
@@ -100,18 +100,7 @@ export async function serveNode(name: string, port: number) {
   throw new Error(`${name}: the node server never came up.\n${await new Response(child.stderr).text()}`);
 }
 
-let sharedChrome: Promise<Browser> | undefined;
-
-/**
- * One Chrome for the whole test process. Launch/teardown churn across a dozen
- * suites is what made goto() flake under load; suites must NOT close this —
- * pages yes, the browser dies with the process.
- */
-export function launchChrome(): Promise<Browser> {
-  sharedChrome ??= chromium.launch({ channel: 'chrome' });
-
-  return sharedChrome;
-}
+export { launchBrowser } from './browser';
 
 /** New page that records uncaught page errors for the final assertion. */
 export async function openPage(browser: Browser): Promise<{ page: Page; errors: string[] }> {

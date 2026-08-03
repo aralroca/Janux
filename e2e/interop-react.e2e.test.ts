@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrApp } from './support/app';
 
 /**
  * What examples/interop-react exists to demonstrate: a plain React component
@@ -20,7 +20,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   ({ base: BASE, stop } = await serveBuilt(APP));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {

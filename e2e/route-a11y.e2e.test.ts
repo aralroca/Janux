@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt } from './support/app';
+import { TIMEOUT, isBuilt, launchBrowser, openPage, serveBuilt } from './support/app';
 
 /**
  * What a screen-reader user experiences when an SPA navigation replaces the
@@ -32,7 +32,7 @@ beforeAll(async () => {
   stop = served.stop;
   // Chrome proper: the Navigation API is what turns these clicks into SPA
   // navigations, and it is the engine that ships it.
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(() => {

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrApp } from './support/app';
 
 /**
  * What examples/with-uploads exists to demonstrate: file uploads end to end —
@@ -43,7 +43,7 @@ beforeAll(async () => {
   ({ server, get } = await ssrApp(APP));
   if (!BUILT) return;
   ({ base: BASE, stop } = await serveBuilt(APP));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {

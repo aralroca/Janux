@@ -4,7 +4,7 @@ import type { Browser, Page } from 'playwright';
 import { createJanuxServer } from '../packages/janux-server/src/index';
 import { prodServerOptions } from '../packages/janux-cli/src/prod';
 import { staticResponse } from '../packages/janux-cli/src/static-assets';
-import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage, serveBuilt } from './support/app';
+import { TIMEOUT, appRoot, isBuilt, launchBrowser, openPage, serveBuilt } from './support/app';
 
 /**
  * examples/shop declares `csp: true` and nothing else, so this suite is the
@@ -47,7 +47,7 @@ async function serveWithCsp(name: string) {
 }
 
 beforeAll(async () => {
-  browser = BUILT || SUSPENSE_BUILT ? await launchChrome() : undefined;
+  browser = BUILT || SUSPENSE_BUILT ? await launchBrowser() : undefined;
   if (BUILT) ({ base: BASE, stop } = await serveBuilt('examples/shop'));
   if (SUSPENSE_BUILT) ({ base: SUSPENSE_BASE, stop: stopSuspense } = await serveWithCsp('examples/with-suspense'));
 });

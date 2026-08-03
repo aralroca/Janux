@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './support/app';
+import { TIMEOUT, isBuilt, launchBrowser, openPage, serveBuilt, ssrApp } from './support/app';
 
 /**
  * What examples/with-advanced-routing exists to demonstrate: the full route
@@ -122,7 +122,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   ({ base, stop } = await serveBuilt(APP));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {

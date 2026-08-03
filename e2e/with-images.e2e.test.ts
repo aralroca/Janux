@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Browser } from 'playwright';
-import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage, serveBuilt } from './support/app';
+import { TIMEOUT, appRoot, isBuilt, launchBrowser, openPage, serveBuilt } from './support/app';
 
 /**
  * The acceptance test for the image primitive, against the archetype that needs
@@ -26,7 +26,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   ({ base: BASE, stop } = await serveBuilt(APP));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(() => stop?.());

@@ -4,7 +4,7 @@ import { type Browser, type Page } from 'playwright';
 import { createJanuxServer } from '../packages/janux-server/src/index';
 import { prodServerOptions } from '../packages/janux-cli/src/prod';
 import { staticResponse } from '../packages/janux-cli/src/static-assets';
-import { TIMEOUT, appRoot, isBuilt, launchChrome } from './support/app';
+import { TIMEOUT, appRoot, isBuilt, launchBrowser } from './support/app';
 
 /**
  * Navigation in a real browser, against the real docs app.
@@ -79,7 +79,7 @@ beforeAll(async () => {
   BASE = `http://localhost:${server.port}`;
   // Chrome proper, not the bundled Chromium: the Navigation API and speculation
   // rules are what this suite exercises, and it is the engine that ships both.
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {

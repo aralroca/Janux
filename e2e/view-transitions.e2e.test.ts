@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, serveBuilt } from './support/app';
+import { TIMEOUT, isBuilt, launchBrowser, serveBuilt } from './support/app';
 
 /**
  * View transitions can only be observed in an engine that has them: happy-dom
@@ -30,7 +30,7 @@ let docs: Awaited<ReturnType<typeof serveBuilt>> | undefined;
 beforeAll(async () => {
   if (SHOP_BUILT) shop = await serveBuilt('examples/shop');
   if (DOCS_BUILT) docs = await serveBuilt('apps/docs');
-  if (SHOP_BUILT || DOCS_BUILT) browser = await launchChrome();
+  if (SHOP_BUILT || DOCS_BUILT) browser = await launchBrowser();
 });
 
 afterAll(() => {

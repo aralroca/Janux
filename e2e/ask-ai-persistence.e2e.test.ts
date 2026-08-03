@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, serveBuilt } from './support/app';
+import { TIMEOUT, isBuilt, launchBrowser, serveBuilt } from './support/app';
 
 /**
  * The Ask AI panel is a `persist` island: opening it and touring the menu must
@@ -25,7 +25,7 @@ beforeAll(async () => {
   if (!BUILT) return;
   ({ base: BASE, stop } = await serveBuilt(APP));
   // Chrome proper: the Navigation API drives both behaviors under test.
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {

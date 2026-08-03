@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './support/app';
+import { TIMEOUT, isBuilt, launchBrowser, openPage, serveBuilt, ssrApp } from './support/app';
 
 /**
  * What examples/with-local-llm exists to demonstrate: a copilot whose model
@@ -89,7 +89,7 @@ beforeAll(async () => {
   ({ server, get } = await ssrApp('examples/with-local-llm'));
   if (!BUILT) return;
   ({ base: BASE, stop } = await serveBuilt('examples/with-local-llm'));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(() => {

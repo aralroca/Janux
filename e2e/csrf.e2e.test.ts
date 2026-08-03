@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt } from './support/app';
+import { TIMEOUT, isBuilt, launchBrowser, openPage, serveBuilt } from './support/app';
 
 /**
  * The one half of the CSRF defence that no unit test can assert: that a real
@@ -71,7 +71,7 @@ beforeAll(async () => {
   ({ stop: stopVictim } = app);
   victim = app.base;
   attacker = Bun.serve({ port: 0, fetch: () => new Response(forgeryPage(victim), { headers: { 'content-type': 'text/html' } }) });
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(() => {

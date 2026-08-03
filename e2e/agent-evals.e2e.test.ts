@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { TIMEOUT, appRoot, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrApp } from './support/app';
 
 /**
  * examples/agent-evals exists to prove the CI gate itself: `janux eval` replays
@@ -23,7 +23,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   ({ base: BASE, stop } = await serveBuilt('examples/agent-evals'));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(() => {

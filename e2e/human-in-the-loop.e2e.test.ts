@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrApp } from './support/app';
 
 /**
  * What examples/human-in-the-loop exists to demonstrate: the `confirm` guard as
@@ -46,7 +46,7 @@ beforeAll(async () => {
   ({ server, get } = await ssrApp('examples/human-in-the-loop'));
   if (!BUILT) return;
   ({ base: BASE, stop } = await serveBuilt('examples/human-in-the-loop'));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(() => {

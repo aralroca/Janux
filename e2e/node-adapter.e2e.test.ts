@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { Browser } from 'playwright';
-import { TIMEOUT, hasNodeBuild, launchChrome, openPage, serveNode } from './support/app';
+import { TIMEOUT, hasNodeBuild, launchBrowser, openPage, serveNode } from './support/app';
 
 /**
  * The suite that runs against the Node build rather than the Bun one.
@@ -27,7 +27,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   [node, shop] = await Promise.all([serveNode(NODE_APP, 31731), serveNode(SHOP, 31732)]);
-  browser = await launchChrome();
+  browser = await launchBrowser();
 }, TIMEOUT);
 
 afterAll(() => {

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { Browser } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrApp } from './support/app';
 
 /**
  * What examples/with-mcp-client exists to demonstrate: the agent's outbound
@@ -212,7 +212,7 @@ describe.if(BUILT)('examples/with-mcp-client in a real browser', () => {
 
   beforeAll(async () => {
     ({ base, stop } = await serveBuilt(APP));
-    browser = await launchChrome();
+    browser = await launchBrowser();
   });
 
   afterAll(() => stop?.());

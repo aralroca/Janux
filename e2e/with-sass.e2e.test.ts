@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Browser } from 'playwright';
-import { TIMEOUT, appRoot, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './support/app';
+import { TIMEOUT, appRoot, isBuilt, launchBrowser, openPage, serveBuilt, ssrApp } from './support/app';
 
 /**
  * Sass against the with-sass example. The claim under test is that naming the
@@ -20,7 +20,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   ({ base: BASE, stop } = await serveBuilt('examples/with-sass'));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {

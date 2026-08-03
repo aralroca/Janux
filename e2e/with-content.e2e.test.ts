@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { appRoot, isBuilt, launchChrome, openPage, serveBuilt, ssrApp, TIMEOUT } from './support/app';
+import { appRoot, isBuilt, launchBrowser, openPage, serveBuilt, ssrApp, TIMEOUT } from './support/app';
 
 const APP = 'examples/with-content';
 const DIST = join(appRoot(APP), 'dist/client');
@@ -164,7 +164,7 @@ describe.skipIf(!isBuilt(APP))('examples/with-content in a browser', () => {
   it(
     'an island written inside MDX resumes and responds to a click',
     async () => {
-      const { page, errors } = await openPage(await launchChrome());
+      const { page, errors } = await openPage(await launchBrowser());
 
       await page.goto(`${built.base}/notes/interactive-content`);
       await page.click('button[data-jxa="poll#default:vote"]');
