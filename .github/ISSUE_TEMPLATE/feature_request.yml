@@ -1,0 +1,22 @@
+name: Feature request
+description: Propose a change or addition to Janux
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can't you do today, or what is more awkward than it should be?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: >-
+        A sketch is enough. Public API changes end up going through an RFC
+        issue ([RFC 0001](https://github.com/aralroca/Janux/issues/1),
+        [RFC 0002](https://github.com/aralroca/Janux/issues/13) are the
+        precedent) — a rough idea here is a fine start.
+    validations:
+      required: false

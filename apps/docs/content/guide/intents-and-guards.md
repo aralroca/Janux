@@ -45,6 +45,31 @@ An `api()` proposal created from the page — `window.janux.call('api.…')` —
 
 Tip: give your copilot component human-only intents (`guard: 'forbidden'`) for `approve`/`reject`, so an agent can never approve its own proposal.
 
+### The proposal token: threat model and guarantees
+
+A server-side proposal is a capability: whoever presents its token to `/_janux/approve` executes the parked call. If you are evaluating Janux for a setting where that approval is the control — payments, PII disclosure, anything regulated — this is the exact contract, and each row is pinned by a test that fails without the mechanism behind it.
+
+The token is `<id>.<signature>`: a random id (the lookup key, and the only part that appears in audit entries and observability spans) plus an HMAC-SHA256 over the id, the proposing session and the payload's hash, under a key generated per server instance. Approval re-derives the signature from the *approving* request's session and the *currently stored* payload, compares it in constant time, and consumes the proposal in the same synchronous pass.
+
+| Attacker | What they hold | Why the approval fails |
+| --- | --- | --- |
+| Replays a settled token | The full token, already approved or rejected once | Consumption is atomic with verification: the second attempt finds nothing (`404`) |
+| Resends an old token | A token lifted from a backup, log or screenshot hours later | Proposals expire — ten minutes by default, `proposalTtlMs` to tune (`410`) |
+| Approves from another session | The full token, in a different browser | The signature covers the proposing session, derived from the request's own cookies (`403`) — and the refusal does **not** consume the proposal, so the owner still decides |
+| Swaps the payload | A valid token, plus a way to alter what it executes | The signature covers the payload's hash, re-checked against the stored input at approval time (`403`) |
+| Redeems on another instance | A token minted by a different server process | The signing key never leaves its instance, and proposals live in that instance's memory |
+| Reads your traces | Audit entries and spans | They carry only the bare id, which no longer settles anything on its own |
+
+Two boundaries to know. "Session" is the hash of the request's `cookie` header: same browser, same session — no framework cookie is minted, so responses stay cacheable and cookieless callers (tests, remote agents) bind to the empty session. And a proposal parked by a *remote* agent binds to that remote caller's (usually empty) session, which today can only be settled server-side — consistent with there being no push channel to open pages.
+
+The TTL is one server option:
+
+```ts
+proposalTtlMs: 5 * 60_000, // approvals expire after five minutes; default is ten
+```
+
+The default survives a coffee break on purpose: hardening the token must not make the human flow worse. The four attacker rows are the corpus in `packages/conformance/security/proposal-tokens.cases.ts`; the vault itself — including the payload-mutation case no HTTP client can express — is covered in `packages/janux-server/src/proposals.test.ts`.
+
 ## Readiness
 
 `ready` declares preconditions as data. A not-ready intent is announced as `ready: false` in the manifest — agents *know* they should wait instead of failing at runtime.
