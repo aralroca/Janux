@@ -117,6 +117,12 @@ Type-only exports are outside this contract. They are documented, and they move,
 - **Experimental** — _none_
 - **Internal** — _none_
 
+### `@janux/testing/playwright`
+
+- **Stable** — `expect`, `test`
+- **Experimental** — _none_
+- **Internal** — _none_
+
 ## Why these are experimental
 
 **`janux/interop`** — React is the only foreign runtime implemented. Vue (and reverse interop — Janux inside a foreign tree) are on the roadmap, and supporting them is expected to move this surface.

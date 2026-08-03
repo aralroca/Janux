@@ -72,6 +72,24 @@ The quiescence barrier: resolves when the page's Janux runtime reports no pendin
 
 This is the call that replaces every sleep in an e2e suite: quiet is observable, so waiting a guessed number of milliseconds is never needed.
 
+## `@janux/testing/playwright` — `test` / `expect`
+
+Fixtures for the Playwright runner: one server per worker for the built app named by `test.use({ janux: { root } })`, `baseURL` pointed at it, and a `goto(path)` that resolves only when the page is **quiet** — the settled barrier instead of a guessed `waitForTimeout`. The `settled()` fixture re-arms the barrier after an interaction, and `agent` drives the page's agent surface (`call` / `approve` / `reject`) the way a real agent does, through `window.janux`.
+
+```
+import { expect, test } from '@janux/testing/playwright';
+
+test.use({ janux: { root: new URL('..', import.meta.url).pathname } });
+
+test('checkout stays quiet', async ({ goto, page, settled, agent }) => {
+  await goto('/cart');                 // navigated AND settled
+  await page.click('text=Add');
+  await settled();                     // drained: sources, effects, debounces
+  await expect(page.locator('output')).toHaveText('1');
+  await agent.call('cart.checkout');   // the agent face, same page
+});
+```
+
 ## `launchChrome()` / `openPage(browser)`
 
 One shared Chrome for the whole test process (launch/teardown churn is what makes `goto` flake under load), and a page that records uncaught `pageerror`s for the final assertion: `openPage` returns `{ page, errors }`.

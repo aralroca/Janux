@@ -26,4 +26,5 @@ export const UNDOCUMENTED: Record<string, string[]> = {
   '@janux/vite': [],
   '@janux/cli': [],
   '@janux/testing': [],
+  '@janux/testing/playwright': [],
 };
