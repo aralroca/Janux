@@ -65,7 +65,7 @@ describe('appModules', () => {
 
     const app = await resolveAppConfig(root);
 
-    expect(appModules(app).map((file) => file.slice(root.length + 1))).toContain('src/feed.ts');
+    expect(appModules(app).map((file) => toPosix(file.slice(root.length + 1)))).toContain('src/feed.ts');
     // And its path is rebuilt at runtime rather than frozen to this machine.
     expect(generateApp(root, app)).not.toContain(root);
   });

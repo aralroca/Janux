@@ -1,8 +1,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
+import { join } from 'node:path';
 import { createTestApp, mockApi, resetApiMocks, type TestApp } from '@janux/testing';
 import { catalog } from '../src/server/shop.api';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = join(import.meta.dirname, '..');
 
 let app: TestApp;
 

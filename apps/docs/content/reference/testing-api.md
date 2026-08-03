@@ -80,9 +80,10 @@ Fixtures for the Playwright runner: one server per worker for the built app name
 The app is served in its own Bun process (the Playwright runner is Node; a Janux server is Bun-first), so `bun` must be on PATH. Run `janux build` for the app first — the fixtures serve `dist/client` like `janux start` does.
 
 ```
+import { join } from 'node:path';
 import { expect, test } from '@janux/testing/playwright';
 
-test.use({ janux: { root: new URL('..', import.meta.url).pathname } });
+test.use({ janux: { root: join(import.meta.dirname, '..') } });
 
 test('checkout stays quiet', async ({ goto, page, settled, agent }) => {
   await goto('/cart');                 // navigated AND settled

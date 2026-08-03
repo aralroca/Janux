@@ -87,9 +87,16 @@ describe('history file — append and read back, fail-open', () => {
     expect(readBaseline(root, file)?.runId).toBe('run_main');
   });
 
+  // A file standing where the directory should be, rather than a path that is
+  // only unusable on POSIX: `/dev/null/nope` is a plain missing path on Windows,
+  // where the write then succeeds and there is nothing to fail open from.
   it('never throws: an unwritable root loses the record, not the run', () => {
-    expect(() => appendHistory('/dev/null/nope', record('run_1', []))).not.toThrow();
-    expect(readBaseline('/dev/null/nope')).toBeUndefined();
+    const blocked = join(mkdtempSync(join(tmpdir(), 'janux-history-')), 'not-a-dir');
+
+    writeFileSync(blocked, '');
+
+    expect(() => appendHistory(blocked, record('run_1', []))).not.toThrow();
+    expect(readBaseline(blocked)).toBeUndefined();
   });
 
   /**

@@ -20,7 +20,10 @@ describe('production wiring runs src/instrumentation.ts first', () => {
     await prodServerOptions(FIXTURE);
 
     expect(isTracing()).toBe(true);
-    const { registered } = await import(`${FIXTURE}/src/instrumentation`);
+    // The same specifier the wiring used, for the same reason it uses it: a raw
+    // path imports a second copy of the module on Windows, and this would read
+    // that copy's untouched array while the loaded one holds the record.
+    const { registered } = await import(moduleSpecifier(join(FIXTURE, 'src/instrumentation.ts')));
 
     expect(registered).toContain('register');
   });
