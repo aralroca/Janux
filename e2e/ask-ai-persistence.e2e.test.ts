@@ -118,6 +118,40 @@ describe.skipIf(!BUILT)('Ask AI persistence across the docs menu (apps/docs)', (
     await page.close();
   }, TIMEOUT);
 
+  /**
+   * A persisted island is lifted out of the old document and grafted into the
+   * new one: taken out once, put back once. Anything beyond that is a second
+   * detach the page can observe — an <iframe> in the subtree reloads, and a
+   * custom element inside it gets a spurious disconnected/connected pair, which
+   * is the exact class of breakage `persist` exists to prevent.
+   *
+   * Counted rather than asserted on identity on purpose: a node removed and
+   * reinserted is still the same node, so `sameInstance` above cannot see this.
+   */
+  it('takes the island out of the page exactly once while moving it', async () => {
+    const { page } = await openDocsWithAssistant();
+
+    await page.evaluate(() => {
+      const node = document.querySelector('janux-island[data-jx-persist]')!;
+      const counts = { detached: 0, attached: 0 };
+
+      (window as any).__moves = counts;
+      new MutationObserver((records) => {
+        for (const record of records) {
+          if ([...record.removedNodes].includes(node)) counts.detached += 1;
+          if ([...record.addedNodes].includes(node)) counts.attached += 1;
+        }
+      }).observe(document.documentElement, { childList: true, subtree: true });
+    });
+
+    await visibleLink(page, OTHER_DOCS_PAGE).click();
+    await settled(page, OTHER_DOCS_PAGE);
+
+    expect(await page.evaluate(() => (window as any).__moves)).toEqual({ detached: 1, attached: 1 });
+    expect(await assistantState(page)).toEqual({ exists: true, sameInstance: true, open: true });
+    await page.close();
+  }, TIMEOUT);
+
   it('still lets a real reload reload', async () => {
     const { page } = await openDocsWithAssistant();
 
