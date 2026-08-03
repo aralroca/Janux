@@ -2,7 +2,7 @@ import { articleJsonLd, breadcrumbJsonLd, notFound, type PageMeta } from 'janux'
 import { Layout } from '../../../components/Layout';
 import { docEntry, docIndex, groupLabel, sectionLabel } from '../../../server/docs.api';
 import { renderMarkdown, type TocEntry } from '../../../server/markdown';
-import { absolute, SOCIAL_IMAGE } from '../../../site';
+import { absolute, SOCIAL_DEFAULTS, SOCIAL_IMAGE } from '../../../site';
 
 export function staticParams() {
   return docIndex().map(({ section, slug }) => ({ section, slug }));
@@ -50,7 +50,7 @@ export function meta({ params }: { params: { section: string; slug: string } }):
     description,
     canonical: path,
     image: SOCIAL_IMAGE,
-    og: { type: 'article' },
+    og: { ...SOCIAL_DEFAULTS, type: 'article' },
     jsonLd: docJsonLd({ title, path, section: params.section, slug: params.slug, description }),
   };
 }
