@@ -87,7 +87,7 @@ describe('examples/blog-static end to end', () => {
   });
 
   it('serves an RSS feed with absolute post urls, newest first, dated', async () => {
-    const response = await get('/rss.xml');
+    const response = await app.fetch('/rss.xml');
     const body = await response.text();
 
     expect(response.status).toBe(200);
@@ -101,7 +101,7 @@ describe('examples/blog-static end to end', () => {
   });
 
   it('advertises the feed on every page, so readers can autodiscover it', async () => {
-    expect(await (await get('/')).text()).toContain(
+    expect(await (await app.fetch('/')).text()).toContain(
       '<link rel="alternate" id="jx-feed" type="application/rss+xml" title="Janux Static Blog" href="/rss.xml">',
     );
   });
