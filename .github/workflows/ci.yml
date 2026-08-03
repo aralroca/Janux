@@ -290,12 +290,15 @@ jobs:
           path: lighthouse-reports/
           if-no-files-found: ignore
 
-  # Static analysis over the JS/TS the repository ships.
+  # Static analysis over the JS/TS the repository ships. The repository is
+  # private without code scanning, so uploading SARIF is not available: the
+  # findings gate the job right here instead, and the SARIF is kept as an
+  # artifact. When the repo goes public (or gets code scanning), drop the two
+  # trailing steps and the `upload: never`/`output:` pair for the default flow.
   codeql:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write
 
     steps:
       - uses: actions/checkout@v4
@@ -304,9 +307,24 @@ jobs:
           languages: javascript-typescript
           build-mode: none
       - uses: github/codeql-action/analyze@v4
+        with:
+          upload: never
+          output: codeql-results
+      - name: Fail on error- or warning-level findings
+        run: |
+          jq -r '.runs[].results[]? | "\(.level // "warning")\t\(.ruleId)\t\(.locations[0].physicalLocation.artifactLocation.uri // "?")"' codeql-results/*.sarif
+          jq -es '[.[].runs[].results[]? | select(.level == "error" or .level == "warning" or .level == null)] | length == 0' codeql-results/*.sarif
+      - name: Upload the SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-results
+          path: codeql-results/
+          if-no-files-found: ignore
 
   # Known-vulnerability scan over the one lockfile every workspace install
-  # resolves from.
+  # resolves from. `fail-on-vuln` (the default) is the gate; the SARIF upload is
+  # off because code scanning is unavailable on this private repository.
   osv-scan:
     permissions:
       actions: read
@@ -315,6 +333,7 @@ jobs:
     uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.8
     with:
       scan-args: -L ./bun.lock
+      upload-sarif: false
 
   # Aggregator over everything, so branch protection can require this one
   # check. A job added above must be added to `needs` here — scripts/ci.test.ts

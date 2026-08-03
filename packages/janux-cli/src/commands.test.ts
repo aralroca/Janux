@@ -247,15 +247,21 @@ describe('emitAssets', () => {
     return root;
   }
 
-  it('copies public/ verbatim and writes the variants <Image> links to', async () => {
-    const root = appWithImage();
+  // Real avif/webp encoding: a cold sharp does not fit bun's 5s default
+  // (22s on Bun 1.3.0, the engines floor the CI matrix runs).
+  it(
+    'copies public/ verbatim and writes the variants <Image> links to',
+    async () => {
+      const root = appWithImage();
 
-    await emitAssets(root, { fonts: [] });
+      await emitAssets(root, { fonts: [] });
 
-    expect(existsSync(join(root, 'dist/client/hero.jpg'))).toBe(true);
-    expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/640.avif'))).toBe(true);
-    expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/1920.webp'))).toBe(true);
-  });
+      expect(existsSync(join(root, 'dist/client/hero.jpg'))).toBe(true);
+      expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/640.avif'))).toBe(true);
+      expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/1920.webp'))).toBe(true);
+    },
+    60_000,
+  );
 
   it('is a no-op for an app with nothing to serve', async () => {
     const root = mkdtempSync(join(tmpdir(), 'janux-build-'));

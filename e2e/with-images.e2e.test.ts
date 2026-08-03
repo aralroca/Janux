@@ -157,7 +157,10 @@ describe.if(BUILT)(`${APP}: the self-hosted font`, () => {
         const loaded = [...(document.fonts as any)].filter((face: any) => face.status === 'loaded');
 
         return {
-          families: loaded.map((face: any) => face.family),
+          // Firefox reports FontFace.family CSSOM-serialized ('"Inter"');
+          // Chromium and WebKit report the bare name, from the same valid
+          // `font-family:'Inter'` the framework emits. Compare the names.
+          families: loaded.map((face: any) => face.family.replace(/^["']|["']$/g, '')),
           body: getComputedStyle(document.body).fontFamily,
         };
       });
