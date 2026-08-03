@@ -17,6 +17,8 @@ janux eval [files...]        # scripted agent-task scenarios against a live app
 janux info                   # versions, resolved config and routes — paste into an issue
 ```
 
+All of these run the `janux` bin that `@janux/cli` installs into your app's `node_modules` — there is no global install. Apps scaffolded by `create-janux` wrap the common ones as package scripts (`bun run dev`); for the rest, prefix with `bunx`: `bunx janux info`.
+
 `PORT` env is honored when `--port` is absent.
 
 `janux start` serves `dist/client` before falling back to the app: compressed with brotli (or gzip, whichever the request accepts), each file compressed once and kept in memory, and cached `immutable` for a year when its name carries a content hash. Behind a CDN that already does this, it costs nothing; on a box without one, it is the difference between shipping a bundle and shipping four of them.
@@ -69,7 +71,7 @@ integrations are actually installed, and every route the file-system router
 found:
 
 ```bash
-janux info
+bunx janux info
 ```
 
 ```markdown

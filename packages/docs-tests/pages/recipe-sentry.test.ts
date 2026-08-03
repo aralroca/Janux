@@ -100,10 +100,10 @@ describe('recipes/sentry.md — the trace the page prints', () => {
 
     setTracer(tracer);
     await (await server.fetch(new Request('http://x/'))).text();
-    await post(server, '/_janux/agent', { messages: [{ role: 'user', content: 'check out' }], path: '/' });
-
-    const proposal = tracer.spans.find((span) => span.name === 'janux.api')!;
-    const id = proposal.attributes['janux.proposal.id'] as string;
+    // The signed token rides only the agent's reply — the span carries the bare
+    // id, which by design no longer approves anything.
+    const turn = await (await post(server, '/_janux/agent', { messages: [{ role: 'user', content: 'check out' }], path: '/' })).text();
+    const [id] = turn.match(/prop_api_[0-9a-f-]{36}\.[A-Za-z0-9_-]+/)!;
 
     await post(server, '/_janux/approve', { id });
 
@@ -152,10 +152,13 @@ describe('recipes/sentry.md — the trace the page prints', () => {
     const server = buildApp();
 
     setTracer(tracer);
-    await post(server, '/_janux/agent', { messages: [{ role: 'user', content: 'check out' }], path: '/' });
+    const turn = await (await post(server, '/_janux/agent', { messages: [{ role: 'user', content: 'check out' }], path: '/' })).text();
     const proposal = tracer.spans.find((span) => span.name === 'janux.api')!;
+    // Spans tie the story together with the bare id; approving needs the signed
+    // token from the agent's reply.
     const id = proposal.attributes['janux.proposal.id'] as string;
-    const approved = await (await post(server, '/_janux/approve', { id })).json();
+    const [token] = turn.match(/prop_api_[0-9a-f-]{36}\.[A-Za-z0-9_-]+/)!;
+    const approved = await (await post(server, '/_janux/approve', { id: token })).json();
 
     expect(proposal.attributes).toMatchObject({
       'janux.intent': 'api.shop.checkout',

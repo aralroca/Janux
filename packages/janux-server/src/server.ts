@@ -24,7 +24,8 @@ import { createMcpEndpoint, type McpAuth } from './mcp';
 import { pageMarkdown } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
 import type { ShellI18n } from './html-shell';
-import { assertValidInput, errorStatus, evictOldestProposal, json, proposalId, type PendingApiProposal } from './http';
+import { assertValidInput, errorStatus, json } from './http';
+import { createProposalVault, proposalId, proposalSessionOf, sessionOf, withProposalSession, type SettleError } from './proposals';
 import { apiAttributes, apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
 import { createFsRouter, type Route } from './router';
@@ -134,6 +135,13 @@ export interface ServerOptions {
    * serves someone else's page. See `csrf.ts`.
    */
   allowedOrigins?: string[];
+  /**
+   * How long a parked `confirm` proposal stays approvable, in milliseconds.
+   * Defaults to ten minutes: long enough for the approver to come back with a
+   * coffee, short enough that a token lifted from a log or backup is dead on
+   * arrival. See `proposals.ts` for the rest of the token's threat model.
+   */
+  proposalTtlMs?: number;
   /** First-class WebSocket endpoint — see `serve()` and the `websocket` handlers on the returned server. */
   websocket?: WebSocketConfig;
   /**
@@ -327,7 +335,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
   // error pages either and degrades to the bare status line.
   const errorPages: Partial<Record<ErrorPageKind, string>> = router?.errorPages ?? {};
   const rootLayouts = router?.rootLayouts ?? [];
-  const proposals = new Map<string, PendingApiProposal>();
+  const proposals = createProposalVault({ ttlMs: options.proposalTtlMs });
 
   const resolveCtx = async (req: Request): Promise<Ctx> => (await options.ctxFor?.(req)) ?? {};
 
@@ -396,7 +404,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const ctx = await resolveCtx(req);
     const identity = (await agentAuth?.identify(req)) ?? null;
 
-    return identity ? { ...ctx, agent: identity } : ctx;
+    // Every invocation path builds its ctx here, so this is where a `confirm`
+    // proposal learns which session parked it — see `proposals.ts`.
+    return withProposalSession(identity ? { ...ctx, agent: identity } : ctx, sessionOf(req));
   };
 
   const findRoute = (pathname: string) => {
@@ -549,19 +559,19 @@ export function createJanuxServer(options: ServerOptions = {}) {
   /** Agent + `confirm`: register a pending proposal for a human instead of running the tool. */
   const registerProposal = (tool: ApiTool, input: unknown, ctx: Ctx, id: string) => {
     const parsed = tool.input ? assertValidInput(tool, input) : input;
-
-    evictOldestProposal(proposals);
     // The approved call still CAME through the agent surface — a human only
     // authorized it. Executing as 'agent' keeps run()/guards/audit consistent
     // with the client-side approval path and with the documented origin rules.
     const execute = () => invokeApi(tool, parsed, ctx, 'agent', options.onAudit, { span: 'janux.api.execute', proposal: id });
+    // The signed token goes only to the proposer; spans and audit entries carry
+    // the bare id, which on its own can no longer settle anything.
+    const token = proposals.park({ id, tool: tool.name, input: parsed, execute, session: proposalSessionOf(ctx) });
 
-    proposals.set(id, { id, tool: tool.name, input: parsed, execute });
     // `proposed`, not `ok` — nothing ran yet, and an audit trail that records an
     // unapproved proposal as a success is worse than no trail at all.
     options.onAudit?.(apiAuditEntry(tool, 'agent', 'confirm', ctx, { input: parsed, ok: true, proposed: true }));
 
-    return { status: 'proposal' as const, id, tool: tool.name, input: parsed };
+    return { status: 'proposal' as const, id: token, tool: tool.name, input: parsed };
   };
 
   /**
@@ -630,6 +640,14 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return json({ ok: false, error: 'a proposal is settled by a human, not by an agent' }, 403);
   };
 
+  /** One refusal per way a token can fail — the 403 stays vague on purpose (session vs. payload is the attacker's homework). */
+  const settleRefusal = (error: SettleError): Response => {
+    if (error === 'expired') return json({ ok: false, error: 'proposal expired' }, 410);
+    if (error === 'invalid') return json({ ok: false, error: 'proposal token does not match this session and payload' }, 403);
+
+    return json({ ok: false, error: 'unknown proposal' }, 404);
+  };
+
   const handleApprove = async (req: Request): Promise<Response> => {
     const refused = refuseAgentSettlement(req);
 
@@ -637,17 +655,17 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const body = await jsonBodyWithin(req);
 
     if (body instanceof Response) return body;
-    const { id } = body as { id?: string };
-    const proposal = id ? proposals.get(id) : undefined;
+    const { id } = body as { id?: unknown };
+    const settled = proposals.approve(typeof id === 'string' ? id : '', sessionOf(req));
 
-    if (!proposal) return json({ ok: false, error: 'unknown proposal' }, 404);
-    proposals.delete(proposal.id);
+    if ('error' in settled) return settleRefusal(settled.error);
+    const { record } = settled;
     // The approval is the human act this whole feature exists to make visible:
     // its own span, `origin: human`, wrapping the agent-origin execution.
     const result = await withSpan(
       'janux.proposal.approve',
-      () => ({ 'janux.proposal.id': proposal.id, 'janux.intent': `api.${proposal.tool}`, 'janux.origin': 'human' }),
-      () => proposal.execute(),
+      () => ({ 'janux.proposal.id': record.id, 'janux.intent': `api.${record.tool}`, 'janux.origin': 'human' }),
+      () => record.execute(),
     );
 
     return json({ ok: true, result });
@@ -892,9 +910,14 @@ export function createJanuxServer(options: ServerOptions = {}) {
       const body = await jsonBodyWithin(req);
 
       if (body instanceof Response) return body;
-      const { id } = body as { id?: string };
+      const { id } = body as { id?: unknown };
+      const settled = proposals.reject(typeof id === 'string' ? id : '', sessionOf(req));
 
-      return json({ ok: id ? proposals.delete(id) : false });
+      // A foreign session must not cancel the owner's pending decision; an
+      // unknown token stays the quiet `ok: false` the client mirror expects.
+      if ('error' in settled) return settled.error === 'invalid' ? settleRefusal('invalid') : json({ ok: false });
+
+      return json({ ok: true });
     }
     if (pathname === '/llms.txt' && options.llmsTxt) {
       llmsTxtBody ??= await renderLlmsTxt();

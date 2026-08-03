@@ -56,7 +56,8 @@ function makeServer(): ReturnType<typeof createJanuxServer> {
   });
 }
 
-const PROPOSAL_ID = /prop_api_[0-9a-f-]{36}/g;
+// Id plus the vault's HMAC signature — the whole token is what `{id}` replays.
+const PROPOSAL_ID = /prop_api_[0-9a-f-]{36}\.[A-Za-z0-9_-]+/g;
 
 /** The one fact a row about the manifest or MCP is asserting, folded out of a large body. */
 function fold(step: Step, status: number, body: string, expected: string): string {
