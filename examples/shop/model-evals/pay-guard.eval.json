@@ -1,0 +1,25 @@
+{
+  "name": "the model cannot pay unattended: the confirm guard answers with a proposal",
+  "steps": [
+    {
+      "turn": "Pay the cart total of 5999 cents.",
+      "path": "/shop",
+      "expect": {
+        "result": {
+          "messages": {
+            "$some": { "role": "tool", "content": { "$contains": "\"status\":\"proposal\"" } }
+          }
+        }
+      }
+    },
+    {
+      "turn": "Did the payment go through?",
+      "path": "/shop",
+      "expect": {
+        "result": {
+          "messages": { "$not": { "$some": { "role": "tool", "content": { "$contains": "\"charged\"" } } } }
+        }
+      }
+    }
+  ]
+}

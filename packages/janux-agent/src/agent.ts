@@ -7,9 +7,10 @@ import { createRateLimiter, type RateLimitConfig, type RateLimiter } from './har
 import { createLlmHandler } from './llm-endpoint';
 import { createRemoteToolbox, type McpAgentConnection, type RemoteToolbox } from './mcp-tools';
 import { resolveModel, setupCard, type ModelEnv } from './model';
-import { tracedAgentTurn, tracedRound, type ModelCost } from './tracing';
+import { tracedAgentTurn, tracedRound, turnUsageAttributes, type ModelCost } from './tracing';
 import { allowsTool, type ToolFilter } from './tool-filter';
-import { callProvider, type AgentTool, type ChatMessage, type FetchLike, type ToolCall } from './providers';
+import { turnBill } from './usage';
+import { callProvider, type AgentTool, type ChatMessage, type FetchLike, type TokenUsage, type ToolCall } from './providers';
 
 export interface HarnessConfig {
   /** Thread-aware turns: history from storage, replies remembered. */
@@ -234,6 +235,14 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
         return json({ type: 'refusal', reason, message: refusalText(config.harness, reason), threadId: turn.threadId }, 200);
       }
       const messages = guarded.messages.filter((message) => message.role !== 'system') as ChatMessage[];
+      const rounds: (TokenUsage | undefined)[] = [];
+      // Turn accounting in the envelope itself, so callers (the eval runner
+      // included) can bill a turn without a tracer anywhere.
+      const billed = () => {
+        const bill = turnBill(rounds, config.cost);
+
+        return bill ? { usage: bill } : {};
+      };
 
       const runLoop = async (): Promise<Response> => {
         for (let round = 0; round < maxTurns; round += 1) {
@@ -246,9 +255,10 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
           );
 
           if ('providerError' in reply) {
-            return json({ type: 'error', error: 'provider_error', detail: reply.providerError, threadId: turn.threadId }, 502);
+            return json({ type: 'error', error: 'provider_error', detail: reply.providerError, threadId: turn.threadId, ...billed() }, 502);
           }
 
+          rounds.push(reply.usage);
           messages.push({ role: 'assistant', content: reply.text, toolCalls: reply.toolCalls });
           if (reply.toolCalls.length === 0) {
             await turn.rememberReply?.(reply.text);
@@ -259,6 +269,7 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
               messages,
               threadId: turn.threadId,
               model: `${model.provider}/${model.model}`,
+              ...billed(),
             });
           }
           const serverCalls = reply.toolCalls.filter((call) => call.name.startsWith('api.'));
@@ -267,15 +278,32 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
 
           messages.push(...(await toolResults(serverCalls, (call) => deps.invoke(call.name, call.input))));
           messages.push(...(await toolResults(remoteCalls, (call) => toolbox!.call(call.name, call.input))));
-          if (uiCalls.length > 0) return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId });
+          if (uiCalls.length > 0) return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId, ...billed() });
         }
 
-        return json({ type: 'text', text: 'I could not finish within the turn limit.', messages, threadId: turn.threadId });
+        // `stopReason` because giving up wears the same `type: 'text'` as a real
+        // answer: without it an eval step reads an exhausted loop as a success.
+        return json({
+          type: 'text',
+          text: 'I could not finish within the turn limit.',
+          stopReason: 'max_turns',
+          messages,
+          threadId: turn.threadId,
+          ...billed(),
+        });
       };
 
       // The whole turn is one span: every round and every tool the model
-      // reached for hangs off it, so a trace reads as one conversation.
-      return tracedAgentTurn(model, runLoop);
+      // reached for hangs off it, so a trace reads as one conversation —
+      // with the turn's total tokens and price on the span that frames it.
+      return tracedAgentTurn(model, async (span) => {
+        const response = await runLoop();
+        const bill = turnBill(rounds, config.cost);
+
+        if (bill) span.setAttributes(turnUsageAttributes(bill));
+
+        return response;
+      });
     },
   };
 }
