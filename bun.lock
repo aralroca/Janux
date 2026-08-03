@@ -870,6 +870,7 @@
         "@janux/node": "workspace:*",
         "@janux/server": "workspace:*",
         "@janux/tailwind": "workspace:*",
+        "@janux/testing": "workspace:*",
         "@janux/vercel": "workspace:*",
         "@janux/vite": "workspace:*",
         "@mdx-js/mdx": "^3.1.0",
@@ -1000,6 +1001,25 @@
         "@tailwindcss/postcss": "^4.0.0",
         "tailwindcss": "^4.0.0",
       },
+    },
+    "packages/janux-testing": {
+      "name": "@janux/testing",
+      "version": "0.6.0",
+      "dependencies": {
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "@janux/vite": "workspace:*",
+      },
+      "devDependencies": {
+        "janux": "workspace:*",
+        "playwright": "^1.62.0",
+      },
+      "peerDependencies": {
+        "playwright": "^1.40.0",
+      },
+      "optionalPeers": [
+        "playwright",
+      ],
     },
     "packages/janux-vercel": {
       "name": "@janux/vercel",
@@ -1299,6 +1319,8 @@
     "@janux/server": ["@janux/server@workspace:packages/janux-server"],
 
     "@janux/tailwind": ["@janux/tailwind@workspace:packages/janux-tailwind"],
+
+    "@janux/testing": ["@janux/testing@workspace:packages/janux-testing"],
 
     "@janux/vercel": ["@janux/vercel@workspace:packages/janux-vercel"],
 

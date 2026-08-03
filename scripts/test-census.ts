@@ -23,6 +23,7 @@ const TARGETS = [
   'packages/janux-vite',
   'packages/janux-cli',
   'packages/janux-tailwind',
+  'packages/janux-testing',
   'packages/conformance',
   'packages/docs-tests',
   'apps/docs',

@@ -25,4 +25,5 @@ export const UNDOCUMENTED: Record<string, string[]> = {
   '@janux/agent/local': [],
   '@janux/vite': [],
   '@janux/cli': [],
+  '@janux/testing': [],
 };
