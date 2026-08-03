@@ -10,5 +10,5 @@
     "jsx": "react-jsx",
     "jsxImportSource": "janux"
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "tests/**/*"]
 }

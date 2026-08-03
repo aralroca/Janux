@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt } from './support/app';
+import { isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * Streaming suspense in a real browser, against the built with-suspense
@@ -12,7 +13,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt } from 
  * re-executes them instead of morphing them in place.
  */
 
-const APP = 'examples/with-suspense';
+const APP = appRoot('examples/with-suspense');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -21,7 +22,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 

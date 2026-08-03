@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/nested-islands exists to demonstrate: stateful islands inside
@@ -10,7 +11,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * whole subtrees (Card with its Badge) without breaking the page.
  */
 
-const APP = 'examples/nested-islands';
+const APP = appRoot('examples/nested-islands');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -19,7 +20,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -35,8 +36,8 @@ const badges = (page: Page) => page.locator('.board .badge').allTextContents();
 
 describe('examples/nested-islands server side', () => {
   it('server-renders the three island levels nested inside each other', async () => {
-    const { get } = await ssrApp(APP);
-    const html = await (await get('/')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('data-jx="board#default"');
     // Two cards by default, each hosting its own badge island: the island ids nest.
@@ -49,8 +50,8 @@ describe('examples/nested-islands server side', () => {
   });
 
   it('every level contributes its intents to the agent surface', async () => {
-    const { get } = await ssrApp(APP);
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const app = await createTestApp(APP);
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const names = new Set(manifest.tools.map((tool: any) => tool.name));
 
     ['board.rename', 'board.add', 'board.remove', 'card.inc', 'badge.toggle'].forEach((name) =>

@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
-import { ssrApp } from './support/app';
+import { createTestApp } from '@janux/testing';
+import { appRoot } from './support/app';
 
 /**
  * The shop demo's reason to exist: one cart with two faces. Humans get buttons
@@ -9,11 +10,10 @@ import { ssrApp } from './support/app';
  * for any of this: the copilot island only reaches for one when it is used.
  */
 
-let server: Awaited<ReturnType<typeof ssrApp>>['server'];
-let get: Awaited<ReturnType<typeof ssrApp>>['get'];
+let app: Awaited<ReturnType<typeof createTestApp>>;
 
 const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
-  server.fetch(
+  app.server.fetch(
     new Request(`http://test${path}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', ...headers },
@@ -22,12 +22,12 @@ const post = (path: string, body: unknown, headers: Record<string, string> = {})
   );
 
 beforeAll(async () => {
-  ({ server, get } = await ssrApp('examples/shop'));
+  app = await createTestApp(appRoot('examples/shop'));
 });
 
 describe('examples/shop end to end', () => {
   it('serves a zero-JS landing that links into the shop', async () => {
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('Janux Shop');
     expect(html).toContain('zero JavaScript');
@@ -35,7 +35,7 @@ describe('examples/shop end to end', () => {
   });
 
   it('renders the catalog server-side, resolved from the api() source', async () => {
-    const html = await (await get('/shop')).text();
+    const html = await (await app.fetch('/shop')).text();
 
     expect(html).toContain('<title>Janux Shop — demo</title>');
     expect(html).toContain('Blue Sneakers');
@@ -50,7 +50,7 @@ describe('examples/shop end to end', () => {
   });
 
   it('serves the dynamic order route as a static page with server data', async () => {
-    const html = await (await get('/orders/abc123')).text();
+    const html = await (await app.fetch('/orders/abc123')).text();
 
     expect(html).toContain('<title>Order abc123 — Janux Shop</title>');
     expect(html).toContain('Order abc123');
@@ -59,7 +59,7 @@ describe('examples/shop end to end', () => {
   });
 
   it('exposes the whole cart as tools on the shop page, with checkout guarded', async () => {
-    const manifest: any = await (await get('/_janux/manifest?path=/shop')).json();
+    const manifest: any = await (await app.fetch('/_janux/manifest?path=/shop')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
     expect(guards).toEqual({
@@ -82,7 +82,7 @@ describe('examples/shop end to end', () => {
   });
 
   it('scopes the manifest per page: the JS-less landing exposes only the api tools', async () => {
-    const manifest: any = await (await get('/_janux/manifest?path=/')).json();
+    const manifest: any = await (await app.fetch('/_janux/manifest?path=/')).json();
     const names = manifest.tools.map((tool: any) => tool.name);
 
     expect(names.filter((name: string) => name.startsWith('cart.'))).toEqual([]);

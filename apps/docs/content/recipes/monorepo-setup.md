@@ -112,6 +112,6 @@ The tool name comes from the app's file and export (`billing.charge`), so each a
 
 ## Testing
 
-Component tests need no app: `createInstance` runs a def anywhere, so `packages/ui` can test its own islands with `bun test` and no Vite, no server, no DOM. See [testing components](/docs/recipes/testing-components).
+Component tests need no app: `createInstance` runs a def anywhere, so `packages/ui` can test its own islands with `bun test` and no Vite, no server, no DOM. See the [testing recipe](/docs/recipes/testing-components).
 
 Related: [Project structure](/docs/getting-started/project-structure) · [CLI](/docs/reference/cli) · [Custom server](/docs/recipes/custom-server)

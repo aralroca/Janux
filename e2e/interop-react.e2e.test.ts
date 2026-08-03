@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/interop-react exists to demonstrate: a plain React component
@@ -10,7 +11,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * intent, so a slider move round-trips React → intent → state → props → React.
  */
 
-const APP = 'examples/interop-react';
+const APP = appRoot('examples/interop-react');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -19,7 +20,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -45,8 +46,8 @@ const slideTo = (page: Page, index: number, value: string) =>
 
 describe('examples/interop-react server side', () => {
   it('server-renders the React component inside the foreign host', async () => {
-    const { get } = await ssrApp(APP);
-    const html = await (await get('/')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<janux-foreign');
     expect(html).toContain('mixer-canvas');
@@ -57,8 +58,8 @@ describe('examples/interop-react server side', () => {
   });
 
   it('exposes the Janux intents as the agent surface, reset guarded', async () => {
-    const { get } = await ssrApp(APP);
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const app = await createTestApp(APP);
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
     expect(guards['mixer.setBand']).toBe('auto');

@@ -7,6 +7,7 @@ export const PUBLISH_ORDER = [
   'janux-vite',
   'janux-tailwind',
   'janux-cli',
+  'janux-testing',
   'janux-vercel',
   'janux-node',
   'create-janux',

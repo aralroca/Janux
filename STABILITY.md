@@ -77,7 +77,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `@janux/server`
 
-- **Stable** — `NAVIGATION_HEADER`, `NONCE_HEADER`, `api`, `apiManifestTools`, `buildLlmsTxt`, `collectApis`, `createFsRouter`, `createJanuxServer`, `createResponseCache`, `htmlDocument`, `invokeApi`, `isApi`, `revalidatePath`, `revalidateTag`, `strictPolicy`
+- **Stable** — `NAVIGATION_HEADER`, `NONCE_HEADER`, `api`, `apiManifestTools`, `buildLlmsTxt`, `collectApis`, `createFsRouter`, `createJanuxServer`, `createResponseCache`, `htmlDocument`, `invokeApi`, `isApi`, `mockApi`, `resetApiMocks`, `revalidatePath`, `revalidateTag`, `strictPolicy`
 - **Experimental** — `createAgentAuth`
 - **Internal** — `acceptsType`, `createHttpHandlers`, `formDataWithin`, `matchesType`, `readBodyWithin`, `rejectOversized`, `sniffContentType`, `spoolMultipart`
 
@@ -107,7 +107,19 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `@janux/cli`
 
-- **Stable** — `HELP_TEXT`, `parseArgs`, `prodServerOptions`, `runCli`
+- **Stable** — `HELP_TEXT`, `parseArgs`, `prodServerOptions`, `runCli`, `staticResponse`
+- **Experimental** — _none_
+- **Internal** — _none_
+
+### `@janux/testing`
+
+- **Stable** — `createTestApp`, `gotoSettled`, `hasNodeBuild`, `isBuilt`, `launchChrome`, `mockApi`, `openPage`, `resetApiMocks`, `settled`, `startNodeServer`, `startTestServer`
+- **Experimental** — _none_
+- **Internal** — _none_
+
+### `@janux/testing/playwright`
+
+- **Stable** — `expect`, `test`
 - **Experimental** — _none_
 - **Internal** — _none_
 

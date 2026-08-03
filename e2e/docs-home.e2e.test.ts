@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
-import { ssrApp } from './support/app';
+import { createTestApp } from '@janux/testing';
+import { appRoot } from './support/app';
 
 /**
  * The home page sells three things — an MCP server from `api()`, WebMCP tools
@@ -8,17 +9,16 @@ import { ssrApp } from './support/app';
  * and link those sections advertise exists and answers with what was promised.
  */
 
-let server: Awaited<ReturnType<typeof ssrApp>>['server'];
-let get: Awaited<ReturnType<typeof ssrApp>>['get'];
+let app: Awaited<ReturnType<typeof createTestApp>>;
 let home: string;
 
 beforeAll(async () => {
-  ({ server, get } = await ssrApp('apps/docs'));
-  home = await (await get('/')).text();
+  app = await createTestApp(appRoot('apps/docs'));
+  home = await (await app.fetch('/')).text();
 });
 
 function rpc(method: string, params?: unknown) {
-  return server.fetch(
+  return app.server.fetch(
     new Request('http://test/_janux/mcp', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -133,7 +133,7 @@ describe('docs home — the pitch sections', () => {
 
   it('links only to pages that exist', async () => {
     const internal = pitchLinks().filter((href) => href.startsWith('/'));
-    const statuses = await Promise.all(internal.map(async (href) => [href, (await get(href)).status] as const));
+    const statuses = await Promise.all(internal.map(async (href) => [href, (await app.fetch(href)).status] as const));
 
     expect(internal.length).toBeGreaterThan(0);
     expect(statuses.filter(([, status]) => status !== 200)).toEqual([]);
@@ -173,7 +173,7 @@ describe('docs home — the advertised MCP endpoint', () => {
   });
 
   it('405s a GET that is not a browser, per streamable HTTP', async () => {
-    const res = await server.fetch(
+    const res = await app.server.fetch(
       new Request('http://test/_janux/mcp', { headers: { accept: 'application/json, text/event-stream' } }),
     );
 
@@ -182,7 +182,7 @@ describe('docs home — the advertised MCP endpoint', () => {
 
   /** The CLI banner prints this URL. Clicking it has to explain itself, not error. */
   it('explains itself to a browser, listing the docs tools it really serves', async () => {
-    const res = await server.fetch(new Request('http://test/_janux/mcp', { headers: { accept: 'text/html' } }));
+    const res = await app.server.fetch(new Request('http://test/_janux/mcp', { headers: { accept: 'text/html' } }));
     const page = await res.text();
     const { result }: any = await (await rpc('tools/list')).json();
 

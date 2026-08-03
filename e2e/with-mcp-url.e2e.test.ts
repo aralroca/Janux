@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { appRoot, ssrApp } from './support/app';
+import { createTestApp } from '@janux/testing';
+import { appRoot } from './support/app';
 
 /**
  * examples/with-mcp-url sells one thing: the app IS a bearer-protected MCP
@@ -13,19 +14,18 @@ import { appRoot, ssrApp } from './support/app';
  * `agent-contract.json` is updated on purpose.
  */
 
-const EXAMPLE = 'examples/with-mcp-url';
+const EXAMPLE = appRoot('examples/with-mcp-url');
 const TOKEN = 'demo-agent-token';
 const AUTH = { authorization: `Bearer ${TOKEN}` };
 
-let server: Awaited<ReturnType<typeof ssrApp>>['server'];
-let get: Awaited<ReturnType<typeof ssrApp>>['get'];
+let app: Awaited<ReturnType<typeof createTestApp>>;
 
 beforeAll(async () => {
-  ({ server, get } = await ssrApp(EXAMPLE));
+  app = await createTestApp(EXAMPLE);
 });
 
 function rpc(method: string, params?: unknown, headers: Record<string, string> = {}) {
-  return server.fetch(
+  return app.server.fetch(
     new Request('http://test/_janux/mcp', {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...headers },
@@ -42,7 +42,7 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<an
 
 describe('examples/with-mcp-url — the landing stays public', () => {
   it('explains itself to a browser without any token', async () => {
-    const res = await get('/_janux/mcp', { accept: 'text/html' });
+    const res = await app.fetch('/_janux/mcp', { headers: { accept: 'text/html' } });
     const page = await res.text();
 
     expect(res.status).toBe(200);
@@ -55,7 +55,7 @@ describe('examples/with-mcp-url — the landing stays public', () => {
   });
 
   it('405s a GET from an MCP client, per streamable HTTP', async () => {
-    const res = await get('/_janux/mcp', { accept: 'application/json, text/event-stream' });
+    const res = await app.fetch('/_janux/mcp', { headers: { accept: 'application/json, text/event-stream' } });
 
     expect(res.status).toBe(405);
   });
@@ -87,9 +87,9 @@ describe('examples/with-mcp-url — bearer protection on the protocol', () => {
 
 describe('examples/with-mcp-url — the tool contract cannot drift silently', () => {
   it('matches the committed agent-contract.json (names, guards, input schemas)', async () => {
-    const golden = JSON.parse(readFileSync(join(appRoot(EXAMPLE), 'agent-contract.json'), 'utf8'));
+    const golden = JSON.parse(readFileSync(join(EXAMPLE, 'agent-contract.json'), 'utf8'));
     const list: any = await (await rpc('tools/list', undefined, AUTH)).json();
-    const manifest: any = await (await get('/_janux/manifest?path=/')).json();
+    const manifest: any = await (await app.fetch('/_janux/manifest?path=/')).json();
     const guards = new Map<string, string>(
       manifest.tools
         .filter((tool: any) => tool.name.startsWith('api.'))
@@ -135,7 +135,7 @@ describe('examples/with-mcp-url — confirm guard over MCP', () => {
 
 describe('examples/with-mcp-url — janux verify gates the surface', () => {
   it('exits 0: every reachable tool documents itself', () => {
-    const result = Bun.spawnSync(['bunx', 'janux', 'verify'], { cwd: appRoot(EXAMPLE) });
+    const result = Bun.spawnSync(['bunx', 'janux', 'verify'], { cwd: EXAMPLE });
     const stdout = result.stdout.toString();
 
     expect(result.exitCode).toBe(0);

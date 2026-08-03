@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { readdirSync } from 'node:fs';
-import { appRoot, ssrApp } from './support/app';
+import { createTestApp } from '@janux/testing';
+import { appRoot } from './support/app';
 
 /**
  * Every directory under examples/ must at least boot, serve its home page and
@@ -16,14 +17,14 @@ const EXAMPLES = readdirSync(appRoot('examples'), { withFileTypes: true })
 for (const name of EXAMPLES) {
   describe(`examples/${name} smoke`, () => {
     it('boots, serves the home page and the agent manifest', async () => {
-      const { get } = await ssrApp(`examples/${name}`);
-      let home = await get('/');
+      const app = await createTestApp(appRoot(`examples/${name}`));
+      let home = await app.fetch('/');
 
       // Locale-routed apps answer the bare root with a redirect — follow it.
-      if (home.status >= 300 && home.status < 400) home = await get(home.headers.get('location')!);
+      if (home.status >= 300 && home.status < 400) home = await app.fetch(home.headers.get('location')!);
       expect(home.status).toBe(200);
       expect(await home.text()).toContain('<html');
-      expect((await get('/_janux/manifest')).status).toBe(200);
+      expect((await app.fetch('/_janux/manifest')).status).toBe(200);
     }, 30_000);
   });
 }

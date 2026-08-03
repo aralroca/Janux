@@ -1,5 +1,5 @@
 export interface CliCommand {
-  command: 'dev' | 'build' | 'start' | 'verify' | 'eval' | 'info' | 'help';
+  command: 'dev' | 'build' | 'start' | 'test' | 'verify' | 'eval' | 'info' | 'help';
   port: number;
   root: string;
   files: string[];
@@ -12,7 +12,7 @@ export interface CliCommand {
   baseline?: string;
 }
 
-const COMMANDS = new Set(['dev', 'build', 'start', 'verify', 'eval', 'info', 'help']);
+const COMMANDS = new Set(['dev', 'build', 'start', 'test', 'verify', 'eval', 'info', 'help']);
 const VALUE_FLAGS = new Set(['--port', '--url', '--start', '--trials', '--baseline']);
 
 export const HELP_TEXT = `janux — the fullstack framework for the Agentic Web
@@ -21,6 +21,7 @@ Usage:
   janux dev    [--port 3000]   Start the dev server (Vite + HMR)
   janux build                  Bundle client assets for production
   janux start  [--port 3000]   Run the production server (Bun)
+  janux test   [files...]      Run the app's suite with bun test — flags pass through (--watch, --coverage)
   janux verify                 Check the agent surface (tool contracts)
   janux eval   [files...]      Run agent-task scenarios (evals/**/*.eval.json)
                [--url http://localhost:3000] [--start "janux start"] [--json]

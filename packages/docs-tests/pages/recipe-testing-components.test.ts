@@ -1,15 +1,21 @@
-import { describe, expect, it } from 'bun:test';
+import { resolve } from 'node:path';
+import { afterEach, describe, expect, it } from 'bun:test';
 import { component, createInstance, effect, intent, jsx, schema, str } from 'janux';
+import { createTestApp, mockApi, resetApiMocks } from '@janux/testing';
 import { TaskBoard, attachedBoard } from './__fixtures__/task-board';
+import { catalog } from '../../janux-testing/src/__fixtures__/harness-app/src/server/catalog.api';
 
 /**
- * recipes/testing-components.md promises the whole runtime as plain function
- * calls. Each of its three snippets runs here against the tutorial's board,
- * including the two details a reader will copy verbatim: `board.derived`, and
- * the `/below min/` message an empty title produces.
+ * recipes/testing-components.md promises three levels and no sleeps. The
+ * component snippets run against the tutorial's board; the route snippets run
+ * against the harness's own fixture app (a root `_layout`, a nested one,
+ * middleware, `src/ctx.ts` and an api-backed island) — the same mechanisms the
+ * page shows against a reader's app.
  */
 
-describe('recipes/testing-components.md', () => {
+const APP = resolve(import.meta.dir, '../../janux-testing/src/__fixtures__/harness-app');
+
+describe('recipes/testing-components.md — level 1, components', () => {
   it('the basics snippet: intents, snapshot and derived, with no attach()', async () => {
     const board = createInstance(TaskBoard);
 
@@ -58,14 +64,9 @@ describe('recipes/testing-components.md', () => {
       },
       view: () => jsx('p', {}),
     });
-    const board = await (async () => {
-      const instance = createInstance(Board);
+    const board = createInstance(Board);
 
-      await instance.attach();
-
-      return instance;
-    })();
-
+    await board.attach();
     saves.length = 0;
     await board.intents.add({ title: 'a' });
     await board.intents.add({ title: 'b' });
@@ -81,5 +82,70 @@ describe('recipes/testing-components.md', () => {
     // Without a `key`, an instance's uri has no fragment — SSR adds #default.
     expect(board.uri).toBe('ui://tasks');
     expect(Object.keys(board.intents).sort()).toEqual(['add', 'clearDone', 'toggle']);
+  });
+});
+
+describe('recipes/testing-components.md — level 2, routes', () => {
+  afterEach(resetApiMocks);
+
+  it('renders a page through its layout chain, fully streamed', async () => {
+    const app = await createTestApp(APP);
+    const page = await app.render('/products/7');
+
+    expect(page.status).toBe(200);
+    expect(page.html).toContain('data-shell="root"');
+    expect(page.html).toContain('data-shell="products"');
+    // The island's source resolved before the assertion: no waiting, no sleep.
+    expect(page.html).toContain('items:real-a,real-b');
+    app.close();
+  });
+
+  it('runs the app middleware exactly as production does', async () => {
+    const app = await createTestApp(APP);
+
+    expect((await app.render('/admin')).status).toBe(403);
+    expect((await app.render('/admin', { headers: { 'x-user': 'ada' } })).status).toBe(200);
+    app.close();
+  });
+
+  it('forces ctx for the test without touching the session', async () => {
+    const app = await createTestApp(APP, { ctx: { user: 'Ada' } });
+
+    expect((await app.render('/')).html).toContain('user:Ada');
+    app.close();
+  });
+
+  it('exposes the page manifest as assertable data', async () => {
+    const app = await createTestApp(APP);
+    const manifest = (await app.manifest('/products/7')) as { routes: string[]; tools: { name: string }[] };
+
+    expect(manifest.routes).toContain('/products/[id]');
+    expect(manifest.tools.map((tool) => tool.name)).toContain('api.catalog.catalog');
+    app.close();
+  });
+
+  it('mocks api() at the boundary, with the contract still enforced', async () => {
+    mockApi(catalog, () => ({ items: ['Mocked Lamp'] }));
+    const app = await createTestApp(APP);
+
+    // The output schema still applies to a mock — see api-mocks.test.ts for the refusal.
+    expect((await app.render('/products/7')).html).toContain('items:Mocked Lamp');
+    app.close();
+  });
+});
+
+describe('recipes/testing-components.md — level 3, end to end', () => {
+  /** The runner itself is driven by e2e/playwright-fixtures.e2e.test.ts; here we pin the surface the page imports. */
+  it('publishes test, expect and the fixtures the page uses', async () => {
+    const playwright = await import('@janux/testing/playwright');
+
+    expect(typeof playwright.test).toBe('function');
+    expect(typeof playwright.expect).toBe('function');
+  });
+
+  it('publishes the standalone barrier for suites that drive the browser themselves', async () => {
+    const testing = await import('@janux/testing');
+
+    expect(['settled', 'gotoSettled', 'startTestServer', 'launchChrome', 'openPage'].every((name) => name in testing)).toBe(true);
   });
 });

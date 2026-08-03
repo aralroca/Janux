@@ -92,7 +92,10 @@ async function project(tarballs: string[], specifiers: string[]): Promise<string
   // The `@types` a real consumer already has, and needs here because nothing is
   // skipped: `@janux/vite`'s declarations name `node:http`, and `@ai-sdk/provider`
   // — reached through `@janux/agent` — names `json-schema` without declaring it.
-  const types = ['typescript@5.9.3', '@types/node@24', '@types/json-schema@7'];
+  // `playwright` for the same reason: it is an optional peer, so npm installs
+  // none of it, but anyone importing `@janux/testing/playwright` has it — and
+  // without it that subpath's types and its runtime import go untested.
+  const types = ['typescript@5.9.3', '@types/node@24', '@types/json-schema@7', 'playwright@1.62'];
   const install = await run(['npm', 'install', '--no-audit', '--no-fund', ...types, ...tarballs], root);
 
   if (!install.ok) throw new Error(`npm install failed\n${install.output}`);

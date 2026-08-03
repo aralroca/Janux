@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/hacker-news exists to demonstrate: the canonical HN clone on
@@ -11,7 +12,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage as newPage, serveBuilt, ssrApp
  * a link warms the destination stream before the click.
  */
 
-const APP = 'examples/hacker-news';
+const APP = appRoot('examples/hacker-news');
 const BUILT = isBuilt(APP);
 
 /** Fixture facts (src/data/stories.ts is pure formulas, so these are stable). */
@@ -25,7 +26,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchChrome();
 });
 
@@ -62,8 +63,8 @@ const booted = (page: Page) =>
 
 describe('examples/hacker-news server side', () => {
   it('streams the front page: skeleton first, the ranked stories later in the same response', async () => {
-    const { get } = await ssrApp(APP);
-    const html = await (await get('/')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/')).text();
 
     // Both live in one response: the inline fallback and the trailing swap chunk.
     expect(html).toContain('data-jx-pending');
@@ -75,20 +76,20 @@ describe('examples/hacker-news server side', () => {
   });
 
   it('paginates: /news/2 renders the second ten stories, not the first page', async () => {
-    const { get } = await ssrApp(APP);
-    const html = await (await get('/news/2')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/news/2')).text();
 
     expect(html).toContain('<title>Janux HN — page 2</title>');
     expect(html).toContain(`>${TITLE_11}</a>`);
     expect(html).toContain('<span class="rank">11.</span>');
     // Page-1 stories are absent as rendered rows (they exist only in the source snapshot).
     expect(html).not.toContain(`>${TITLE_1}</a>`);
-    expect((await (await get('/news/3')).text())).toContain(`>${TITLE_21}</a>`);
+    expect((await (await app.fetch('/news/3')).text())).toContain(`>${TITLE_21}</a>`);
   });
 
   it('item/[id]: the nested comment tree arrives fully server-rendered, parent before child', async () => {
-    const { get } = await ssrApp(APP);
-    const html = await (await get('/item/1')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/item/1')).text();
 
     expect(html).toContain(`<title>${TITLE_1} — Janux HN</title>`);
     ['(c1-1)', '(c1-1-1)', '(c1-1-1-1)'].forEach((marker) => expect(html).toContain(marker));
@@ -100,17 +101,17 @@ describe('examples/hacker-news server side', () => {
   });
 
   it('item/[id]: an id that matches the matcher but no story is a 404', async () => {
-    const { get } = await ssrApp(APP);
-    const response = await get('/item/999');
+    const app = await createTestApp(APP);
+    const response = await app.fetch('/item/999');
 
     expect(response.status).toBe(404);
     expect(await response.text()).toContain('No such page');
   });
 
   it('exposes the fixture apis and the mounted intents as agent tools', async () => {
-    const { get } = await ssrApp(APP);
+    const app = await createTestApp(APP);
     const toolGuards = async (path: string) => {
-      const manifest: any = await (await get(`/_janux/manifest?path=${encodeURIComponent(path)}`)).json();
+      const manifest: any = await (await app.fetch(`/_janux/manifest?path=${encodeURIComponent(path)}`)).json();
 
       return Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
     };

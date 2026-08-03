@@ -112,7 +112,7 @@ export const SECTIONS: SectionDef[] = [
     section: 'reference',
     label: 'Reference',
     groups: [
-      { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api', 'content-api', 'observability-api'] },
+      { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api', 'content-api', 'observability-api', 'testing-api'] },
       {
         label: 'Agent harness',
         slugs: ['agent-memory', 'agent-guardrails', 'agent-workflows', 'agent-rate-limit', 'agent-mcp-client', 'agent-attachments'],

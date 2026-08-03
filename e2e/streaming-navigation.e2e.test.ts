@@ -4,7 +4,8 @@ import { type Browser, type Page } from 'playwright';
 import { createJanuxServer } from '../packages/janux-server/src/index';
 import { prodServerOptions } from '../packages/janux-cli/src/prod';
 import { staticResponse } from '../packages/janux-cli/src/static-assets';
-import { TIMEOUT, appRoot, isBuilt, launchChrome } from './support/app';
+import { isBuilt, launchChrome } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * Navigation in a real browser, against the real docs app.
@@ -16,7 +17,7 @@ import { TIMEOUT, appRoot, isBuilt, launchChrome } from './support/app';
  */
 
 const APP_ROOT = appRoot('apps/docs');
-const BUILT = isBuilt('apps/docs');
+const BUILT = isBuilt(APP_ROOT);
 const FIRST = '/docs/getting-started/what-is-janux';
 const SECOND = '/docs/getting-started/quick-start';
 const THIRD = '/docs/getting-started/mental-model';

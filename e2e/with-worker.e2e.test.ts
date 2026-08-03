@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * `worker()` against the with-worker example. The assertion that matters is not
@@ -9,7 +10,7 @@ import { TIMEOUT, isBuilt, launchChrome, openPage, serveBuilt, ssrApp } from './
  * the two buttons is observable rather than asserted by faith.
  */
 
-const BUILT = isBuilt('examples/with-worker');
+const BUILT = isBuilt(appRoot('examples/with-worker'));
 /** π(10⁷): the preset the page loads with. */
 const PRIMES_BELOW_10M = 664579;
 
@@ -19,7 +20,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt('examples/with-worker'));
+  ({ url: BASE, stop } = await startTestServer(appRoot('examples/with-worker')));
   browser = await launchChrome();
 });
 
@@ -52,8 +53,8 @@ async function openLab(): Promise<{ page: Page; errors: string[] }> {
 
 describe('worker SSR (examples/with-worker)', () => {
   it('renders the lab and the ticker on the server', async () => {
-    const { get } = await ssrApp('examples/with-worker');
-    const html = await (await get('/')).text();
+    const app = await createTestApp(appRoot('examples/with-worker'));
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('id="ticker"');
     expect(html).toContain('data-limit="10000000"');
