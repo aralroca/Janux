@@ -1,6 +1,9 @@
+import { spawn, type ChildProcess } from 'node:child_process';
+import type { Readable } from 'node:stream';
+import { fileURLToPath } from 'node:url';
 import { test as base, type Page } from 'playwright/test';
 import { gotoSettled, settled as settledBarrier } from './browser';
-import { startTestServer, type TestServer } from './test-server';
+import type { TestServer } from './test-server';
 
 export interface JanuxOptions {
   /** Absolute root of the built app the worker serves — set it with `test.use({ janux: { root } })`. */
@@ -25,6 +28,27 @@ interface JanuxWorkerFixtures {
   app: TestServer;
 }
 
+/** Sibling of this module, whichever extension the package is running from (src in the repo, dist when published). */
+const SERVE_ENTRY = fileURLToPath(new URL(import.meta.url.replace(/playwright(\.[jt]s)$/, 'serve$1')));
+
+/**
+ * The app runs in its own Bun process, not in this one: the Playwright runner
+ * is Node, and a Janux server is Bun-first. `serve.ts` prints its URL on the
+ * first line of stdout, which is also the readiness signal.
+ */
+function spawnServer(root: string): Promise<TestServer> {
+  const child: ChildProcess = spawn('bun', [SERVE_ENTRY, root], { stdio: ['ignore', 'pipe', 'inherit'] });
+
+  return firstLine(child.stdout).then((url) => ({ url, stop: () => { child.kill(); } }));
+}
+
+/** The server announces itself with its URL; no line at all means `bun` never ran it. */
+async function firstLine(stream: Readable | null): Promise<string> {
+  for await (const chunk of stream ?? []) return String(chunk).trim();
+
+  throw new Error('@janux/testing/playwright: could not start the app — is `bun` on PATH?');
+}
+
 function agentDriver(page: Page): AgentDriver {
   return {
     call: (tool, input) =>
@@ -44,7 +68,7 @@ export const test = base.extend<JanuxFixtures, JanuxWorkerFixtures>({
   app: [
     async ({ janux }, use) => {
       if (!janux.root) throw new Error('@janux/testing/playwright: set test.use({ janux: { root } }) to the app root');
-      const server = await startTestServer(janux.root);
+      const server = await spawnServer(janux.root);
 
       await use(server);
       server.stop();

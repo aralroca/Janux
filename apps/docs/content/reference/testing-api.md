@@ -77,6 +77,8 @@ This is the call that replaces every sleep in an e2e suite: quiet is observable,
 
 Fixtures for the Playwright runner: one server per worker for the built app named by `test.use({ janux: { root } })`, `baseURL` pointed at it, and a `goto(path)` that resolves only when the page is **quiet** — the settled barrier instead of a guessed `waitForTimeout`. The `settled()` fixture re-arms the barrier after an interaction, and `agent` drives the page's agent surface (`call` / `approve` / `reject`) the way a real agent does, through `window.janux`.
 
+The app is served in its own Bun process (the Playwright runner is Node; a Janux server is Bun-first), so `bun` must be on PATH. Run `janux build` for the app first — the fixtures serve `dist/client` like `janux start` does.
+
 ```
 import { expect, test } from '@janux/testing/playwright';
 

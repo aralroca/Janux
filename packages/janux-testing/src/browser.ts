@@ -37,7 +37,16 @@ export interface SettledOptions {
 export async function settled(page: Page, options: SettledOptions = {}): Promise<void> {
   const timeout = options.timeout ?? 10_000;
 
-  await page.waitForFunction(() => Boolean((window as unknown as { janux?: unknown }).janux), null, { timeout });
+  // A page that ships no runtime (the 0-JS guarantee) is quiet by construction —
+  // wait for the runtime only where the shell actually linked it.
+  await page.waitForFunction(
+    () =>
+      Boolean((window as unknown as { janux?: unknown }).janux) ||
+      !document.querySelector('script[key="jx-runtime"], script[key="jx-runtime-eager"]'),
+    null,
+    { timeout },
+  );
+  if (!(await page.evaluate(() => Boolean((window as unknown as { janux?: unknown }).janux)))) return;
   // A `waitForFunction` predicate that returns a promise does not await it —
   // `evaluate` does, and `janux.settled()` is a promise.
   await page.waitForFunction(() => !document.querySelector('[data-jx-pending]'), null, { timeout });
