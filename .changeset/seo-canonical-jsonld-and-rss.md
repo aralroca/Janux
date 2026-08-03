@@ -17,13 +17,19 @@ only the first `:`, so nothing the SPA head diff matches on moved.
 typed input in, schema.org naming out, absent fields dropped so a block never carries `"description":undefined`.
 The results stay open, so a page spreads what the input does not carry on top: `{ ...articleJsonLd(x), isPartOf }`.
 
-A `feed` config publishes the site's content at `GET /rss.xml`, the same idea as `llms.txt` and the per-page
-markdown projection, for human readers. The router knows pages, not titles or dates, so the app maps its own
-content layer into `items()` — usually a collection, newest first — and the response is memoized like `llms.txt`
-because that call typically reads every content file off disk. It is doubly opt-in (`siteUrl` and `feed`), every
-page advertises it with a keyed `rel="alternate"` link emitted only where the feed will actually resolve, and
+`src/feed.ts` publishes the site's content at `GET /rss.xml`, the same idea as `llms.txt` and the per-page markdown
+projection, for human readers. The router knows pages, not titles or dates, so the app maps its own content layer
+into `items()` — usually a collection, newest first — and the response is memoized like `llms.txt` because that
+call typically reads every content file off disk. It is doubly opt-in (`siteUrl` and the module), every page
+advertises it with a keyed `rel="alternate"` link emitted only where the feed will actually resolve, and
 `output: "static"` writes it beside the pages through the same hook that writes the sitemap — so a static host
 serves it with no server at all.
+
+It is a conventional module rather than a `janux.config.ts` field for a reason worth stating: a deployment adapter
+resolves the app config at build time and serializes it into the generated bundle as JSON, which drops functions
+silently. A feed declared in the config would have answered `/rss.xml` with a 500 on Vercel and Node while working
+perfectly in dev, in tests and in a static export. `src/feed.ts` is a module the bundler inlines, like `src/ctx.ts`
+and `src/middleware.ts` beside it.
 
 One detail worth stating, because it is invisible until a validator says so: an author's name is emitted as
 `dc:creator`, not `<author>`. RSS reserves that element for an email address, and a feed carrying a name there is

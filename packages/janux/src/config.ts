@@ -182,8 +182,6 @@ export interface JanuxConfig {
    */
   inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
-  /** RSS feed at `/rss.xml`. Needs `siteUrl` — a feed of relative links is invalid. */
-  feed?: FeedConfig;
   output?: JanuxOutput;
   /** Fonts to self-host, subset, preload and give an adjusted fallback. */
   fonts?: FontConfig[];

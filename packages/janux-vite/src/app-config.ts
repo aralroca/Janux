@@ -39,6 +39,8 @@ export interface JanuxAppConfig {
   ctxModule?: string;
   matchersModule?: string;
   websocketModule?: string;
+  /** `src/feed.ts`, whose default export is the app's `FeedConfig`. */
+  feedModule?: string;
   /** `src/instrumentation.ts`, loaded and `register()`ed before the server serves. */
   instrumentationModule?: string;
   mcpAuth?: McpAuthConfig;
@@ -51,7 +53,6 @@ export interface JanuxAppConfig {
   siteUrl?: string;
   inlineStyles?: boolean;
   llmsTxt?: { title?: string; description?: string };
-  feed?: FeedConfig;
   output: JanuxOutput;
   /** Fonts to self-host, as declared in janux.config.ts. */
   fonts: FontConfig[];
@@ -130,6 +131,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     ctxModule: optional(resolve(root, 'src/ctx.ts')),
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
     websocketModule: options.websocket ? resolve(root, options.websocket) : optional(resolve(root, 'src/ws.ts')),
+    feedModule: optional(resolve(root, 'src/feed.ts')),
     instrumentationModule: optional(resolve(root, 'src/instrumentation.ts')),
     mcpAuth: options.mcpAuth,
     agents: options.agents,
@@ -141,7 +143,6 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     siteUrl: options.siteUrl,
     inlineStyles: options.inlineStyles,
     llmsTxt: options.llmsTxt,
-    feed: options.feed,
     output: options.output ?? 'bun',
     fonts: options.fonts ?? [],
     navigation: options.navigation,

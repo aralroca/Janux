@@ -27,6 +27,7 @@ const PATH_FIELDS = new Set([
   'ctxModule',
   'matchersModule',
   'websocketModule',
+  'feedModule',
   'httpHandlersDir',
   'stylesheet',
 ]);
@@ -56,6 +57,7 @@ export function appModules(app: JanuxAppConfig): string[] {
     app.ctxModule,
     app.matchersModule,
     app.websocketModule,
+    app.feedModule,
   ];
   const handlers = app.httpHandlersDir ? walkFiles(app.httpHandlersDir) : [];
 

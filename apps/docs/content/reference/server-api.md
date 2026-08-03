@@ -133,6 +133,36 @@ const jsonLd = [
 
 URLs are taken as written — resolve them against your site's origin yourself; JSON-LD has no notion of a base URL.
 
+### RSS
+
+`src/feed.ts` default-exports a `FeedConfig` and the app serves `GET /rss.xml` — the same idea as `llms.txt` and the per-page markdown projections in the [agent surface](/docs/guide/agent-and-copilot), for human readers:
+
+```ts
+// src/feed.ts
+import type { FeedConfig } from 'janux';
+import { allPosts } from './content';
+
+export default {
+  title: 'My blog',                    // falls back to the app `title`
+  description: 'Posts about things.',
+  items: () =>
+    allPosts().map((post) => ({
+      url: `/posts/${post.id}`,        // root-relative or absolute
+      title: post.data.title,
+      description: post.data.description,
+      date: post.data.date,            // ISO — becomes pubDate
+    })),
+} satisfies FeedConfig;
+```
+
+The router knows pages, not titles or dates, so the app maps its own [content collection](/docs/guide/content-collections) into `items()` — newest first, since that is the order the feed carries. It runs when the feed is first requested, not at boot, and the response is memoized like `llms.txt`.
+
+The feed needs [`siteUrl`](/docs/reference/cli): a feed of relative links is invalid. Every page then advertises it with `<link rel="alternate" type="application/rss+xml">`, and `output: "static"` writes `rss.xml` beside the pages, so a static host serves it with no server at all.
+
+An item's `author` is a name, emitted as `dc:creator` — RSS reserves `<author>` for an email address and a feed carrying a name there is rejected as invalid.
+
+> **Why a module and not a config field?** `items()` is behavior, and a deployment adapter serializes the app config to JSON — which drops functions silently. A conventional module is one the bundler inlines, so the feed keeps working where the app is bundled into a serverless function.
+
 ## HTTP surface
 
 | Endpoint | Method | Purpose |
@@ -144,7 +174,7 @@ URLs are taken as written — resolve them against your site's origin yourself; 
 | `/_janux/agent` | POST | The copilot turn protocol (see [Agent API](/docs/reference/agent-api)) |
 | `/sitemap.xml` | GET | Every page the router knows, absolute — when `siteUrl` is set (dynamic routes expanded via `staticParams`) |
 | `/robots.txt` | GET | `Allow: /` plus the sitemap link — when `siteUrl` is set |
-| `/rss.xml` | GET | RSS 2.0 feed of the app's `feed.items()` — when `siteUrl` and [`feed`](/docs/reference/cli) are set. Every page advertises it with a `rel="alternate"` link |
+| `/rss.xml` | GET | RSS 2.0 feed of the app's `src/feed.ts` — when `siteUrl` is set and the app has one (see [RSS](#rss)). Every page advertises it with a `rel="alternate"` link |
 
 Error envelope: `{ ok: false, error }` with 400 (invalid input), 401 (`agent_required`), 403 (forbidden), 404, 500.
 

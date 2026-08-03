@@ -1,5 +1,4 @@
 import { defineConfig } from 'janux';
-import { allPosts } from './src/content';
 
 export default defineConfig({
   title: 'Janux Static Blog',
@@ -10,17 +9,7 @@ export default defineConfig({
     title: 'Janux Static Blog',
     description: 'A fully static markdown blog. Read any post as markdown at /posts/<slug>.md.',
   },
-  // The same idea for human readers: the posts at GET /rss.xml, newest first.
-  feed: {
-    description: 'A fully static markdown blog, built with Janux.',
-    items: () =>
-      allPosts().map((post) => ({
-        url: `/posts/${post.id}`,
-        title: post.data.title,
-        description: post.data.description,
-        date: post.data.date,
-      })),
-  },
+  // The feed itself lives in src/feed.ts — see the RSS section of the docs.
   // `janux build` prerenders every page into dist/client — deploy without a server.
   output: 'static',
   navigation: {
