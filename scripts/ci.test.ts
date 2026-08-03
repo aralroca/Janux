@@ -10,7 +10,8 @@ import { join } from 'node:path';
  * no compiler, so this is where those claims are checked.
  */
 const ROOT = join(import.meta.dir, '..');
-const WORKFLOW = readFileSync(join(ROOT, '.github/workflows/ci.yml'), 'utf8');
+// CRLF-proof: these guards must hold whatever line endings a checkout has.
+const WORKFLOW = readFileSync(join(ROOT, '.github/workflows/ci.yml'), 'utf8').replaceAll('\r\n', '\n');
 
 /** The one `>=x.y.z` Bun bound the packages agree on, digits only. */
 function enginesFloor(): string {
