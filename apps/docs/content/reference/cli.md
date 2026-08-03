@@ -115,12 +115,15 @@ surface cannot be verified).
 
 "Can an agent actually complete this task through my tools?" as a repeatable
 CI check. Runs `evals/**/*.eval.json` (or explicit files) against a live app
-and exits 1 on any failed expectation.
+and exits 1 when the regression gate fails — with one trial (the default),
+that is any failed expectation.
 
 ```bash
 janux eval --start "janux start"        # boots the app, runs, stops it
 janux eval --url http://localhost:3000  # against a server you manage
 janux eval evals/checkout.eval.json --json
+janux eval --trials 2                   # gate only on reproducible failures
+janux eval --baseline evals/baseline.json  # compare against a committed run
 ```
 
 ```jsonc
@@ -151,10 +154,26 @@ inverts a match, and the value `"$absent"` requires the field to be missing.
 `throw` inside a tool's `run()` surfaces as `{ "ok": false, "status": 500 }`
 with `error` starting `"Error: …"`, assertable like any other outcome.
 
+A step can also be a whole agent turn: `{ "turn": "Add two units of p1",
+"path": "/shop" }` POSTs the message to `/_janux/agent` and the reply envelope
+is the outcome (`result` matches `type`, `calls`, `messages`…), with the
+turn's token `usage` (and `costUsd` when the app declared its model's cost)
+accounted per scenario and per run.
+
 Scenario files run sorted by filename, and a scenario with `"reset": true`
 reboots the `--start` app first, so it starts from seed state (without
 `--start`, `reset` is ignored). With `--json` the booted app's stdout is
 silenced — the report is the only thing on stdout, safe to pipe.
+
+`--trials N` replays the whole set N times and the gate fails **only on
+scenarios that fail every trial** — a real regression reproduces, a wobble
+does not block. The verdict (which scenario, how many trials, which step)
+goes to stderr and, structured, to `eval-gate.json`. Every run is appended to
+`.janux/evals/history.jsonl` with its metadata (commit, model, date, usage),
+and the end of the run compares against the previous one — or against
+`--baseline <file>` — saying what improved, what regressed and what it cost.
+The [agent evals in CI](/docs/recipes/agent-evals-in-ci) recipe wires all of
+it into a workflow.
 
 ## create-janux
 
@@ -208,6 +227,7 @@ Everything is optional — the defaults are the [conventional layout](#project-c
 | `lang` | `'en'` | `<html lang>` for the whole app. An [i18n](/docs/guide/i18n) app ignores it: each page declares its own locale and direction |
 | `siteUrl` | — | Public origin (`https://janux.dev`). Resolves a route's relative `image`/`canonical` into the absolute URLs Open Graph needs (see [PageMeta](/docs/reference/server-api)), and opts into `/sitemap.xml` + `/robots.txt` |
 | `llmsTxt` | off | `{ title?, description? }` — opt into serving `GET /llms.txt` |
+| `feed` | off | `{ title?, description?, items }` — opt into serving `GET /rss.xml`. `items()` returns `{ url, title, description?, date?, author? }[]`, typically a [content collection](/docs/guide/content-collections) mapped, newest first. Needs `siteUrl`; every page advertises the feed with a `rel="alternate"` link |
 | `inlineStyles` | `false` | Inline the built stylesheet into every page instead of linking it: one less render-blocking round trip before the first paint, at the cost of a cacheable request. Production only — dev keeps the link so CSS hot-reload works |
 | `csp` | off | `true` for a strict [Content Security Policy](/docs/recipes/csp): a fresh nonce per request on every inline script and style the framework emits, plus the header. `{ nonce?, header? }` to bring your own. Ignored by `output: 'static'`, which has no per-request anything |
 | `output` | `'bun'` | `'bun'` or `'static'` — see [output](#output) |
