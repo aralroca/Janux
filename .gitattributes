@@ -1,0 +1,6 @@
+# One byte-identical checkout everywhere. The docs-truth suite compares
+# generated documents (STABILITY.md) and parses markdown/YAML byte-for-byte;
+# a CRLF checkout — the default on Windows runners — fails all of it for no
+# real reason. Binary files are untouched: `text=auto` only applies to what
+# git already detects as text.
+* text=auto eol=lf
