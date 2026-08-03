@@ -1,5 +1,6 @@
 import { HELP_TEXT, parseArgs } from './args';
 import { build, dev, start } from './commands';
+import { testCommand } from './test';
 import { verify } from './verify';
 import { evalCommand } from './eval';
 import { info } from './info';
@@ -16,6 +17,7 @@ export async function runCli(argv: string[]): Promise<void> {
   if (parsed.command === 'dev') return dev(parsed);
   if (parsed.command === 'build') return build(parsed);
   if (parsed.command === 'start') return start(parsed);
+  if (parsed.command === 'test') return testCommand(parsed);
   if (parsed.command === 'verify') return verify(parsed);
   if (parsed.command === 'eval') return evalCommand(parsed);
   if (parsed.command === 'info') return info(parsed);

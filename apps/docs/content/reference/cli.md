@@ -11,6 +11,7 @@ description: "Every command, flag and exit code the Janux CLI ships with: dev, b
 janux dev   [--port 3000]    # Vite dev server: SSR, HMR, api stubs, agent endpoint
 janux build                  # client bundle + styles + public/ → dist/client (+ prerendered HTML with output: "static")
 janux start [--port 3000]    # production server on Bun (no Vite at runtime)
+janux test  [files...]       # the app's suite via bun test — pair it with @janux/testing
 janux verify                 # agent-surface contract checks (CI-friendly)
 janux eval [files...]        # scripted agent-task scenarios against a live app
 janux info                   # versions, resolved config and routes — paste into an issue
@@ -101,6 +102,10 @@ Installed-but-invisible is the reason it exists: zero-config integrations are
 configured *by being installed*, so nothing in your own source says whether
 Tailwind is on. Paths are reported relative to the app root and the root itself
 is never printed — there is nothing to redact before posting.
+
+## janux test
+
+`bun test`, run from the app root with any file filters passed through — the exit code is the suite's. Janux does not ship a test runner: `bun:test` covers components and routes (see [`@janux/testing`](/docs/reference/testing-api)), Playwright covers the browser. The command exists so every project drives its suite the same way, whatever the package manager scripts look like.
 
 ## janux verify
 

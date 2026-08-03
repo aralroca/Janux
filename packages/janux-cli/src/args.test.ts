@@ -31,10 +31,19 @@ describe('janux CLI args', () => {
     expect(parsed.json).toBe(true);
   });
 
+  it('parses test with file filters passed through', () => {
+    const parsed = parseArgs(['test', 'src/cart.test.ts', 'src/routes.test.ts'], '/app');
+
+    expect(parsed.command).toBe('test');
+    expect(parsed.files).toEqual(['src/cart.test.ts', 'src/routes.test.ts']);
+    expect(parseArgs(['test'], '/app').files).toEqual([]);
+  });
+
   it('falls back to help on unknown commands', () => {
     expect(parseArgs(['nope'], '/app').command).toBe('help');
     expect(parseArgs([], '/app').command).toBe('help');
     expect(HELP_TEXT).toContain('janux dev');
+    expect(HELP_TEXT).toContain('janux test');
     expect(HELP_TEXT).toContain('janux info');
   });
 
