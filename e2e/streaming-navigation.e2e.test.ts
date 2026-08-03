@@ -170,9 +170,12 @@ describe.skipIf(!BUILT)('navigation in a real browser (apps/docs)', () => {
         (window as any).__phases.push(`${event.detail.phase}:${new URL(event.detail.to).pathname}`);
       });
     });
-    const superseded = page
-      .evaluate((path) => (window as any).janux.navigate(path), `/slow${SECOND}`)
-      .catch(() => {});
+    // Caught inside the page, not on this side: a superseded navigation
+    // rejects with AbortError by contract, and Firefox's driver reports a
+    // rejected promise *returned from* evaluate as a pageerror even when the
+    // caller catches it — which the `errors` assertion below would then read
+    // as the framework having thrown.
+    const superseded = page.evaluate((path) => (window as any).janux.navigate(path).catch(() => {}), `/slow${SECOND}`);
 
     await page.waitForFunction(() => (window as any).__phases.length > 0);
     await sidebarLink(page, THIRD).click();

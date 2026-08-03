@@ -1,3 +1,4 @@
+import { Glob } from 'bun';
 import { describe, expect, it } from 'bun:test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -26,6 +27,13 @@ function enginesFloor(): string {
   return (bounds[0] as string).replace('>=', '').trim();
 }
 
+/**
+ * A lifecycle hook whose callback is followed by a timeout: `beforeAll(async
+ * () => { … }, 60_000)`. Anchored on the closing brace at the start of a line,
+ * which is where a hook body ends and no other call in these files does.
+ */
+const TIMED_HOOK = /\b(?:before|after)(?:All|Each)\(([\s\S]*?)^\}\s*,\s*[\d_]+\s*\)/m;
+
 /** The flow-style list a matrix axis declares, e.g. `os: [a, b]` → ['a', 'b']. */
 function matrixAxis(name: string): string[] {
   const match = WORKFLOW.match(new RegExp(`^\\s+${name}:\\s*\\[([^\\]]*)\\]`, 'm'));
@@ -53,6 +61,22 @@ describe('the CI workflow', () => {
   it('scans the code with CodeQL and the lockfile with osv-scanner', () => {
     expect(WORKFLOW).toContain('github/codeql-action/init');
     expect(WORKFLOW).toContain('osv-scanner');
+  });
+
+  /**
+   * `beforeAll(fn, ms)` throws before Bun 1.3.2 ("expects a function as the
+   * second argument"), and the file that uses it fails to load rather than to
+   * assert — so the floor lane reports a module error, not a named test. Two
+   * suites carried it; a third would only be found by CI. Slow setup goes at
+   * module scope, which carries no deadline.
+   */
+  it('never lifts a hook deadline with a form the Bun floor rejects', async () => {
+    const files = await Array.fromAsync(new Glob('**/*.test.ts').scan({ cwd: ROOT }));
+    const offenders = files
+      .filter((file) => !file.includes('node_modules'))
+      .filter((file) => TIMED_HOOK.test(readFileSync(join(ROOT, file), 'utf8')));
+
+    expect(offenders).toEqual([]);
   });
 
   it('feeds every job into the single aggregate check, so none escapes branch protection', () => {

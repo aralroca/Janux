@@ -65,11 +65,18 @@ const assistantState = (page: Page) =>
 /** The sidebar renders twice (a mobile `details` and the desktop nav); only one is clickable. */
 const visibleLink = (page: Page, href: string) => page.locator(`a[href="${href}"]:visible`).first();
 
-const settled = (page: Page, path: string) =>
-  page.waitForFunction(
-    (expected) => location.pathname === expected && !!document.querySelector('janux-island[data-jx-persist]'),
-    path,
-  );
+/**
+ * `intercept()` commits the URL before the new document renders, so a wait on
+ * the pathname alone is satisfied by the *old* page — and the assertion that
+ * follows lands in the window where the persisted island has been lifted out
+ * and not yet grafted back. Every engine has that window; Firefox's is wide
+ * enough to lose the race routinely. `janux.settled()` drains the navigation
+ * the framework itself is tracking, which is the real completion signal.
+ */
+const settled = async (page: Page, path: string) => {
+  await page.waitForFunction((expected) => location.pathname === expected, path);
+  await page.evaluate(() => (window as any).janux.settled());
+};
 
 describe.skipIf(!BUILT)('Ask AI persistence across the docs menu (apps/docs)', () => {
   it('survives a round trip through /playground with the panel open', async () => {
