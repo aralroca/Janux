@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/with-uploads exists to demonstrate: file uploads end to end —
@@ -9,7 +10,7 @@ import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrAp
  * gallery server-rendered from the same store agents read via api.uploads.list.
  */
 
-const APP = 'examples/with-uploads';
+const APP = appRoot('examples/with-uploads');
 const BUILT = isBuilt(APP);
 
 /** Mirrors MAX_SIZE_BYTES in src/limits.ts — the contract the handler enforces. */
@@ -19,8 +20,7 @@ const MAX_SIZE = 1024 * 1024;
 const PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 const PNG_1X1 = Uint8Array.from(atob(PNG_BASE64), (char) => char.charCodeAt(0));
 
-let server: Awaited<ReturnType<typeof ssrApp>>['server'];
-let get: Awaited<ReturnType<typeof ssrApp>>['get'];
+let app: Awaited<ReturnType<typeof createTestApp>>;
 let BASE = '';
 let stop: (() => void) | undefined;
 let browser: Browser | undefined;
@@ -30,19 +30,19 @@ const upload = (file: File) => {
 
   body.set('file', file);
 
-  return server.fetch(new Request('http://test/api/uploads', { method: 'POST', body }));
+  return app.server.fetch(new Request('http://test/api/uploads', { method: 'POST', body }));
 };
 
 const listedNames = async () => {
-  const body: any = await (await server.fetch(new Request('http://test/api/uploads'))).json();
+  const body: any = await (await app.server.fetch(new Request('http://test/api/uploads'))).json();
 
   return body.uploads.map((entry: any) => entry.name);
 };
 
 beforeAll(async () => {
-  ({ server, get } = await ssrApp(APP));
+  app = await createTestApp(APP);
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchBrowser();
 });
 
@@ -52,7 +52,7 @@ afterAll(async () => {
 
 describe('examples/with-uploads server side', () => {
   it('server-renders the empty gallery with the drop target', async () => {
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<title>Janux — file uploads</title>');
     expect(html).toContain('Choose files');
@@ -62,7 +62,7 @@ describe('examples/with-uploads server side', () => {
   });
 
   it('exposes the upload surface to agents: listing auto, forbidden picker unlisted', async () => {
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
     expect(guards['api.uploads.list']).toBe('auto');
@@ -80,13 +80,13 @@ describe('examples/with-uploads server side', () => {
     expect(meta).toMatchObject({ name: 'pixel.png', type: 'image/png', size: PNG_1X1.byteLength });
     expect(await listedNames()).toContain('pixel.png');
     // The bytes round-trip with their MIME type…
-    const shot = await server.fetch(new Request(`http://test/api/uploads/${meta.id}`));
+    const shot = await app.server.fetch(new Request(`http://test/api/uploads/${meta.id}`));
 
     expect(shot.status).toBe(200);
     expect(shot.headers.get('content-type')).toBe('image/png');
     expect(new Uint8Array(await shot.arrayBuffer())).toEqual(PNG_1X1);
     // …and the gallery page now server-renders the upload.
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('pixel.png');
     expect(html).toContain('uploads:1');

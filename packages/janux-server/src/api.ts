@@ -1,4 +1,5 @@
 import { JxType, validate, toJsonSchema, JanuxIntentError } from 'janux';
+import { apiRunFor } from './api-mocks';
 import { isTracing, reportError, withSpan, type SpanAttributes } from 'janux/observability';
 import type { AuditEntry, Ctx, Guard, GuardValue, Origin } from 'janux';
 
@@ -168,7 +169,7 @@ async function runApi(
       throw new JanuxIntentError('forbidden', `Tool "${tool.name}" is not available`);
     }
     const parsed = parseApiInput(tool, input);
-    const result = checkOutput(tool, await tool.run({ input: parsed, ctx, origin }));
+    const result = checkOutput(tool, await apiRunFor(tool)({ input: parsed, ctx, origin }));
 
     audit({ input: parsed, ok: true });
 

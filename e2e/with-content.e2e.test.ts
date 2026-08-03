@@ -1,25 +1,25 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { appRoot, isBuilt, launchBrowser, openPage, serveBuilt, ssrApp, TIMEOUT } from './support/app';
+import { createTestApp, isBuilt, launchBrowser, openPage, startTestServer } from '@janux/testing';
+import { appRoot, TIMEOUT } from './support/app';
 
-const APP = 'examples/with-content';
-const DIST = join(appRoot(APP), 'dist/client');
+const APP = appRoot('examples/with-content');
+const DIST = join(APP, 'dist/client');
 const PUBLISHED = ['charting-with-react', 'interactive-content', 'agent-readable-content', 'typed-frontmatter'];
 const DRAFT = 'still-a-draft';
 
-let server: Awaited<ReturnType<typeof ssrApp>>['server'];
-let get: Awaited<ReturnType<typeof ssrApp>>['get'];
+let app: Awaited<ReturnType<typeof createTestApp>>;
 
 beforeAll(async () => {
-  ({ server, get } = await ssrApp(APP));
+  app = await createTestApp(APP);
 });
 
 const distPage = (page: string) => readFileSync(join(DIST, page.slice(1), 'index.html'), 'utf8');
 
 describe('examples/with-content collections', () => {
   it('lists every published note, newest first', async () => {
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
     const positions = PUBLISHED.map((slug) => html.indexOf(`href="/notes/${slug}"`));
 
     expect(positions.every((position) => position >= 0)).toBe(true);
@@ -28,16 +28,16 @@ describe('examples/with-content collections', () => {
 
   /** `draft: true` is frontmatter the schema declares, so hiding it is a filter, not a convention. */
   it('keeps a draft out of the index, the routes and llms.txt', async () => {
-    const html = await (await get('/')).text();
-    const llms = await (await get('/llms.txt')).text();
+    const html = await (await app.fetch('/')).text();
+    const llms = await (await app.fetch('/llms.txt')).text();
 
     expect(html).not.toContain(DRAFT);
     expect(llms).not.toContain(DRAFT);
-    expect((await get(`/notes/${DRAFT}`)).status).toBe(404);
+    expect((await app.fetch(`/notes/${DRAFT}`)).status).toBe(404);
   });
 
   it('renders typed frontmatter into the page, not a regex guess at the body', async () => {
-    const html = await (await get('/notes/typed-frontmatter')).text();
+    const html = await (await app.fetch('/notes/typed-frontmatter')).text();
 
     expect(html).toContain('<title>Frontmatter the framework validates — Janux content collections</title>');
     expect(html).toContain('name="description" id="jx-description" content="One schema() checks a post');
@@ -46,20 +46,20 @@ describe('examples/with-content collections', () => {
   });
 
   it('renders the markdown body with heading ids and builds the TOC from the same ids', async () => {
-    const html = await (await get('/notes/typed-frontmatter')).text();
+    const html = await (await app.fetch('/notes/typed-frontmatter')).text();
 
     expect(html).toContain('<h2 id="one-schema-two-surfaces"');
     expect(html).toContain('href="#one-schema-two-surfaces"');
   });
 
   it('enumerates only the published notes through listPages', async () => {
-    expect((await server.listPages()).sort()).toEqual(['/', ...PUBLISHED.map((slug) => `/notes/${slug}`)].sort());
+    expect((await app.server.listPages()).sort()).toEqual(['/', ...PUBLISHED.map((slug) => `/notes/${slug}`)].sort());
   });
 });
 
 describe('examples/with-content MDX', () => {
   it('mounts a Janux component written in the content as a real island', async () => {
-    const html = await (await get('/notes/interactive-content')).text();
+    const html = await (await app.fetch('/notes/interactive-content')).text();
 
     expect(html).toContain('data-jx="poll#');
     // Server-rendered, not a placeholder waiting for hydration.
@@ -68,7 +68,7 @@ describe('examples/with-content MDX', () => {
 
   /** The island came from a markdown file, and it is on the agent surface all the same. */
   it('exposes the content island intents on the manifest', async () => {
-    const manifest = await (await get('/_janux/manifest?path=/notes/interactive-content')).json();
+    const manifest = await (await app.fetch('/_janux/manifest?path=/notes/interactive-content')).json();
     const poll = manifest.resources?.find((entry: any) => entry.uri?.startsWith('ui://poll'));
 
     expect(poll).toBeDefined();
@@ -76,7 +76,7 @@ describe('examples/with-content MDX', () => {
   });
 
   it('mounts a React component from the content, server-rendered, via foreign()', async () => {
-    const html = await (await get('/notes/charting-with-react')).text();
+    const html = await (await app.fetch('/notes/charting-with-react')).text();
 
     expect(html).toContain('janux-foreign');
     expect(html).toContain('<svg class="trend"');
@@ -85,7 +85,7 @@ describe('examples/with-content MDX', () => {
 
   /** A `.md` file is markdown: `{braces}` and raw HTML are what the author wrote. */
   it('does not read a markdown body as JSX', async () => {
-    const html = await (await get('/notes/agent-readable-content')).text();
+    const html = await (await app.fetch('/notes/agent-readable-content')).text();
 
     expect(html).toContain('{ title, date, tags }');
     expect(html).toContain('<figure class="callout">');
@@ -94,7 +94,7 @@ describe('examples/with-content MDX', () => {
 
 describe('examples/with-content agent face', () => {
   it('serves any note as markdown through the .md projection', async () => {
-    const response = await get('/notes/typed-frontmatter.md');
+    const response = await app.fetch('/notes/typed-frontmatter.md');
     const body = await response.text();
 
     expect(response.status).toBe(200);
@@ -103,13 +103,13 @@ describe('examples/with-content agent face', () => {
   });
 
   it('projects an MDX note, island included, as markdown', async () => {
-    const body = await (await get('/notes/interactive-content.md')).text();
+    const body = await (await app.fetch('/notes/interactive-content.md')).text();
 
     expect(body).toContain('Resumability');
   });
 
   it('serves llms.txt with the concrete note pages', async () => {
-    const body = await (await get('/llms.txt')).text();
+    const body = await (await app.fetch('/llms.txt')).text();
 
     PUBLISHED.forEach((slug) => expect(body).toContain(`- [/notes/${slug}](/notes/${slug})`));
   });
@@ -154,10 +154,10 @@ describe.skipIf(!isBuilt(APP))('examples/with-content static build', () => {
 });
 
 describe.skipIf(!isBuilt(APP))('examples/with-content in a browser', () => {
-  let built: Awaited<ReturnType<typeof serveBuilt>>;
+  let built: Awaited<ReturnType<typeof startTestServer>>;
 
   beforeAll(async () => {
-    built = await serveBuilt(APP);
+    built = await startTestServer(APP);
   });
   afterAll(() => built?.stop());
 
@@ -166,7 +166,7 @@ describe.skipIf(!isBuilt(APP))('examples/with-content in a browser', () => {
     async () => {
       const { page, errors } = await openPage(await launchBrowser());
 
-      await page.goto(`${built.base}/notes/interactive-content`);
+      await page.goto(`${built.url}/notes/interactive-content`);
       await page.click('button[data-jxa="poll#default:vote"]');
       await page.waitForFunction(() => document.querySelector('.poll-total')?.textContent?.includes('1 vote'));
 

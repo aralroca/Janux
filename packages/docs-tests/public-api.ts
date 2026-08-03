@@ -22,6 +22,8 @@ import * as content from '@janux/content';
 import * as agentLocal from '@janux/agent/local';
 import * as vite from '@janux/vite';
 import * as cli from '@janux/cli';
+import * as testing from '@janux/testing';
+import * as testingPlaywright from '@janux/testing/playwright';
 
 export const ENTRIES: Record<string, Record<string, unknown>> = {
   janux: core,
@@ -39,6 +41,8 @@ export const ENTRIES: Record<string, Record<string, unknown>> = {
   '@janux/agent/local': agentLocal,
   '@janux/vite': vite,
   '@janux/cli': cli,
+  '@janux/testing': testing,
+  '@janux/testing/playwright': testingPlaywright,
 };
 
 /** Every runtime export name of an entry point, in the order the docs read best: alphabetical. */

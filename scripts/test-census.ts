@@ -23,6 +23,7 @@ const TARGETS = [
   'packages/janux-vite',
   'packages/janux-cli',
   'packages/janux-tailwind',
+  'packages/janux-testing',
   'packages/conformance',
   'packages/docs-tests',
   'apps/docs',
@@ -30,6 +31,11 @@ const TARGETS = [
   // Only the bin: the `template/` beside it is scaffolding for a generated app,
   // not a workspace, so its own tests cannot resolve `janux` from here.
   'packages/create-janux/bin.test.ts',
+  // The examples that test their own routes with the published harness: they
+  // are part of what `bun run test` runs, so they are part of what it counts.
+  'examples/shop/tests',
+  'examples/with-advanced-routing/tests',
+  'examples/hacker-news/tests',
 ];
 
 const REPORT = '.census-junit.xml';
@@ -83,9 +89,12 @@ interface Coverage {
 
 /** One run produces both numbers: junit for the counts, the table for coverage. */
 async function collect(): Promise<{ junit: string; coverage: Coverage | undefined }> {
+  // FORCE_COLOR=0: bun keeps colouring the coverage table even into a pipe, and
+  // an ANSI-wrapped `All files` row does not match — the run then reports "no
+  // coverage", which `--min-coverage` cannot tell from "coverage too low".
   const run = Bun.spawn(
     ['bun', 'test', ...TARGETS, '--coverage', '--reporter=junit', `--reporter-outfile=${REPORT}`],
-    { stdout: 'pipe', stderr: 'pipe' },
+    { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, FORCE_COLOR: '0' } },
   );
   const [stdout, stderr] = await Promise.all([new Response(run.stdout).text(), new Response(run.stderr).text()]);
 

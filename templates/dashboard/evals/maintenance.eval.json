@@ -1,0 +1,27 @@
+{
+  "name": "confirm-guarded maintenance mode: proposal, human approval, consumed proposal",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.ops.maintenance",
+      "input": { "enabled": true, "reason": "database migration" },
+      "expect": { "result": { "status": "proposal", "tool": "ops.maintenance", "enabled": "$absent" } }
+    },
+    {
+      "tool": "api.ops.board",
+      "expect": { "result": { "maintenance": false } }
+    },
+    {
+      "approve": "$steps[0].result.id",
+      "expect": { "result": { "enabled": true, "reason": "database migration" } }
+    },
+    {
+      "tool": "api.ops.board",
+      "expect": { "result": { "maintenance": true, "reason": "database migration" } }
+    },
+    {
+      "approve": "$steps[0].result.id",
+      "expect": { "ok": false, "status": 404 }
+    }
+  ]
+}

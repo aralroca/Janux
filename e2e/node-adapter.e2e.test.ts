@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { Browser } from 'playwright';
-import { TIMEOUT, hasNodeBuild, launchBrowser, openPage, serveNode } from './support/app';
+import { hasNodeBuild, launchBrowser, openPage, startNodeServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The suite that runs against the Node build rather than the Bun one.
@@ -16,17 +17,17 @@ import { TIMEOUT, hasNodeBuild, launchBrowser, openPage, serveNode } from './sup
  * fail, matching how the Bun suites treat a missing `dist/client`.
  */
 
-const NODE_APP = 'examples/with-node-adapter';
-const SHOP = 'examples/shop';
+const NODE_APP = appRoot('examples/with-node-adapter');
+const SHOP = appRoot('examples/shop');
 const BUILT = hasNodeBuild(NODE_APP) && hasNodeBuild(SHOP);
 
-let node: Awaited<ReturnType<typeof serveNode>> | undefined;
-let shop: Awaited<ReturnType<typeof serveNode>> | undefined;
+let node: Awaited<ReturnType<typeof startNodeServer>> | undefined;
+let shop: Awaited<ReturnType<typeof startNodeServer>> | undefined;
 let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  [node, shop] = await Promise.all([serveNode(NODE_APP, 31731), serveNode(SHOP, 31732)]);
+  [node, shop] = await Promise.all([startNodeServer(NODE_APP, 31731), startNodeServer(SHOP, 31732)]);
   browser = await launchBrowser();
 }, TIMEOUT);
 
@@ -37,7 +38,7 @@ afterAll(() => {
 
 describe.if(BUILT)('the Node build serves the app', () => {
   it('is served by node, and says so', async () => {
-    const html = await (await fetch(node!.base)).text();
+    const html = await (await fetch(node!.url)).text();
 
     expect(html).toContain('Running on Node');
     expect(node!.output.text).toMatch(/janux-node: serving on .+ \(node \d+\./);
@@ -51,7 +52,7 @@ describe.if(BUILT)('the Node build serves the app', () => {
   });
 
   it('answers an api() endpoint, so RPC survives the bundle', async () => {
-    const response = await fetch(`${node!.base}/_janux/api/runtime.whoami`, {
+    const response = await fetch(`${node!.url}/_janux/api/runtime.whoami`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
       body: '{}',
@@ -61,7 +62,7 @@ describe.if(BUILT)('the Node build serves the app', () => {
   });
 
   it('keeps the agent surface: the island and its intents are in the manifest', async () => {
-    const manifest: any = await (await fetch(`${node!.base}/_janux/manifest?path=%2F`)).json();
+    const manifest: any = await (await fetch(`${node!.url}/_janux/manifest?path=%2F`)).json();
 
     expect(manifest.resources.map((resource: any) => resource.uri)).toContain('ui://runtime-card');
     expect(manifest.tools.map((tool: any) => tool.name)).toEqual(
@@ -76,7 +77,7 @@ describe.if(BUILT)('the Node build serves the app', () => {
    * only through the generated module map.
    */
   it('holds a WebSocket open, the capability the adapter declares', async () => {
-    const socket = new WebSocket(`${node!.base.replace('http', 'ws')}/ws`);
+    const socket = new WebSocket(`${node!.url.replace('http', 'ws')}/ws`);
     const frames: any[] = [];
 
     await new Promise<void>((resolve, reject) => {
@@ -101,7 +102,7 @@ describe.if(BUILT)('the Node build serves the app', () => {
   }, TIMEOUT);
 
   it('closes an upgrade on a path it has no handler for, instead of leaking the socket', async () => {
-    const socket = new WebSocket(`${node!.base.replace('http', 'ws')}/nope`);
+    const socket = new WebSocket(`${node!.url.replace('http', 'ws')}/nope`);
 
     await expect(
       new Promise((resolve, reject) => {
@@ -113,7 +114,7 @@ describe.if(BUILT)('the Node build serves the app', () => {
   }, TIMEOUT);
 
   it('serves the built client compressed, with the content type the browser needs', async () => {
-    const response = await fetch(`${node!.base}/client.js`, { headers: { 'accept-encoding': 'br, gzip' } });
+    const response = await fetch(`${node!.url}/client.js`, { headers: { 'accept-encoding': 'br, gzip' } });
 
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('javascript');
@@ -125,7 +126,7 @@ describe.if(BUILT)('the island hydrates from the bundle Node served', () => {
   it('counts clicks in the browser, with no page load', async () => {
     const { page, errors } = await openPage(browser!);
 
-    await page.goto(node!.base, { waitUntil: 'networkidle' });
+    await page.goto(node!.url, { waitUntil: 'networkidle' });
     // Server-rendered first: the number is in the HTML before any JS runs.
     expect(await page.getByTestId('clicks').textContent()).toBe('0');
     expect(await page.getByTestId('runtime').textContent()).toBe('Node');
@@ -147,7 +148,7 @@ describe.if(BUILT)('the island hydrates from the bundle Node served', () => {
  */
 describe.if(BUILT)('examples/shop under Node', () => {
   it('server-renders the shop', async () => {
-    const html = await (await fetch(`${shop!.base}/shop`)).text();
+    const html = await (await fetch(`${shop!.url}/shop`)).text();
 
     expect(html).toContain('<title>Janux Shop');
     expect(html).toContain('janux-island');
@@ -156,7 +157,7 @@ describe.if(BUILT)('examples/shop under Node', () => {
   it('adds to the cart in a real browser', async () => {
     const { page, errors } = await openPage(browser!);
 
-    await page.goto(`${shop!.base}/shop`, { waitUntil: 'networkidle' });
+    await page.goto(`${shop!.url}/shop`, { waitUntil: 'networkidle' });
     const addButtons = page.locator('button', { hasText: /add/i });
 
     await addButtons.first().click();
@@ -167,7 +168,7 @@ describe.if(BUILT)('examples/shop under Node', () => {
   }, TIMEOUT);
 
   it('keeps the CSRF guard on the invocation pipeline', async () => {
-    const response = await fetch(`${shop!.base}/_janux/api/shop.saveCart`, {
+    const response = await fetch(`${shop!.url}/_janux/api/shop.saveCart`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: 'https://evil.example' },
       body: '{}',

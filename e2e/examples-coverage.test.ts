@@ -37,3 +37,34 @@ describe('examples coverage', () => {
     expect(UNTESTED_EXAMPLES.filter((name) => !EXAMPLES.includes(name))).toEqual([]);
   });
 });
+
+/**
+ * Same contract for templates/ — with no backlog: a template starts somebody's
+ * product, so it ships tested (e2e suite + evals) and listed, or not at all.
+ */
+
+const TEMPLATES = readdirSync(appRoot('templates'), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .sort();
+const TEMPLATES_PAGE = readFileSync(join(appRoot('apps/docs'), 'content/more/templates.md'), 'utf8');
+
+describe('templates coverage', () => {
+  it('there is a gallery at all', () => {
+    expect(TEMPLATES.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(TEMPLATES)('templates/%s has a dedicated e2e suite', (name) => {
+    expect(SUITES).toContain(`templates/${name}`);
+  });
+
+  it.each(TEMPLATES)('templates/%s ships its own README and at least one eval', (name) => {
+    expect(readdirSync(join(appRoot('templates'), name))).toContain('README.md');
+    expect(readdirSync(join(appRoot('templates'), name, 'evals')).filter((file) => file.endsWith('.eval.json')).length).toBeGreaterThan(0);
+  });
+
+  it.each(TEMPLATES)('templates/%s is listed in the README and the docs templates gallery', (name) => {
+    expect(README).toContain(`templates/${name}`);
+    expect(TEMPLATES_PAGE).toContain(name);
+  });
+});

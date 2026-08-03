@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Browser } from 'playwright';
-import { TIMEOUT, appRoot, isBuilt, launchBrowser, openPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchBrowser, openPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * Sass against the with-sass example. The claim under test is that naming the
@@ -10,7 +11,7 @@ import { TIMEOUT, appRoot, isBuilt, launchBrowser, openPage, serveBuilt, ssrApp 
  * still emit the one sheet the shell links, `/styles.css`.
  */
 
-const BUILT = isBuilt('examples/with-sass');
+const BUILT = isBuilt(appRoot('examples/with-sass'));
 const ACCENTS = ['ocean', 'moss', 'ember', 'plum'];
 
 let BASE = '';
@@ -19,7 +20,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt('examples/with-sass'));
+  ({ url: BASE, stop } = await startTestServer(appRoot('examples/with-sass')));
   browser = await launchBrowser();
 });
 
@@ -29,8 +30,8 @@ afterAll(async () => {
 
 describe('sass SSR (examples/with-sass)', () => {
   it('links the compiled sheet at /styles.css, not the .scss entry', async () => {
-    const { get } = await ssrApp('examples/with-sass');
-    const html = await (await get('/')).text();
+    const app = await createTestApp(appRoot('examples/with-sass'));
+    const html = await (await app.fetch('/')).text();
 
     const links = [...html.matchAll(/<link[^>]*rel="stylesheet"[^>]*>/g)].map(([tag]) => tag);
 

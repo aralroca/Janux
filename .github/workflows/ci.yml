@@ -153,14 +153,14 @@ jobs:
 
       - name: Build the docs site
         run: bun run --cwd apps/docs build
-      # Derived from the suites themselves: any example an e2e file gates on
-      # isBuilt()/serveBuilt() gets built here, so a new browser suite can never
-      # skip silently because someone forgot to extend a hardcoded list.
-      - name: Build the examples the browser e2e drives
+      # Derived from the suites themselves: any example or template an e2e file
+      # gates on isBuilt()/serveBuilt() gets built here, so a new browser suite
+      # can never skip silently because someone forgot to extend a hardcoded list.
+      - name: Build the examples and templates the browser e2e drives
         run: |
-          apps=$(grep -l -e isBuilt -e serveBuilt e2e/*.e2e.test.ts | xargs grep -hoE "'examples/[a-z0-9-]+'" | tr -d "'" | sort -u)
+          apps=$(grep -l -e isBuilt -e startTestServer e2e/*.e2e.test.ts | xargs grep -hoE "'(examples|templates)/[a-z0-9-]+'" | tr -d "'" | sort -u)
           # An empty list would let every browser suite skip itself green.
-          [ -n "$apps" ] || { echo "::error::no e2e example apps discovered"; exit 1; }
+          [ -n "$apps" ] || { echo "::error::no e2e apps discovered"; exit 1; }
           for app in $apps; do bun run --cwd "$app" build; done
       # Same trick for the Node adapter suite, which gates on hasNodeBuild()
       # rather than isBuilt(): without its `build:node` output it would skip
@@ -168,7 +168,7 @@ jobs:
       # is the one that must never do that.
       - name: Build the Node deployments the adapter e2e drives
         run: |
-          apps=$(grep -l -e hasNodeBuild -e serveNode e2e/*.e2e.test.ts | xargs grep -hoE "'examples/[a-z0-9-]+'" | tr -d "'" | sort -u)
+          apps=$(grep -l -e hasNodeBuild -e startNodeServer e2e/*.e2e.test.ts | xargs grep -hoE "'examples/[a-z0-9-]+'" | tr -d "'" | sort -u)
           [ -n "$apps" ] || { echo "::error::no node-adapter example apps discovered"; exit 1; }
           for app in $apps; do bun run --cwd "$app" build:node; done
 
@@ -211,6 +211,13 @@ jobs:
       # consumer's tsconfig must not be able to produce errors inside node_modules.
       - name: Install the tarballs in a clean Node project and import them
         run: bun run smoke:node
+
+      # A template promises to work on a clean machine; inside the workspace Bun
+      # hoists whatever a sibling declares, so one missing its own dependency
+      # installs fine here and dies for the first user. Scaffolded outside the
+      # repository from the packed CLI, then its own `eval` script is the gate.
+      - name: Scaffold every template outside the repo and run its evals
+        run: bun run smoke:templates
 
       - name: Upload the tarballs
         if: failure()

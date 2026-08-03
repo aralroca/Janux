@@ -1,0 +1,35 @@
+{
+  "name": "confirm-guarded delete: proposal, human approval, audited, consumed proposal",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.customers.remove",
+      "input": { "id": "cus_103", "reason": "account closed by owner" },
+      "expect": { "result": { "status": "proposal", "tool": "customers.remove", "removed": "$absent" } }
+    },
+    {
+      "tool": "api.customers.list",
+      "expect": { "result": { "customers": { "$some": { "id": "cus_103" } } } }
+    },
+    {
+      "tool": "api.customers.trail",
+      "expect": { "result": { "entries": { "$not": { "$some": { "tool": "customers.remove" } } } } }
+    },
+    {
+      "approve": "$steps[0].result.id",
+      "expect": { "result": { "id": "cus_103", "removed": true } }
+    },
+    {
+      "tool": "api.customers.list",
+      "expect": { "result": { "customers": { "$not": { "$some": { "id": "cus_103" } } } } }
+    },
+    {
+      "tool": "api.customers.trail",
+      "expect": { "result": { "entries": { "$some": { "tool": "customers.remove", "detail": "Alan Turing — account closed by owner" } } } }
+    },
+    {
+      "approve": "$steps[0].result.id",
+      "expect": { "ok": false, "status": 404 }
+    }
+  ]
+}

@@ -69,7 +69,7 @@ export default async function Page({ ctx, params }) { ... }         // async sup
 `meta` returns a `PageMeta`. `title` and `description` fall back to the app config; everything else is per-page:
 
 ```ts
-import type { PageMeta } from 'janux';
+import { articleJsonLd, type PageMeta } from 'janux';
 
 export function meta({ params }): PageMeta {
   return {
@@ -77,8 +77,9 @@ export function meta({ params }): PageMeta {
     description: 'The fullstack framework for the Agentic Web.',
     image: '/og/what-is-janux.png',   // og:image + twitter:image
     canonical: `/docs/${params.section}/${params.slug}`,
-    robots: 'index,follow',
-    jsonLd: { '@context': 'https://schema.org', '@type': 'TechArticle', headline: 'What is Janux?' },
+    robots: { index: true, follow: true, maxImagePreview: 'large' },
+    og: { type: 'article', siteName: 'Janux' },
+    jsonLd: articleJsonLd({ type: 'TechArticle', headline: 'What is Janux?' }),
   };
 }
 ```
@@ -88,8 +89,8 @@ export function meta({ params }): PageMeta {
 | `title`, `description` | `<title>` and the description meta |
 | `image` | `og:image` + `twitter:image`, and switches the card to `summary_large_image` |
 | `canonical` | `<link rel="canonical">` + `og:url` |
-| `robots` | `<meta name="robots">` |
-| `og`, `twitter` | `og:*` / `twitter:*` with **unprefixed keys** (`{ type: 'article' }`), overriding the derived values key by key |
+| `robots` | `<meta name="robots">` — a typed `RobotsMeta` object (serialized in a stable order) or the raw content string |
+| `og`, `twitter` | `og:*` / `twitter:*` with **unprefixed keys** (`{ type: 'article' }`), overriding the derived values key by key. `OpenGraphMeta`/`TwitterMeta` type the common keys; camelCase aliases name the ones a literal key cannot (`siteName` → `og:site_name`, `imageAlt` → `og:image:alt`, `publishedTime`/`modifiedTime` → `article:*`), and any other property passes through by its unprefixed or full name |
 | `jsonLd` | One `<script type="application/ld+json">` per entry (an object or an array) |
 | `head` | `{ tag, attrs?, text? }[]` — anything the fields above don't cover |
 
@@ -105,6 +106,63 @@ head: [{ tag: 'link', attrs: { rel: 'preload', as: 'image', href: '/demo-poster.
 
 Every head node the shell writes carries a stable `id` (`jx-og-title`, `jx-jsonld-0`, `jx-head-0`, …). That is what lets [SPA navigation](/docs/guide/navigation) match them by identity across the document diff: leaving a page drops its social tags instead of stranding the previous page's card, and a tag both pages declare is updated in place.
 
+### Structured data helpers
+
+Three typed builders cover the JSON-LD shapes a content site needs — `articleJsonLd`, `breadcrumbJsonLd` and `organizationJsonLd`. Typed input in, schema.org naming out, absent fields dropped; the result is open, so a property the input does not carry spreads on:
+
+```ts
+import { articleJsonLd, breadcrumbJsonLd, organizationJsonLd } from 'janux';
+
+const jsonLd = [
+  breadcrumbJsonLd([
+    { name: 'Blog', url: 'https://example.com/blog' },
+    { name: 'Hello' },                       // no url: the crumb for this very page
+  ]),
+  {
+    ...articleJsonLd({
+      type: 'BlogPosting',                   // 'Article' by default
+      headline: 'Hello',
+      datePublished: '2026-07-20',           // ISO, as content collections store it
+      author: { name: 'Aral' },              // becomes a schema.org Person
+    }),
+    isPartOf: { '@type': 'WebSite', name: 'Example' },
+  },
+  organizationJsonLd({ name: 'Example', url: 'https://example.com', sameAs: ['https://github.com/example'] }),
+];
+```
+
+URLs are taken as written — resolve them against your site's origin yourself; JSON-LD has no notion of a base URL.
+
+### RSS
+
+`src/feed.ts` default-exports a `FeedConfig` and the app serves `GET /rss.xml` — the same idea as `llms.txt` and the per-page markdown projections in the [agent surface](/docs/guide/agent-and-copilot), for human readers:
+
+```ts
+// src/feed.ts
+import type { FeedConfig } from 'janux';
+import { allPosts } from './content';
+
+export default {
+  title: 'My blog',                    // falls back to the app `title`
+  description: 'Posts about things.',
+  items: () =>
+    allPosts().map((post) => ({
+      url: `/posts/${post.id}`,        // root-relative or absolute
+      title: post.data.title,
+      description: post.data.description,
+      date: post.data.date,            // ISO — becomes pubDate
+    })),
+} satisfies FeedConfig;
+```
+
+The router knows pages, not titles or dates, so the app maps its own [content collection](/docs/guide/content-collections) into `items()` — newest first, since that is the order the feed carries. It runs when the feed is first requested, not at boot, and the response is memoized like `llms.txt`.
+
+The feed needs [`siteUrl`](/docs/reference/cli): a feed of relative links is invalid. Every page then advertises it with `<link rel="alternate" type="application/rss+xml">`, and `output: "static"` writes `rss.xml` beside the pages, so a static host serves it with no server at all.
+
+An item's `author` is a name, emitted as `dc:creator` — RSS reserves `<author>` for an email address and a feed carrying a name there is rejected as invalid.
+
+> **Why a module and not a config field?** `items()` is behavior, and a deployment adapter serializes the app config to JSON — which drops functions silently. A conventional module is one the bundler inlines, so the feed keeps working where the app is bundled into a serverless function.
+
 ## HTTP surface
 
 | Endpoint | Method | Purpose |
@@ -116,6 +174,7 @@ Every head node the shell writes carries a stable `id` (`jx-og-title`, `jx-jsonl
 | `/_janux/agent` | POST | The copilot turn protocol (see [Agent API](/docs/reference/agent-api)) |
 | `/sitemap.xml` | GET | Every page the router knows, absolute — when `siteUrl` is set (dynamic routes expanded via `staticParams`) |
 | `/robots.txt` | GET | `Allow: /` plus the sitemap link — when `siteUrl` is set |
+| `/rss.xml` | GET | RSS 2.0 feed of the app's `src/feed.ts` — when `siteUrl` is set and the app has one (see [RSS](#rss)). Every page advertises it with a `rel="alternate"` link |
 
 Error envelope: `{ ok: false, error }` with 400 (invalid input), 401 (`agent_required`), 403 (forbidden), 404, 500.
 

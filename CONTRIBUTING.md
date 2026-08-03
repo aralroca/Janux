@@ -110,3 +110,9 @@ Every folder under `examples/` is a claim about the framework, and the suite hol
 ## Reporting bugs
 
 Include: minimal reproduction (a failing test is ideal), expected vs actual behavior, and `bun --version`. Security issues: see [SECURITY.md](SECURITY.md) — do not open a public issue.
+
+## Governance
+
+Janux has one maintainer, [@aralroca](https://github.com/aralroca), who has the final say on design, scope and releases. The bus factor is 1. That is worth knowing before you bet a production app on the framework — and it is part of why contributions are welcome.
+
+Design changes go through an **RFC**: an issue laying out the proposal and its tradeoffs, the way [RFC 0001](https://github.com/aralroca/Janux/issues/1) and [RFC 0002](https://github.com/aralroca/Janux/issues/13) did. Bug fixes, docs and small improvements don't need one — open a PR directly. What the framework promises lives in the docs, so an accepted RFC ships with the docs that describe it (rule 7 above).

@@ -46,6 +46,30 @@ describe('appModules', () => {
     expect(modules.filter((file) => file === 'src/routes/_layout.tsx')).toHaveLength(1);
   });
 
+  /**
+   * The feed's `items()` is behavior, and behavior does not survive a config:
+   * the generated module serializes config values as JSON, which drops
+   * functions silently — a deployed app would answer `/rss.xml` with a 500 and
+   * nothing before production would say so. So the feed lives in a module the
+   * bundler inlines, like every other conventional single.
+   */
+  it('includes the feed module, so its items() survives bundling', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-adapter-feed-'));
+    const write = (file: string, code: string) => {
+      mkdirSync(dirname(join(root, file)), { recursive: true });
+      writeFileSync(join(root, file), code);
+    };
+
+    write('src/routes/index.tsx', 'export default () => null;');
+    write('src/feed.ts', 'export default { items: () => [{ url: "/a", title: "A" }] };');
+
+    const app = await resolveAppConfig(root);
+
+    expect(appModules(app).map((file) => file.slice(root.length + 1))).toContain('src/feed.ts');
+    // And its path is rebuilt at runtime rather than frozen to this machine.
+    expect(generateApp(root, app)).not.toContain(root);
+  });
+
   /** No URL matches `_404`/`_500`, so the route list never names them — and a bundle without them has no error pages. */
   it('includes the error pages', async () => {
     const root = mkdtempSync(join(tmpdir(), 'janux-adapter-errors-'));

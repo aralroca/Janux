@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { join } from 'node:path';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, appRoot, isBuilt, launchBrowser, openPage as newPage } from './support/app';
+import { isBuilt, launchBrowser, openPage as newPage } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 import { createJanuxServer } from '../packages/janux-server/src/index';
 import { prodServerOptions } from '../packages/janux-cli/src/prod';
 import { staticResponse } from '../packages/janux-cli/src/static-assets';
@@ -16,7 +17,7 @@ import { staticResponse } from '../packages/janux-cli/src/static-assets';
  */
 
 const ROOT = appRoot('examples/realtime-chat');
-const BUILT = isBuilt('examples/realtime-chat');
+const BUILT = isBuilt(ROOT);
 
 /** Exactly the `janux start` wiring: static assets, then `serve` (upgrade or fetch), plus the app's handlers. */
 async function startChat() {

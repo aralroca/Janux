@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The charts category: `recharts` mounted unchanged.
@@ -13,7 +14,7 @@ import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrAp
  * only" row stays true instead of aspirational.
  */
 
-const APP = 'examples/interop-charts';
+const APP = appRoot('examples/interop-charts');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -22,7 +23,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchBrowser();
 });
 
@@ -36,8 +37,8 @@ const lines = (page: Page) => page.locator('.recharts-line').count();
 
 describe('examples/interop-charts server side', () => {
   it('server-renders the sized wrapper, and — Recharts being Recharts — nothing inside it', async () => {
-    const { get } = await ssrApp(APP);
-    const html = await (await get('/')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<janux-foreign');
     expect(html).toContain('revenue-chart');
@@ -53,8 +54,8 @@ describe('examples/interop-charts server side', () => {
   });
 
   it('exposes the chart controls as the agent surface, reset guarded', async () => {
-    const { get } = await ssrApp(APP);
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const app = await createTestApp(APP);
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const guards = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool.guard]));
 
     expect(guards['chart.toggleSeries']).toBe('auto');

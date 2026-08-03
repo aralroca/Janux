@@ -1,0 +1,353 @@
+:root {
+  --ink: #1e1b4b;
+  --violet: #7c3aed;
+  --cyan: #06b6d4;
+  --text: #334155;
+  --heading: #0f172a;
+  --border: #e2e8f0;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+  color: var(--text);
+  background: #f6f7fb;
+  -webkit-font-smoothing: antialiased;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 19px;
+  text-decoration: none;
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bar-hint {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+main.split {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 28px 24px 120px;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--heading);
+  letter-spacing: -0.02em;
+}
+
+button {
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform 0.12s, opacity 0.12s;
+}
+
+button:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+/* Framework agent-glow (boot({ glow: true })) — tune it via CSS vars. */
+janux-island {
+  display: block;
+  --janux-glow-radius: 18px;
+}
+
+/* ── Board ──────────────────────────────────────────────────────── */
+.board {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 30px -18px rgba(30, 27, 75, 0.35);
+}
+
+.maintenance {
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #92400e;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.kpi strong {
+  font-size: 26px;
+  color: var(--heading);
+}
+
+.kpi span {
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+
+.board table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.board th {
+  text-align: left;
+  padding: 8px 10px;
+  color: #94a3b8;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.board td {
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.board tr.critical td:first-child code {
+  color: #dc2626;
+}
+
+.badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge.open {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge.acknowledged {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge.resolved {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.board td button {
+  padding: 6px 12px;
+  background: #eef2ff;
+  color: var(--ink);
+}
+
+.board > button.danger {
+  margin-top: 16px;
+  padding: 10px 16px;
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.log {
+  margin: 16px 0 0;
+  padding: 8px 12px;
+  list-style: none;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #67e8f9;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* ── Copilot ────────────────────────────────────────────────────── */
+.copilot {
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 30px -18px rgba(30, 27, 75, 0.35);
+  position: sticky;
+  top: 20px;
+}
+
+.copilot h3 {
+  margin: 0 0 10px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.chip {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid #ddd6fe;
+  background: #f5f3ff;
+  color: #5b21b6;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.chip.demo {
+  border-color: #a5f3fc;
+  background: #ecfeff;
+  color: #0e7490;
+}
+
+.copilot .chat {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.copilot .chat li {
+  margin-bottom: 8px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 88%;
+}
+
+.copilot .chat li.user {
+  margin-left: auto;
+  background: linear-gradient(90deg, var(--violet), #6d28d9);
+  color: #fff;
+}
+
+.copilot .chat li.assistant {
+  background: #f1f5f9;
+  color: var(--heading);
+}
+
+.activity {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  list-style: none;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #67e8f9;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.copilot form {
+  display: flex;
+  gap: 8px;
+}
+
+.copilot input {
+  flex: 1;
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 14px;
+  outline: none;
+}
+
+.copilot input:focus {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.copilot form button {
+  padding: 9px 16px;
+  background: var(--ink);
+  color: #fff;
+}
+
+.proposal {
+  margin: 0 0 12px;
+  padding: 14px;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  background: #fffbeb;
+}
+
+.proposal p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #92400e;
+}
+
+.proposal button {
+  padding: 7px 14px;
+  background: var(--ink);
+  color: #fff;
+}
+
+.proposal button + button {
+  margin-left: 8px;
+  background: #e2e8f0;
+  color: var(--ink);
+}
+
+/* ── Fallback pages ─────────────────────────────────────────────── */
+.fallback {
+  max-width: 560px;
+  margin: 0 auto;
+  text-align: center;
+  padding-top: 80px;
+}
+
+a {
+  color: var(--violet);
+}
+
+@media (max-width: 980px) {
+  main.split {
+    grid-template-columns: 1fr;
+  }
+
+  .copilot {
+    position: static;
+  }
+}

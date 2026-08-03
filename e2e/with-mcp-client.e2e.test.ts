@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { Browser } from 'playwright';
-import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/with-mcp-client exists to demonstrate: the agent's outbound
@@ -11,7 +12,7 @@ import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrAp
  * into an actionable panel instead of a crash.
  */
 
-const APP = 'examples/with-mcp-client';
+const APP = appRoot('examples/with-mcp-client');
 const BUILT = isBuilt(APP);
 const ENV_KEYS = ['MCP_SERVER_URL', 'MCP_SERVER_TOKEN', 'MCP_TOOL_INCLUDE', 'MCP_TOOL_EXCLUDE'] as const;
 const DEAD = 'http://127.0.0.1:1/mcp';
@@ -19,13 +20,13 @@ const DEAD = 'http://127.0.0.1:1/mcp';
 const seenAuth: (string | null)[] = [];
 const seenMethods: string[] = [];
 
-let client: Awaited<ReturnType<typeof ssrApp>>;
+let client: Awaited<ReturnType<typeof createTestApp>>;
 let remote: ReturnType<typeof Bun.serve>;
 let legacyGate: ReturnType<typeof Bun.serve>;
 let remoteUrl = '';
 let demoUrl = '';
 
-const post = (app: Awaited<ReturnType<typeof ssrApp>>, path: string, body: unknown) =>
+const post = (app: Awaited<ReturnType<typeof createTestApp>>, path: string, body: unknown) =>
   app.server.fetch(
     new Request(`http://test${path}`, {
       method: 'POST',
@@ -71,7 +72,7 @@ beforeAll(async () => {
   // the recording proxy is what lets the lazy-discovery test observe silence.
   // Every api() call re-reads env, so the suite still runs on the default.
   process.env.MCP_SERVER_URL = remoteUrl;
-  client = await ssrApp(APP);
+  client = await createTestApp(APP);
   delete process.env.MCP_SERVER_URL;
   demoUrl = (await listRemote()).result.url;
 });
@@ -109,7 +110,7 @@ describe('examples/with-mcp-client with no configuration at all', () => {
   }, 30_000);
 
   it('re-exposes the remote bridge on its own manifest and hosted MCP', async () => {
-    const manifest: any = await (await client.get('/_janux/manifest')).json();
+    const manifest: any = await (await client.fetch('/_janux/manifest')).json();
     const manifestNames = manifest.tools.map((tool: any) => tool.name);
 
     expect(manifestNames).toContain('api.remote.listTools');
@@ -164,11 +165,11 @@ describe('examples/with-mcp-client pointed at another server', () => {
   it('degrades cleanly when that server is down: boots, serves and says what to do', async () => {
     process.env.MCP_SERVER_URL = DEAD;
     try {
-      const home = await client.get('/');
+      const home = await client.fetch('/');
 
       expect(home.status).toBe(200);
       expect(await home.text()).toContain('Outbound MCP client');
-      expect((await client.get('/_janux/manifest')).status).toBe(200);
+      expect((await client.fetch('/_janux/manifest')).status).toBe(200);
       const { result } = await listRemote();
 
       expect(result.available).toBe(false);
@@ -211,7 +212,7 @@ describe.if(BUILT)('examples/with-mcp-client in a real browser', () => {
   let stop: (() => void) | undefined;
 
   beforeAll(async () => {
-    ({ base, stop } = await serveBuilt(APP));
+    ({ url: base, stop } = await startTestServer(APP));
     browser = await launchBrowser();
   });
 

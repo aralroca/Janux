@@ -1,0 +1,31 @@
+{
+  "name": "the surface defends itself: bad input and bad order are rejected before anything runs",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.ops.resolve",
+      "input": { "id": "INC-101" },
+      "expect": { "ok": false, "status": 500, "error": "Acknowledge" }
+    },
+    {
+      "tool": "api.ops.acknowledge",
+      "input": { "id": "INC-999" },
+      "expect": { "ok": false, "status": 500, "error": "Unknown incident" }
+    },
+    {
+      "tool": "api.ops.maintenance",
+      "input": { "enabled": true, "reason": "x" },
+      "expect": { "ok": false, "status": 400, "error": "reason" }
+    },
+    {
+      "tool": "api.ops.acknowledge",
+      "input": { "id": "INC-103" },
+      "expect": { "result": { "status": "acknowledged" } }
+    },
+    {
+      "tool": "api.ops.acknowledge",
+      "input": { "id": "INC-103" },
+      "expect": { "ok": false, "status": 500, "error": "already acknowledged" }
+    }
+  ]
+}

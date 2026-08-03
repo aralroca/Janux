@@ -121,6 +121,50 @@ describe('the agent loop emits gen_ai spans', () => {
     expect(tracer.spans[call.parent]!.name).toBe('invoke_agent janux');
   });
 
+  it('totals the whole turn on the invoke_agent span: tokens and price across every round', async () => {
+    const tracer = recordingTracer();
+    const toolCall = [{ type: 'tool_use', id: 'call_1', name: 'api__shop__search', input: { q: 'shoes' } }];
+    const agent = defineAgent(
+      { model: 'anthropic/claude-fable-5', cost: { input: 3, output: 15 } },
+      { env, fetchImpl: scriptedFetch([anthropicReply(toolCall), anthropicReply([{ type: 'text', text: 'found' }])]) },
+    );
+
+    setTracer(tracer);
+    await ask(buildServer(agent), turn);
+
+    const turnSpan = tracer.spans.find((span) => span.name === 'invoke_agent janux')!;
+
+    // Two rounds of 1200 in / 300 out each: the turn is the sum, per punto-18 traces.
+    expect(turnSpan.attributes).toMatchObject({
+      'janux.turn.input_tokens': 2400,
+      'janux.turn.output_tokens': 600,
+    });
+    expect(turnSpan.attributes['janux.turn.cost.usd']).toBeCloseTo(0.0162, 6);
+  });
+
+  /**
+   * The turn totals are the sum of its rounds, so they must NOT reuse the keys
+   * the rounds already carry: `sum(gen_ai.usage.input_tokens)` over a trace is
+   * the standard GenAI dashboard query, and a parent repeating its children's
+   * keys doubles every token and every dollar in it.
+   */
+  it('keeps turn totals off the per-round semconv keys, so summing a trace cannot double-count', async () => {
+    const tracer = recordingTracer();
+    const agent = defineAgent(
+      { model: 'anthropic/claude-fable-5', cost: { input: 3, output: 15 } },
+      { env, fetchImpl: scriptedFetch([]) },
+    );
+
+    setTracer(tracer);
+    await ask(buildServer(agent), turn);
+
+    const turnSpan = tracer.spans.find((span) => span.name === 'invoke_agent janux')!;
+
+    expect(turnSpan.attributes['gen_ai.usage.input_tokens']).toBeUndefined();
+    expect(turnSpan.attributes['gen_ai.usage.output_tokens']).toBeUndefined();
+    expect(turnSpan.attributes['janux.cost.usd']).toBeUndefined();
+  });
+
   it('records a provider failure on the span with the semconv error type', async () => {
     const tracer = recordingTracer();
     const failing = async () => new Response('nope', { status: 500 });

@@ -112,7 +112,7 @@ export const SECTIONS: SectionDef[] = [
     section: 'reference',
     label: 'Reference',
     groups: [
-      { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api', 'content-api', 'observability-api'] },
+      { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api', 'content-api', 'observability-api', 'testing-api'] },
       {
         label: 'Agent harness',
         slugs: ['agent-memory', 'agent-guardrails', 'agent-workflows', 'agent-rate-limit', 'agent-mcp-client', 'agent-attachments'],
@@ -132,7 +132,7 @@ export const SECTIONS: SectionDef[] = [
       { label: 'Testing & deployment', slugs: ['testing-components', 'deploying', 'adapters', 'vercel', 'docker', 'sentry'] },
     ],
   },
-  { section: 'more', label: 'More', groups: [{ slugs: ['examples', 'interop-matrix', 'comparison', 'benchmarks', 'faq', 'glossary'] }] },
+  { section: 'more', label: 'More', groups: [{ slugs: ['templates', 'examples', 'interop-matrix', 'comparison', 'benchmarks', 'faq', 'glossary'] }] },
 ];
 
 export interface DocRef {

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/with-forms exists to demonstrate: ONE typed schema (str/int/
@@ -12,17 +13,16 @@ import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrAp
  * schema stays the contract when they are bypassed.
  */
 
-const APP = 'examples/with-forms';
+const APP = appRoot('examples/with-forms');
 const BUILT = isBuilt(APP);
 
-let server: Awaited<ReturnType<typeof ssrApp>>['server'];
-let get: Awaited<ReturnType<typeof ssrApp>>['get'];
+let app: Awaited<ReturnType<typeof createTestApp>>;
 let BASE = '';
 let stop: (() => void) | undefined;
 let browser: Browser | undefined;
 
 const post = (path: string, body: unknown) =>
-  server.fetch(
+  app.server.fetch(
     new Request(`http://test${path}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
@@ -37,15 +37,15 @@ const storedNames = async (base?: string) => {
     headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin' },
     body: '{}',
   });
-  const body: any = await (base ? await fetch(request) : await server.fetch(request)).json();
+  const body: any = await (base ? await fetch(request) : await app.server.fetch(request)).json();
 
   return body.result.registrations;
 };
 
 beforeAll(async () => {
-  ({ server, get } = await ssrApp(APP));
+  app = await createTestApp(APP);
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchBrowser();
 });
 
@@ -55,7 +55,7 @@ afterAll(async () => {
 
 describe('examples/with-forms server side', () => {
   it('renders the registration form server-side, idle and error-free', async () => {
-    const html = await (await get('/')).text();
+    const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<title>Janux — validated forms</title>');
     expect(html).toContain('JanuxConf registration');
@@ -94,7 +94,7 @@ describe('examples/with-forms server side', () => {
   });
 
   it('announces the SAME typed schema for the form intent and the api tool', async () => {
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const tools = Object.fromEntries(manifest.tools.map((tool: any) => [tool.name, tool]));
     const form = tools['registration.submit'];
     const typed = tools['api.registrations.register'];

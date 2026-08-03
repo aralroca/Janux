@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchBrowser, serveBuilt } from './support/app';
+import { isBuilt, launchBrowser, settled, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * The Ask AI panel is a `persist` island: opening it and touring the menu must
@@ -12,7 +13,7 @@ import { TIMEOUT, isBuilt, launchBrowser, serveBuilt } from './support/app';
  * browser that actually performs the default action of an uncancelled click.
  */
 
-const APP = 'apps/docs';
+const APP = appRoot('apps/docs');
 const BUILT = isBuilt(APP);
 const DOCS_PAGE = '/docs/getting-started/what-is-janux';
 const OTHER_DOCS_PAGE = '/docs/getting-started/quick-start';
@@ -23,7 +24,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   // Chrome proper: the Navigation API drives both behaviors under test.
   browser = await launchBrowser();
 });
@@ -73,9 +74,9 @@ const visibleLink = (page: Page, href: string) => page.locator(`a[href="${href}"
  * enough to lose the race routinely. `janux.settled()` drains the navigation
  * the framework itself is tracking, which is the real completion signal.
  */
-const settled = async (page: Page, path: string) => {
+const settledAt = async (page: Page, path: string) => {
   await page.waitForFunction((expected) => location.pathname === expected, path);
-  await page.evaluate(() => (window as any).janux.settled());
+  await settled(page);
 };
 
 describe.skipIf(!BUILT)('Ask AI persistence across the docs menu (apps/docs)', () => {
@@ -83,12 +84,12 @@ describe.skipIf(!BUILT)('Ask AI persistence across the docs menu (apps/docs)', (
     const { page, warnings } = await openDocsWithAssistant();
 
     await visibleLink(page, '/playground').click();
-    await settled(page, '/playground');
+    await settledAt(page, '/playground');
 
     expect(await assistantState(page)).toEqual({ exists: true, sameInstance: true, open: true });
 
     await visibleLink(page, OTHER_DOCS_PAGE).click();
-    await settled(page, OTHER_DOCS_PAGE);
+    await settledAt(page, OTHER_DOCS_PAGE);
 
     expect(await assistantState(page)).toEqual({ exists: true, sameInstance: true, open: true });
     expect(warnings.filter((text) => text.includes('persisted island'))).toEqual([]);
@@ -145,7 +146,7 @@ describe.skipIf(!BUILT)('Ask AI persistence across the docs menu (apps/docs)', (
     });
 
     await visibleLink(page, OTHER_DOCS_PAGE).click();
-    await settled(page, OTHER_DOCS_PAGE);
+    await settledAt(page, OTHER_DOCS_PAGE);
 
     expect(await page.evaluate(() => (window as any).__moves)).toEqual({ detached: 1, attached: 1 });
     expect(await assistantState(page)).toEqual({ exists: true, sameInstance: true, open: true });

@@ -96,7 +96,8 @@ The set no other framework can emit, because no other framework has the answers.
 | `janux.guard` | `janux.intent`, `janux.api` | The **resolved** guard: `auto`, `confirm` or `forbidden` |
 | `janux.origin` | `janux.intent`, `janux.api` | `human` or `agent` |
 | `janux.proposal.id` | proposal spans | Ties an agent's request to the human approval that ran it, across two requests |
-| `janux.cost.usd` | `chat {model}` | What the turn cost, when the agent declared its prices |
+| `janux.cost.usd` | `chat {model}` | What the round cost, when the agent declared its prices |
+| `janux.turn.input_tokens`, `janux.turn.output_tokens`, `janux.turn.cost.usd` | `invoke_agent janux` | The whole turn: every round summed, and priced |
 
 ### The spans
 
@@ -110,8 +111,17 @@ The set no other framework can emit, because no other framework has the answers.
 | `janux.api` | The `api()` invocation pipeline, and the proposal an agent's `confirm` call parks |
 | `janux.api.execute` | The approved run of a proposed `api()` call |
 | `janux.proposal.approve` | `POST /_janux/approve` — the human act |
-| `invoke_agent janux` | One agent turn: every round and every tool hangs off it |
+| `invoke_agent janux` | One agent turn: every round and every tool hangs off it. Carries the turn's totals under `janux.turn.*` |
 | `chat {model}` | One round of the loop |
+
+The turn totals are deliberately **not** on the `gen_ai.usage.*` keys the
+rounds already carry. A turn's totals *are* the sum of its `chat` children, so
+repeating those keys on the parent would double every token — and every dollar
+— in the `sum(...)` query the GenAI conventions exist to make possible.
+
+The same totals travel in the agent's reply envelope as `usage`
+(`{ inputTokens, outputTokens, costUsd? }`), so a caller with no tracer — the
+`janux eval` runner included — can still bill a turn.
 
 ### GenAI semantic conventions
 

@@ -1,7 +1,7 @@
-import { buildManifest, component, intent, schema, int, type PageMeta } from 'janux';
+import { buildManifest, component, intent, organizationJsonLd, schema, int, type PageMeta } from 'janux';
 import { Layout } from '../components/Layout';
 import { renderMarkdown } from '../server/markdown';
-import { absolute, SOCIAL_IMAGE } from '../site';
+import { absolute, HERO_POSTER, SOCIAL_DEFAULTS, SOCIAL_IMAGE } from '../site';
 
 /* Kept under ~155 characters: past that, search results truncate the sentence
    and the category ("Agentic Web") is what must survive the cut. */
@@ -13,6 +13,7 @@ export const meta: PageMeta = {
   description: DESCRIPTION,
   canonical: '/',
   image: SOCIAL_IMAGE,
+  og: { ...SOCIAL_DEFAULTS, type: 'website' },
   jsonLd: [
     {
       '@context': 'https://schema.org',
@@ -31,10 +32,18 @@ export const meta: PageMeta = {
       license: 'https://opensource.org/licenses/MIT',
       author: { '@type': 'Person', name: 'Aral Roca Gómez', url: 'https://aralroca.com' },
     },
+    organizationJsonLd({
+      name: 'Janux',
+      url: absolute('/'),
+      logo: absolute('/favicon.svg'),
+      sameAs: ['https://github.com/aralroca/Janux'],
+    }),
   ],
   // The hero video's poster is the largest paint on this page; without the hint
-  // the browser only discovers it after parsing the <video>.
-  head: [{ tag: 'link', attrs: { rel: 'preload', as: 'image', href: SOCIAL_IMAGE, fetchpriority: 'high' } }],
+  // the browser only discovers it after parsing the <video>. It is the poster,
+  // not the social card: preloading an image only crawlers fetch would spend
+  // the page's first connection on bytes the visitor never sees.
+  head: [{ tag: 'link', attrs: { rel: 'preload', as: 'image', href: HERO_POSTER, fetchpriority: 'high' } }],
 };
 
 const SAMPLE_CODE = `import { component, intent, schema, int } from 'janux';

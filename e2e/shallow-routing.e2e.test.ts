@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt } from './support/app';
+import { isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * Shallow routing: the URL moves, the page does not.
@@ -14,7 +15,7 @@ import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt } from
  * `urlState`, so a shallow change has something to prove it reached.
  */
 
-const APP = 'examples/data-cache';
+const APP = appRoot('examples/data-cache');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -23,7 +24,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchBrowser();
 });
 

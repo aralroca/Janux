@@ -4,7 +4,8 @@ import type { Browser, Page } from 'playwright';
 import { createJanuxServer } from '../packages/janux-server/src/index';
 import { prodServerOptions } from '../packages/janux-cli/src/prod';
 import { staticResponse } from '../packages/janux-cli/src/static-assets';
-import { TIMEOUT, appRoot, isBuilt, launchBrowser, openPage, serveBuilt } from './support/app';
+import { isBuilt, launchBrowser, openPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * examples/shop declares `csp: true` and nothing else, so this suite is the
@@ -20,8 +21,8 @@ import { TIMEOUT, appRoot, isBuilt, launchBrowser, openPage, serveBuilt } from '
  * blocks nothing also reports nothing.
  */
 
-const BUILT = isBuilt('examples/shop');
-const SUSPENSE_BUILT = isBuilt('examples/with-suspense');
+const BUILT = isBuilt(appRoot('examples/shop'));
+const SUSPENSE_BUILT = isBuilt(appRoot('examples/with-suspense'));
 
 let BASE = '';
 let SUSPENSE_BASE = '';
@@ -48,7 +49,7 @@ async function serveWithCsp(name: string) {
 
 beforeAll(async () => {
   browser = BUILT || SUSPENSE_BUILT ? await launchBrowser() : undefined;
-  if (BUILT) ({ base: BASE, stop } = await serveBuilt('examples/shop'));
+  if (BUILT) ({ url: BASE, stop } = await startTestServer(appRoot('examples/shop')));
   if (SUSPENSE_BUILT) ({ base: SUSPENSE_BASE, stop: stopSuspense } = await serveWithCsp('examples/with-suspense'));
 });
 

@@ -1,0 +1,24 @@
+name: Bug report
+description: Something in Janux doesn't behave as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: >-
+        Expected vs actual behavior, and a minimal reproduction — a failing
+        test is ideal, a snippet or repo link works too.
+    validations:
+      required: true
+  - type: textarea
+    id: info
+    attributes:
+      label: "`janux info` output"
+      description: >-
+        Run `bunx janux info` in your app and paste the markdown unedited — it
+        reports versions, resolved config, integrations and routes, and never
+        prints your machine's paths. If the bug is in this repo itself,
+        `bun --version` is enough.
+    validations:
+      required: true

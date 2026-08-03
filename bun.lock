@@ -6,6 +6,7 @@
       "name": "janux-monorepo",
       "devDependencies": {
         "@changesets/cli": "^2.31.1",
+        "@janux/testing": "workspace:*",
         "@swc/core": "^1.9.0",
         "@types/bun": "^1.2.0",
         "lighthouse": "^13.4.1",
@@ -431,6 +432,7 @@
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
+        "@janux/testing": "workspace:*",
         "janux": "workspace:*",
       },
     },
@@ -638,6 +640,7 @@
         "@janux/cli": "workspace:*",
         "@janux/node": "workspace:*",
         "@janux/server": "workspace:*",
+        "@janux/testing": "workspace:*",
         "janux": "workspace:*",
       },
     },
@@ -648,6 +651,7 @@
         "@janux/agent": "workspace:*",
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
+        "@janux/testing": "workspace:*",
         "janux": "workspace:*",
       },
     },
@@ -870,6 +874,7 @@
         "@janux/node": "workspace:*",
         "@janux/server": "workspace:*",
         "@janux/tailwind": "workspace:*",
+        "@janux/testing": "workspace:*",
         "@janux/vercel": "workspace:*",
         "@janux/vite": "workspace:*",
         "@mdx-js/mdx": "^3.1.0",
@@ -1001,6 +1006,25 @@
         "tailwindcss": "^4.0.0",
       },
     },
+    "packages/janux-testing": {
+      "name": "@janux/testing",
+      "version": "0.6.0",
+      "dependencies": {
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "@janux/vite": "workspace:*",
+      },
+      "devDependencies": {
+        "janux": "workspace:*",
+        "playwright": "^1.62.0",
+      },
+      "peerDependencies": {
+        "playwright": "^1.40.0",
+      },
+      "optionalPeers": [
+        "playwright",
+      ],
+    },
     "packages/janux-vercel": {
       "name": "@janux/vercel",
       "version": "0.6.0",
@@ -1031,6 +1055,38 @@
       },
       "peerDependencies": {
         "vite": ">=5",
+      },
+    },
+    "templates/back-office": {
+      "name": "janux-template-back-office",
+      "version": "0.1.0",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
+    "templates/content-site": {
+      "name": "janux-template-content-site",
+      "version": "0.1.0",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/content": "workspace:*",
+        "@janux/server": "workspace:*",
+        "@mdx-js/mdx": "^3.1.0",
+        "janux": "workspace:*",
+      },
+    },
+    "templates/dashboard": {
+      "name": "janux-template-dashboard",
+      "version": "0.1.0",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
       },
     },
   },
@@ -1304,6 +1360,8 @@
     "@janux/server": ["@janux/server@workspace:packages/janux-server"],
 
     "@janux/tailwind": ["@janux/tailwind@workspace:packages/janux-tailwind"],
+
+    "@janux/testing": ["@janux/testing@workspace:packages/janux-testing"],
 
     "@janux/vercel": ["@janux/vercel@workspace:packages/janux-vercel"],
 
@@ -2246,6 +2304,12 @@
     "janux-news-bench": ["janux-news-bench@workspace:benchmarks/news/janux"],
 
     "janux-streaming-ssr-bench": ["janux-streaming-ssr-bench@workspace:benchmarks/streaming-ssr/janux"],
+
+    "janux-template-back-office": ["janux-template-back-office@workspace:templates/back-office"],
+
+    "janux-template-content-site": ["janux-template-content-site@workspace:templates/content-site"],
+
+    "janux-template-dashboard": ["janux-template-dashboard@workspace:templates/dashboard"],
 
     "janux-todomvc": ["janux-todomvc@workspace:benchmarks/todomvc/janux"],
 

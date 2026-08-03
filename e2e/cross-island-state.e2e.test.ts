@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
 import { createBus, createInstance, int, schema, store } from '../packages/janux/src/index';
 import { cart as cartStore } from '../examples/cross-island-state/src/stores';
-import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrApp } from './support/app';
+import { createTestApp, isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
+import { TIMEOUT, appRoot } from './support/app';
 
 /**
  * What examples/cross-island-state exists to demonstrate: the shared-state
@@ -13,7 +14,7 @@ import { TIMEOUT, isBuilt, launchBrowser, openPage as newPage, serveBuilt, ssrAp
  * single repaint.
  */
 
-const APP = 'examples/cross-island-state';
+const APP = appRoot('examples/cross-island-state');
 const BUILT = isBuilt(APP);
 
 let BASE = '';
@@ -22,7 +23,7 @@ let browser: Browser | undefined;
 
 beforeAll(async () => {
   if (!BUILT) return;
-  ({ base: BASE, stop } = await serveBuilt(APP));
+  ({ url: BASE, stop } = await startTestServer(APP));
   browser = await launchBrowser();
 });
 
@@ -47,8 +48,8 @@ async function addProduct(page: Page, name: string, expectedCount: string): Prom
 
 describe('examples/cross-island-state server side', () => {
   it('server-renders every island and the empty per-request cart', async () => {
-    const { get } = await ssrApp(APP);
-    const html = await (await get('/')).text();
+    const app = await createTestApp(APP);
+    const html = await (await app.fetch('/')).text();
 
     ['product-grid#default', 'cart-badge#default', 'cart-panel#default', 'toasts#default', 'inventory#default'].forEach(
       (id) => expect(html).toContain(`data-jx="${id}"`),
@@ -63,8 +64,8 @@ describe('examples/cross-island-state server side', () => {
   });
 
   it('exposes the store and every intent on the agent surface', async () => {
-    const { get } = await ssrApp(APP);
-    const manifest: any = await (await get('/_janux/manifest')).json();
+    const app = await createTestApp(APP);
+    const manifest: any = await (await app.fetch('/_janux/manifest')).json();
     const names = new Set(manifest.tools.map((tool: any) => tool.name));
     const cart = manifest.resources.find((entry: any) => entry.uri === 'store://cart');
 

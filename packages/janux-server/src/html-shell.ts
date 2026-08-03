@@ -39,6 +39,8 @@ export interface ShellOptions {
   /** `@font-face` rules — the real faces and their metric-adjusted fallbacks. */
   fontFaces?: string;
   favicon?: string;
+  /** The app publishes `/rss.xml`: advertise it with a `rel="alternate"` link. */
+  feed?: { title: string };
   i18n?: ShellI18n;
   /** `navigation` from the app config: reaches the client through the shell. */
   navigation?: NavigationConfig;
@@ -202,6 +204,10 @@ export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
   const favicon = options.favicon
     ? `<link rel="icon" id="jx-favicon" href="${safeAttr(options.favicon)}">`
     : '';
+  // Feed autodiscovery: readers look for this link, on every page.
+  const feedLink = options.feed
+    ? `<link rel="alternate" id="jx-feed" type="application/rss+xml" title="${safeAttr(options.feed.title)}" href="/rss.xml">`
+    : '';
   // Always a language: an undeclared one is a bug for assistive tech, so apps
   // without i18n get `lang` from config and fall back to English.
   const htmlAttrs = options.i18n
@@ -223,7 +229,7 @@ export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
     // links (favicon, stylesheets) sit before the conditional description meta,
     // so a page that omits the description never shifts the stylesheet's
     // position — it stays put across the diff instead of being moved/re-resolved.
-    `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${fontHead}${favicon}${manifestLink}${styleLinks}${description}${social}</head>`,
+    `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${fontHead}${favicon}${feedLink}${manifestLink}${styleLinks}${description}${social}</head>`,
     '<body>',
   ].join('\n');
 }
