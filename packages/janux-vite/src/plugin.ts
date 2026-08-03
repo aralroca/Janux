@@ -17,6 +17,7 @@ import {
   registerInstrumentation,
   resolveAppConfig,
   shellOptions,
+  toPosix,
   type JanuxPluginOptions,
 } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
@@ -91,8 +92,9 @@ function appForeignImport(root: string): ServerOptions['foreignImport'] {
   return (spec) => import(pathToFileURL(appRequire.resolve(spec)).href);
 }
 
+/** Forward-slash, whatever the OS: every caller builds a URL or a Vite entry from it. */
 function relativeToRoot(root: string, absolute: string): string {
-  return absolute.startsWith(root) ? absolute.slice(root.length + 1) : absolute;
+  return toPosix(absolute.startsWith(root) ? absolute.slice(root.length + 1) : absolute);
 }
 
 /**
@@ -108,6 +110,17 @@ export function devStylesheets(root: string, stylesheet: string | undefined): st
   const url = `/${relativeToRoot(root, stylesheet)}`;
 
   return [`${url}${url.includes('?') ? '&' : '?'}direct`];
+}
+
+/**
+ * Whether a Vite module id is one of the *app's* api modules — inside its
+ * server directory and named `*.api.ts|js`. The config carries the directory as
+ * a native path while Vite's ids are forward-slashed on every OS, so on Windows
+ * a raw prefix test never matches and the stub transform silently stops; both
+ * sides are compared in their forward-slash form.
+ */
+export function isApiModule(serverDir: string, id: string): boolean {
+  return toPosix(id).startsWith(`${toPosix(serverDir)}/`) && /\.api\.[tj]s($|\?)/.test(id);
 }
 
 /**
@@ -172,7 +185,7 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       const app = await resolveAppConfig(root, options);
       const { clientEntry } = app;
 
-      serverDir = `${app.serverDir}/`;
+      serverDir = app.serverDir;
 
       return {
         appType: 'custom',
@@ -206,7 +219,7 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
      */
     transform(code, id, transformOptions) {
       if (bundling && !transformOptions?.ssr) collectIslands(islandCatalog, id, code);
-      if (!id.startsWith(serverDir) || !/\.api\.[tj]s($|\?)/.test(id)) return undefined;
+      if (!serverDir || !isApiModule(serverDir, id)) return undefined;
       if (transformOptions?.ssr) return undefined;
 
       return { code: apiStubModule(id, code), map: null };

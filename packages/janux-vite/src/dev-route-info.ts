@@ -1,5 +1,6 @@
 import { relative } from 'node:path';
 import { createFsRouter, type Matcher } from '@janux/server';
+import { toPosix } from './app-config';
 
 /**
  * The half of an error's Janux chain that only the server knows: which route
@@ -76,8 +77,8 @@ export function devRouteInfo(
   return {
     path,
     pattern: match.pattern,
-    file: relative(root, match.filePath),
-    layouts: match.layouts.map((layout) => relative(root, layout)),
+    file: toPosix(relative(root, match.filePath)),
+    layouts: match.layouts.map((layout) => toPosix(relative(root, layout))),
     params: match.params,
   };
 }

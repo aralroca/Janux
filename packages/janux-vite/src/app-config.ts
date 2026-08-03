@@ -112,6 +112,17 @@ export function publishAppRoot(root: string): void {
   process.env.JANUX_APP_ROOT = root;
 }
 
+/**
+ * A path in its forward-slash form, whatever OS produced it.
+ *
+ * Everything the framework derives from `relative()` — generated import
+ * specifiers, dev URLs, the route reports `janux info` prints — must read the
+ * same on Windows, where `relative()` answers with backslashes.
+ */
+export function toPosix(path: string): string {
+  return path.replaceAll('\\', '/');
+}
+
 /** Resolves the conventional app layout: src/routes, src/server, src/client.ts, src/agent.ts, src/stores.ts. */
 export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginOptions = {}): Promise<JanuxAppConfig> {
   const options = { ...packageJsonOptions(root), ...(await configFileOptions(root)), ...pluginOptions };

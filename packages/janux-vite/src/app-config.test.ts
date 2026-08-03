@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig } from './app-config';
+import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig, toPosix } from './app-config';
 
 function app(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), 'janux-app-'));
@@ -358,5 +358,21 @@ describe('the app root the framework publishes', () => {
     await resolveAppConfig(app({ 'janux.config.ts': 'export default {};' }));
 
     expect(process.env.JANUX_APP_ROOT).toBe('/srv/app');
+  });
+});
+
+/**
+ * Everything the framework derives from `relative()` — generated import
+ * specifiers, dev URLs, the route reports `janux info` prints — must read the
+ * same on Windows, where `relative()` answers with backslashes. This is the one
+ * normalization those call sites share.
+ */
+describe('toPosix', () => {
+  it('turns a Windows-relative path into its forward-slash form', () => {
+    expect(toPosix('src\\routes\\index.tsx')).toBe('src/routes/index.tsx');
+  });
+
+  it('leaves a POSIX path alone', () => {
+    expect(toPosix('src/routes/index.tsx')).toBe('src/routes/index.tsx');
   });
 });
