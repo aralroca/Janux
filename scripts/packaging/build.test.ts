@@ -6,7 +6,7 @@
  * The fixture is written under `node_modules/` so `bun test` never discovers
  * the files it is meant to prove are left out of `dist`.
  */
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildPackage } from './build';
@@ -39,18 +39,22 @@ const FILES: Record<string, string> = {
   'bin.ts': `#!/usr/bin/env bun\nimport { describeShape } from './src/index';\n\nconsole.log(describeShape({ kind: 'circle' }));`,
 };
 
-let outputs: string[] = [];
-
-beforeAll(async () => {
-  rmSync(ROOT, { recursive: true, force: true });
-  await Promise.all(Object.entries(FILES).map(([path, content]) => Bun.write(`${ROOT}/${path}`, content)));
-  // A leftover from an earlier build, to prove `dist` is replaced and not merged.
-  await Bun.write(`${ROOT}/dist/src/gone.js`, 'export const gone = true;');
-  outputs = await buildPackage(ROOT);
-  // A real `tsc` build, against bun's 5s default for hooks. It finishes in well
-  // under a second on a quiet machine and has timed out three times on CI —
-  // the work is genuinely slow there, not stuck, so it gets a real deadline.
-}, 60_000);
+/*
+ * Built once at module scope rather than in a `beforeAll`.
+ *
+ * A real `tsc` build does not fit bun's 5s default for hooks — it has timed out
+ * three times on CI, where the work is genuinely slow rather than stuck. The
+ * deadline used to be lifted with `beforeAll(fn, 60_000)`, but that form throws
+ * on Bun 1.3.0 ("expects a function as the second argument"; fixed in 1.3.2),
+ * and 1.3.0 is the floor `engines` declares and CI now runs. Module evaluation
+ * carries no such deadline, so this needs no per-test timeout and no floor bump
+ * for a constraint only the suite has.
+ */
+rmSync(ROOT, { recursive: true, force: true });
+await Promise.all(Object.entries(FILES).map(([path, content]) => Bun.write(`${ROOT}/${path}`, content)));
+// A leftover from an earlier build, to prove `dist` is replaced and not merged.
+await Bun.write(`${ROOT}/dist/src/gone.js`, 'export const gone = true;');
+const outputs = await buildPackage(ROOT);
 
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
