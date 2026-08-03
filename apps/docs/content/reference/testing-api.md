@@ -19,6 +19,7 @@ interface TestAppOptions {
 }
 
 interface TestApp {
+  server: JanuxServer;   // the full server underneath: listPages(), manifestFor(), apiTools
   fetch(path: string, init?: RequestInit): Promise<Response>;
   render(path: string, init?: RequestInit): Promise<RenderedPage>;  // { status, headers, html }
   manifest(path: string): Promise<unknown>;  // islands, tools, route patterns

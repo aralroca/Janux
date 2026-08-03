@@ -15,6 +15,8 @@ export interface RenderedPage {
 }
 
 export interface TestApp {
+  /** The full server underneath, for what the harness does not wrap: `listPages()`, `manifestFor()`, `apiTools`. */
+  server: ReturnType<typeof createJanuxServer>;
   /** The raw HTTP boundary: any path the app serves, middleware included. */
   fetch(path: string, init?: RequestInit): Promise<Response>;
   /** Renders a route through its `_layout` chain and middleware, fully streamed. */
@@ -45,6 +47,7 @@ export async function createTestApp(root: string, options: TestAppOptions = {}):
   const request = (path: string, init?: RequestInit) => server.fetch(new Request(`http://test${path}`, init));
 
   return {
+    server,
     fetch: request,
     async render(path, init) {
       const response = await request(path, init);

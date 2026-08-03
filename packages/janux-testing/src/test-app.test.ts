@@ -91,6 +91,15 @@ describe('createTestApp honors mockApi during SSR', () => {
   });
 });
 
+describe('createTestApp exposes the underlying server', () => {
+  it('hands over the full JanuxServer for what the harness does not wrap', async () => {
+    const app = await createTestApp(FIXTURE);
+
+    expect((await app.server.listPages()).sort()).toEqual(['/', '/admin', '/products/[id]']);
+    app.close();
+  });
+});
+
 describe('createTestApp cleans up after itself', () => {
   it('close() restores the previously published app root', async () => {
     const previous = process.env.JANUX_APP_ROOT;
