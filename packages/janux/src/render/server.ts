@@ -1,5 +1,5 @@
 import { Fragment, type JanuxNode } from '../jsx-runtime';
-import { createInstance, type JanuxInstance } from '../runtime/instance';
+import { createInstance, type InstanceOptions, type JanuxInstance } from '../runtime/instance';
 import type { EventBus } from '../runtime/bus';
 import type { ComponentDef, Ctx } from '../define/types';
 import { isForeignDef, type ForeignDef } from '../interop';
@@ -24,6 +24,14 @@ export interface RenderOptions {
   bus?: EventBus;
   storeDefs?: Record<string, ComponentDef>;
   initialState?: Record<string, Record<string, unknown>>;
+  /**
+   * Audit and proposal hooks for the instances this render mounts. SSR itself
+   * never invokes an intent, so a page request passes none; a host that renders
+   * in order to *call* one — `janux run` — needs them, because a `confirm`
+   * guard hands the parked `Proposal` (and with it, the only way to execute it)
+   * to `onProposal` and nowhere else.
+   */
+  hooks?: Pick<InstanceOptions, 'onAudit' | 'onProposal' | 'proposalDiff'>;
   /**
    * Resolves the foreign runtime (react, react-dom/server) from the APP's
    * context. Injected by the host (vite plugin / CLI) so the SSR copy is the
@@ -120,7 +128,7 @@ function storeInstances(scope: RenderScope): Record<string, JanuxInstance> {
     if (scope.registry.stores.has(alias)) return;
     const initial = scope.initialState?.[`store://${def.name}`];
 
-    scope.registry.stores.set(alias, createInstance(def, { bus: scope.bus, ctx: scope.ctx, initial }));
+    scope.registry.stores.set(alias, createInstance(def, { ...scope.hooks, bus: scope.bus, ctx: scope.ctx, initial }));
   });
 
   return Object.fromEntries(scope.registry.stores);
@@ -331,7 +339,7 @@ async function renderIslandInto(def: ComponentDef, props: any, scope: RenderScop
     Object.keys(def.use ?? {}).map((alias) => [alias, stores[alias]!]),
   );
   const initial = scope.initialState?.[`ui://${def.name}#${key}`] ?? props.initial;
-  const instance = createInstance(def, { key, ctx: islandCtx(scope), bus: scope.bus, initial, stores: useStores });
+  const instance = createInstance(def, { ...scope.hooks, key, ctx: islandCtx(scope), bus: scope.bus, initial, stores: useStores });
   const persist = props.persist ? ' data-jx-persist' : '';
   const eager = props.eager ? ' data-jx-eager' : '';
   const id = escapeHtml(`${def.name}#${key}`);

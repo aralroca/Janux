@@ -1,25 +1,38 @@
 ---
 title: Auth and request context
-description: "Identity flows through a Janux app in ctx: built once per request, injected everywhere it is needed, and never a global."
+description: "Identity flows through a Janux app in ctx: built once per request, injected everywhere it is needed, and never a global. Sessions with batteries, and per-agent authorization on top."
 ---
 
 # Auth and request context
 
 `ctx` is how identity flows through Janux: built once per request, injected everywhere, never global.
 
+Janux is **not an auth provider** and will not become one. What it ships is the two things every app has to build around one — a session cookie that is signed, expiring and rotating, and an authorization model the invocation pipeline enforces for you — plus the seams to plug your own provider into both.
+
 ## Building ctx
 
 `src/ctx.ts` is the convention: default-export a function of the request and every route, intent, source and `api()` receives what it returns.
 
 ```ts title="src/ctx.ts"
-import { verifyCookie } from './auth';
+import type { CtxBag } from '@janux/server';
 
-export default async function ctxFor(req: Request) {
-  const session = await verifyCookie(req.headers.get('cookie'));
+/** Your allowlisted agents, by Web Bot Auth key id, and what each may do. */
+const AGENT_SCOPES: Record<string, string[]> = { 'partner-agent-key-thumbprint': ['orders:read'] };
 
-  return { userId: session?.userId, role: session?.role ?? 'guest' };
+export default function ctxFor(req: Request, { session, agent }: CtxBag) {
+  const user = session as { userId: string; scopes: string[] } | undefined;
+
+  return {
+    userId: user?.userId,
+    role: user ? 'member' : 'guest',
+    scopes: user?.scopes,
+    // What this agent may spend of that grant — never more (see below).
+    agent: agent?.verified ? { scopes: AGENT_SCOPES[agent.keyId!] } : undefined,
+  };
 }
 ```
+
+The second argument is what the framework already verified, so `ctxFor` never verifies it twice: `session` is the payload of the signed session cookie (when the app has a [session store](#sessions-with-batteries-included)), and `agent` is the Web Bot Auth identity — `null` when the request carried no signature.
 
 `janux dev` and `janux start` both pick it up; there is nothing to register. Running your own server? It's the `ctxFor` option of [`createJanuxServer`](/docs/recipes/custom-server) — the convention just wires that for you.
 
@@ -47,6 +60,91 @@ sources: { profile: source({ query: ({ ctx }) => loadProfile(ctx.userId) }) },
 export default function Page({ ctx }) { return ctx.userId ? <Dashboard /> : <Login />; }
 ```
 
+## Sessions, with batteries included
+
+`createSessionStore` is the cookie half of auth — the part every app rewrites and half of them get wrong. It authenticates nobody: you call `issue()` once *your* provider has decided who this is.
+
+```ts title="src/session.ts"
+import { createSessionStore } from '@janux/server';
+
+export default createSessionStore<{ userId: string; scopes: string[] }>({
+  secret: process.env.SESSION_SECRET!,
+});
+```
+
+`src/session.ts` is the convention, like `src/ctx.ts`. Your login route issues, your logout route clears:
+
+```ts
+import sessions from '../session';
+
+export async function POST(req: Request) {
+  const user = await myProvider.verify(await req.formData());
+
+  return new Response(null, {
+    status: 303,
+    headers: { location: '/', 'set-cookie': sessions.issue({ userId: user.id, scopes: user.scopes }) },
+  });
+}
+```
+
+Three properties, and the third is the one apps skip:
+
+- **Signed.** The payload is data your server minted, not data the browser sent. Signed, *not encrypted* — put an id and a grant in it, never a secret.
+- **Expiring**, absolutely. A cookie past its window is not a session however valid its signature.
+- **Rotating.** Past `rotateAfterMs` (default: half the TTL) the value on the wire is replaced automatically — the server appends the renewed `Set-Cookie` to whatever response the request produced, so a copy lifted from a log, a proxy or a backup stops working, and the user never notices. `issue()` again on privilege change is the other half: a fresh value is what defeats session fixation.
+
+Nothing is stored server-side, which is the trade: no revocation list, and a replaced cookie remains valid until its own expiry. Shorten `ttlMs` if that matters more to you than statelessness.
+
+Two smaller consequences worth knowing:
+
+- The response that carries a renewal is **`private, no-store`**, whatever the route's [cache policy](/docs/guide/http-cache) said — it holds a credential now, so a CDN in front must not keep it for the next visitor.
+- A [`confirm` proposal](/docs/guide/intents-and-guards) is bound to the credentials its browser held when it was parked. A rotation landing inside a proposal's ten-minute window therefore refuses the approval (`403`, the same answer a foreign session gets) and the human simply asks again — it fails closed, never open.
+
+### It mints no CSRF token, on purpose
+
+A session cookie is an ambient credential, and the forgery question — *which page told the browser to send it?* — is [already answered once](#cross-site-requests) for the whole `/_janux/*` invocation surface, in the pipeline, before any handler runs. A second mechanism here would be a second thing to get wrong, not a second defence. `SameSite=Lax` is set anyway, as hygiene rather than as the guarantee.
+
+## Scopes: permissions, not just identity
+
+A guard asks *may this origin proceed?* — governance over the agent surface. A scope asks *was this caller granted the capability at all?* — authorization over the credential. They are different questions, so scopes bind human calls too.
+
+Declare them on the tool, never in `run()`:
+
+```ts
+export const refund = api({
+  description: 'Refund an order',
+  scopes: ['orders:write'],
+  run: ({ input }) => payments.refund(input.orderId),
+});
+```
+
+```ts
+empty: intent({ description: 'Empty the cart', scopes: ['cart:write'], run: ({ state }) => (state.items = []) }),
+```
+
+The grant lives on `ctx`, and there are exactly two places it comes from:
+
+| On `ctx` | Means | Absent means |
+|---|---|---|
+| `scopes` | What this **credential** grants — a session cookie, a bearer token, an OIDC `scope` claim | **Nothing.** A tool that declares scopes is unreachable until you grant them |
+| `agent.scopes` | How much of that grant the **agent acting for it** may spend | The agent inherits the session's grant unchanged |
+
+The effective grant is the **intersection**, so an agent can never out-rank the session it acts for. "The agent acts as the user" stops being a promise in a document and becomes arithmetic no app code can get wrong.
+
+### Enforced twice, because invisible is not protected
+
+A tool outside the grant is **absent** from every listing — the page manifest, `/_janux/manifest`, the hosted MCP `tools/list`, the MCP landing page, `llms.txt` — *and* **refused** by the invocation pipeline. Both, always, and the second is not optional at the transport:
+
+```bash
+# Out of scope. Not in the manifest, and not callable either:
+curl -X POST https://your.app/_janux/api/orders.refund -H 'origin: https://your.app' -d '{}'
+# → 403 {"ok":false,"error":"Error: Tool \"orders.refund\" is not available"}
+```
+
+Dropping `x-janux-origin: agent` buys nothing: that header is a hint about which *guard* rules apply, never a claim of identity, so the scope check ignores it. Listing a tool and refusing it at call time would hand an agent the name, the description and the input schema of something it may never call — which is exactly what the check exists to prevent. Refusing it without hiding it would leave the inventory public. The conformance corpus asserts all of it, on all three doors: [`security/tool-scopes.cases.ts`](https://github.com/aralroca/janux/blob/main/packages/conformance/security/tool-scopes.cases.ts).
+
+> **Note:** intents live on both sides of the wire, so their scopes are evaluated with whatever `ctx` the pipeline has: the request's on the server, and in the browser the one the page booted with (`boot({ ctx })`). Server-authoritative authorization belongs on `api()`, whose `ctx` is always the request's.
+
 ## Dynamic guards by role
 
 ```ts
@@ -61,9 +159,56 @@ Guards resolve per request: an admin's agent refunds unattended; everyone else's
 
 ## The agent acts as the user
 
-Agent invocations run under the **end user's ctx**, never a service identity. The copilot can do at most what its human can — guards then narrow further. There is no privilege escalation path through the agent endpoint.
+Agent invocations run under the **end user's ctx**, never a service identity. The copilot can do at most what its human can — guards then narrow further, and `agent.scopes` narrows again. There is no privilege escalation path through the agent endpoint: the effective grant is an intersection, so an agent that claims more than its session holds still gets the session's.
 
-> **Warning:** `x-janux-origin` distinguishes agent from human for *guard semantics* — it is not authentication. A caller lying about being human gains nothing your `ctxFor` didn't already grant them.
+> **Warning:** `x-janux-origin` distinguishes agent from human for *guard semantics* — it is not authentication. A caller lying about being human gains nothing your `ctxFor` didn't already grant them, and nothing a scope refuses either: the scope check ignores the header.
+
+## Plugging in OAuth / OIDC
+
+Janux builds no provider — you bring Auth0, Keycloak, Okta, WorkOS, Clerk, a `openid-client` of your own. Three seams is all it takes, and none of them is a Janux-shaped abstraction over your provider.
+
+**1. The callback issues a session.** Your provider's redirect lands on an ordinary [HTTP handler](/docs/guide/http-handlers). Exchange the code, then hand the claims you actually need to `sessions.issue()` — the ID token itself does not belong in a cookie:
+
+```ts title="src/api/auth/callback.ts"
+import sessions from '../../session';
+import { client } from '../../oidc';
+
+export async function GET(req: Request) {
+  const tokens = await client.callback(new URL(req.url));
+  const claims = tokens.claims();
+
+  return new Response(null, {
+    status: 303,
+    headers: {
+      location: '/',
+      // A fresh cookie value on every login: this is the fixation defence.
+      'set-cookie': sessions.issue({ userId: claims.sub, scopes: String(tokens.scope ?? '').split(' ').filter(Boolean) }),
+    },
+  });
+}
+```
+
+**2. `ctxFor` turns the session into a grant.** The OIDC `scope` string is already a space-separated list of exactly what the user consented to, so it maps onto `ctx.scopes` unchanged — that is the whole integration. Map roles or a `permissions` claim the same way if your provider issues those instead.
+
+**3. Machine callers bring their own token.** An external MCP client or a service-to-service caller has no cookie, so its grant comes from the bearer token — read it in `ctxFor` like any other credential, and validate it wherever you validate tokens:
+
+```ts title="src/ctx.ts"
+export default async function ctxFor(req: Request, { session, agent }: CtxBag) {
+  const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  const token = bearer ? await client.introspect(bearer) : undefined;
+  const user = session as { userId: string; scopes: string[] } | undefined;
+
+  return {
+    userId: user?.userId ?? token?.sub,
+    scopes: user?.scopes ?? token?.scope?.split(' '),
+    agent: agent?.verified ? { scopes: AGENT_SCOPES[agent.keyId!] } : undefined,
+  };
+}
+```
+
+For `/_janux/mcp` specifically, [`mcpAuth`](/docs/recipes/external-mcp-clients) is the door: it verifies the bearer and answers `401` with `WWW-Authenticate` (and a `resource_metadata` URL) before any tool is listed, which is what an OAuth-aware MCP client expects. The grant still arrives through `ctx.scopes`, so the same tool is filtered and refused identically whether the caller came through the browser, the bridge or MCP.
+
+**Refresh tokens stay server-side.** The session cookie holds an id and a grant; if you need to call the provider on the user's behalf later, keep the refresh token in your own store keyed by `userId`, not in the cookie — the payload is signed, not encrypted.
 
 ## Cross-site requests
 

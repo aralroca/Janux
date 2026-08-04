@@ -12,6 +12,7 @@ janux dev   [--port 3000]    # Vite dev server: SSR, HMR, api stubs, agent endpo
 janux build                  # client bundle + styles + public/ → dist/client (+ prerendered HTML with output: "static")
 janux start [--port 3000]    # production server on Bun (no Vite at runtime)
 janux test  [files...]       # the app's suite via bun test (flags pass through)
+janux run   [tool] [--arg]   # invoke an intent or an api() from the terminal (no tool: list them)
 janux verify                 # agent-surface contract checks (CI-friendly)
 janux eval [files...]        # scripted agent-task scenarios against a live app
 janux info                   # versions, resolved config and routes — paste into an issue
@@ -108,6 +109,114 @@ is never printed — there is nothing to redact before posting.
 ## janux test
 
 `bun test`, run from the app root. Everything after the command name goes through verbatim — file filters, `--watch`, `--coverage`, `-t` — and the exit code is the suite's. Janux does not ship a test runner: `bun:test` covers components and routes (see [`@janux/testing`](/docs/reference/testing-api)), Playwright covers the browser. The command exists so every project drives its suite the same way, whatever the package manager scripts look like.
+
+## janux run
+
+The terminal projection of the agent surface. `agent-native` promises one
+definition projected to UI, agent, HTTP, MCP, A2A **and CLI**; this is the last
+of those faces, and it is derived rather than designed — the tools, their
+arguments and their guards are the ones already declared.
+
+```bash
+janux run                                  # every tool this app projects
+janux run cart.addItem --help              # usage, generated from the input schema
+janux run cart.addItem --productId p1      # invoke it
+janux run api.shop.catalog | jq '.products[0]'
+```
+
+Nothing is declared for the CLI. If an app needs a single line of code to be
+runnable from a terminal, the projection is wrong.
+
+### What it is for
+
+Scripting and CI against your own app without writing a client for it. A
+release job that seeds a catalog, a smoke test that calls the same `api()` the
+copilot calls, a cron that reconciles orders — all of it with the app's guards,
+validation and audit trail in force, and none of it duplicating a schema in a
+`curl` invocation that drifts the day an argument is renamed.
+
+```bash
+# in CI
+bunx janux run api.orders.reconcile --since 2026-01-01 > report.json
+```
+
+### The tool list
+
+`janux run` with no tool prints the manifest, one line per tool:
+
+```
+Tools:
+  api.shop.catalog  [auto]    List every product in the store…
+  api.shop.pay      [confirm] Charge the cart. Irreversible monetary action.
+  cart.addItem      [auto]    Add a product to the cart by id
+```
+
+A `forbidden` tool is never listed and never callable, exactly as it is never
+advertised to an agent — the list is the manifest, not a second inventory.
+
+### Arguments come from the schema
+
+Each declared property of a tool's `input` becomes one `--flag`, typed by that
+property: `integer`/`number` parse numerically, `boolean` is bare (`--verbose`)
+or explicit (`--verbose false`), `list()`/`obj()` take JSON, and an `enum()`
+shows its members in `--help`. A flag the schema does not declare is refused
+rather than dropped — a typo that silently changes the input of a scripted call
+is the one failure a script cannot see.
+
+What is *missing* is not checked here: the invocation pipeline validates every
+call anyway, and its error already names the path and the reason.
+
+### Guards, and why a terminal is an agent
+
+Calls go out as `origin: 'agent'`. A terminal is not a session: there is no
+signed-in human behind a CI job, so the CLI knocks on the door an agent knocks
+on. `forbidden` denies, and `confirm` parks the call instead of running it.
+
+| guard | interactive terminal | non-interactive (CI, pipes) |
+|---|---|---|
+| `auto` | runs | runs |
+| `confirm` | prompts `approve <tool> {…}? [y/N]`, runs only on `y` | **fails, exit 1** — nothing ran |
+| `forbidden` | not listed, not callable | not listed, not callable |
+
+The non-interactive refusal is the whole point: a script that auto-approved its
+own irreversible call would turn the guard into a comment. There is no
+`--yes` flag, because a flag that answers a human's question is the same
+mistake with a longer name.
+
+Nothing runs before the approval, including the proposal's shadow diff: a
+terminal shows no before/after, so the CLI asks the pipeline not to compute one
+(`proposalDiff: false`) rather than speculatively execute the body of a call
+that may never be approved.
+
+### How each half is invoked
+
+An `api()` **is** an HTTP endpoint, so it travels its own HTTP boundary
+in-process — no port, no socket — and meets the same guards, CSRF policy, audit
+entries and proposal vault a browser meets. An `intent()` belongs to a mounted
+component, so it is invoked on the instance a fresh render of the page that
+mounts it produces, exactly as the client bridge does it.
+
+That fresh render is worth stating plainly: **a terminal has no session**. An
+intent whose `ready` depends on accumulated state (a cart with items in it)
+answers "not ready", the same answer an agent gets on a page where it is not
+ready. Tools that are meaningful without a session — the `api()` half, above
+all — are what a script reaches for.
+
+The `ctx` is the anonymous one an unauthenticated request gets: the app's own
+`ctxFor` runs, with no cookies and no session, so a guard that depends on a
+signed-in user denies rather than inherits one.
+
+### Exit codes
+
+| code | when |
+|---|---|
+| 0 | the tool ran (its result is on stdout, as JSON) |
+| 1 | unknown tool, bad argument, refused or unapproved `confirm`, or the tool threw |
+
+Results go to stdout and everything else to stderr, so `janux run … | jq` works
+without filtering out prose. Like `janux build` and `janux verify`, the command
+does not mount the app's schedules: one invocation must not claim a background
+job's occurrence.
 
 ## janux verify
 
