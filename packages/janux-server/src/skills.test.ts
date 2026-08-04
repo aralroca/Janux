@@ -5,6 +5,8 @@ import { discoverSkills, parseSkill, skillIndex } from './skills';
 
 const SKILLS = `${import.meta.dirname}/__fixtures__/skills`;
 
+const toPosix = (path: string) => path.replaceAll('\\', '/');
+
 describe('skills — the filesystem convention', () => {
   it('discovers flat markdown and SKILL.md packages, sorted by name', () => {
     const skills = discoverSkills(SKILLS);
@@ -15,8 +17,9 @@ describe('skills — the filesystem convention', () => {
   it('derives the name from the file when frontmatter omits it, and honours it when present', () => {
     const skills = discoverSkills(SKILLS);
 
-    expect(skills[0]!.file.endsWith('refund-order.md')).toBe(true);
-    expect(skills[1]!.file.endsWith('stock-audit/SKILL.md')).toBe(true);
+    // Compared in posix form: `join` answers with backslashes on Windows.
+    expect(toPosix(skills[0]!.file).endsWith('__fixtures__/skills/refund-order.md')).toBe(true);
+    expect(toPosix(skills[1]!.file).endsWith('__fixtures__/skills/stock-audit/SKILL.md')).toBe(true);
   });
 
   it('keeps the body out of the index — that is the whole point of loading on demand', () => {
