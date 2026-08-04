@@ -11,6 +11,26 @@ import { ThemeToggle } from './ThemeToggle';
 const THEME_INIT =
   "const t=localStorage.getItem('janux-theme');if(t==='light'||t==='dark')document.body.dataset.theme=t;";
 
+/** The top-bar destinations, in the order they appear. Docs leads: it stands in for every other doc page. */
+const TOP_LINKS = [
+  { href: '/docs/getting-started/what-is-janux', label: 'Docs' },
+  { href: '/playground', label: 'Playground' },
+  { href: '/docs/more/templates', label: 'Templates' },
+  { href: '/docs/more/examples', label: 'Examples' },
+];
+
+/**
+ * The one top link a page lights up. Templates and Examples live under /docs
+ * as well, so an exact match wins and any other doc page falls back to Docs.
+ */
+export function activeTopLink(current?: string) {
+  const exact = TOP_LINKS.find((link) => link.href === current);
+
+  if (exact) return exact.href;
+
+  return current?.startsWith('/docs/') ? TOP_LINKS[0].href : undefined;
+}
+
 /** The engraved mark, inlined so CSS light-dark() flips tile/engraving with the theme. */
 export function JanuxMark({ size = 26 }: { size?: number }) {
   return (
@@ -71,6 +91,8 @@ function SidebarNav({ current }: { current?: string }) {
 }
 
 export function Layout({ children, current, sidebar = true }: { children: unknown; current?: string; sidebar?: boolean }) {
+  const active = activeTopLink(current);
+
   return (
     <div class="shell">
       <script dangerHTML={THEME_INIT}></script>
@@ -92,10 +114,16 @@ export function Layout({ children, current, sidebar = true }: { children: unknow
           <SearchModal eager />
         </div>
         <nav class="top-links">
-          <a href="/docs/getting-started/what-is-janux">Docs</a>
-          <a href="/playground">Playground</a>
-          <a href="/docs/more/templates">Templates</a>
-          <a href="/docs/more/examples">Examples</a>
+          {TOP_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              class={link.href === active ? 'active' : undefined}
+              aria-current={link.href === active ? 'page' : undefined}
+            >
+              {link.label}
+            </a>
+          ))}
           <a href="https://github.com/aralroca/Janux" target="_blank" rel="noopener">GitHub</a>
           <a href="https://www.npmjs.com/package/janux" target="_blank" rel="noopener">npm</a>
         </nav>
