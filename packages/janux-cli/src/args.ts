@@ -1,5 +1,5 @@
 export interface CliCommand {
-  command: 'dev' | 'build' | 'start' | 'test' | 'verify' | 'eval' | 'info' | 'help';
+  command: 'dev' | 'build' | 'start' | 'test' | 'verify' | 'eval' | 'info' | 'upgrade' | 'codemod' | 'help';
   port: number;
   root: string;
   files: string[];
@@ -10,10 +10,18 @@ export interface CliCommand {
   trials: number;
   /** Run record (JSON) to compare this eval run against, instead of the local history. */
   baseline?: string;
+  /** Print what would be written, and write nothing. Every command that edits source accepts it. */
+  dryRun: boolean;
+  /** The version the app is on; `upgrade` reads it off the installed `janux` when it is not given. */
+  from?: string;
+  /** The version to upgrade to; defaults to the version of the CLI being run. */
+  to?: string;
+  /** List the codemods instead of running one. */
+  list: boolean;
 }
 
-const COMMANDS = new Set(['dev', 'build', 'start', 'test', 'verify', 'eval', 'info', 'help']);
-const VALUE_FLAGS = new Set(['--port', '--url', '--start', '--trials', '--baseline']);
+const COMMANDS = new Set(['dev', 'build', 'start', 'test', 'verify', 'eval', 'info', 'upgrade', 'codemod', 'help']);
+const VALUE_FLAGS = new Set(['--port', '--url', '--start', '--trials', '--baseline', '--from', '--to']);
 
 export const HELP_TEXT = `janux — the fullstack framework for the Agentic Web
 
@@ -27,6 +35,10 @@ Usage:
                [--url http://localhost:3000] [--start "janux start"] [--json]
                [--trials 2] [--baseline evals/baseline.json]
   janux info                   Versions, resolved config and routes, as markdown to paste into an issue
+  janux upgrade                Run the codemods for the breaking changes between two Janux versions
+               [--from 0.4.0] [--to 0.6.0] [--dry-run]
+  janux codemod [id]           Run one codemod by id — including the Next and Astro migrations
+               [--list] [--dry-run]
 `;
 
 function flagValue(argv: string[], flag: string): string | undefined {
@@ -70,5 +82,9 @@ export function parseArgs(argv: string[], cwd: string): CliCommand {
     json: argv.includes('--json'),
     trials,
     baseline: flagValue(argv, '--baseline'),
+    dryRun: argv.includes('--dry-run'),
+    from: flagValue(argv, '--from'),
+    to: flagValue(argv, '--to'),
+    list: argv.includes('--list'),
   };
 }
