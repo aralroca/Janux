@@ -146,6 +146,15 @@ export interface ServerOptions {
    */
   session?: SessionStore<unknown>;
   runtimeUrl?: string;
+  /**
+   * The built service worker to register (`/sw.js`), set by `janux start` when
+   * the app has a `src/sw.ts` and did not turn registration off. Absent
+   * everywhere else, including `janux dev` — see `@janux/vite`'s
+   * `serviceWorker.ts` for why a worker is a production artifact.
+   */
+  serviceWorkerUrl?: string;
+  /** `/manifest.webmanifest` when the app ships one — the installability half of a PWA. */
+  webManifestUrl?: string;
   islandModules?: Record<string, string>;
   title?: string;
   lang?: string;
@@ -951,6 +960,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
         islandNames,
         islandModules: options.islandModules,
         runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
+        // Not gated on islands, unlike the runtime: an app with no islands at
+        // all is precisely the one whose offline story is its whole point.
+        serviceWorkerUrl: options.serviceWorkerUrl,
+        webManifestUrl: options.webManifestUrl,
         manifestUrl: options.staticExport ? undefined : `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
         stylesheets: options.stylesheets,
         inlineStyles: navigating ? undefined : options.inlineStyles,

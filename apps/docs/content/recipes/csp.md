@@ -29,7 +29,7 @@ export default defineConfig({ csp: true });
 That is the whole setup. Every response now gets a fresh 128-bit nonce, every inline script and style the framework writes carries it, and the response ships:
 
 ```
-Content-Security-Policy: script-src 'nonce-{random}' 'strict-dynamic'; object-src 'none'; base-uri 'none'
+Content-Security-Policy: script-src 'nonce-{random}' 'strict-dynamic'; worker-src 'self'; object-src 'none'; base-uri 'none'
 ```
 
 ## What gets nonced
@@ -48,6 +48,8 @@ All of it — this is a framework guarantee, tested by sweeping the emitted docu
 | `self.jx$u=…`, `jx$u(…)` | The [suspense](/docs/guide/ssr-and-resumability) unsuspense runtime and each boundary's swap call |
 | `<script type="application/ld+json">`, `meta.head` script/style | JSON-LD and a route's own head tags |
 | `<script>` / `<style>` written in your JSX | Your own tags — a theme-init snippet, a critical-CSS block. Declare `nonce` yourself and yours wins |
+
+`worker-src` is stated rather than left to fall back: with no value of its own it inherits `script-src`, and a worker script cannot carry a nonce — so the app's own [service worker](/docs/guide/service-workers) would be refused by the policy meant to protect it. `'self'` is the narrowest answer that still allows one.
 
 Nothing runs `eval` or `new Function`, so you never need `'unsafe-eval'`.
 

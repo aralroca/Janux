@@ -86,17 +86,40 @@ describe('strictPolicy', () => {
   const policy = strictPolicy('abc');
 
   /*
-   * Scripts by nonce only, `strict-dynamic` for what they go on to load, and
-   * the two holes a nonce alone leaves open: `object-src` (the plugin bypass)
-   * and `base-uri` (the `<base>` one).
+   * Scripts by nonce only, `strict-dynamic` for what they go on to load,
+   * `worker-src` stated so the app's own service worker is not refused by the
+   * `script-src` it would otherwise inherit, and the two holes a nonce alone
+   * leaves open: `object-src` (the plugin bypass) and `base-uri` (the `<base>`
+   * one).
    */
   it('is exactly the recommended strict policy', () => {
-    expect(policy).toBe("script-src 'nonce-abc' 'strict-dynamic'; object-src 'none'; base-uri 'none'");
+    expect(policy).toBe(
+      "script-src 'nonce-abc' 'strict-dynamic'; worker-src 'self'; object-src 'none'; base-uri 'none'",
+    );
   });
 
   /** Stated separately because it is the property a future edit must not break. */
   it('never weakens itself with unsafe-inline or unsafe-eval', () => {
     expect(policy).not.toContain('unsafe-inline');
     expect(policy).not.toContain('unsafe-eval');
+  });
+});
+
+/**
+ * `worker-src` has no default of its own: it falls back to `child-src`, then
+ * `script-src`. A nonce cannot be attached to a worker script the way it can
+ * to a `<script>` tag, so under the policy above `worker-src` inherited a
+ * source list a same-origin worker can never satisfy — and `janux build`
+ * emitting `/sw.js` would have been a feature that silently never registered
+ * on any app that also wrote `csp: true`. Same-origin only, which is the
+ * strongest thing that can be said about a worker and still say yes.
+ */
+describe('strictPolicy and workers', () => {
+  it('allows a same-origin service worker', () => {
+    expect(strictPolicy('abc')).toContain("worker-src 'self'");
+  });
+
+  it('allows no other origin to supply one', () => {
+    expect(strictPolicy('abc')).not.toContain('worker-src *');
   });
 });

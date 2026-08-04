@@ -30,7 +30,7 @@ describe('recipes/csp.md', () => {
     const nonce = /'nonce-([^']+)'/.exec(policy!)![1]!;
 
     expect(policy).toBe(
-      `script-src 'nonce-${nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none'`,
+      `script-src 'nonce-${nonce}' 'strict-dynamic'; worker-src 'self'; object-src 'none'; base-uri 'none'`,
     );
     expect(tags(html).length).toBeGreaterThan(0);
     expect(tags(html).filter((tag) => !tag.includes(`nonce="${nonce}"`))).toEqual([]);
@@ -44,7 +44,7 @@ describe('recipes/csp.md', () => {
     const { policy, html } = await serverFrom(2, { 'x-nonce': 'from-proxy' });
 
     expect(policy).toBe(
-      "script-src 'nonce-from-proxy' 'strict-dynamic'; object-src 'none'; base-uri 'none'; " +
+      "script-src 'nonce-from-proxy' 'strict-dynamic'; worker-src 'self'; object-src 'none'; base-uri 'none'; " +
         "style-src 'nonce-from-proxy'; connect-src 'self'",
     );
     expect(tags(html).filter((tag) => !tag.includes('nonce="from-proxy"'))).toEqual([]);

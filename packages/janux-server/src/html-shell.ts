@@ -8,6 +8,7 @@ import {
 import type { QueryClient } from 'janux/query';
 import { headTags } from './head-tags';
 import { nonceAttr, safeAttr, safeJson } from './html-escape';
+import { serviceWorkerScript } from './service-worker-script';
 
 export interface ShellI18n {
   locale: string;
@@ -30,6 +31,17 @@ export interface ShellOptions {
   islandNames: string[];
   islandModules?: Record<string, string>;
   runtimeUrl?: string;
+  /**
+   * The app's built service worker (`/sw.js`), when it has one. Absent for
+   * every app that did not opt in, which is what keeps their HTML unchanged.
+   */
+  serviceWorkerUrl?: string;
+  /**
+   * The app's web app manifest (`/manifest.webmanifest`), when `public/` holds
+   * one. Not to be confused with `manifestUrl` below, which is the *agent*
+   * manifest — this one is what makes the app installable.
+   */
+  webManifestUrl?: string;
   manifestUrl?: string;
   stylesheets?: string[];
   /** CSS inlined as `<style>` instead of linked: one less render-blocking round trip. */
@@ -139,6 +151,15 @@ function navigationScripts(options: Omit<ShellOptions, 'html'>): string {
   return scripts.join('\n');
 }
 
+/**
+ * Beside the navigation scripts rather than with the island runtime, because
+ * the app most likely to want a worker is the one that ships no runtime at
+ * all: a static, 0-JS site whose whole point is that it keeps working offline.
+ */
+function serviceWorkerScripts(options: Omit<ShellOptions, 'html'>): string {
+  return options.serviceWorkerUrl ? serviceWorkerScript(options.serviceWorkerUrl, options.nonce) : '';
+}
+
 function runtimeScripts(options: Omit<ShellOptions, 'html'>): string {
   if (options.islandNames.length === 0) return '';
   const modules = Object.fromEntries(
@@ -204,6 +225,11 @@ export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
   const favicon = options.favicon
     ? `<link rel="icon" id="jx-favicon" href="${safeAttr(options.favicon)}">`
     : '';
+  // Installability, by the same rule as the favicon: a file in `public/` and no
+  // configuration. Keyed and placed with the other persistent resource links.
+  const webManifest = options.webManifestUrl
+    ? `<link rel="manifest" id="jx-webmanifest" href="${safeAttr(options.webManifestUrl)}">`
+    : '';
   // Feed autodiscovery: readers look for this link, on every page.
   const feedLink = options.feed
     ? `<link rel="alternate" id="jx-feed" type="application/rss+xml" title="${safeAttr(options.feed.title)}" href="/rss.xml">`
@@ -229,7 +255,7 @@ export function shellPrelude(options: Omit<ShellOptions, 'html'>): string {
     // links (favicon, stylesheets) sit before the conditional description meta,
     // so a page that omits the description never shifts the stylesheet's
     // position — it stays put across the diff instead of being moved/re-resolved.
-    `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${fontHead}${favicon}${feedLink}${manifestLink}${styleLinks}${description}${social}</head>`,
+    `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeAttr(options.title ?? 'Janux app')}</title>${fontHead}${favicon}${webManifest}${feedLink}${manifestLink}${styleLinks}${description}${social}</head>`,
     '<body>',
   ].join('\n');
 }
@@ -250,6 +276,7 @@ export function shellEpilogue(options: Omit<ShellOptions, 'html'>): string {
     options.islandNames.length > 0 ? stateScripts(options.snapshots, options.nonce) : '',
     options.queryScript ?? '',
     navigationScripts(options),
+    serviceWorkerScripts(options),
     runtimeScripts(options),
     '</body>',
     '</html>',
@@ -276,6 +303,7 @@ export function shellInterlude(options: Omit<ShellOptions, 'html'>): string {
     options.islandNames.length > 0 ? stateScripts(options.snapshots, options.nonce) : '',
     options.queryScript ?? '',
     navigationScripts(options),
+    serviceWorkerScripts(options),
     runtimeScripts(options),
     kick,
   ]

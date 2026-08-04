@@ -154,6 +154,27 @@ export interface FeedConfig {
   items: () => FeedItem[] | Promise<FeedItem[]>;
 }
 
+/**
+ * The service worker, which an app opts into by writing `src/sw.ts` — this
+ * only says what to do about *registering* the result.
+ *
+ * There is no `enabled` flag on purpose: the file is the switch. A worker that
+ * could be turned on from a config file is a worker somebody turns on without
+ * reading what it caches, and a service worker nobody meant to install is not
+ * a bug you can ship a fix for — it is already running on their machine.
+ */
+export interface ServiceWorkerConfig {
+  /**
+   * Register the built worker from every page. Default: `true`.
+   *
+   * `false` still builds and serves `/sw.js`; it just does not sign the page
+   * up, which is what you want when registration is conditional (a user
+   * setting, a subset of routes) and you would rather call
+   * `navigator.serviceWorker.register('/sw.js')` yourself.
+   */
+  register?: boolean;
+}
+
 export interface JanuxConfig {
   routesDir?: string;
   serverDir?: string;
@@ -191,6 +212,8 @@ export interface JanuxConfig {
   csp?: boolean | CspConfig;
   /** Cache-tag header and the server's own shared response cache. */
   cache?: CacheConfig;
+  /** What to do about registering the worker `src/sw.ts` builds into. */
+  serviceWorker?: ServiceWorkerConfig;
 }
 
 /** Identity helper for `janux.config.ts`: type-checks and autocompletes the config. */

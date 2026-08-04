@@ -1,0 +1,182 @@
+:root {
+  --ink: #16211c;
+  --muted: #5d6d64;
+  --line: #d9e2db;
+  --paper: #f6f8f6;
+  --moss: #2f6b4f;
+  color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.app {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+}
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 0.9rem;
+  height: 0.9rem;
+  background: var(--moss);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.masthead nav {
+  display: flex;
+  gap: 1rem;
+}
+
+a {
+  color: var(--moss);
+}
+
+h1 {
+  margin: 2rem 0 0.5rem;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  margin: 2.5rem 0 0.75rem;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.lede {
+  margin: 0 0 1.5rem;
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+
+.checklist ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  overflow: hidden;
+  background: white;
+}
+
+.checklist li + li {
+  border-top: 1px solid var(--line);
+}
+
+.checklist li button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.checklist li.packed button {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.tick {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.3rem;
+  color: var(--moss);
+  font-size: 0.8rem;
+}
+
+.tally {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+}
+
+.reset {
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.signals div {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.signals dt {
+  font-weight: 650;
+}
+
+.signals dd {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.try,
+.elsewhere {
+  color: var(--muted);
+}
+
+.colophon {
+  margin-top: 3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e6ece8;
+    --muted: #9bb0a4;
+    --line: #2a3630;
+    --paper: #101713;
+    --moss: #74c69d;
+  }
+
+  .checklist ul {
+    background: #16201b;
+  }
+}

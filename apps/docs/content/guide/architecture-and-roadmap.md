@@ -39,6 +39,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 - **Platform:** arbitrary `src/api/**` HTTP handlers + multipart uploads + `dropzone`.
 - **Content:** typed collections (`@janux/content`) — frontmatter validated by the same `schema()` as component state, with Markdown and MDX bodies whose islands are ordinary islands (see [the guide](/docs/guide/content-collections)).
 - **Agentic surface:** hosted MCP endpoint (`/_janux/mcp`), per-page Markdown projections, proposal visual diffs, `llms.txt`, Web Bot Auth, `janux verify`/`janux eval`, and [skills](/docs/guide/skills) — filesystem procedures whose index always travels and whose body the model loads on demand, projected to MCP as resources and checked by `janux verify` against the tools the tree really has.
+- **Offline & PWA:** an opt-in [service worker](/docs/guide/service-workers) — `src/sw.ts` exists, so `janux build` emits `/sw.js` with the manifest of the assets it just hashed — plus a default strategy that answers build output from the cache and documents from the network, prunes the previous deploy's cache and does not strand an open tab on it; a `public/manifest.webmanifest` is linked by the same file-presence rule as the favicon.
 - **Observability:** `src/instrumentation.ts` loaded before the server serves, OpenTelemetry spans for the request, the SSR render, each island, the invocation pipeline and the agent loop (`gen_ai.*` semantic conventions, tokens and cost per turn), a global `onError`, and PII redaction on every exported attribute — fail-open throughout, and inert when unconfigured (see [the reference](/docs/reference/observability-api)).
 - **Embedded harness (`@janux/agent`):** memory (in-memory + Postgres adapters), durable suspend/resume workflows, guardrail processors, rate limiting (in-memory + Redis), attachments, outbound MCP client, model routing (Anthropic/OpenAI/Google/OpenRouter).
 
@@ -54,7 +55,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 
 ## Testing
 
-The framework is developed test-first with `bun:test` + happy-dom (11377 tests, the count `bun run test:census` measures and enforces):
+The framework is developed test-first with `bun:test` + happy-dom (11454 tests, the count `bun run test:census` measures and enforces):
 
 - Resume-without-hydration is asserted (zero component code until interaction).
 - Guard semantics (auto/confirm/forbidden × human/agent) are covered at every layer: instance, HTTP, bridge, agent loop.

@@ -40,9 +40,19 @@ export type ResolvedCsp = (req: Request) => { nonce: string; policy?: string };
  * chunks: trust propagates to what a trusted script loads, so the policy does
  * not have to enumerate build output. `object-src` kills the plugin bypass and
  * `base-uri` kills the `<base>` one, neither of which a nonce covers.
+ *
+ * `worker-src` is stated rather than left to fall back: with no value of its
+ * own it inherits `script-src`, and a worker script cannot carry a nonce, so
+ * the app's own `/sw.js` would be refused by the very policy meant to protect
+ * it. `'self'` is the narrowest answer that still allows one.
  */
 export function strictPolicy(nonce: string): string {
-  return [`script-src 'nonce-${nonce}' 'strict-dynamic'`, "object-src 'none'", "base-uri 'none'"].join('; ');
+  return [
+    `script-src 'nonce-${nonce}' 'strict-dynamic'`,
+    "worker-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+  ].join('; ');
 }
 
 /** 128 bits of randomness, base64: unguessable, and valid in a CSP source expression. */

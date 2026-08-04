@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-11377%20passing-brightgreen" alt="11377 tests passing" />
+  <img src="https://img.shields.io/badge/tests-11454%20passing-brightgreen" alt="11454 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -230,7 +230,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 103 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 105 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -371,6 +371,7 @@ One example per **category**, each verified in CI — the [compatibility matrix]
 | [`with-sqlite`](examples/with-sqlite) | Real persistence with `bun:sqlite` and both server surfaces on one database: `api()` RPC (delete is `confirm`-guarded — agents propose, humans approve) next to classic REST handlers. |
 | [`with-uploads`](examples/with-uploads) | End-to-end file uploads: `dropzone()` feeding a validating multipart handler (type + size), server-rendered gallery, previews without a reload. |
 | [`realtime-chat`](examples/realtime-chat) | A custom server composing `createJanuxServer` with Bun's native WebSockets: optimistic delivery, cursor-based replay on reconnect, live presence. |
+| [`with-offline`](examples/with-offline) | Service worker, offline and PWA: `src/sw.ts` plus `offlineFirst()`, a prerendered site that opens with no network, an offline fallback for pages never visited, and a deploy that takes over without stranding an open tab. |
 | [`with-worker`](examples/with-worker) | `worker()`: the same prime-counting function on a Web Worker and on the main thread, with a ticker that proves which one froze the page. |
 | [`with-node-adapter`](examples/with-node-adapter) | The same app deployed to Node with `@janux/node`: one `build/` directory, no Bun on the box, and a click counter that only moves if the island hydrated from the bundle Node served. |
 

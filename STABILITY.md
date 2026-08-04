@@ -75,6 +75,12 @@ Type-only exports are outside this contract. They are documented, and they move,
 - **Experimental** — `worker`
 - **Internal** — _none_
 
+### `janux/service-worker`
+
+- **Stable** — `assets`, `offlineFirst`, `version`
+- **Experimental** — _none_
+- **Internal** — _none_
+
 ### `@janux/server`
 
 - **Stable** — `NAVIGATION_HEADER`, `NONCE_HEADER`, `api`, `apiManifestTools`, `buildLlmsTxt`, `collectApis`, `createFsRouter`, `createJanuxServer`, `createResponseCache`, `createSessionStore`, `discoverSkills`, `htmlDocument`, `invokeApi`, `isApi`, `mockApi`, `parseSkill`, `resetApiMocks`, `revalidatePath`, `revalidateTag`, `skillIndex`, `strictPolicy`
@@ -103,7 +109,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 - **Stable** — `janux`
 - **Experimental** — _none_
-- **Internal** — `apiFiles`, `apiModuleName`, `apiStubModule`, `builtFontAssets`, `exportedApiNames`, `fontResponse`, `imageResponse`, `packageDir`, `publishAppRoot`, `resolveAppConfig`, `resolveFonts`, `sendFetchResponse`, `shellOptions`, `toFetchRequest`, `writeFontAssets`, `writeImageVariants`
+- **Internal** — `SERVICE_WORKER_FILE`, `apiFiles`, `apiModuleName`, `apiStubModule`, `builtFontAssets`, `builtServiceWorker`, `exportedApiNames`, `fontResponse`, `imageResponse`, `packageDir`, `publishAppRoot`, `resolveAppConfig`, `resolveFonts`, `retireServiceWorker`, `sendFetchResponse`, `serviceWorkerAssets`, `serviceWorkerVersion`, `shellOptions`, `toFetchRequest`, `writeFontAssets`, `writeImageVariants`
 
 ### `@janux/cli`
 
