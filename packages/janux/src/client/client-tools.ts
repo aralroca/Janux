@@ -1,5 +1,6 @@
 import { CLIENT_TOOL_NAMES } from '../client-tools/specs';
 import { emitToolTarget } from './glow';
+import { islandIdsInDocument } from './mount';
 import { collectPageLinks, createNavigateTool } from './navigate-tool';
 
 export { CLIENT_TOOL_NAMES };
@@ -84,9 +85,7 @@ function fill(selector: string, value: string): unknown {
 }
 
 function viewContext(): unknown {
-  const islands = [...document.querySelectorAll('janux-island[data-jx]')].map((el) => el.getAttribute('data-jx'));
-
-  return { path: location.pathname + location.search, title: document.title, links: collectPageLinks(), islands };
+  return { path: location.pathname + location.search, title: document.title, links: collectPageLinks(), islands: islandIdsInDocument() };
 }
 
 /** Executes one built-in client tool (names in CLIENT_TOOL_NAMES). */

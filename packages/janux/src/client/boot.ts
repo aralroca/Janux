@@ -18,6 +18,7 @@ import { configurePrefetch, prefetchOnHover } from './prefetch';
 import { rescopeSpeculationRules, shellNavigationConfig } from './speculation';
 import { installWebMCP } from './webmcp';
 import { installDevOverlay } from '../dev/overlay';
+import { installDevTools } from '../dev/devtools';
 
 export interface BootOptions {
   islands?: Record<string, IslandLoader>;
@@ -33,6 +34,14 @@ export interface BootOptions {
   navigation?: boolean;
   /** Register mounted tools with `document.modelContext` (WebMCP), polyfilled when absent. Default: true. */
   webmcp?: boolean;
+  /**
+   * The in-page devtools panel (Alt+Shift+J): island/ownership tree, per-island
+   * state, intent timeline, manifest, WebMCP tools and pending proposals.
+   * Dev only and on by default there — `false` turns it off. A production
+   * build ships zero bytes of it either way, so apps opt out, never in, and
+   * the shipped bundle never carries the flag.
+   */
+  devtools?: boolean;
   /**
    * Observes every client-side `AuditEntry` (tool, origin, guard, input,
    * ok/error). Each entry is also dispatched as a `janux:audit` DOM event —
@@ -282,6 +291,9 @@ export function boot(options: BootOptions = {}): JanuxClient {
   };
 
   if (typeof window !== 'undefined') (window as any).janux = client;
+  // A pure observer over the registry and the events dispatched above — it can
+  // watch everything from the first mount without changing any of it.
+  if (import.meta.env?.DEV && options.devtools !== false) installDevTools({ registry, proposals });
   if (options.webmcp !== false) installWebMCP(bridge);
   mountEagerIslands(mount).catch(reportIntentError);
   mountDocumentForeigns(mount).catch(reportIntentError);

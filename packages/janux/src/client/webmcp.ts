@@ -2,6 +2,7 @@ import type { Manifest, ManifestTool } from '../manifest';
 import type { JanuxBridge } from './bridge';
 import { createNavigateTool } from './navigate-tool';
 import { consumeWarmManifest, MANIFEST_HEADERS, routeManifestUrl } from './prefetch';
+import { recordWebMCPTools } from '../dev/webmcp-registry';
 
 export interface WebMCPToolDescriptor {
   name: string;
@@ -63,14 +64,14 @@ export function createModelContextPolyfill(): ModelContextPolyfill {
   };
 }
 
+/** Whatever context this document has right now — native, polyfilled or none. Never creates one. */
+export function currentModelContext(): ModelContext | undefined {
+  return (document as any).modelContext ?? (navigator as any).modelContext;
+}
+
 /** The native context when the browser has one (Chrome 149+ behind a flag); the polyfill otherwise. */
 function resolveModelContext(): ModelContext {
-  const doc = document as any;
-  const native = doc.modelContext ?? (navigator as any).modelContext;
-
-  if (native) return native;
-
-  return (doc.modelContext = createModelContextPolyfill());
+  return currentModelContext() ?? ((document as any).modelContext = createModelContextPolyfill());
 }
 
 /** The copy hover already warmed, or a fresh request when the user got here another way. */
@@ -159,6 +160,9 @@ export function installWebMCP(bridge: JanuxBridge): WebMCPHandle {
     const taken = tools.some((tool) => tool.name.replace(/[^\w-]/g, '_') === 'navigate');
     const descriptors = [...(taken ? [] : [createNavigateTool()]), ...tools.map((tool) => descriptorFor(tool, bridge))];
 
+    // The devtools panel's view of the native registry, which is not enumerable
+    // by design. Recorded before the loop so the shipped loop stays byte-identical.
+    if (import.meta.env?.DEV) recordWebMCPTools(descriptors);
     controller?.abort();
     controller = new AbortController();
     for (const descriptor of descriptors) {
