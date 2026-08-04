@@ -95,6 +95,11 @@ Three properties, and the third is the one apps skip:
 
 Nothing is stored server-side, which is the trade: no revocation list, and a replaced cookie remains valid until its own expiry. Shorten `ttlMs` if that matters more to you than statelessness.
 
+Two smaller consequences worth knowing:
+
+- The response that carries a renewal is **`private, no-store`**, whatever the route's [cache policy](/docs/guide/http-cache) said — it holds a credential now, so a CDN in front must not keep it for the next visitor.
+- A [`confirm` proposal](/docs/guide/intents-and-guards) is bound to the credentials its browser held when it was parked. A rotation landing inside a proposal's ten-minute window therefore refuses the approval (`403`, the same answer a foreign session gets) and the human simply asks again — it fails closed, never open.
+
 ### It mints no CSRF token, on purpose
 
 A session cookie is an ambient credential, and the forgery question — *which page told the browser to send it?* — is [already answered once](#cross-site-requests) for the whole `/_janux/*` invocation surface, in the pipeline, before any handler runs. A second mechanism here would be a second thing to get wrong, not a second defence. `SameSite=Lax` is set anyway, as hygiene rather than as the guarantee.

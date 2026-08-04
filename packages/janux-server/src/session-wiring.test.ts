@@ -70,6 +70,29 @@ describe('the session, wired into the server', () => {
       .toEqual({ userId: 'u1' });
   });
 
+  /**
+   * The rotated cookie makes the response one person's, whatever the route
+   * said. Janux's own cache already refuses to store a `set-cookie` response,
+   * but a CDN in front only reads the headers — and `public, s-maxage` next to
+   * a session cookie is that cookie handed to the next visitor.
+   */
+  it('stops a renewed response being shareable, even on a publicly cached route', async () => {
+    let now = 1_000_000;
+    const sessions = createSessionStore<User>({ secret: SECRET, ttlMs: 10_000, rotateAfterMs: 500, now: () => now });
+    const cookie = asCookie(sessions.issue({ userId: 'u1' }));
+    const server = createJanuxServer({
+      session: sessions,
+      routes: { '/': () => jsx('main', {}) },
+      cache: { shared: false },
+    });
+
+    now += 600;
+    const response = await server.fetch(new Request('http://test/', { headers: { cookie } }));
+
+    expect(response.headers.get('set-cookie')).toStartWith('janux_session=');
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+  });
+
   it('renews on an invocation response too — the api surface is where a session is spent', async () => {
     let now = 1_000_000;
     const sessions = createSessionStore<User>({ secret: SECRET, ttlMs: 10_000, rotateAfterMs: 500, now: () => now });

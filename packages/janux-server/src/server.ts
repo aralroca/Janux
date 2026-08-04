@@ -398,8 +398,17 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return session?.data;
   };
 
-  const resolveCtx = async (req: Request, agent: AgentIdentity | null = null): Promise<Ctx> =>
-    (await options.ctxFor?.(req, { session: readSession(req), agent })) ?? {};
+  /**
+   * The bag is built before the call, not inside it: `options.ctxFor?.(req,
+   * bag)` never evaluates its arguments when there is no `ctxFor`, so an app
+   * with a session store and no ctx resolver read no cookie and rotated
+   * nothing.
+   */
+  const resolveCtx = async (req: Request, agent: AgentIdentity | null = null): Promise<Ctx> => {
+    const bag: CtxBag = { session: readSession(req), agent };
+
+    return (await options.ctxFor?.(req, bag)) ?? {};
+  };
 
   const i18nCache = new Map<string, I18n>();
   const i18nFor = (locale: string): I18n => {
@@ -1080,15 +1089,23 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   /**
    * A rotated session reaches the browser whichever response won the race —
-   * page, api refusal or the 500 above. The shared response cache never holds
-   * one: it refuses to store a response carrying `set-cookie`, and this runs
-   * after it anyway.
+   * page, api refusal or the 500 above.
+   *
+   * And the response stops being shareable when it does. Janux's own cache
+   * refuses to store anything carrying `set-cookie` (and this runs after it
+   * anyway), but a CDN in front only sees the headers: a `scope: 'public'`
+   * page answered with `s-maxage` AND a session cookie is one shared cache
+   * away from being handed to the next visitor. The credential decides —
+   * whatever the route's policy said a moment ago, this response now belongs
+   * to exactly one person.
    */
   const dispatch = async (req: Request, span: JanuxSpan): Promise<Response> => {
     const response = await answer(req, span);
     const renewed = renewals.get(req);
 
-    if (renewed) response.headers.append('set-cookie', renewed);
+    if (!renewed) return response;
+    response.headers.append('set-cookie', renewed);
+    response.headers.set('cache-control', 'private, no-store');
 
     return response;
   };
