@@ -12,6 +12,8 @@ import {
   type FeedConfig,
   type I18n,
   type I18nConfig,
+  type InstanceOptions,
+  type JanuxInstance,
   type NavigationConfig,
   type PageMeta,
   type RenderResult,
@@ -95,6 +97,13 @@ export interface WebSocketConfig<Data = any> {
 export interface WebSocketUpgrader {
   upgrade(req: Request, options?: { data?: unknown }): boolean;
 }
+
+/**
+ * What a caller that renders a page in order to *invoke* something on it passes
+ * to `instancesFor`: the audit trail it should land in, and the sink a `confirm`
+ * guard's parked `Proposal` is handed to.
+ */
+export type InstanceHooks = Pick<InstanceOptions, 'onAudit' | 'onProposal' | 'proposalDiff'>;
 
 export interface ServerOptions {
   routesDir?: string;
@@ -547,12 +556,12 @@ export function createJanuxServer(options: ServerOptions = {}) {
    * the page to know which tools exist, and that cost belongs in the trace —
    * otherwise its island spans hang off nothing.
    */
-  const renderPage = async (pathname: string, ctx: Ctx) => {
+  const renderPage = async (pathname: string, ctx: Ctx, hooks?: InstanceHooks) => {
     const page = await resolvePageOrNone(pathname, ctx);
 
     if (!page) return undefined;
     const rendered = await withSpan('janux.render', () => ({ 'janux.route': routePattern(pathname) }), () =>
-      renderToString(page.vnode, renderOptions(ctx)),
+      renderToString(page.vnode, { ...renderOptions(ctx), hooks }),
     );
 
     return { ...rendered, meta: page.meta };
@@ -582,6 +591,24 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const result = await renderPage(page, localeCtx(ctx, locale ?? options.i18n?.defaultLocale));
 
     return manifestOf(result, ctx);
+  };
+
+  /**
+   * The same mounted tree `manifestFor` describes, live instead of serialized:
+   * the islands and stores a fresh render of `pathname` mounts.
+   *
+   * An intent is not an HTTP endpoint — it belongs to a mounted component — so a
+   * caller outside the browser (`janux run`) needs the instance itself to
+   * invoke one through the ordinary pipeline. `hooks` is how it receives the
+   * `Proposal` a `confirm` guard parks; nothing here decides anything.
+   */
+  const instancesFor = async (pathname: string, ctx: Ctx, hooks?: InstanceHooks): Promise<JanuxInstance[]> => {
+    const { locale, pathname: page } = localize(pathname);
+    const result = await renderPage(page, localeCtx(ctx, locale ?? options.i18n?.defaultLocale), hooks);
+
+    if (!result) return [];
+
+    return [...result.registry.islands.map(({ instance }) => instance), ...result.registry.stores.values()];
   };
 
   /** Agent + `confirm`: register a pending proposal for a human instead of running the tool. */
@@ -1064,5 +1091,5 @@ export function createJanuxServer(options: ServerOptions = {}) {
   /** Releases what the server started for itself — today, the schedule loop. */
   const stop = (): void => options.schedules?.mount.stop();
 
-  return { fetch, serve, websocket, stop, apiTools, manifestFor, listPages, notFoundPage };
+  return { fetch, serve, websocket, stop, apiTools, manifestFor, instancesFor, listPages, notFoundPage };
 }
