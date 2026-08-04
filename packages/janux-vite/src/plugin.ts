@@ -54,6 +54,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
   const i18nModule = app.i18nModule ? await vite.ssrLoadModule(app.i18nModule) : undefined;
   const middlewareModule = app.middlewareModule ? await vite.ssrLoadModule(app.middlewareModule) : undefined;
   const ctxModule = app.ctxModule ? await vite.ssrLoadModule(app.ctxModule) : undefined;
+  const sessionModule = app.sessionModule ? await vite.ssrLoadModule(app.sessionModule) : undefined;
   const matchersModule = app.matchersModule ? await vite.ssrLoadModule(app.matchersModule) : undefined;
   const websocketModule = app.websocketModule ? await vite.ssrLoadModule(app.websocketModule) : undefined;
   const feedModule = app.feedModule ? await vite.ssrLoadModule(app.feedModule) : undefined;
@@ -84,6 +85,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     foreignImport: appForeignImport(vite.config.root),
     middleware: middlewareModule?.default as ServerOptions['middleware'],
     ctxFor: ctxModule?.default as ServerOptions['ctxFor'],
+    session: sessionModule?.default as ServerOptions['session'],
     matchers: matchersModule as ServerOptions['matchers'],
     httpHandlers: app.httpHandlersDir
       ? { dir: app.httpHandlersDir, loadModule: (file) => vite.ssrLoadModule(file) as any }

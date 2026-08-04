@@ -127,7 +127,7 @@ export const SECTIONS: SectionDef[] = [
       },
       { label: 'Reactivity', slugs: ['signal', 'computed', 'watch', 'batch', 'untrack', 'owners', 'for'] },
       { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus', 'i18n-api', 'worker'] },
-      { label: 'Client & CLI', slugs: ['client-api', 'client-state', 'data-cache-api', 'foreign', 'client-runtime', 'client-tools', 'cli', 'build-internals'] },
+      { label: 'Client & CLI', slugs: ['client-api', 'client-state', 'data-cache-api', 'foreign', 'client-runtime', 'client-tools', 'cli', 'codemods', 'build-internals'] },
     ],
   },
   {
@@ -140,7 +140,14 @@ export const SECTIONS: SectionDef[] = [
       { label: 'Testing & deployment', slugs: ['testing-components', 'deploying', 'adapters', 'vercel', 'docker', 'sentry'] },
     ],
   },
-  { section: 'more', label: 'More', groups: [{ slugs: ['templates', 'examples', 'interop-matrix', 'comparison', 'benchmarks', 'faq', 'glossary'] }] },
+  {
+    section: 'more',
+    label: 'More',
+    groups: [
+      { slugs: ['templates', 'examples', 'interop-matrix', 'comparison', 'benchmarks', 'faq', 'glossary'] },
+      { label: 'Migrating', slugs: ['migrating-from-next', 'migrating-from-astro'] },
+    ],
+  },
 ];
 
 export interface DocRef {

@@ -5,6 +5,7 @@ import { flushRenders } from './render-queue';
 import { isTracing, withSpan, type JanuxSpan, type SpanAttributes } from '../observability/tracing';
 import { withGate, type MutationGate } from '../state/mutation-gate';
 import { publishJanuxError } from '../dev/error-channel';
+import { allowsScopes } from './scopes';
 import type { ComponentDef, Ctx, GuardValue, IntentDef, Origin, RunBag } from '../define/types';
 
 export interface AuditEntry {
@@ -39,6 +40,13 @@ export interface IntentHooks {
   onAudit?: (entry: AuditEntry) => void;
   onProposal?: (proposal: Proposal) => void;
   trackPending: <T>(work: Promise<T>) => Promise<T>;
+  /**
+   * Whether a parked proposal carries a shadow-run diff. `false` for a host
+   * that shows none: computing it means running the intent's body speculatively,
+   * and a body whose effects are not state writes (an `api()` call, a message)
+   * would have happened before the human said yes.
+   */
+  proposalDiff?: boolean;
   /** Dev only: the island this pipeline belongs to, for the error overlay's chain. */
   devUri?: string;
 }
@@ -75,6 +83,10 @@ function normalizeGuard(tool: string, value: unknown): GuardValue {
 
 export function resolveGuard(def: IntentDef, ctx: Ctx, origin: Origin, tool = 'intent'): GuardValue {
   const guard = def.guard ?? 'auto';
+
+  // Out of scope is indistinguishable from not existing, for every listing that
+  // filters on `forbidden`. The pipeline refuses it too — see runInvocation.
+  if (!allowsScopes(ctx, def.scopes)) return 'forbidden';
 
   if (typeof guard !== 'function') return normalizeGuard(tool, guard);
   try {
@@ -213,7 +225,13 @@ async function runInvocation(
    * nothing — see `bundle-size.test.ts`, which measures it.
    */
   try {
-    if (origin === 'agent' && guard === 'forbidden') {
+    /*
+     * Two refusals with one answer. The guard governs the agent surface; the
+     * scope is what the caller was granted, so it ignores the origin —
+     * `x-janux-origin` is a free-to-type hint, and a check that only ran for
+     * `'agent'` would be one omitted header away from nothing.
+     */
+    if (!allowsScopes(bag.ctx, def.scopes) || (origin === 'agent' && guard === 'forbidden')) {
       throw new JanuxIntentError('forbidden', `Intent "${tool}" is not available`);
     }
     checkInvocable(tool, def, bag);
@@ -226,7 +244,9 @@ async function runInvocation(
       span?.setAttributes({ 'janux.proposal.id': proposalId });
       audit(hooks, { ...invoked, input: parsed, ok: true, proposed: true });
 
-      return propose(proposalId, invoked, parsed, approvedRun(proposalId, invoked, id, parsed, run, hooks), hooks, dryRunDiff(def, bag, parsed));
+      const diff = hooks.proposalDiff === false ? undefined : dryRunDiff(def, bag, parsed);
+
+      return propose(proposalId, invoked, parsed, approvedRun(proposalId, invoked, id, parsed, run, hooks), hooks, diff);
     }
     const result = await run();
 

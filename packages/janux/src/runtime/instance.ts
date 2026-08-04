@@ -20,6 +20,8 @@ export interface InstanceOptions {
   stores?: Record<string, JanuxInstance>;
   onAudit?: (entry: AuditEntry) => void;
   onProposal?: (proposal: Proposal) => void;
+  /** `false` where nothing shows the proposal's before/after — see `IntentHooks`. */
+  proposalDiff?: boolean;
 }
 
 /** An instance-level intent ref: the public `IntentRef` plus the internal origin channel. */
@@ -155,6 +157,7 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     gate,
     onAudit: options.onAudit,
     onProposal: options.onProposal,
+    proposalDiff: options.proposalDiff,
     trackPending: tracker.track,
   };
 

@@ -38,6 +38,8 @@ export interface JanuxAppConfig {
   i18nModule?: string;
   middlewareModule?: string;
   ctxModule?: string;
+  /** `src/session.ts`, whose default export is the app's `SessionStore`. */
+  sessionModule?: string;
   matchersModule?: string;
   websocketModule?: string;
   /** `src/schedules/`, when the app has one — each file is a schedule (see `schedules.ts`). */
@@ -149,6 +151,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     i18nModule: optional(resolve(root, 'src/i18n.ts')) ?? optional(resolve(root, 'src/i18n/index.ts')),
     middlewareModule: optional(resolve(root, 'src/middleware.ts')),
     ctxModule: optional(resolve(root, 'src/ctx.ts')),
+    sessionModule: optional(resolve(root, 'src/session.ts')),
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
     websocketModule: options.websocket ? resolve(root, options.websocket) : optional(resolve(root, 'src/ws.ts')),
     schedulesDir: optional(resolve(root, 'src/schedules')),

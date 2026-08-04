@@ -213,6 +213,21 @@ describe('WebMCP integration', () => {
     handle.dispose();
   });
 
+  /** The native modelContext keeps tools internal; the devtools panel reads this dev-only record. */
+  it('records what it registered for the devtools panel, in dev only', async () => {
+    process.env.DEV = 'true';
+    const client = await serveAndBoot();
+    const handle = installWebMCP(client);
+
+    await handle.sync();
+    const { registeredWebMCPTools } = await import('../dev/webmcp-registry');
+
+    expect(registeredWebMCPTools().map((tool) => tool.name)).toContain('api_shop_pay');
+    expect(registeredWebMCPTools().map((tool) => tool.name)).toContain('navigate');
+    handle.dispose();
+    delete process.env.DEV;
+  });
+
   it('boot installs WebMCP by default (0 config)', async () => {
     const { html } = await renderToString(jsx(counter as any, {}), {
       initialState: { 'ui://counter#default': { n: 1 } },
