@@ -16,6 +16,8 @@ janux run   [tool] [--arg]   # invoke an intent or an api() from the terminal (n
 janux verify                 # agent-surface contract checks (CI-friendly)
 janux eval [files...]        # scripted agent-task scenarios against a live app
 janux info                   # versions, resolved config and routes — paste into an issue
+janux upgrade                # codemods for the breaking changes between two Janux versions
+janux codemod [id]           # one codemod by id, including the Next and Astro migrations
 ```
 
 All of these run the `janux` bin that `@janux/cli` installs into your app's `node_modules` — there is no global install. Apps scaffolded by `create-janux` wrap the common ones as package scripts (`bun run dev`); for the rest, prefix with `bunx`: `bunx janux info`.
@@ -105,6 +107,36 @@ Installed-but-invisible is the reason it exists: zero-config integrations are
 configured *by being installed*, so nothing in your own source says whether
 Tailwind is on. Paths are reported relative to the app root and the root itself
 is never printed — there is nothing to redact before posting.
+
+## janux upgrade
+
+Runs the codemods for the breaking changes between two Janux versions. `--from`
+defaults to the `janux` the app actually resolves, `--to` to the version of the
+CLI being run, so after bumping the dependency the bare command is usually
+right.
+
+```bash
+janux upgrade --dry-run              # the diff it would write, written nowhere
+janux upgrade
+janux upgrade --from 0.4.0 --to 0.6.0
+```
+
+The range is half-open — a codemod runs when its release is after `--from` and
+at or before `--to` — and every codemod is idempotent, so a second run reports
+nothing to do rather than doing it twice.
+
+## janux codemod
+
+One codemod by id, including the framework migrations, which `janux upgrade`
+never selects on its own.
+
+```bash
+janux codemod --list
+janux codemod next/routes --dry-run
+```
+
+Both commands are documented in full, with the catalog, on
+[Codemods & `janux upgrade`](/docs/reference/codemods).
 
 ## janux test
 

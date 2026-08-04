@@ -6,7 +6,18 @@ import type { CliCommand } from './args';
 const ROOT = join(import.meta.dir, '__fixtures__', 'eval-app');
 
 function cli(over: Partial<CliCommand> = {}): CliCommand {
-  return { command: 'eval', port: 3000, root: ROOT, files: [], url: 'http://localhost:3000', json: false, trials: 1, ...over };
+  return {
+    command: 'eval',
+    port: 3000,
+    root: ROOT,
+    files: [],
+    url: 'http://localhost:3000',
+    json: false,
+    trials: 1,
+    dryRun: false,
+    list: false,
+    ...over,
+  };
 }
 
 describe('scenarioFiles', () => {

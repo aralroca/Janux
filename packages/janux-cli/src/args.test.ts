@@ -13,11 +13,30 @@ describe('janux CLI args', () => {
       json: false,
       trials: 1,
       baseline: undefined,
+      dryRun: false,
+      from: undefined,
+      to: undefined,
+      list: false,
     });
     expect(parseArgs(['build'], '/app').command).toBe('build');
     expect(parseArgs(['start'], '/app').command).toBe('start');
     expect(parseArgs(['verify'], '/app').command).toBe('verify');
     expect(parseArgs(['info'], '/app').command).toBe('info');
+  });
+
+  it('parses the upgrade range and the dry run every writing command offers', () => {
+    const parsed = parseArgs(['upgrade', '--from', '0.4.0', '--to', '0.6.0', '--dry-run'], '/app');
+
+    expect(parsed.command).toBe('upgrade');
+    expect([parsed.from, parsed.to]).toEqual(['0.4.0', '0.6.0']);
+    expect(parsed.dryRun).toBe(true);
+    // The versions are flag values, not the codemod id a bare positional carries.
+    expect(parsed.files).toEqual([]);
+  });
+
+  it('parses a codemod id and --list', () => {
+    expect(parseArgs(['codemod', 'next/routes'], '/app').files).toEqual(['next/routes']);
+    expect(parseArgs(['codemod', '--list'], '/app').list).toBe(true);
   });
 
   it('parses eval files and flags', () => {

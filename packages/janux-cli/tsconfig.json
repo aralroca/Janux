@@ -1,4 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*", "bin.ts"]
+  "include": ["src/**/*", "bin.ts"],
+  // Codemod fixtures are inputs and expected outputs, not code: the "before"
+  // side is deliberately written in syntax the current release removed, and the
+  // "after" side imports modules that only exist in the app being migrated.
+  "exclude": ["src/codemods/__fixtures__/**"]
 }
