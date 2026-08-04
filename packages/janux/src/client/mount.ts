@@ -123,12 +123,17 @@ function sweepForeigns(prefix: string, mount: MountContext): void {
 }
 
 /** The key prefix every descendant of `name#key` carries (see SSR `nextKey`). */
-function childPrefix(name: string, key: string): string {
+export function childPrefix(name: string, key: string): string {
   return `${name}.${key}.`;
 }
 
-function keyOf(id: string): string {
+export function keyOf(id: string): string {
   return id.split('#')[1] ?? 'default';
+}
+
+/** Every island the document currently names, resumed or not. */
+export function islandIdsInDocument(): string[] {
+  return [...document.querySelectorAll('janux-island[data-jx]')].map((island) => island.getAttribute('data-jx')!);
 }
 
 /** Sweep children of this parent whose host left the DOM (same principle as navigation). */

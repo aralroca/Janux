@@ -293,6 +293,8 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
 
     reject(id) {
       if (remoteProposals.delete(id)) rejectApiProposal(id);
+      // Dev only: a bare Map delete is invisible, and the devtools Proposals tab must follow it.
+      if (import.meta.env?.DEV) document.dispatchEvent(new CustomEvent('janux:proposal-settled', { detail: id }));
 
       return proposals.delete(id);
     },
