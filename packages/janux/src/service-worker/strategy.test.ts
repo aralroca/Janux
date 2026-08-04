@@ -170,13 +170,7 @@ describe('fetch: the offline fallback', () => {
     expect(await response.text()).toBe('you are offline');
   });
 
-  /**
-   * `mode` is stated rather than left to the default on purpose: it IS the
-   * thing under test, and Bun's default has not been the same across the
-   * supported range (1.3.0 answers `navigate`, later versions `cors`), so a
-   * test that relied on it was asserting the runtime's opinion instead of the
-   * strategy's. A real data request is a `fetch()` from page code.
-   */
+  /** A data request is a `fetch()` from page code — see the fixture on why `mode` is stated. */
   it('does not hand the fallback page to a data request', async () => {
     const ctx = context(serving('you are offline'), { fallback: '/offline' });
 

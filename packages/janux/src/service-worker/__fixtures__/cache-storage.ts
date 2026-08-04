@@ -60,9 +60,23 @@ export class FakeCacheStorage {
   }
 }
 
-/** `new Request()` at the fake's origin, so pathname lookups line up. */
-export function request(path: string, init?: RequestInit & { mode?: RequestMode }): Request {
-  return new Request(new URL(path, ORIGIN).href, init);
+/**
+ * A request at the fake's origin, as the three fields the strategy reads.
+ *
+ * Deliberately not a real `Request`. `mode` is what separates a navigation
+ * from a data fetch, and it cannot be exercised across the supported Bun range:
+ * 1.3.0 reports `navigate` for every request and ignores the `mode` init
+ * outright, while later versions honour it. A test built on that is asserting
+ * the runtime's opinion rather than the rule — and it passed locally and failed
+ * on the floor lane, which is the worst way to find out. In a real worker the
+ * browser supplies this object and sets `mode` correctly; here the test does.
+ */
+export function request(path: string, init: { method?: string; mode?: RequestMode } = {}): Request {
+  return {
+    url: new URL(path, ORIGIN).href,
+    method: init.method ?? 'GET',
+    mode: init.mode ?? 'cors',
+  } as unknown as Request;
 }
 
 export { ORIGIN };

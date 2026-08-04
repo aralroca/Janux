@@ -14,7 +14,7 @@
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import type { ServiceWorkerConfig } from 'janux';
 import { toPosix } from './app-config';
 
@@ -48,7 +48,12 @@ export function serviceWorkerAssets(outDir: string): string[] {
 
   return readdirSync(outDir, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
-    .map((entry) => toPosix(join(entry.parentPath, entry.name).slice(outDir.length + 1)))
+    // `relative()`, never a slice by `outDir.length`: `parentPath` is what the
+    // OS resolved, not the string that was passed in. On Windows a `/tmp/x`
+    // argument comes back as `D:\tmp\x`, and a slice sized to the shorter form
+    // leaves the tail of the drive prefix on every path — `/s/client.js`, with
+    // `sw.js` and `islands.json` no longer matching their own exclusions.
+    .map((entry) => toPosix(relative(outDir, join(entry.parentPath, entry.name))))
     .filter(precacheable)
     .sort()
     .map((path) => `/${path}`);

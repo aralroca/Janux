@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join, sep } from 'node:path';
 import { builtServiceWorker, retireServiceWorker, serviceWorkerAssets, serviceWorkerVersion } from './service-worker';
 
 /**
@@ -15,7 +16,9 @@ import { builtServiceWorker, retireServiceWorker, serviceWorkerAssets, serviceWo
  * for no offline benefit.
  */
 
-const OUT = '/tmp/janux-sw-assets';
+// The platform's own temp dir, not a hardcoded `/tmp`: on Windows that is a
+// path with a drive letter, which is exactly the shape that broke the walk.
+const OUT = join(tmpdir(), 'janux-sw-assets');
 
 function fixture(files: Record<string, string>): string {
   rmSync(OUT, { recursive: true, force: true });
@@ -65,6 +68,21 @@ describe('the precache manifest', () => {
 
   it('uses forward slashes for nested files whatever the platform separator is', () => {
     expect(serviceWorkerAssets(fixture({ 'a/b/c.js': 'x' }))).toEqual(['/a/b/c.js']);
+  });
+
+  /**
+   * The walk must derive each path by comparing it to the output directory, not
+   * by cutting `outDir.length` characters off the front — what the OS reports is
+   * a resolved path, which need not be the string that was passed in. This ran
+   * green on POSIX for exactly that reason and produced `/s/client.js` on
+   * Windows, where `/tmp/x` comes back as `D:\tmp\x`. A caller-shaped path that
+   * is not already normalised reproduces the same mismatch anywhere.
+   */
+  it('is not fooled by an outDir that is not already normalised', () => {
+    const out = fixture({ 'client.js': 'boot', 'a/b.js': 'x' });
+
+    expect(serviceWorkerAssets(join(out, 'nested', '..'))).toEqual(['/a/b.js', '/client.js']);
+    expect(serviceWorkerAssets(`${out}${sep}`)).toEqual(['/a/b.js', '/client.js']);
   });
 });
 
