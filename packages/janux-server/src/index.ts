@@ -3,6 +3,7 @@ export { mockApi, resetApiMocks } from './api-mocks';
 export {
   createJanuxServer,
   NAVIGATION_HEADER,
+  type InstanceHooks,
   type ServerOptions,
   type AgentMount,
   type AgentDeps,
