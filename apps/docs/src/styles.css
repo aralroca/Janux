@@ -189,6 +189,11 @@ kbd {
   color: var(--heading);
 }
 
+.top-links a.active {
+  color: var(--heading);
+  font-weight: 600;
+}
+
 .theme-toggle {
   display: flex;
   align-items: center;
