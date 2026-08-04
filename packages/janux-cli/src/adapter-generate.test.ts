@@ -202,7 +202,7 @@ describe('generateApp — schedules', () => {
 
   it('inlines every schedule module, the shared _config included', async () => {
     const root = appWithSchedules();
-    const modules = appModules(await resolveAppConfig(root)).map((file) => file.slice(root.length + 1));
+    const modules = appModules(await resolveAppConfig(root)).map((file) => toPosix(file.slice(root.length + 1)));
 
     expect(modules).toContain('src/schedules/nightly.ts');
     expect(modules).toContain('src/schedules/billing/sweep.ts');
