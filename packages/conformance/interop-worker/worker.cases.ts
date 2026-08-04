@@ -1053,11 +1053,15 @@ export const WORKER_CASES: ScenarioCase[] = [
       // The point of moving work off the main thread: a busy loop there does not
       // stop this one from answering.
       const sleeper = worker(async (ms: number) => {
-        const started = Date.now();
+        const started = performance.now();
 
         await new Promise((resolve) => setTimeout(resolve, ms));
 
-        return Date.now() - started >= ms;
+        // Half the delay, not all of it: what separates a real sleep from a
+        // call that never left is orders of magnitude, while a runtime may
+        // fire a timer a fraction early and `Date.now()` floors to whole
+        // milliseconds — so an honest 20ms wait can read back as 19.
+        return performance.now() - started > ms / 2;
       });
 
       log.push(String(await sleeper(20)));

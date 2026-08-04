@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { createTestApp, isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -43,7 +43,7 @@ beforeAll(async () => {
   app = await createTestApp(APP);
   if (!BUILT) return;
   ({ url: BASE, stop } = await startTestServer(APP));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {

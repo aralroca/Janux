@@ -105,14 +105,22 @@ function assertUniqueIds(files: SourceFile[]): void {
 
 interface CacheLine {
   mtimeMs: number;
+  size: number;
   entry: CollectionEntry<any>;
 }
 
 /**
- * Parsed entries, keyed by path and invalidated by mtime. Content files change
- * only when someone edits them, so re-reading and re-validating on every render
- * is work the second visitor to a page should not pay for — and under `janux
- * dev` an author still sees their edit on reload.
+ * Parsed entries, keyed by path and invalidated by mtime *and size*. Content
+ * files change only when someone edits them, so re-reading and re-validating on
+ * every render is work the second visitor to a page should not pay for — and
+ * under `janux dev` an author still sees their edit on reload.
+ *
+ * Size is part of the key because mtime alone is only as fine as the clock
+ * reporting it: Bun 1.3.0, the floor `engines` declares, reports whole
+ * milliseconds, so a second edit inside one tick looked identical to the first
+ * and was served stale. What remains outside the guarantee is an edit that
+ * keeps the byte length *and* lands within the same tick — two saves under a
+ * millisecond apart, which is a script, not an author at a keyboard.
  *
  * Per collection, not per path: `data` is the *validated* value, so two
  * collections reading one directory through different schemas must not hand
@@ -132,11 +140,11 @@ function cacheFor(def: CollectionDef<any>): Map<string, CacheLine> {
 }
 
 function readEntry<C extends CollectionDef<any>>(def: C, source: SourceFile): CollectionEntry<C> {
-  const { mtimeMs } = statSync(source.file);
+  const { mtimeMs, size } = statSync(source.file);
   const cache = cacheFor(def);
   const cached = cache.get(source.file);
 
-  if (cached?.mtimeMs === mtimeMs) return cached.entry;
+  if (cached?.mtimeMs === mtimeMs && cached.size === size) return cached.entry;
   const { data, body } = parseFrontmatter(readFileSync(source.file, 'utf8'), source.file);
   const entry: CollectionEntry<C> = {
     ...source,
@@ -146,7 +154,7 @@ function readEntry<C extends CollectionDef<any>>(def: C, source: SourceFile): Co
     data: validateFrontmatter(def.schema, data, source.file) as CollectionEntry<C>['data'],
   };
 
-  cache.set(source.file, { mtimeMs, entry });
+  cache.set(source.file, { mtimeMs, size, entry });
 
   return entry;
 }

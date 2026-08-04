@@ -12,10 +12,13 @@
   One component, two faces: a live view for humans, typed MCP tools &amp; resources for AI agents — generated from the same definition, so they can never drift.
 </p>
 
+> [!WARNING]
+> Janux is currently **under active development**. This repository is public to enable collaboration and transparency, but it has not been officially announced yet. Expect breaking changes, incomplete documentation, and unfinished features until the first public release.
+
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-11003%20passing-brightgreen" alt="11003 tests passing" />
+  <img src="https://img.shields.io/badge/tests-11024%20passing-brightgreen" alt="11024 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />

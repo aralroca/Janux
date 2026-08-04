@@ -7,7 +7,7 @@ import { join } from 'node:path';
  * same surface the docs teach.
  */
 
-/** Driving a real Chrome does not fit bun's 5s default. */
+/** Driving a real browser does not fit bun's 5s default. */
 export const TIMEOUT = 60_000;
 
 const REPO_ROOT = join(import.meta.dir, '../..');

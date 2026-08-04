@@ -86,18 +86,18 @@ export const DOCUMENT_CASES: ScenarioCase[] = [
     id: 'stream2-doc-the-head-goes-out-long-before-the-island-it-is-waiting-for',
     src: 'janux',
     run: async (log) => {
-      const started = performance.now();
       const response = await get('/slow');
       const reader = response.body!.getReader();
-
-      await reader.read();
-      const headAt = performance.now() - started;
+      const first = new TextDecoder().decode((await reader.read()).value);
 
       await reader.cancel();
-      // The island's source needs 20ms; the head must not have waited for it.
-      log.push(`early=${headAt < 20}`);
+      // Ordering, not a stopwatch: what the head raced was the island's source,
+      // so the claim is that the first chunk is already the head and cannot yet
+      // carry what that source resolves to. A wall-clock budget said the same
+      // thing only on a machine fast enough to make it true.
+      log.push(`head=${first.includes('<head')}`, `resolved=${first.includes('rows:')}`);
     },
-    expected: ['early=true'],
+    expected: ['head=true', 'resolved=false'],
   },
   {
     id: 'stream2-doc-the-routes-own-meta-reaches-the-head-not-the-tail',

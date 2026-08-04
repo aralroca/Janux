@@ -8,7 +8,10 @@ import { join } from 'node:path';
  * type. This drives the real TypeScript language service over a fixture and
  * reads the same quick info VS Code would show.
  */
-const FIXTURE_PATH = join(import.meta.dir, '__hover_fixture__.tsx');
+// Not `join`: the language service keys its source files by their forward-slash
+// form, so a native Windows path asks the program for a file it has not got.
+const DIR = import.meta.dir.replaceAll('\\', '/');
+const FIXTURE_PATH = `${DIR}/__hover_fixture__.tsx`;
 const FIXTURE = `export const view = <div style={{ color: 'red' }} dangerHTML="<b>hi</b>" />;\n`;
 
 /**
@@ -42,7 +45,7 @@ const HOST: ts.LanguageServiceHost = {
 
     return text === undefined ? undefined : ts.ScriptSnapshot.fromString(text);
   },
-  getCurrentDirectory: () => import.meta.dir,
+  getCurrentDirectory: () => DIR,
   getCompilationSettings: () => OPTIONS,
   getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
   fileExists: (file) => file === FIXTURE_PATH || ts.sys.fileExists(file),

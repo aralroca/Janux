@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -25,7 +25,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   ({ url: BASE, stop } = await startTestServer(APP));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(() => {
@@ -83,7 +83,11 @@ describe.skipIf(!BUILT)('shallow routing (examples/data-cache)', () => {
       link.id = 'shallow-link';
       link.dataset.shallow = '';
       link.textContent = 'display';
-      document.body.appendChild(link);
+      // Into the bar, not the body: `.preview` scrolls past the bottom of its
+      // row track, so a link appended to the body sits underneath it. Both
+      // engines lay it out that way and only their hit-test tie-break differs,
+      // so a body-appended link is a coin flip rather than a test.
+      (document.querySelector('.bar') ?? document.body).appendChild(link);
     });
     await page.locator('#shallow-link').click();
     await page.waitForFunction(() => location.search === '?tag=display');

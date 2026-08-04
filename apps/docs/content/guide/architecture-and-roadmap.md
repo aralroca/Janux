@@ -54,7 +54,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 
 ## Testing
 
-The framework is developed test-first with `bun:test` + happy-dom (11003 tests, the count `bun run test:census` measures and enforces):
+The framework is developed test-first with `bun:test` + happy-dom (11024 tests, the count `bun run test:census` measures and enforces):
 
 - Resume-without-hydration is asserted (zero component code until interaction).
 - Guard semantics (auto/confirm/forbidden × human/agent) are covered at every layer: instance, HTTP, bridge, agent loop.
@@ -62,3 +62,5 @@ The framework is developed test-first with `bun:test` + happy-dom (11003 tests, 
 - Apps test at three levels with the same package a user gets ([`@janux/testing`](/docs/recipes/testing-components)): the e2e suite drives the public harness, not an internal fork of it.
 
 Run everything with `bun test packages` at the repo root.
+
+CI runs that suite on Linux, Windows and macOS, and on both ends of the supported Bun range — the floor `engines` declares as well as the latest release, because a floor nothing exercises is not a claim. The browser end-to-end suite runs the same cases on Chromium, Firefox and WebKit. Nothing in the framework is known to be degraded on any of them; where an engine differs it has been in the automation driver rather than the engine, and those cases are written up in `CONTRIBUTING.md` so the next author does not rediscover them.

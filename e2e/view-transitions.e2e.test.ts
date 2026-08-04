@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { isBuilt, launchChrome, startTestServer } from '@janux/testing';
+import { isBuilt, launchBrowser, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -31,7 +31,7 @@ let docs: Awaited<ReturnType<typeof startTestServer>> | undefined;
 beforeAll(async () => {
   if (SHOP_BUILT) shop = await startTestServer(appRoot('examples/shop'));
   if (DOCS_BUILT) docs = await startTestServer(appRoot('apps/docs'));
-  if (SHOP_BUILT || DOCS_BUILT) browser = await launchChrome();
+  if (SHOP_BUILT || DOCS_BUILT) browser = await launchBrowser();
 });
 
 afterAll(() => {

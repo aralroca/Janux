@@ -80,9 +80,10 @@ Fixtures for the Playwright runner: one server per worker for the built app name
 The app is served in its own Bun process (the Playwright runner is Node; a Janux server is Bun-first), so `bun` must be on PATH. Run `janux build` for the app first — the fixtures serve `dist/client` like `janux start` does.
 
 ```
+import { join } from 'node:path';
 import { expect, test } from '@janux/testing/playwright';
 
-test.use({ janux: { root: new URL('..', import.meta.url).pathname } });
+test.use({ janux: { root: join(import.meta.dirname, '..') } });
 
 test('checkout stays quiet', async ({ goto, page, settled, agent }) => {
   await goto('/cart');                 // navigated AND settled
@@ -93,6 +94,8 @@ test('checkout stays quiet', async ({ goto, page, settled, agent }) => {
 });
 ```
 
-## `launchChrome()` / `openPage(browser)`
+## `launchBrowser()` / `openPage(browser)`
 
-One shared Chrome for the whole test process (launch/teardown churn is what makes `goto` flake under load), and a page that records uncaught `pageerror`s for the final assertion: `openPage` returns `{ page, errors }`.
+One shared browser for the whole test process (launch/teardown churn is what makes `goto` flake under load), and a page that records uncaught `pageerror`s for the final assertion: `openPage` returns `{ page, errors }`.
+
+Which engine it launches comes from `JANUX_E2E_BROWSER` — `chromium`, `firefox` or `webkit`. Unset means Chromium on the branded Chrome channel, so a suite run by hand behaves as it always has; a name it does not recognize is refused rather than quietly swapped for another engine. Janux's own CI runs the browser suite once per engine by setting it.

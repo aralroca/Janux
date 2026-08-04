@@ -19,7 +19,9 @@ function markdownFiles(): string[] {
     ...readdirSync(CONTENT, { recursive: true })
       .map(String)
       .filter((name) => name.endsWith('.md'))
-      .map((name) => join('apps/docs/content', name.replaceAll('\\', '/'))),
+      // Not `join`: it would answer backslashes on Windows, and these are
+      // repo-relative display paths every check matches with forward slashes.
+      .map((name) => `apps/docs/content/${name.replaceAll('\\', '/')}`),
     'README.md',
   ];
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { bool, list, schema, str } from 'janux';
 import { defineCollection, getCollection, getEntry } from './collection';
@@ -98,6 +98,8 @@ describe('relative directories', () => {
 });
 
 describe('caching', () => {
+  /** Seconds since the epoch, whole — see the same-tick case below. */
+  const PINNED = 1_600_000_000;
   const dir = join(FIXTURES, '.tmp-cache');
   const file = join(dir, 'note.md');
   const notes = defineCollection({ dir, schema: schema({ title: str() }) });
@@ -111,6 +113,30 @@ describe('caching', () => {
     expect(getEntry(notes, 'note')?.data.title).toBe('Before');
 
     writeFileSync(file, '---\ntitle: After\n---\nBody\n');
+    expect(getEntry(notes, 'note')?.data.title).toBe('After');
+  });
+
+  /**
+   * Two edits inside one mtime tick. How coarse that tick is depends on the
+   * runtime: Bun 1.3.0 — the floor `engines` declares — reports whole
+   * milliseconds where later versions report fractions, so a real edit went
+   * unseen there and the suite only caught it on that lane. The timestamp is
+   * restored here rather than raced, so the window is reproduced on any clock.
+   */
+  it('picks up an edit that lands within one mtime tick', () => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(file, '---\ntitle: Before\n---\nBody\n');
+    // A whole second, stamped on both writes: it round-trips exactly at any
+    // clock resolution, where restoring a captured timestamp does not.
+    utimesSync(file, PINNED, PINNED);
+
+    expect(getEntry(notes, 'note')?.data.title).toBe('Before');
+
+    writeFileSync(file, '---\ntitle: After\n---\nBody\n');
+    utimesSync(file, PINNED, PINNED);
+
+    // Without this the file would look edited for the ordinary reason.
+    expect(statSync(file).mtimeMs).toBe(PINNED * 1000);
     expect(getEntry(notes, 'note')?.data.title).toBe('After');
   });
 });

@@ -13,7 +13,8 @@ describe('file conventions', () =>
     const match = router.match(row.path);
 
     expect(match?.pattern ?? null).toBe(row.pattern);
-    expect(match ? relative(root, match.filePath) : null).toBe(row.file);
+    // The router answers native paths; the corpus rows spell them forward-slash.
+    expect(match ? relative(root, match.filePath).replaceAll('\\', '/') : null).toBe(row.file);
   }));
 
 describe('layout chains', () =>
@@ -21,7 +22,7 @@ describe('layout chains', () =>
     const match = router.match(row.path);
 
     expect(match).toBeDefined();
-    expect(match!.layouts.map((layout) => relative(root, layout))).toEqual(row.layouts);
+    expect(match!.layouts.map((layout) => relative(root, layout).replaceAll('\\', '/'))).toEqual(row.layouts);
   }));
 
 describe('error page discovery', () =>

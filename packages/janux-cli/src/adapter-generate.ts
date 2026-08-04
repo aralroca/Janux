@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { createFsRouter } from '@janux/server';
-import { apiFiles, type JanuxAppConfig } from '@janux/vite/config';
+import { apiFiles, toPosix, type JanuxAppConfig } from '@janux/vite/config';
 
 /**
  * The app, resolved at build time into a module a bundler can see through.
@@ -70,9 +70,14 @@ export function appModules(app: JanuxAppConfig): string[] {
   ];
 }
 
-/** `'/app/src/routes/index.tsx'` → `path('src/routes/index.tsx')`, evaluated at runtime. */
+/**
+ * `'/app/src/routes/index.tsx'` → `path('src/routes/index.tsx')`, evaluated at
+ * runtime. Always the forward-slash form: a build made on Windows deploys to
+ * Linux, where a module key with backslashes would never match — and `join`
+ * rebuilds the native path from it on any OS.
+ */
 function pathExpression(root: string, file: string): string {
-  return `path(${JSON.stringify(relative(root, file))})`;
+  return `path(${JSON.stringify(toPosix(relative(root, file)))})`;
 }
 
 function configEntries(root: string, app: JanuxAppConfig): string[] {
@@ -85,9 +90,13 @@ function configEntries(root: string, app: JanuxAppConfig): string[] {
     );
 }
 
-/** Extensionless: TypeScript rejects a `.ts` specifier unless the app opted into them. */
+/**
+ * Extensionless: TypeScript rejects a `.ts` specifier unless the app opted into
+ * them. Forward-slash always — module specifiers are URLs, and the backslashes
+ * `relative()` answers with on Windows are string escapes there.
+ */
 function importSpecifier(root: string, file: string): string {
-  return `../${relative(root, file).replace(/\.[jt]sx?$/, '')}`;
+  return `../${toPosix(relative(root, file)).replace(/\.[jt]sx?$/, '')}`;
 }
 
 export function generateApp(

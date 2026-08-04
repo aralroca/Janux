@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { createTestApp, gotoSettled, isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -22,7 +22,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   ({ url: BASE, stop } = await startTestServer(APP));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {
@@ -66,7 +66,7 @@ describe.skipIf(!BUILT)('examples/interop-command-palette in the browser', () =>
   it('typing filters through cmdk and the query round-trips through the intent', async () => {
     const { page, errors } = await openPage();
 
-    await page.goto(`${BASE}/`);
+    await gotoSettled(page, `${BASE}/`);
     await page.waitForSelector('.palette-item');
     expect(await page.locator('.palette-item').count()).toBe(5);
 
@@ -82,7 +82,7 @@ describe.skipIf(!BUILT)('examples/interop-command-palette in the browser', () =>
   it('picking a command runs it as an intent and clears the query', async () => {
     const { page, errors } = await openPage();
 
-    await page.goto(`${BASE}/`);
+    await gotoSettled(page, `${BASE}/`);
     await page.waitForSelector('.palette-item[data-command="zen-mode"]');
     await page.click('.palette-item[data-command="zen-mode"]');
 
@@ -98,7 +98,7 @@ describe.skipIf(!BUILT)('examples/interop-command-palette in the browser', () =>
   it('the agent runs a command from the same list', async () => {
     const { page, errors } = await openPage();
 
-    await page.goto(`${BASE}/`);
+    await gotoSettled(page, `${BASE}/`);
     await page.waitForSelector('.palette-item');
     await page.waitForSelector('.tool-row:has-text("palette.run") button');
 
@@ -120,7 +120,7 @@ describe.skipIf(!BUILT)('examples/interop-command-palette in the browser', () =>
   it('the guarded clear stays a proposal until a human approves it', async () => {
     const { page, errors } = await openPage();
 
-    await page.goto(`${BASE}/`);
+    await gotoSettled(page, `${BASE}/`);
     await page.waitForSelector('.palette-item[data-command="archive"]');
     await page.click('.palette-item[data-command="archive"]');
     await page.waitForFunction(

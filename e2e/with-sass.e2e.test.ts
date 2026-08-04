@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Browser } from 'playwright';
-import { createTestApp, isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { createTestApp, isBuilt, launchBrowser, openPage, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -21,7 +21,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   ({ url: BASE, stop } = await startTestServer(appRoot('examples/with-sass')));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {

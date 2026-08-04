@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { runtimeIncludes } from './deps';
-import { devAsset, devStylesheets, fallsThroughToVite, foreignExternals, janux } from './plugin';
+import { devAsset, devStylesheets, fallsThroughToVite, foreignExternals, isApiModule, janux } from './plugin';
 
 /**
  * Regression: the dev shell used to link `/src/styles.css`, which Vite's
@@ -156,5 +156,33 @@ describe('devAsset', () => {
 
   it('leaves anything else to the app', async () => {
     expect(await devAsset(app, '/posts/hello')).toBeUndefined();
+  });
+});
+
+/**
+ * On Windows the app config carries native paths (`C:\app\src`) while Vite
+ * hands out forward-slashed ids (`C:/app/src/...`). A raw-string prefix test
+ * between the two never matches, so every api module silently stopped being
+ * projected into client stubs — these pin the Windows shapes on any OS.
+ */
+describe('paths that mix Windows and Vite separators', () => {
+  it('derives the stylesheet URL from a native Windows root and entry', () => {
+    expect(devStylesheets('C:\\app', 'C:\\app\\src\\styles.css')).toEqual(['/src/styles.css?direct']);
+  });
+
+  it('recognizes an api module under a native Windows server dir', () => {
+    expect(isApiModule('C:\\app\\src\\server', 'C:/app/src/server/docs.api.ts')).toBe(true);
+  });
+
+  it('still recognizes one under a POSIX server dir', () => {
+    expect(isApiModule('/app/src/server', '/app/src/server/docs.api.ts?v=1')).toBe(true);
+  });
+
+  it('still leaves a dependency outside the server dir alone', () => {
+    expect(isApiModule('C:\\app\\src\\server', 'C:/app/node_modules/monaco-editor/esm/vs/editor/editor.api.js')).toBe(false);
+  });
+
+  it('still leaves a server file that is not an api module alone', () => {
+    expect(isApiModule('/app/src/server', '/app/src/server/notes.ts')).toBe(false);
   });
 });

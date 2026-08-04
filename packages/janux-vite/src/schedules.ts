@@ -1,7 +1,8 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { join, relative } from 'node:path';
 import { createMemoryStorage, createScheduler, type ScheduleConfig, type ScheduleDef } from '@janux/agent';
 import type { ServerOptions } from '@janux/server';
+import { toPosix } from './app-config';
 
 /**
  * The `src/schedules/` convention: every `.ts`/`.js` file default-exports
@@ -21,7 +22,9 @@ export function scheduleFiles(schedulesDir: string | undefined): string[] {
   if (!schedulesDir || !existsSync(schedulesDir)) return [];
 
   return readdirSync(schedulesDir, { recursive: true, encoding: 'utf8' })
-    .filter((entry) => SCHEDULE_FILE.test(entry) && !entry.split(sep).some((part) => part.startsWith('_')))
+    // Normalised first: a nested entry arrives with the platform's separator,
+    // and `_helpers` has to be recognised on Windows too.
+    .filter((entry) => SCHEDULE_FILE.test(entry) && !toPosix(entry).split('/').some((part) => part.startsWith('_')))
     .map((entry) => join(schedulesDir, entry))
     .filter((path) => statSync(path).isFile())
     .sort();
@@ -29,7 +32,9 @@ export function scheduleFiles(schedulesDir: string | undefined): string[] {
 
 /** `<dir>/billing/invoice-sweep.ts` → `billing/invoice-sweep`. */
 export function scheduleName(schedulesDir: string, filePath: string): string {
-  return relative(schedulesDir, filePath).replace(SCHEDULE_FILE, '').split(sep).join('/');
+  // The name is the path, so it is posix on every platform: a schedule must not
+  // be called `billing\invoice-sweep` on Windows and something else elsewhere.
+  return toPosix(relative(schedulesDir, filePath)).replace(SCHEDULE_FILE, '');
 }
 
 export function scheduleConfigFile(schedulesDir: string | undefined): string | undefined {

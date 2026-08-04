@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from 'bun:test';
+import { fileURLToPath } from 'node:url';
 import { createPgStorage } from './pg-storage';
 
 const PG_URL = process.env.JANUX_TEST_PG ?? 'postgres://assistant:assistant@localhost:5432/janux_harness_test';
@@ -11,7 +12,9 @@ const reachable = await fetch(`http://${hostname}:${port || 5432}`).catch((error
 );
 const suite = reachable === undefined ? describe.skip : describe;
 const storage = reachable === undefined ? undefined : await createPgStorage({ connectionString: PG_URL });
-const WORKER = new URL('./__fixtures__/schedule-worker.ts', import.meta.url).pathname;
+// `fileURLToPath`, not `.pathname`: on Windows the latter yields `/C:/…`, which
+// is not a path anything can spawn.
+const WORKER = fileURLToPath(new URL('./__fixtures__/schedule-worker.ts', import.meta.url));
 
 afterAll(async () => {
   await storage?.close();

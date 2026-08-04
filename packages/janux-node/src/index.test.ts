@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -40,18 +40,23 @@ async function waitForServer(): Promise<void> {
   throw new Error(`the node server never came up. Its output was:\n${output}`);
 }
 
-beforeAll(async () => {
-  // `adapt()` runs after `janux build`, so the client it copies has to exist.
-  const built = Bun.spawnSync(['bun', join(import.meta.dirname, '../../janux-cli/bin.ts'), 'build'], { cwd: APP });
+/*
+ * Built and served at module scope rather than in a `beforeAll`.
+ *
+ * A real build plus a Node server does not fit bun's 5s default for hooks, and
+ * the form that lifts it — `beforeAll(fn, 120_000)` — throws on Bun 1.3.0, the
+ * floor `engines` declares and CI runs. Module evaluation carries no deadline.
+ */
+// `adapt()` runs after `janux build`, so the client it copies has to exist.
+const built = Bun.spawnSync(['bun', join(import.meta.dirname, '../../janux-cli/bin.ts'), 'build'], { cwd: APP });
 
-  if (!built.success) throw new Error(`janux build failed:\n${built.stderr.toString()}`);
-  await runAdapter(node(), APP);
+if (!built.success) throw new Error(`janux build failed:\n${built.stderr.toString()}`);
+await runAdapter(node(), APP);
 
-  child = Bun.spawn(['node', join(BUILD, 'index.js')], { env: { ...process.env, PORT: String(PORT) }, stdout: 'pipe', stderr: 'pipe' });
-  void pump(child.stdout as ReadableStream<Uint8Array>);
-  void pump(child.stderr as ReadableStream<Uint8Array>);
-  await waitForServer();
-}, 120_000);
+child = Bun.spawn(['node', join(BUILD, 'index.js')], { env: { ...process.env, PORT: String(PORT) }, stdout: 'pipe', stderr: 'pipe' });
+void pump(child.stdout as ReadableStream<Uint8Array>);
+void pump(child.stderr as ReadableStream<Uint8Array>);
+await waitForServer();
 
 afterAll(async () => {
   child?.kill();

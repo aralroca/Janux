@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -202,14 +202,16 @@ describe('spoolMultipart', () => {
   });
 
   it('rejects when it cannot create the spool directory, instead of blaming the caller', async () => {
-    // An unwritable spool location is a broken deploy, not a bad request: the
-    // handler gets a rejection (a 500), never a polite 400 about the upload.
-    const readOnly = join(dir, 'read-only');
+    // A spool location that is not a usable directory is a broken deploy, not a
+    // bad request: the handler gets a rejection (a 500), never a polite 400
+    // about the upload. A file standing where the directory should be says that
+    // on every OS — a mode-0o500 directory only says it to a non-root POSIX user.
+    const notADirectory = join(dir, 'spool.txt');
 
-    mkdirSync(readOnly, { mode: 0o500 });
+    writeFileSync(notADirectory, 'not a directory');
     const body = multipart([{ name: 'file', filename: 'a.png', type: 'image/png', body: PNG }]);
 
-    await expect(spoolMultipart(post(body), { maxBytes: 1_000_000, dir: readOnly })).rejects.toThrow();
+    await expect(spoolMultipart(post(body), { maxBytes: 1_000_000, dir: notADirectory })).rejects.toThrow();
   });
 
   it('sniffs the real type from the magic bytes, keeping the declared one apart', async () => {

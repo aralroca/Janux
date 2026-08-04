@@ -27,7 +27,7 @@
     "./observability": "./src/observability/index.ts"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^18.0.0",
+    "@happy-dom/global-registrator": "^20.11.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "react": "^19.2.0",

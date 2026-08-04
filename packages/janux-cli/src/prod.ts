@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { defineAgent } from '@janux/agent';
 import type { ServerOptions } from '@janux/server';
 import {
@@ -73,9 +74,21 @@ async function builtIslandModules(root: string): Promise<Record<string, string> 
 
 type Loader = (file: string) => Promise<Record<string, unknown>>;
 
+/**
+ * The specifier an app module is imported by, which is a URL and never a path.
+ *
+ * On Windows the app config carries `C:\app\src\agent.ts`, and that parses as a
+ * URL whose scheme is `c:`: Node's loader refuses it outright, and Bun resolves
+ * it as a bare package — a second copy of the module, so an SDK that registered
+ * itself in one instance is invisible to everything that imported the other.
+ */
+export function moduleSpecifier(file: string): string {
+  return pathToFileURL(file).href;
+}
+
 /** A prebuilt app looks its modules up; everything else imports them. */
 function moduleLoader(prebuilt: PrebuiltApp | undefined): Loader {
-  if (!prebuilt) return (file) => import(file);
+  if (!prebuilt) return (file) => import(moduleSpecifier(file));
 
   return async (file) => {
     const module = prebuilt.modules[file];

@@ -4,7 +4,7 @@ import { type Browser, type Page } from 'playwright';
 import { createJanuxServer } from '../packages/janux-server/src/index';
 import { prodServerOptions } from '../packages/janux-cli/src/prod';
 import { staticResponse } from '../packages/janux-cli/src/static-assets';
-import { isBuilt, launchChrome } from '@janux/testing';
+import { isBuilt, launchBrowser, settled } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -80,7 +80,7 @@ beforeAll(async () => {
   BASE = `http://localhost:${server.port}`;
   // Chrome proper, not the bundled Chromium: the Navigation API and speculation
   // rules are what this suite exercises, and it is the engine that ships both.
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {
@@ -121,18 +121,32 @@ const sidebarLink = (page: Page, href: string) => page.locator(`a[href="${href}"
 describe.skipIf(!BUILT)('navigation in a real browser (apps/docs)', () => {
   it('applies a navigation as it streams: the new heading paints before the page ends', async () => {
     const { page } = await openDocsWithAssistant();
-    const navigation = page.evaluate((path) => (window as any).janux.navigate(path), `/slow${SECOND}`);
-
-    // Halfway through the pause: the tail of the page provably has not
-    // arrived. The marker lives near the end of Quick start and appears
-    // nowhere on the page navigated from.
+    // The marker lives near the end of Quick start and appears nowhere on the
+    // page navigated from.
     const TAIL_MARKER = 'Make your first change';
 
-    await page.waitForTimeout(CHUNK_PAUSE_MS / 2);
-    const midStream = await page.evaluate((marker) => ({
-      heading: document.querySelector('h1')?.textContent ?? '',
-      tailLanded: !!document.body.textContent?.includes(marker),
-    }), TAIL_MARKER);
+    // Sampled the instant the new heading paints, rather than at a fraction of
+    // the pause: on a loaded runner the diff can land later than half way, and
+    // waiting a guessed number of milliseconds then reads the page before it.
+    await page.evaluate((marker) => {
+      const record = () => {
+        if (!document.querySelector('h1')?.textContent?.includes('Quick start')) return false;
+        (window as any).__midStream ??= {
+          heading: document.querySelector('h1')?.textContent ?? '',
+          tailLanded: !!document.body.textContent?.includes(marker),
+        };
+
+        return true;
+      };
+      const observer = new MutationObserver(() => record() && observer.disconnect());
+
+      if (!record()) observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    }, TAIL_MARKER);
+
+    const navigation = page.evaluate((path) => (window as any).janux.navigate(path), `/slow${SECOND}`);
+
+    await page.waitForFunction(() => (window as any).__midStream !== undefined, null, { timeout: 10_000 });
+    const midStream = await page.evaluate(() => (window as any).__midStream);
 
     await navigation;
 
@@ -171,9 +185,12 @@ describe.skipIf(!BUILT)('navigation in a real browser (apps/docs)', () => {
         (window as any).__phases.push(`${event.detail.phase}:${new URL(event.detail.to).pathname}`);
       });
     });
-    const superseded = page
-      .evaluate((path) => (window as any).janux.navigate(path), `/slow${SECOND}`)
-      .catch(() => {});
+    // Caught inside the page, not on this side: a superseded navigation
+    // rejects with AbortError by contract, and Firefox's driver reports a
+    // rejected promise *returned from* evaluate as a pageerror even when the
+    // caller catches it — which the `errors` assertion below would then read
+    // as the framework having thrown.
+    const superseded = page.evaluate((path) => (window as any).janux.navigate(path).catch(() => {}), `/slow${SECOND}`);
 
     await page.waitForFunction(() => (window as any).__phases.length > 0);
     await sidebarLink(page, THIRD).click();
@@ -231,6 +248,9 @@ describe.skipIf(!BUILT)('navigation in a real browser (apps/docs)', () => {
 
     await sidebarLink(page, SECOND).click();
     await page.waitForFunction((path) => location.pathname === path, SECOND);
+    // `intercept()` commits the URL before the new document renders, so the
+    // pathname alone is satisfied while the old <html> is still in place.
+    await settled(page);
 
     expect(
       await page.evaluate(() => ({

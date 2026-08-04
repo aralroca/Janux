@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'bun:test';
 import { createJanuxServer } from '@janux/server';
 import { jsx } from 'janux';
@@ -49,7 +49,10 @@ describe('bundleInputs', () => {
  * `styles2.css` and linked by nobody.
  */
 describe('cssAssetName', () => {
-  const name = cssAssetName('/app', '/app/src/styles.css');
+  // An app root is whatever the OS calls absolute — `/app` here, `D:\app` on
+  // Windows — and the sheet is derived from it, as `resolveAppConfig` derives it.
+  const ROOT = resolve('/app');
+  const name = cssAssetName(ROOT, join(ROOT, 'src/styles.css'));
 
   it('gives the fixed name to the app stylesheet only', () => {
     expect(name({ names: ['styles.css'], originalFileNames: ['src/styles.css'] })).toBe('styles.css');
@@ -66,7 +69,7 @@ describe('cssAssetName', () => {
     expect(name({ names: ['logo.svg'], originalFileNames: ['public/logo.svg'] })).toBe(
       'assets/[name]-[hash][extname]',
     );
-    expect(cssAssetName('/app', undefined)({ names: ['styles.css'], originalFileNames: ['src/styles.css'] })).toBe(
+    expect(cssAssetName(ROOT, undefined)({ names: ['styles.css'], originalFileNames: ['src/styles.css'] })).toBe(
       'assets/[name]-[hash][extname]',
     );
   });
@@ -247,15 +250,21 @@ describe('emitAssets', () => {
     return root;
   }
 
-  it('copies public/ verbatim and writes the variants <Image> links to', async () => {
-    const root = appWithImage();
+  // Real avif/webp encoding: a cold sharp does not fit bun's 5s default
+  // (22s on Bun 1.3.0, the engines floor the CI matrix runs).
+  it(
+    'copies public/ verbatim and writes the variants <Image> links to',
+    async () => {
+      const root = appWithImage();
 
-    await emitAssets(root, { fonts: [] });
+      await emitAssets(root, { fonts: [] });
 
-    expect(existsSync(join(root, 'dist/client/hero.jpg'))).toBe(true);
-    expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/640.avif'))).toBe(true);
-    expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/1920.webp'))).toBe(true);
-  });
+      expect(existsSync(join(root, 'dist/client/hero.jpg'))).toBe(true);
+      expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/640.avif'))).toBe(true);
+      expect(existsSync(join(root, 'dist/client/_janux/image/hero.jpg/1920.webp'))).toBe(true);
+    },
+    60_000,
+  );
 
   it('is a no-op for an app with nothing to serve', async () => {
     const root = mkdtempSync(join(tmpdir(), 'janux-build-'));

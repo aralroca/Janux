@@ -41,7 +41,11 @@ export function specifierResolver(source: string, built: Set<string>): (specifie
   const here = dirname(source);
 
   return (specifier) => {
-    const target = CANDIDATES.map((suffix) => join(here, specifier + suffix)).find((candidate) => built.has(candidate));
+    // The build set holds forward-slash paths; `join` answers with backslashes
+    // on Windows, so its result has to be normalized before the lookup.
+    const target = CANDIDATES.map((suffix) => join(here, specifier + suffix).replaceAll('\\', '/')).find((candidate) =>
+      built.has(candidate),
+    );
 
     if (!target) return undefined;
     const path = relative(here, target).replaceAll('\\', '/').replace(/\.tsx?$/, '.js');

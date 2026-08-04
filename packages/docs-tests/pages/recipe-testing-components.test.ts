@@ -146,6 +146,6 @@ describe('recipes/testing-components.md — level 3, end to end', () => {
   it('publishes the standalone barrier for suites that drive the browser themselves', async () => {
     const testing = await import('@janux/testing');
 
-    expect(['settled', 'gotoSettled', 'startTestServer', 'launchChrome', 'openPage'].every((name) => name in testing)).toBe(true);
+    expect(['settled', 'gotoSettled', 'startTestServer', 'launchBrowser', 'openPage'].every((name) => name in testing)).toBe(true);
   });
 });

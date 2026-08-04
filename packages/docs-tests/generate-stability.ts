@@ -7,6 +7,7 @@
  * document can be regenerated and byte-compared in the suite — a stability
  * contract that drifts from the code is worse than none.
  */
+import { fileURLToPath } from 'node:url';
 import { EXPERIMENTAL, surface, type Moving, type Tier } from './stability';
 
 type Api = ReturnType<typeof surface>;
@@ -75,7 +76,8 @@ export function stabilityDocument(): string {
 }
 
 if (import.meta.main) {
-  const path = new URL('../../STABILITY.md', import.meta.url).pathname;
+  // fileURLToPath, not `.pathname`: on Windows the pathname is `/C:/...`.
+  const path = fileURLToPath(new URL('../../STABILITY.md', import.meta.url));
   const api = surface();
 
   await Bun.write(path, stabilityDocument());
