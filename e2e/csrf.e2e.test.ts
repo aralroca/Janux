@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { isBuilt, launchBrowser, openPage, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -74,7 +74,7 @@ beforeAll(async () => {
   ({ stop: stopVictim } = app);
   victim = app.url;
   attacker = Bun.serve({ port: 0, fetch: () => new Response(forgeryPage(victim), { headers: { 'content-type': 'text/html' } }) });
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(() => {

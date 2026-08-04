@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { Browser } from 'playwright';
-import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { createTestApp, isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -213,7 +213,7 @@ describe.if(BUILT)('examples/with-mcp-client in a real browser', () => {
 
   beforeAll(async () => {
     ({ url: base, stop } = await startTestServer(APP));
-    browser = await launchChrome();
+    browser = await launchBrowser();
   });
 
   afterAll(() => stop?.());

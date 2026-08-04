@@ -9,4 +9,4 @@ export {
   type TestServer,
   type TestServerOptions,
 } from './test-server';
-export { gotoSettled, launchChrome, openPage, settled, type SettledOptions } from './browser';
+export { gotoSettled, launchBrowser, openPage, settled, type SettledOptions } from './browser';

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { createTestApp, isBuilt, launchChrome, openPage as newPage, startTestServer } from '@janux/testing';
+import { createTestApp, gotoSettled, isBuilt, launchBrowser, openPage as newPage, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -21,7 +21,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   ({ url: BASE, stop } = await startTestServer(APP));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {
@@ -90,8 +90,7 @@ describe.skipIf(!BUILT)('examples/interop-react in the browser', () => {
   it('a React onChange dispatches the setBand intent and the state flows back as props', async () => {
     const { page, errors } = await openPage();
 
-    await page.goto(`${BASE}/`);
-    await page.waitForSelector('.mixer input[type="range"]');
+    await gotoSettled(page, `${BASE}/`);
     await slideTo(page, 0, '9');
 
     // Janux state moved (the .levels line is Janux-rendered, not React)…
@@ -110,8 +109,7 @@ describe.skipIf(!BUILT)('examples/interop-react in the browser', () => {
   it('the panel example payload for setBand actually moves a band when called as agent', async () => {
     const { page, errors } = await openPage();
 
-    await page.goto(`${BASE}/`);
-    await page.waitForSelector('.mixer input[type="range"]');
+    await gotoSettled(page, `${BASE}/`);
     await page.waitForSelector('.tool-row:has-text("mixer.setBand") button');
 
     // The payload shown next to the tool is what the button sends — it must
@@ -136,8 +134,7 @@ describe.skipIf(!BUILT)('examples/interop-react in the browser', () => {
   it('the guarded flat intent stays a proposal until a human approves it', async () => {
     const { page, errors } = await openPage();
 
-    await page.goto(`${BASE}/`);
-    await page.waitForSelector('.mixer input[type="range"]');
+    await gotoSettled(page, `${BASE}/`);
     await slideTo(page, 0, '9');
     await page.waitForFunction(
       () => document.querySelector('.mixer-shell .levels')?.textContent === 'low=9 mid=5 high=5',

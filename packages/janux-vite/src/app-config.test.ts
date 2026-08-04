@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig } from './app-config';
+import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig, toPosix } from './app-config';
 
 function app(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), 'janux-app-'));
@@ -217,11 +217,16 @@ describe('resolveAppConfig conventions', () => {
     return root;
   }
 
+  // The config carries native paths — backslashed on Windows — while the
+  // conventions below are spelled the one way they read on every OS. `toPosix`
+  // for the fields that always have a value, this for the ones that may not.
+  const conventionOf = (path: string | undefined) => (path === undefined ? undefined : toPosix(path));
+
   it('defaults the routes and server directories to the conventional ones', async () => {
     const config = await resolveAppConfig(appWithSources({}));
 
-    expect(config.routesDir.endsWith('/src/routes')).toBe(true);
-    expect(config.serverDir.endsWith('/src/server')).toBe(true);
+    expect(toPosix(config.routesDir).endsWith('/src/routes')).toBe(true);
+    expect(toPosix(config.serverDir).endsWith('/src/server')).toBe(true);
   });
 
   it('lets the config move the routes and server directories', async () => {
@@ -234,9 +239,9 @@ describe('resolveAppConfig conventions', () => {
 
   it('resolves the client entry only when the app wrote one', async () => {
     expect((await resolveAppConfig(appWithSources({}))).clientEntry).toBe('');
-    expect((await resolveAppConfig(appWithSources({ 'src/client.ts': 'export {};' }))).clientEntry).toEndWith(
-      '/src/client.ts',
-    );
+    const written = await resolveAppConfig(appWithSources({ 'src/client.ts': 'export {};' }));
+
+    expect(toPosix(written.clientEntry)).toEndWith('/src/client.ts');
   });
 
   it('picks up the middleware, agent and stores conventions', async () => {
@@ -244,23 +249,23 @@ describe('resolveAppConfig conventions', () => {
       appWithSources({ 'src/middleware.ts': 'export default 1;', 'src/agent.ts': 'export default 1;', 'src/stores.ts': 'export default 1;' }),
     );
 
-    expect(config.middlewareModule).toEndWith('/src/middleware.ts');
-    expect(config.agentModule).toEndWith('/src/agent.ts');
-    expect(config.storesModule).toEndWith('/src/stores.ts');
+    expect(conventionOf(config.middlewareModule)).toEndWith('/src/middleware.ts');
+    expect(conventionOf(config.agentModule)).toEndWith('/src/agent.ts');
+    expect(conventionOf(config.storesModule)).toEndWith('/src/stores.ts');
   });
 
   it('accepts i18n as a directory as well as a file', async () => {
     const single = await resolveAppConfig(appWithSources({ 'src/i18n.ts': 'export default {};' }));
     const nested = await resolveAppConfig(appWithSources({ 'src/i18n/index.ts': 'export default {};' }));
 
-    expect(single.i18nModule).toEndWith('/src/i18n.ts');
-    expect(nested.i18nModule).toEndWith('/src/i18n/index.ts');
+    expect(conventionOf(single.i18nModule)).toEndWith('/src/i18n.ts');
+    expect(conventionOf(nested.i18nModule)).toEndWith('/src/i18n/index.ts');
   });
 
   it('picks up src/instrumentation.ts, which nothing else in the app declares', async () => {
     const config = await resolveAppConfig(appWithSources({ 'src/instrumentation.ts': 'export function register() {}' }));
 
-    expect(config.instrumentationModule).toEndWith('/src/instrumentation.ts');
+    expect(conventionOf(config.instrumentationModule)).toEndWith('/src/instrumentation.ts');
     expect((await resolveAppConfig(appWithSources({}))).instrumentationModule).toBeUndefined();
   });
 
@@ -271,9 +276,9 @@ describe('resolveAppConfig conventions', () => {
 
   it('claims the http handlers directory only when the app has one', async () => {
     expect((await resolveAppConfig(appWithSources({}))).httpHandlersDir).toBeUndefined();
-    expect((await resolveAppConfig(appWithSources({ 'src/api/webhook.ts': 'export {};' }))).httpHandlersDir).toEndWith(
-      '/src/api',
-    );
+    expect(
+      conventionOf((await resolveAppConfig(appWithSources({ 'src/api/webhook.ts': 'export {};' }))).httpHandlersDir),
+    ).toEndWith('/src/api');
   });
 
   it('declares no fonts for an app that asked for none', async () => {
@@ -358,5 +363,21 @@ describe('the app root the framework publishes', () => {
     await resolveAppConfig(app({ 'janux.config.ts': 'export default {};' }));
 
     expect(process.env.JANUX_APP_ROOT).toBe('/srv/app');
+  });
+});
+
+/**
+ * Everything the framework derives from `relative()` — generated import
+ * specifiers, dev URLs, the route reports `janux info` prints — must read the
+ * same on Windows, where `relative()` answers with backslashes. This is the one
+ * normalization those call sites share.
+ */
+describe('toPosix', () => {
+  it('turns a Windows-relative path into its forward-slash form', () => {
+    expect(toPosix('src\\routes\\index.tsx')).toBe('src/routes/index.tsx');
+  });
+
+  it('leaves a POSIX path alone', () => {
+    expect(toPosix('src/routes/index.tsx')).toBe('src/routes/index.tsx');
   });
 });

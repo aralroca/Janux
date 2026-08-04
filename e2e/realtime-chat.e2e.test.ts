@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { join } from 'node:path';
 import { type Browser, type Page } from 'playwright';
-import { isBuilt, launchChrome, openPage as newPage } from '@janux/testing';
+import { isBuilt, launchBrowser, openPage as newPage } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 import { createJanuxServer } from '../packages/janux-server/src/index';
 import { prodServerOptions } from '../packages/janux-cli/src/prod';
@@ -126,7 +126,7 @@ beforeAll(async () => {
   if (!BUILT) return;
   chat = await startChat();
   BASE = chat.url;
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {

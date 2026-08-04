@@ -52,10 +52,11 @@ describe('fs router — full segment grammar', () => {
   });
 
   it('layout chains compose outermost → innermost', () => {
-    const match = router.match('/console/t1')!;
+    // The router answers native paths; these name the directories forward-slash.
+    const layouts = router.match('/console/t1')!.layouts.map((layout) => layout.replaceAll('\\', '/'));
 
-    expect(match.layouts[0]).toContain('app/_layout');
-    expect(match.layouts[1]).toContain('[team]/_layout');
+    expect(layouts[0]).toContain('app/_layout');
+    expect(layouts[1]).toContain('[team]/_layout');
   });
 });
 

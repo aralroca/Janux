@@ -8,15 +8,66 @@ on:
   # else, which is strictly less coverage than this.
   pull_request:
 
+# The shape of this file is guarded by scripts/ci.test.ts: the Bun floor below
+# must be the one `engines` declares, the OS and browser matrices must stay
+# whole, every job must feed the `ci` aggregate, and nothing may branch on
+# runner.os — a Windows failure is a bug to fix in the code, not to skip.
 jobs:
+  # The unit + conformance suite, everywhere users are: three OSes, and both
+  # ends of the Bun range — the `engines` floor (an unverified floor rots) and
+  # latest. No Postgres/Redis here: containers only run on Linux runners, so
+  # the adapter suites skip themselves in these lanes and are exercised — with
+  # the services up — in the census job below, which owns the coverage claim.
   test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        bun: ['1.3.0', latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ matrix.bun }}
+      # `@janux/node` declares Node 24+, and its suite spawns a real `node` to
+      # assert behaviour Bun's `node:http` shim does not share (it never emits
+      # 'close' on a ServerResponse). Pinned rather than inherited: the runner's
+      # default version is not a promise, and 24 is the version the adapter
+      # claims to support.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - name: Tests
+        run: bun run test
+
+  # Types are OS-independent, so one lane is the claim.
+  typecheck:
     runs-on: ubuntu-latest
 
-    # The Postgres memory store and the Redis counter store are production
-    # adapters whose suites skip themselves when the service is unreachable — so
-    # without these they were silently never exercised on CI, and coverage came in
-    # ~1.1pp lower than on a machine with the local stack. Credentials match the
-    # defaults the suites probe for, so no env override is needed for Postgres.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - name: Typecheck
+        run: bun run typecheck
+
+  # The full suite once more, with the Postgres memory store and the Redis
+  # counter store up: production adapters whose suites skip themselves when the
+  # service is unreachable — without these they were silently never exercised on
+  # CI, and coverage came in ~1.1pp lower than on a machine with the local
+  # stack. Credentials match the defaults the suites probe for. Prints the
+  # per-area count and fails if total coverage slips below the floor — which is
+  # what stops the corpus growing by permutation: rows that add tests without
+  # moving coverage no longer look like progress.
+  census:
+    runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -46,25 +97,60 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      # `@janux/node` declares Node 24+, and its suite spawns a real `node` to
-      # assert behaviour Bun's `node:http` shim does not share (it never emits
-      # 'close' on a ServerResponse). Pinned rather than inherited: the runner's
-      # default version is not a promise, and 24 is the version the adapter
-      # claims to support.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - name: Census and coverage floor
+        run: bun run test:census --min-coverage 0.93
+
+  # The browser end-to-end suite, once per engine users actually run: the
+  # Chrome channel, Firefox and WebKit. Each lane builds what its suites gate
+  # on (a real client bundle is what makes islands mount and navigations
+  # happen), because a suite that finds no build skips itself green.
+  e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    runs-on: ubuntu-latest
+
+    # durable-agent drives the Postgres memory store and the Redis rate
+    # counter through a real browser session.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: assistant
+          POSTGRES_PASSWORD: assistant
+          POSTGRES_DB: janux_harness_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      JANUX_TEST_REDIS: redis://localhost:6379/15
+      JANUX_E2E_BROWSER: ${{ matrix.browser }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - run: bun install --frozen-lockfile
 
-      # Unit + conformance corpus + docs truth guards, then types.
-      - name: Tests
-        run: bun run test
-      - name: Typecheck
-        run: bun run typecheck
-
-      # The browser end-to-end suite drives the built docs app (a real client
-      # bundle is what makes islands mount and navigations happen), and skips
-      # itself without one — so building is what keeps it from passing silently.
       - name: Build the docs site
         run: bun run --cwd apps/docs build
       # Derived from the suites themselves: any example or template an e2e file
@@ -72,7 +158,7 @@ jobs:
       # can never skip silently because someone forgot to extend a hardcoded list.
       - name: Build the examples and templates the browser e2e drives
         run: |
-          apps=$(grep -l -e isBuilt -e serveBuilt e2e/*.e2e.test.ts | xargs grep -hoE "'(examples|templates)/[a-z0-9-]+'" | tr -d "'" | sort -u)
+          apps=$(grep -l -e isBuilt -e startTestServer e2e/*.e2e.test.ts | xargs grep -hoE "'(examples|templates)/[a-z0-9-]+'" | tr -d "'" | sort -u)
           # An empty list would let every browser suite skip itself green.
           [ -n "$apps" ] || { echo "::error::no e2e apps discovered"; exit 1; }
           for app in $apps; do bun run --cwd "$app" build; done
@@ -82,21 +168,17 @@ jobs:
       # is the one that must never do that.
       - name: Build the Node deployments the adapter e2e drives
         run: |
-          apps=$(grep -l -e hasNodeBuild -e serveNode e2e/*.e2e.test.ts | xargs grep -hoE "'examples/[a-z0-9-]+'" | tr -d "'" | sort -u)
+          apps=$(grep -l -e hasNodeBuild -e startNodeServer e2e/*.e2e.test.ts | xargs grep -hoE "'examples/[a-z0-9-]+'" | tr -d "'" | sort -u)
           [ -n "$apps" ] || { echo "::error::no node-adapter example apps discovered"; exit 1; }
           for app in $apps; do bun run --cwd "$app" build:node; done
-      - name: Install Chrome for Playwright
-        run: bunx playwright install --with-deps chrome
 
-      # The examples end to end, against a real server.
-      - name: End-to-end
+      # The chromium lane drives the branded Chrome channel — what the suite
+      # has always run on, and what `launchTarget` answers when unset.
+      - name: Install ${{ matrix.browser }} for Playwright
+        run: bunx playwright install --with-deps ${{ matrix.browser == 'chromium' && 'chrome' || matrix.browser }}
+
+      - name: End-to-end (${{ matrix.browser }})
         run: bun run test:e2e
-
-      # Prints the per-area count and fails if total coverage slips below the
-      # floor. This is what stops the corpus growing by permutation: rows that add
-      # tests without moving coverage no longer look like progress.
-      - name: Census and coverage floor
-        run: bun run test:census --min-coverage 0.93
 
   # What npm receives, installed the way a user installs it.
   #
@@ -171,7 +253,7 @@ jobs:
       - name: Build ${{ matrix.example }}
         run: bun run --cwd examples/${{ matrix.example }} build
 
-  # Aggregator so branch protection can require one check: with always() a
+  # Aggregator so the example shards report as one check: with always() a
   # failed shard reports as failed here, never as skipped.
   examples:
     needs: example-build
@@ -214,3 +296,67 @@ jobs:
           name: lighthouse-reports
           path: lighthouse-reports/
           if-no-files-found: ignore
+
+  # Static analysis over the JS/TS the repository ships. The repository is
+  # private without code scanning, so uploading SARIF is not available: the
+  # findings gate the job right here instead, and the SARIF is kept as an
+  # artifact. When the repo goes public (or gets code scanning), drop the two
+  # trailing steps and the `upload: never`/`output:` pair for the default flow.
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # `analyze` reads the workflow run even when it uploads nothing.
+      actions: read
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@v4
+        with:
+          upload: never
+          output: codeql-results
+      # Gated at error level, which is where CodeQL puts a finding it is
+      # confident is a defect. Everything it found here is a warning — mostly
+      # regex sanitization in tests, benchmarks and the markdown projection —
+      # so those are printed and kept in the SARIF to be worked through, and
+      # this step is what stops an error-level one from ever landing quietly.
+      - name: Fail on error-level findings
+        run: |
+          jq -r '.runs[].results[]? | "\(.level // "warning")\t\(.ruleId)\t\(.locations[0].physicalLocation.artifactLocation.uri // "?")"' codeql-results/*.sarif | sort | uniq -c | sort -rn
+          jq -es '[.[].runs[].results[]? | select(.level == "error")] | length == 0' codeql-results/*.sarif
+      - name: Upload the SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-results
+          path: codeql-results/
+          if-no-files-found: ignore
+
+  # Known-vulnerability scan over the one lockfile every workspace install
+  # resolves from. `fail-on-vuln` (the default) is the gate; the SARIF upload is
+  # off because code scanning is unavailable on this private repository.
+  osv-scan:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.8
+    with:
+      scan-args: -L ./bun.lock
+      upload-sarif: false
+
+  # Aggregator over everything, so branch protection can require this one
+  # check. A job added above must be added to `needs` here — scripts/ci.test.ts
+  # fails otherwise. With always() a failed or skipped dependency reports as
+  # failed here, never as skipped.
+  ci:
+    needs: [test, typecheck, census, e2e, package-smoke, discover-examples, example-build, examples, lighthouse, codeql, osv-scan]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job green
+        run: echo '${{ toJSON(needs) }}' | jq -e 'all(.[]; .result == "success")'

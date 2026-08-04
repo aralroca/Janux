@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { isBuilt, launchChrome, startTestServer } from '@janux/testing';
+import { isBuilt, launchBrowser, settled, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -26,7 +26,7 @@ beforeAll(async () => {
   if (!BUILT) return;
   ({ url: BASE, stop } = await startTestServer(APP));
   // Chrome proper: the Navigation API drives both behaviors under test.
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(async () => {
@@ -66,23 +66,30 @@ const assistantState = (page: Page) =>
 /** The sidebar renders twice (a mobile `details` and the desktop nav); only one is clickable. */
 const visibleLink = (page: Page, href: string) => page.locator(`a[href="${href}"]:visible`).first();
 
-const settled = (page: Page, path: string) =>
-  page.waitForFunction(
-    (expected) => location.pathname === expected && !!document.querySelector('janux-island[data-jx-persist]'),
-    path,
-  );
+/**
+ * `intercept()` commits the URL before the new document renders, so a wait on
+ * the pathname alone is satisfied by the *old* page — and the assertion that
+ * follows lands in the window where the persisted island has been lifted out
+ * and not yet grafted back. Every engine has that window; Firefox's is wide
+ * enough to lose the race routinely. `janux.settled()` drains the navigation
+ * the framework itself is tracking, which is the real completion signal.
+ */
+const settledAt = async (page: Page, path: string) => {
+  await page.waitForFunction((expected) => location.pathname === expected, path);
+  await settled(page);
+};
 
 describe.skipIf(!BUILT)('Ask AI persistence across the docs menu (apps/docs)', () => {
   it('survives a round trip through /playground with the panel open', async () => {
     const { page, warnings } = await openDocsWithAssistant();
 
     await visibleLink(page, '/playground').click();
-    await settled(page, '/playground');
+    await settledAt(page, '/playground');
 
     expect(await assistantState(page)).toEqual({ exists: true, sameInstance: true, open: true });
 
     await visibleLink(page, OTHER_DOCS_PAGE).click();
-    await settled(page, OTHER_DOCS_PAGE);
+    await settledAt(page, OTHER_DOCS_PAGE);
 
     expect(await assistantState(page)).toEqual({ exists: true, sameInstance: true, open: true });
     expect(warnings.filter((text) => text.includes('persisted island'))).toEqual([]);
@@ -95,12 +102,53 @@ describe.skipIf(!BUILT)('Ask AI persistence across the docs menu (apps/docs)', (
     await page.evaluate(() => {
       (window as any).__sameDocument = true;
     });
-    await visibleLink(page, DOCS_PAGE).click();
+    // By hand again, and for a different reason than the streaming suite:
+    // `locator.click()` waits for "scheduled navigations to finish", and under
+    // Playwright's WebKit a navigation the page cancels is reported as
+    // scheduled and never as cleared — so the wait never returns. Cancelling is
+    // exactly what this case asserts the router does.
+    const box = (await visibleLink(page, DOCS_PAGE).boundingBox())!;
+
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     // A no-op yields nothing to await; a reload would blank the panel quickly.
     await page.waitForTimeout(1_000);
 
     expect(await page.evaluate(() => (window as any).__sameDocument)).toBe(true);
     expect(page.url()).toBe(`${BASE}${DOCS_PAGE}`);
+    expect(await assistantState(page)).toEqual({ exists: true, sameInstance: true, open: true });
+    await page.close();
+  }, TIMEOUT);
+
+  /**
+   * A persisted island is lifted out of the old document and grafted into the
+   * new one: taken out once, put back once. Anything beyond that is a second
+   * detach the page can observe — an <iframe> in the subtree reloads, and a
+   * custom element inside it gets a spurious disconnected/connected pair, which
+   * is the exact class of breakage `persist` exists to prevent.
+   *
+   * Counted rather than asserted on identity on purpose: a node removed and
+   * reinserted is still the same node, so `sameInstance` above cannot see this.
+   */
+  it('takes the island out of the page exactly once while moving it', async () => {
+    const { page } = await openDocsWithAssistant();
+
+    await page.evaluate(() => {
+      const node = document.querySelector('janux-island[data-jx-persist]')!;
+      const counts = { detached: 0, attached: 0 };
+
+      (window as any).__moves = counts;
+      new MutationObserver((records) => {
+        for (const record of records) {
+          if ([...record.removedNodes].includes(node)) counts.detached += 1;
+          if ([...record.addedNodes].includes(node)) counts.attached += 1;
+        }
+      }).observe(document.documentElement, { childList: true, subtree: true });
+    });
+
+    await visibleLink(page, OTHER_DOCS_PAGE).click();
+    await settledAt(page, OTHER_DOCS_PAGE);
+
+    expect(await page.evaluate(() => (window as any).__moves)).toEqual({ detached: 1, attached: 1 });
     expect(await assistantState(page)).toEqual({ exists: true, sameInstance: true, open: true });
     await page.close();
   }, TIMEOUT);

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser, type Page } from 'playwright';
-import { isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { isBuilt, launchBrowser, openPage, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -33,7 +33,7 @@ beforeAll(async () => {
   stop = served.stop;
   // Chrome proper: the Navigation API is what turns these clicks into SPA
   // navigations, and it is the engine that ships it.
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(() => {

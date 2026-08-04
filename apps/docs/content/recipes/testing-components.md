@@ -75,9 +75,12 @@ it('persists after the debounce', async () => {
 
 ```ts
 import { afterAll, beforeAll, expect, it } from 'bun:test';
+import { join } from 'node:path';
 import { createTestApp, type TestApp } from '@janux/testing';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+// Not `new URL(...).pathname`: on Windows that reads `/C:/...`, which resolves
+// against the drive again and points nowhere.
+const ROOT = join(import.meta.dirname, '..');
 
 let app: TestApp;
 
@@ -155,9 +158,10 @@ Because the contract still applies, a mock that returns the wrong shape fails th
 The fixtures start your built app and hand you a `goto` that resolves when the page is **quiet**:
 
 ```ts
+import { join } from 'node:path';
 import { expect, test } from '@janux/testing/playwright';
 
-test.use({ janux: { root: new URL('..', import.meta.url).pathname } });
+test.use({ janux: { root: join(import.meta.dirname, '..') } });
 
 test('the cart survives a click', async ({ goto, page, settled }) => {
   await goto('/shop');                    // navigated AND settled
@@ -189,7 +193,7 @@ test('an agent cannot check out on its own', async ({ goto, agent, page }) => {
 
 ### Without the fixtures
 
-For suites that drive the browser themselves, the same barrier is a function: `settled(page)` and `gotoSettled(page, url)`, plus `startTestServer(root)` and `launchChrome()` / `openPage(browser)`. That is what Janux's own e2e suite uses — see the [testing API](/docs/reference/testing-api).
+For suites that drive the browser themselves, the same barrier is a function: `settled(page)` and `gotoSettled(page, url)`, plus `startTestServer(root)` and `launchBrowser()` / `openPage(browser)`. That is what Janux's own e2e suite uses — see the [testing API](/docs/reference/testing-api).
 
 ## Which level?
 

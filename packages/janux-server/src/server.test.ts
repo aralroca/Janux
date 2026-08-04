@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { component, intent, jsx, renderToString, schema, source, str, int, list } from 'janux';
 import { api } from './api';
 import { htmlDocument } from './html-shell';
-import { createJanuxServer } from './server';
+import { createJanuxServer, routeSpecifier } from './server';
 
 const orders = [
   { id: 'o1', status: 'pending' },
@@ -574,5 +574,19 @@ describe('first-class websockets', () => {
     expect((await server.serve(new Request('http://test/'), { upgrade: () => true }))?.status).toBe(200);
     expect((await server.fetch(new Request('http://test/ws'))).status).toBe(404);
     expect(server.websocket.message('socket' as never, 'frame')).toBeUndefined();
+  });
+});
+
+/**
+ * A filesystem path is not a module specifier. The router answers native paths,
+ * and on Windows `C:\app\src\routes\index.tsx` parses as a URL whose scheme is
+ * `c:` — Node's loader refuses it, so every page of an app served by `janux
+ * start` fails to load. Bun is worse than an error: it resolves the path as a
+ * bare specifier, quietly importing a second copy of the module.
+ */
+describe('the specifier a route is loaded by', () => {
+  it('is a file URL, even for a path a URL parser reads as a scheme', () => {
+    expect(new URL(routeSpecifier('C:\\app\\src\\routes\\index.tsx')).protocol).toBe('file:');
+    expect(new URL(routeSpecifier('/app/src/routes/index.tsx')).protocol).toBe('file:');
   });
 });

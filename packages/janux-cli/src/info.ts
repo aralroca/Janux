@@ -3,6 +3,7 @@ import { release } from 'node:os';
 import { join, relative } from 'node:path';
 import { createFsRouter } from '@janux/server';
 import { packageDir, resolveAppConfig } from '@janux/vite';
+import { toPosix } from '@janux/vite/config';
 import { renderInfoMarkdown } from './info-report';
 import type { CliCommand } from './args';
 
@@ -59,7 +60,7 @@ function presence(name: string, root: string): PackagePresence {
 
 /** Config values are paths; the report shows them relative to the root, which is the part that matters. */
 function relativeTo(root: string, value: string | undefined): string | undefined {
-  return value ? relative(root, value) : undefined;
+  return value ? toPosix(relative(root, value)) : undefined;
 }
 
 function configOf(app: Awaited<ReturnType<typeof resolveAppConfig>>, root: string): JanuxInfo['config'] {
@@ -78,8 +79,8 @@ function routesOf(routesDir: string, root: string): RouteInfo[] {
 
   return createFsRouter(routesDir).routes.map((route) => ({
     pattern: route.pattern,
-    file: relative(root, route.filePath),
-    layouts: route.layouts.map((layout) => relative(root, layout)),
+    file: toPosix(relative(root, route.filePath)),
+    layouts: route.layouts.map((layout) => toPosix(relative(root, layout))),
   }));
 }
 

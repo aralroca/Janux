@@ -12,7 +12,7 @@
     "@janux/tailwind": "workspace:*"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^18.0.0",
+    "@happy-dom/global-registrator": "^20.11.1",
     "@types/react": "^19.2.0",
     "diff-dom-streaming": "^0.6.10",
     "react": "^19.2.0",

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Browser } from 'playwright';
-import { isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { isBuilt, launchBrowser, openPage, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -27,7 +27,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   ({ url: BASE, stop } = await startTestServer(appRoot(APP)));
-  browser = await launchChrome();
+  browser = await launchBrowser();
 });
 
 afterAll(() => stop?.());
@@ -158,7 +158,10 @@ describe.if(BUILT)(`${APP}: the self-hosted font`, () => {
         const loaded = [...(document.fonts as any)].filter((face: any) => face.status === 'loaded');
 
         return {
-          families: loaded.map((face: any) => face.family),
+          // Firefox reports FontFace.family CSSOM-serialized ('"Inter"');
+          // Chromium and WebKit report the bare name, from the same valid
+          // `font-family:'Inter'` the framework emits. Compare the names.
+          families: loaded.map((face: any) => face.family.replace(/^["']|["']$/g, '')),
           body: getComputedStyle(document.body).fontFamily,
         };
       });

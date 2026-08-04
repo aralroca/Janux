@@ -1,17 +1,39 @@
 import type { Browser, Page } from 'playwright';
 
-let sharedChrome: Promise<Browser> | undefined;
+export type E2eBrowser = 'chromium' | 'firefox' | 'webkit';
 
 /**
- * One Chrome for the whole test process. Launch/teardown churn across a dozen
+ * Which engine to drive, from JANUX_E2E_BROWSER — the CI matrix runs the same
+ * suites on all three. Unset means Chromium on the branded Chrome channel,
+ * which is what a developer's machine has installed and what these suites have
+ * always run on. An unknown name is refused rather than quietly swapped for
+ * another engine, because a matrix lane that silently retests Chrome is worse
+ * than one that fails.
+ */
+export function launchTarget(name = process.env.JANUX_E2E_BROWSER): {
+  browser: E2eBrowser;
+  options: { channel?: string };
+} {
+  if (!name || name === 'chromium') return { browser: 'chromium', options: { channel: 'chrome' } };
+  if (name === 'firefox' || name === 'webkit') return { browser: name, options: {} };
+
+  throw new Error(`Unknown JANUX_E2E_BROWSER '${name}' — expected chromium, firefox or webkit.`);
+}
+
+let shared: Promise<Browser> | undefined;
+
+/**
+ * One browser for the whole test process. Launch/teardown churn across a dozen
  * suites is what made goto() flake under load; suites must NOT close this —
  * pages yes, the browser dies with the process. Playwright is imported lazily
  * so `@janux/testing` works without it until a browser is actually asked for.
  */
-export function launchChrome(): Promise<Browser> {
-  sharedChrome ??= import('playwright').then(({ chromium }) => chromium.launch({ channel: 'chrome' }));
+export function launchBrowser(): Promise<Browser> {
+  const { browser, options } = launchTarget();
 
-  return sharedChrome;
+  shared ??= import('playwright').then((playwright) => playwright[browser].launch(options));
+
+  return shared;
 }
 
 /** New page that records uncaught page errors for the final assertion. */

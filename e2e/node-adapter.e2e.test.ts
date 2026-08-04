@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { Browser } from 'playwright';
-import { hasNodeBuild, launchChrome, openPage, startNodeServer } from '@janux/testing';
+import { hasNodeBuild, launchBrowser, openPage, startNodeServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -28,7 +28,7 @@ let browser: Browser | undefined;
 beforeAll(async () => {
   if (!BUILT) return;
   [node, shop] = await Promise.all([startNodeServer(NODE_APP, 31731), startNodeServer(SHOP, 31732)]);
-  browser = await launchChrome();
+  browser = await launchBrowser();
 }, TIMEOUT);
 
 afterAll(() => {

@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { join } from 'node:path';
 import { createTestApp, type TestApp } from '@janux/testing';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = join(import.meta.dirname, '..');
 
 let app: TestApp;
 

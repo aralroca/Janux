@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { type Browser } from 'playwright';
-import { createTestApp, isBuilt, launchChrome, openPage, startTestServer } from '@janux/testing';
+import { createTestApp, isBuilt, launchBrowser, openPage, startTestServer } from '@janux/testing';
 import { TIMEOUT, appRoot } from './support/app';
 
 /**
@@ -95,7 +95,7 @@ function servedTemplate(template: string) {
 
   beforeAll(async () => {
     ({ url: state.base, stop } = await startTestServer(appRoot(`templates/${template}`)));
-    state.browser = await launchChrome();
+    state.browser = await launchBrowser();
   });
 
   afterAll(() => stop?.());

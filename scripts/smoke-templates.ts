@@ -70,9 +70,25 @@ function declaredTarballs(app: string, byName: Map<string, string>): string[] {
 }
 
 /**
- * The scaffolded app asks the registry for `^<version>`; reinstalling the ones
- * it declares from the tarballs pins it to the code in this commit instead, so
- * a template is tested against the PR rather than against the last release.
+ * The rest of the framework, pinned without being declared.
+ *
+ * A template names the packages it uses; the ones those pull in — `@janux/vite`
+ * behind `@janux/cli`, say — still came from the registry, so half the app under
+ * test was the last release. An export added to one package and consumed by
+ * another then fails here for the one reason a release never will: the two
+ * publish together. `--no-save` keeps them out of `dependencies`, so a template
+ * that forgot one of its own is still caught by the install above.
+ */
+function undeclaredTarballs(app: string, byName: Map<string, string>): string[] {
+  const declared = new Set(declaredTarballs(app, byName));
+
+  return [...byName.values()].filter((path) => !declared.has(path));
+}
+
+/**
+ * The scaffolded app asks the registry for `^<version>`; reinstalling from the
+ * tarballs pins it to the code in this commit instead, so a template is tested
+ * against the PR rather than against the last release.
  */
 async function scaffold(root: string, template: string, byName: Map<string, string>): Promise<string | undefined> {
   const app = join(root, `smoke-${template}`);
@@ -81,7 +97,10 @@ async function scaffold(root: string, template: string, byName: Map<string, stri
   if (!created.ok) return `${template}: scaffold failed\n${created.output}`;
   const installed = await run(['npm', 'install', '--no-audit', '--no-fund', ...declaredTarballs(app, byName)], app);
 
-  return installed.ok ? undefined : `${template}: install failed\n${installed.output}`;
+  if (!installed.ok) return `${template}: install failed\n${installed.output}`;
+  const pinned = await run(['npm', 'install', '--no-save', '--no-audit', '--no-fund', ...undeclaredTarballs(app, byName)], app);
+
+  return pinned.ok ? undefined : `${template}: pinning the rest of the framework failed\n${pinned.output}`;
 }
 
 /**

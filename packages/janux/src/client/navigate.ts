@@ -94,6 +94,12 @@ async function restorePersisted(mount: MountContext, kept: PersistedIsland[]): P
     kept.map(async ({ id, node }) => {
       const incoming = document.querySelector(persistedSelector(id));
 
+      // Already grafted back mid-stream, by the observer above — the same
+      // check it makes, which this one was missing. Replacing a node with
+      // itself is a no-op only on paper: engines run the full remove and
+      // insert, so an <iframe> in the subtree reloads and a custom element
+      // inside it gets a disconnected/connected pair it should never see.
+      if (incoming === node) return;
       if (incoming) incoming.replaceWith(node);
       else {
         warnDroppedPersist(id);
