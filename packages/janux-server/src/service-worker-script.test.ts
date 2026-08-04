@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'bun:test';
-import { bootServiceWorker, serviceWorkerScript, type PageScope } from './service-worker-script';
+import {
+  bootServiceWorker,
+  dropStaleServiceWorkerCaches,
+  reclaimServiceWorkerScript,
+  serviceWorkerScript,
+  unregisterStaleServiceWorker,
+  type PageScope,
+} from './service-worker-script';
 
 /**
  * The registration side of the contract, and specifically the reload.
@@ -22,7 +29,7 @@ function fakePage(controller: object | null) {
     container: new Map(),
     document: new Map(),
   };
-  const calls = { registered: [] as string[], reloads: 0, updates: 0 };
+  const calls = { registered: [] as string[], reloads: 0, updates: 0, unregistered: 0 };
   const registration = {
     update: () => {
       calls.updates += 1;
@@ -52,6 +59,16 @@ function fakePage(controller: object | null) {
   } as unknown as PageScope;
 
   return { page, events, calls };
+}
+
+/**
+ * Lets a chain of already-resolved promises run to completion. A macrotask
+ * rather than a counted number of ticks: the chain's length is an implementation
+ * detail, and a count that happens to fit today is a test that breaks on the
+ * next `.then`.
+ */
+async function settle(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 /** Fires `load` and lets the registration promise settle. */
@@ -147,5 +164,83 @@ describe('noticing a deploy that landed while the tab sat open', () => {
     events.document.get('visibilitychange')?.();
 
     expect(calls.updates).toBe(0);
+  });
+});
+
+/**
+ * `janux dev` never registers a worker — but it very often runs on the port a
+ * `janux start` used an hour ago, and a worker is scoped to the origin, not to
+ * the process. So the dev page opens under a worker from a build that no longer
+ * exists: it answers `/styles.css` from a cache Vite is not serving, and the
+ * developer sees an unstyled page with no obvious cause.
+ *
+ * Dev therefore reclaims the origin instead of merely declining to claim it.
+ * Nothing happens when no worker is controlling, which is almost every session.
+ */
+function controlledPage(controller: object | null) {
+  const { page, calls } = fakePage(controller);
+  const registrations = [{ unregister: async () => { calls.unregistered += 1; } }];
+  const caches = new Map<string, boolean>([['janux-v1', true], ['app-images', true]]);
+
+  (page.navigator.serviceWorker as any).getRegistrations = async () => registrations;
+  (page as any).caches = {
+    keys: async () => [...caches.keys()],
+    delete: async (name: string) => caches.delete(name),
+  };
+
+  return { page, calls, caches };
+}
+
+describe('reclaiming the origin in dev', () => {
+  it('unregisters a worker left behind by a production run, and reloads once', async () => {
+    const { page, calls } = controlledPage({});
+
+    unregisterStaleServiceWorker(page);
+    await settle();
+
+    expect(calls.unregistered).toBe(1);
+    expect(calls.reloads).toBe(1);
+  });
+
+  it('does nothing at all when no worker is controlling the page', async () => {
+    const { page, calls } = controlledPage(null);
+
+    unregisterStaleServiceWorker(page);
+    await settle();
+
+    expect(calls.unregistered).toBe(0);
+    expect(calls.reloads).toBe(0);
+  });
+
+  /**
+   * The caches are swept on the load AFTER the unregistration, never in the
+   * same breath: a worker that is still controlling the page keeps answering
+   * and caching requests, so a delete issued alongside the reload races it and
+   * loses — leaving a `janux-` cache refilled with the dev server's own URLs.
+   */
+  it("sweeps Janux's leftover caches once nothing is controlling the page", async () => {
+    const { page, caches } = controlledPage(null);
+
+    dropStaleServiceWorkerCaches(page);
+    await settle();
+
+    expect([...caches.keys()]).toEqual(['app-images']);
+  });
+
+  it('leaves the caches alone while the old worker is still in charge of them', async () => {
+    const { page, caches } = controlledPage({});
+
+    dropStaleServiceWorkerCaches(page);
+    await settle();
+
+    expect([...caches.keys()]).toEqual(['janux-v1', 'app-images']);
+  });
+
+  it('is emitted as a keyed, nonced script like everything else the shell writes', () => {
+    const script = reclaimServiceWorkerScript('n0nce');
+
+    expect(script).toContain('key="jx-sw-reclaim"');
+    expect(script).toContain('nonce="n0nce"');
+    expect(script).not.toMatch(/\b_[a-z_]+\(/);
   });
 });

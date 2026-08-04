@@ -85,8 +85,14 @@ export function configurePrefetch(options: PrefetchConfig | undefined): void {
   [...prefetched.keys()].forEach(drop);
 }
 
+/**
+ * Strictly younger than the TTL, not "at most" it. The boundary millisecond is
+ * immaterial at the 30s default, but `ttl: 0` has to mean *disabled* — and with
+ * `<=` it instead meant "fresh for as long as `Date.now()` has not ticked",
+ * which is a coin flip on a fast machine rather than a rule.
+ */
 function isFresh(entry: PrefetchEntry | undefined): entry is PrefetchEntry {
-  return entry !== undefined && Date.now() - entry.at <= ttl;
+  return entry !== undefined && Date.now() - entry.at < ttl;
 }
 
 function drop(url: string): void {

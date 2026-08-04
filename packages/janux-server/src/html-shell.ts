@@ -8,7 +8,7 @@ import {
 import type { QueryClient } from 'janux/query';
 import { headTags } from './head-tags';
 import { nonceAttr, safeAttr, safeJson } from './html-escape';
-import { serviceWorkerScript } from './service-worker-script';
+import { reclaimServiceWorkerScript, serviceWorkerScript } from './service-worker-script';
 
 export interface ShellI18n {
   locale: string;
@@ -36,6 +36,12 @@ export interface ShellOptions {
    * every app that did not opt in, which is what keeps their HTML unchanged.
    */
   serviceWorkerUrl?: string;
+  /**
+   * `janux dev`: unregister any worker found on this origin. Dev declines to
+   * register one, which is not the same as not having one — see
+   * `reclaimFromServiceWorker`.
+   */
+  reclaimServiceWorker?: boolean;
   /**
    * The app's web app manifest (`/manifest.webmanifest`), when `public/` holds
    * one. Not to be confused with `manifestUrl` below, which is the *agent*
@@ -157,7 +163,9 @@ function navigationScripts(options: Omit<ShellOptions, 'html'>): string {
  * all: a static, 0-JS site whose whole point is that it keeps working offline.
  */
 function serviceWorkerScripts(options: Omit<ShellOptions, 'html'>): string {
-  return options.serviceWorkerUrl ? serviceWorkerScript(options.serviceWorkerUrl, options.nonce) : '';
+  if (options.serviceWorkerUrl) return serviceWorkerScript(options.serviceWorkerUrl, options.nonce);
+
+  return options.reclaimServiceWorker ? reclaimServiceWorkerScript(options.nonce) : '';
 }
 
 function runtimeScripts(options: Omit<ShellOptions, 'html'>): string {

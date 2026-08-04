@@ -28,6 +28,10 @@ The reason it is a file and not a config flag: a worker somebody switches on wit
 
 `janux dev` neither builds nor registers a worker. A worker installed while a page is being written outlives the edit that installed it, and the next `bun run dev` gets served by a cache from the last one. Build the app and `janux start` it to exercise the worker.
 
+Declining to register one is not the same as not having one, though. A worker is scoped to an **origin**, not to a process, so `janux dev --port 4340` inherits whatever `janux start --port 4340` installed an hour ago — the page comes up served by a build that no longer exists, `/styles.css` is answered from a cache Vite knows nothing about, and you get an unstyled page with no visible cause.
+
+So dev reclaims the origin: if a worker is controlling the page it is unregistered, the page reloads once, and the leftover `janux-` caches are swept on the load after that. It says so in the console, and it does nothing at all when there is no worker — which is nearly every session.
+
 ## What the build hands the worker
 
 The one thing a worker cannot work out for itself is what the files are called. The names are decided by the bundler, minutes earlier, on another machine — so the build reads its own output back and substitutes the answer in:

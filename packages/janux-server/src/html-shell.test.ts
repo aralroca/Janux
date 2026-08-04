@@ -366,3 +366,14 @@ describe('htmlDocument web app manifest', () => {
     expect(html).toContain('rel="janux-manifest"');
   });
 });
+
+describe('htmlDocument reclaiming a stale worker in dev', () => {
+  it('emits the reclaim script when the server asks for it', () => {
+    expect(htmlDocument({ ...base, reclaimServiceWorker: true })).toContain('key="jx-sw-reclaim"');
+  });
+
+  it('says nothing in production, where a worker on this origin is the app’s own', () => {
+    expect(htmlDocument(base)).not.toContain('jx-sw-reclaim');
+    expect(htmlDocument({ ...base, serviceWorkerUrl: '/sw.js' })).not.toContain('jx-sw-reclaim');
+  });
+});

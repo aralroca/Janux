@@ -153,6 +153,8 @@ export interface ServerOptions {
    * `serviceWorker.ts` for why a worker is a production artifact.
    */
   serviceWorkerUrl?: string;
+  /** `janux dev`: reclaim the origin from a worker a previous `janux start` left on it. */
+  reclaimServiceWorker?: boolean;
   /** `/manifest.webmanifest` when the app ships one — the installability half of a PWA. */
   webManifestUrl?: string;
   islandModules?: Record<string, string>;
@@ -963,6 +965,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
         // Not gated on islands, unlike the runtime: an app with no islands at
         // all is precisely the one whose offline story is its whole point.
         serviceWorkerUrl: options.serviceWorkerUrl,
+        reclaimServiceWorker: options.reclaimServiceWorker,
         webManifestUrl: options.webManifestUrl,
         manifestUrl: options.staticExport ? undefined : `/_janux/manifest?path=${encodeURIComponent(pathname)}`,
         stylesheets: options.stylesheets,
