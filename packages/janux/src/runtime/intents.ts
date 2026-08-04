@@ -5,6 +5,7 @@ import { flushRenders } from './render-queue';
 import { isTracing, withSpan, type JanuxSpan, type SpanAttributes } from '../observability/tracing';
 import { withGate, type MutationGate } from '../state/mutation-gate';
 import { publishJanuxError } from '../dev/error-channel';
+import { allowsScopes } from './scopes';
 import type { ComponentDef, Ctx, GuardValue, IntentDef, Origin, RunBag } from '../define/types';
 
 export interface AuditEntry {
@@ -75,6 +76,10 @@ function normalizeGuard(tool: string, value: unknown): GuardValue {
 
 export function resolveGuard(def: IntentDef, ctx: Ctx, origin: Origin, tool = 'intent'): GuardValue {
   const guard = def.guard ?? 'auto';
+
+  // Out of scope is indistinguishable from not existing, for every listing that
+  // filters on `forbidden`. The pipeline refuses it too — see runInvocation.
+  if (!allowsScopes(ctx, def.scopes)) return 'forbidden';
 
   if (typeof guard !== 'function') return normalizeGuard(tool, guard);
   try {
@@ -213,7 +218,13 @@ async function runInvocation(
    * nothing — see `bundle-size.test.ts`, which measures it.
    */
   try {
-    if (origin === 'agent' && guard === 'forbidden') {
+    /*
+     * Two refusals with one answer. The guard governs the agent surface; the
+     * scope is what the caller was granted, so it ignores the origin —
+     * `x-janux-origin` is a free-to-type hint, and a check that only ran for
+     * `'agent'` would be one omitted header away from nothing.
+     */
+    if (!allowsScopes(bag.ctx, def.scopes) || (origin === 'agent' && guard === 'forbidden')) {
       throw new JanuxIntentError('forbidden', `Intent "${tool}" is not available`);
     }
     checkInvocable(tool, def, bag);

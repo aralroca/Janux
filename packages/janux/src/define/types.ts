@@ -18,7 +18,25 @@ export type GuardValue = 'auto' | 'confirm' | 'forbidden';
  * `({ origin }) => (origin === 'agent' ? 'confirm' : 'auto')`.
  */
 export type Guard = GuardValue | ((bag: { ctx: Ctx; origin: Origin }) => GuardValue);
-export type Ctx = { i18n?: I18n } & Record<string, unknown>;
+
+/**
+ * The agent acting on this request, as the invocation pipeline sees it.
+ * `verified`/`keyId` come from Web Bot Auth (@janux/server owns them);
+ * `scopes` is the app's answer to "and what may this one do?" — see
+ * `grantedScopes`, which can only ever narrow the session's own grant.
+ */
+export interface AgentGrant {
+  verified?: boolean;
+  keyId?: string;
+  scopes?: string[];
+}
+
+export type Ctx = {
+  i18n?: I18n;
+  /** What this caller's credential grants. Absent ⇒ nothing: a scoped tool is unreachable. */
+  scopes?: string[];
+  agent?: AgentGrant;
+} & Record<string, unknown>;
 export type Origin = 'human' | 'agent';
 export type Cleanup = (() => void) | undefined;
 
@@ -102,6 +120,14 @@ export interface IntentDef {
    */
   coerce?: 'form';
   guard?: Guard;
+  /**
+   * Scopes the caller's credential must carry, all of them. Unlike a guard —
+   * which asks whether *this origin* may proceed — a scope asks whether this
+   * caller was granted the capability at all, so it binds human calls as well.
+   * A context without them neither sees the intent in the manifest nor can
+   * invoke it. See `grantedScopes`.
+   */
+  scopes?: string[];
   server?: boolean;
   prefetch?: 'eager' | 'visible' | 'idle';
   ready?: (bag: RunBag) => boolean;

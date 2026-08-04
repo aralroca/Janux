@@ -31,6 +31,7 @@ import { assertValidInput, errorStatus, json } from './http';
 import { createProposalVault, proposalId, proposalSessionOf, sessionOf, withProposalSession, type SettleError } from './proposals';
 import { apiAttributes, apiAuditEntry, apiManifestTools, collectApis, invokeApi, resolveApiGuard, type ApiTool } from './api';
 import { createAgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
+import type { SessionStore } from './session';
 import { createFsRouter, type Route } from './router';
 import {
   queryPayloadScript,
@@ -59,6 +60,14 @@ export interface AgentMount {
   handle(req: Request, deps: AgentDeps): Promise<Response>;
   /** One-turn LLM proxy for browser-side agent loops (`serverLlm()` from `@janux/agent/local`). */
   handleLlm?(req: Request): Promise<Response>;
+}
+
+/** What the framework already verified about a request, handed to `ctxFor` so it does not have to. */
+export interface CtxBag {
+  /** The signed session cookie's payload, when a `session` store is configured and it verified. */
+  session?: unknown;
+  /** The Web Bot Auth identity — `null` on a request that carried no signature. */
+  agent: AgentIdentity | null;
 }
 
 export interface AgentDeps {
@@ -105,7 +114,21 @@ export interface ServerOptions {
   agent?: AgentMount;
   /** Scheduled jobs and how this deployment fires them — see `schedules.ts`. */
   schedules?: SchedulesConfig;
-  ctxFor?: (req: Request) => Ctx | Promise<Ctx>;
+  /**
+   * The app's own answer to "who is asking?", built once per request. The bag
+   * carries what the framework already verified, so `ctxFor` never verifies it
+   * twice: the `session` cookie's payload and the Web Bot Auth `agent`
+   * identity. Grants ride back on the returned ctx — `scopes` for what this
+   * credential may do, `agent.scopes` for how much of it the agent may spend
+   * (see `grantedScopes`).
+   */
+  ctxFor?: (req: Request, bag: CtxBag) => Ctx | Promise<Ctx>;
+  /**
+   * Signed session cookies (`createSessionStore`). Wiring the store here is
+   * what makes rotation real: `ctxFor` returns a `Ctx` and has no response to
+   * write the renewed cookie to, so the server carries it out.
+   */
+  session?: SessionStore<unknown>;
   runtimeUrl?: string;
   islandModules?: Record<string, string>;
   title?: string;
@@ -360,7 +383,23 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const rootLayouts = router?.rootLayouts ?? [];
   const proposals = createProposalVault({ ttlMs: options.proposalTtlMs });
 
-  const resolveCtx = async (req: Request): Promise<Ctx> => (await options.ctxFor?.(req)) ?? {};
+  /**
+   * The renewed session cookie of a request still in flight, so the response
+   * can carry it without an out-parameter threaded through every handler. A
+   * WeakMap because the key is the request: it dies with it.
+   */
+  const renewals = new WeakMap<Request, string>();
+
+  const readSession = (req: Request): unknown => {
+    const session = options.session?.read(req);
+
+    if (session?.renew) renewals.set(req, session.renew);
+
+    return session?.data;
+  };
+
+  const resolveCtx = async (req: Request, agent: AgentIdentity | null = null): Promise<Ctx> =>
+    (await options.ctxFor?.(req, { session: readSession(req), agent })) ?? {};
 
   const i18nCache = new Map<string, I18n>();
   const i18nFor = (locale: string): I18n => {
@@ -429,12 +468,16 @@ export function createJanuxServer(options: ServerOptions = {}) {
     buildLlmsTxt({ title: options.title, ...options.llmsTxt }, await listPages(), apiManifestTools(apiTools, {}) as LlmsTxtTool[]);
 
   const ctxWithAgent = async (req: Request): Promise<Ctx> => {
-    const ctx = await resolveCtx(req);
     const identity = (await agentAuth?.identify(req)) ?? null;
+    // Handed to `ctxFor` rather than only stamped after it, so the app can
+    // answer "and what may THIS agent do?" — `agent.scopes` on the ctx it
+    // returns, which the merge below preserves while the identity itself stays
+    // the framework's to state.
+    const ctx = await resolveCtx(req, identity);
 
     // Every invocation path builds its ctx here, so this is where a `confirm`
     // proposal learns which session parked it — see `proposals.ts`.
-    return withProposalSession(identity ? { ...ctx, agent: identity } : ctx, sessionOf(req));
+    return withProposalSession(identity ? { ...ctx, agent: { ...ctx.agent, ...identity } } : ctx, sessionOf(req));
   };
 
   const findRoute = (pathname: string) => {
@@ -975,7 +1018,11 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return new Response(rssBody, { headers: { 'content-type': 'application/rss+xml; charset=utf-8' } });
     }
     if (pathname === '/_janux/manifest') {
-      const ctx = await resolveCtx(req);
+      // The agent identity has to be on the ctx the manifest is built from:
+      // this endpoint IS the listing an agent reads, so leaving it off meant
+      // scoping it by the human's grant alone and advertising tools the agent
+      // itself may not spend.
+      const ctx = await ctxWithAgent(req);
 
       // The page may fail; this request must not fail with it. The client asks
       // for the manifest of the page it just landed on — including a `_500` —
@@ -1021,7 +1068,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
    * operator hears about it instead of the process printing an unattributed
    * stack. Fail-open all the way: the visitor still gets a status line.
    */
-  const dispatch = async (req: Request, span: JanuxSpan): Promise<Response> => {
+  const answer = async (req: Request, span: JanuxSpan): Promise<Response> => {
     try {
       return await handleRequest(req, span);
     } catch (error) {
@@ -1029,6 +1076,21 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
       return new Response(STATUS_TEXT[500], { status: 500 });
     }
+  };
+
+  /**
+   * A rotated session reaches the browser whichever response won the race —
+   * page, api refusal or the 500 above. The shared response cache never holds
+   * one: it refuses to store a response carrying `set-cookie`, and this runs
+   * after it anyway.
+   */
+  const dispatch = async (req: Request, span: JanuxSpan): Promise<Response> => {
+    const response = await answer(req, span);
+    const renewed = renewals.get(req);
+
+    if (renewed) response.headers.append('set-cookie', renewed);
+
+    return response;
   };
 
   const fetch = (req: Request): Promise<Response> =>
