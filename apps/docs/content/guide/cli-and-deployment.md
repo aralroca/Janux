@@ -11,6 +11,7 @@ description: The commands a Janux app ships with — dev, build, start, verify a
 janux dev [--port 3000]     # Vite dev server: SSR, HMR, api stubs, agent endpoint
 janux build                 # client bundle → dist/client (+ prerendered pages with output: "static")
 janux start [--port 3000]   # production server on Bun
+janux run   [tool] [--arg]  # invoke an intent or an api() from the terminal
 janux verify                # fail CI when agent-reachable tools lack descriptions
 janux eval [files...]       # scripted agent-task scenarios against a live app
 ```
@@ -44,6 +45,7 @@ A Bun server that:
 
 ## Guarding the agent surface
 
+- `janux run` is the terminal face of the agent surface: `janux run` lists every tool the manifest advertises, `janux run <tool> --arg value` invokes one — same guards, same validation, arguments and `--help` generated from the schema each tool already declares. It is how a script or a CI job talks to your own app without writing a client for it; a `confirm` guard prompts on a terminal and **fails** (exit 1) with nobody at one, never auto-approving. Details: [CLI reference](/docs/reference/cli).
 - `janux verify` renders every route's manifest and exits 1 when an agent-reachable `intent()` or `api()` has no `description` — wire it into CI so incomplete contracts fail the build instead of degrading conversations silently.
 - `janux eval` replays `evals/**/*.eval.json` scenarios against a live app, including `approve` steps that exercise the real human-in-the-loop flow. Details and scenario format: [CLI reference](/docs/reference/cli).
 
