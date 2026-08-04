@@ -86,6 +86,23 @@ describe('resolveAppConfig src/ctx.ts', () => {
   });
 });
 
+describe('resolveAppConfig src/session.ts', () => {
+  it('picks up the session convention when the file exists', async () => {
+    const root = app({ 'package.json': '{"name":"x"}' });
+
+    mkdirSync(join(root, 'src'), { recursive: true });
+    writeFileSync(join(root, 'src/session.ts'), 'export default {} as never;');
+
+    expect((await resolveAppConfig(root)).sessionModule).toBe(join(root, 'src/session.ts'));
+  });
+
+  it('leaves it undefined when the app has no session.ts (an app without sessions pays nothing)', async () => {
+    const root = app({ 'package.json': '{"name":"x"}' });
+
+    expect((await resolveAppConfig(root)).sessionModule).toBeUndefined();
+  });
+});
+
 describe('resolveAppConfig schedules directory', () => {
   it('resolves src/schedules by convention when it exists', async () => {
     const root = app({});

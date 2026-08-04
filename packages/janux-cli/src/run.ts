@@ -127,9 +127,12 @@ export async function runCommand({ root }: CliCommand, argv: string[]): Promise<
   // occurrence is a side effect nobody asked this command for.
   const options = await prodServerOptions(root, undefined, { schedules: false });
   const server = createJanuxServer(options);
-  // No request, no cookies, no session: the anonymous ctx an unauthenticated
-  // caller gets, so a guard that depends on a user denies rather than inherits.
-  const ctx = (await options.ctxFor?.(new Request('http://localhost/'))) ?? {};
+  // No request, no cookies, no session, nothing signed: the anonymous ctx an
+  // unauthenticated caller gets, so a guard that depends on a user denies
+  // rather than inherits — and a tool that declares `scopes` is out of reach
+  // from the terminal unless `ctxFor` grants them from somewhere that is not a
+  // browser (an env token, say).
+  const ctx = (await options.ctxFor?.(new Request('http://localhost/'), { session: undefined, agent: null })) ?? {};
   const target: RunTarget = { server, ctx, base: 'http://localhost', onAudit: options.onAudit };
 
   process.exitCode = await runTool(target, argv, terminalIo());

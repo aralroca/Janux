@@ -3,6 +3,7 @@ export { mockApi, resetApiMocks } from './api-mocks';
 export {
   createJanuxServer,
   NAVIGATION_HEADER,
+  type CtxBag,
   type InstanceHooks,
   type ServerOptions,
   type AgentMount,
@@ -31,5 +32,6 @@ export {
 export { spoolMultipart, type SpoolOptions, type SpooledFile, type SpooledForm } from './multipart';
 export { buildLlmsTxt, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 export { createAgentAuth, type AgentAuth, type AgentIdentity, type AgentsConfig } from './agent-auth';
+export { createSessionStore, type SessionOptions, type SessionRead, type SessionStore } from './session';
 export { htmlDocument, type ShellOptions } from './html-shell';
 export { NONCE_HEADER, strictPolicy, type ResolvedCsp } from './csp';

@@ -64,6 +64,7 @@ Same as `component` minus `view`. Projects as `store://<name>`. `scope: 'app' | 
 | `input` | `schema({...})` | Validated before `run`; errors carry paths |
 | `coerce` | `'form'` | Form strings become what `input` means before validating: numbers via `Number` (blank stays invalid), checkboxes `'on'`/absent → `true`/`false`, `money()` never scaled. Typed input passes through — one schema, both faces ([forms](/docs/recipes/forms)) |
 | `guard` | `'auto' \| 'confirm' \| 'forbidden'` or `({ ctx }) => guard` | Default `'auto'` |
+| `scopes` | `string[]` | Every one of them must be in the caller's grant. Out of scope ⇒ absent from the manifest **and** refused by the pipeline, whatever the origin claims ([auth and context](/docs/recipes/auth-and-context)) |
 | `ready` | `(bag) => boolean` | Announced in the manifest; not-ready calls throw `not_ready` |
 | `glowTarget` | `(bag) => string \| undefined` | CSS selector for the DOM this intent's effect lands on |
 | `run` | `(bag) => unknown` (required) | The only place `state` may be mutated |
@@ -195,6 +196,17 @@ type Proposal   = { id: string; tool: string; input: unknown; execute: () => Pro
 ```
 
 `AuditEntry.agent` is the verified Web Bot Auth key id, present only for authenticated external agents. A `Proposal` is what a `confirm` guard produces; `execute()` runs it exactly once (the `/_janux/approve` endpoint calls it for you).
+
+### grantedScopes(ctx) / allowsScopes(ctx, required?)
+
+The scope arithmetic the invocation pipeline runs, exported because an app sometimes needs the same answer outside a tool (rendering a menu, say — never as the enforcement point, which is invariant 4's job).
+
+```ts
+grantedScopes({ scopes: ['orders:read', 'orders:write'], agent: { scopes: ['orders:read'] } });  // ['orders:read']
+allowsScopes({ scopes: ['orders:read'] }, ['orders:write']);                                     // false
+```
+
+`ctx.scopes` is what the caller's credential grants — absent means **none**, so a tool that declares `scopes` is unreachable until the app grants them. `ctx.agent.scopes` narrows that: the effective grant is the intersection, so an agent can never out-rank the session it acts for. A tool that declares no scopes is never affected. See the [auth recipe](/docs/recipes/auth-and-context).
 
 ### notFound() / isNotFoundError(error)
 
