@@ -1,5 +1,5 @@
 import { prodServerOptions } from '@janux/cli/prod';
-import { createJanuxServer, type ServerOptions } from '@janux/server';
+import { createJanuxServer, type CtxBag, type ServerOptions } from '@janux/server';
 import { publishAppRoot } from '@janux/vite';
 import { restoreAppRoot } from './test-server';
 import type { Ctx } from 'janux';
@@ -32,7 +32,9 @@ export interface TestApp {
 }
 
 function forcedCtx(base: ServerOptions['ctxFor'], forced: Record<string, unknown>): ServerOptions['ctxFor'] {
-  return async (req: Request): Promise<Ctx> => ({ ...(await base?.(req)), ...forced });
+  // The bag travels through untouched: the app's own `ctxFor` still sees the
+  // session and the agent identity the server verified for this request.
+  return async (req: Request, bag: CtxBag): Promise<Ctx> => ({ ...(await base?.(req, bag)), ...forced });
 }
 
 /**

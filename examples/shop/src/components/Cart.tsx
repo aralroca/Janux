@@ -95,6 +95,16 @@ export const Cart = component({
       },
     }),
 
+    clear: intent({
+      description: 'Empty the cart entirely, coupon included',
+      guard: 'confirm',
+      ready: ({ state }: any) => state.items.length > 0,
+      run: ({ state }: any) => {
+        state.items = [];
+        state.coupon = null;
+      },
+    }),
+
     checkout: intent({
       description: 'Pay for the cart. Has monetary side effects.',
       guard: 'confirm',

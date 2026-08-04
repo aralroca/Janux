@@ -51,5 +51,7 @@ describe('the page manifest is the agent surface', () => {
     expect([...tools.keys()]).toContain('api.shop.catalog');
     // Checkout spends money: an agent proposes it, a human approves.
     expect(tools.get('cart.checkout')).toBe('confirm');
+    // Sync and pure, so an agent proposal for it carries a shadow-run diff.
+    expect(tools.get('cart.clear')).toBe('confirm');
   });
 });

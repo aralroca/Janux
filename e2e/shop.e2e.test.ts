@@ -69,6 +69,7 @@ describe('examples/shop end to end', () => {
       'cart.changeQty': 'auto',
       'cart.removeItem': 'auto',
       'cart.applyCoupon': 'auto',
+      'cart.clear': 'confirm',
       'cart.checkout': 'confirm',
       'api.shop.catalog': 'auto',
       'api.shop.orderStatus': 'auto',

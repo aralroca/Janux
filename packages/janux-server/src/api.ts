@@ -1,4 +1,4 @@
-import { JxType, validate, toJsonSchema, JanuxIntentError } from 'janux';
+import { JxType, validate, toJsonSchema, JanuxIntentError, allowsScopes } from 'janux';
 import { apiRunFor } from './api-mocks';
 import { isTracing, reportError, withSpan, type SpanAttributes } from 'janux/observability';
 import type { AuditEntry, Ctx, Guard, GuardValue, Origin } from 'janux';
@@ -8,6 +8,13 @@ export interface ApiDef {
   input?: JxType;
   output?: JxType;
   guard?: Guard;
+  /**
+   * Scopes the caller's credential must carry, all of them — the `api()` half
+   * of `IntentDef.scopes`. Out of scope means absent from every listing AND
+   * refused by this pipeline, for a human caller as much as an agent: an
+   * invisible tool is not a protected tool.
+   */
+  scopes?: string[];
   run: (bag: { input: any; ctx: Ctx; origin: Origin }) => unknown;
 }
 
@@ -75,6 +82,10 @@ function normalizeGuard(tool: ApiTool, value: unknown): GuardValue {
 
 export function resolveApiGuard(tool: ApiTool, ctx: Ctx, origin: Origin): GuardValue {
   const guard = tool.guard ?? 'auto';
+
+  // Mirrors `resolveGuard`: out of scope reads as forbidden, so `apiManifestTools`,
+  // the MCP listing and the landing page all drop it without knowing about scopes.
+  if (!allowsScopes(ctx, tool.scopes)) return 'forbidden';
 
   if (typeof guard !== 'function') return normalizeGuard(tool, guard);
   try {
@@ -165,7 +176,13 @@ async function runApi(
     onAudit?.(apiAuditEntry(tool, origin, guard, ctx, extra));
 
   try {
-    if (origin === 'agent' && guard === 'forbidden') {
+    /*
+     * The guard binds the agent surface; the scope binds the credential, so it
+     * is checked whatever the origin claims to be. Without that, a direct
+     * `POST /_janux/api/…` that simply omits `x-janux-origin: agent` would walk
+     * past an authorization decision the manifest already made.
+     */
+    if (!allowsScopes(ctx, tool.scopes) || (origin === 'agent' && guard === 'forbidden')) {
       throw new JanuxIntentError('forbidden', `Tool "${tool.name}" is not available`);
     }
     const parsed = parseApiInput(tool, input);

@@ -26,6 +26,16 @@ const OVERLAY_FINGERPRINTS = [
   '/_janux/dev/route',
 ];
 
+/** Same contract for the devtools panel: on by default in dev, and prod still ships none of it. */
+const DEVTOOLS_FINGERPRINTS = [
+  'janux-devtools',
+  'Janux DevTools',
+  'data-jxdt-toggle',
+  'data-jxdt-diff-changed',
+  'Alt+Shift+J',
+  'janux:proposal-settled',
+];
+
 /**
  * Turns every dev guard on. Vite owns `import.meta.env.*` replacement, so
  * neither `define` nor `mode` can override it — rewriting the expression ahead
@@ -75,9 +85,11 @@ describe('the dev overlay in a production bundle', () => {
     // inlined into the entry rather than earning a chunk of its own.
     expect(forced.bytes).toBeGreaterThan(shipped.bytes);
     expect(forced.chunks).toBe(shipped.chunks);
-    OVERLAY_FINGERPRINTS.forEach((fingerprint) => expect(forced.code).toContain(fingerprint));
+    const fingerprints = [...OVERLAY_FINGERPRINTS, ...DEVTOOLS_FINGERPRINTS];
+
+    fingerprints.forEach((fingerprint) => expect(forced.code).toContain(fingerprint));
     // ...and `janux build` emits none of it, in no chunk.
-    OVERLAY_FINGERPRINTS.forEach((fingerprint) => expect(shipped.code).not.toContain(fingerprint));
+    fingerprints.forEach((fingerprint) => expect(shipped.code).not.toContain(fingerprint));
   }, 120_000);
 
   /** `hidden` maps exist for an error tracker; the bundle must not point the browser at them. */
