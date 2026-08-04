@@ -769,6 +769,16 @@
         "sass": "^1.83.0",
       },
     },
+    "examples/with-skills": {
+      "name": "janux-example-with-skills",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/with-sqlite": {
       "name": "janux-example-with-sqlite",
       "version": "0.2.1",
@@ -996,6 +1006,7 @@
       "dependencies": {
         "janux": "workspace:*",
         "web-bot-auth": "^0.1.3",
+        "yaml": "^2.6.0",
       },
     },
     "packages/janux-tailwind": {
@@ -2287,6 +2298,8 @@
     "janux-example-with-optimistic-ui": ["janux-example-with-optimistic-ui@workspace:examples/with-optimistic-ui"],
 
     "janux-example-with-sass": ["janux-example-with-sass@workspace:examples/with-sass"],
+
+    "janux-example-with-skills": ["janux-example-with-skills@workspace:examples/with-skills"],
 
     "janux-example-with-sqlite": ["janux-example-with-sqlite@workspace:examples/with-sqlite"],
 

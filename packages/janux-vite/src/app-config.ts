@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { ServerOptions } from '@janux/server';
+import { discoverSkills, type ServerOptions, type Skill } from '@janux/server';
 import type {
   AgentsAuthConfig,
   CacheConfig,
@@ -44,6 +44,12 @@ export interface JanuxAppConfig {
   websocketModule?: string;
   /** `src/schedules/`, when the app has one — each file is a schedule (see `schedules.ts`). */
   schedulesDir?: string;
+  /**
+   * `src/skills/**`, parsed. Data rather than a directory, so a bundled
+   * deployment carries the procedures inside its config instead of hoping the
+   * markdown made it into the serverless function.
+   */
+  skills: Skill[];
   /** `src/feed.ts`, whose default export is the app's `FeedConfig`. */
   feedModule?: string;
   /** `src/instrumentation.ts`, loaded and `register()`ed before the server serves. */
@@ -149,6 +155,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
     websocketModule: options.websocket ? resolve(root, options.websocket) : optional(resolve(root, 'src/ws.ts')),
     schedulesDir: optional(resolve(root, 'src/schedules')),
+    skills: discoverSkills(resolve(root, 'src/skills')),
     feedModule: optional(resolve(root, 'src/feed.ts')),
     instrumentationModule: optional(resolve(root, 'src/instrumentation.ts')),
     mcpAuth: options.mcpAuth,

@@ -117,6 +117,36 @@ describe('resolveAppConfig schedules directory', () => {
   });
 });
 
+describe('resolveAppConfig skills directory', () => {
+  function appWithSkill(source: string): string {
+    const root = app({});
+
+    mkdirSync(join(root, 'src/skills'), { recursive: true });
+    writeFileSync(join(root, 'src/skills/refund.md'), source);
+
+    return root;
+  }
+
+  it('discovers src/skills by convention, parsed and ready to serve', async () => {
+    const root = appWithSkill('---\ndescription: Refund an order\ntools: [api.shop.refund]\n---\nSteps here.\n');
+    const { skills } = await resolveAppConfig(root);
+
+    expect(skills).toHaveLength(1);
+    expect(skills[0]).toMatchObject({ name: 'refund', description: 'Refund an order', tools: ['api.shop.refund'] });
+    expect(skills[0]!.body).toBe('Steps here.\n');
+  });
+
+  it('is an empty list for an app with no skills, so nothing downstream branches', async () => {
+    expect((await resolveAppConfig(app({}))).skills).toEqual([]);
+  });
+
+  it('refuses to boot on a broken skill instead of serving a half-index', async () => {
+    const root = appWithSkill('---\nwhen: sometimes\n---\nNo description.\n');
+
+    expect(resolveAppConfig(root)).rejects.toThrow(/description/);
+  });
+});
+
 describe('resolveAppConfig websocket module', () => {
   it('resolves src/ws.ts by convention', async () => {
     const root = app({});

@@ -21,11 +21,25 @@ export interface ManifestResource {
   opaque?: boolean;
 }
 
+/**
+ * A skill as the manifest carries it: the index line, never the body. The body
+ * is fetched on demand (`load_skill`, or MCP `resources/read`) — see
+ * `@janux/server`'s `skills.ts`, which owns the filesystem convention.
+ */
+export interface ManifestSkill {
+  name: string;
+  description: string;
+  when?: string;
+  tools: string[];
+}
+
 export interface Manifest {
   janux: string;
   resources: ManifestResource[];
   tools: ManifestTool[];
   events: string[];
+  /** Present only for an app that declares skills. */
+  skills?: ManifestSkill[];
 }
 
 function uriFor(def: ComponentDef, key?: string): string {

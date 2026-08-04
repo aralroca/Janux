@@ -1,0 +1,19 @@
+{
+  "name": "the agent itself finishes the return after loading the skill",
+  "reset": true,
+  "steps": [
+    {
+      "turn": "Customer A-1002 wants to return their t-shirt because it is the wrong size. Process the return.",
+      "expect": { "ok": true }
+    },
+    {
+      "tool": "api.returns.order",
+      "input": { "id": "A-1002" },
+      "expect": { "result": { "status": "refunded" } }
+    },
+    {
+      "tool": "api.returns.levels",
+      "expect": { "result": { "items": { "$some": { "sku": "TSHIRT", "stock": 41 } } } }
+    }
+  ]
+}

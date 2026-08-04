@@ -78,6 +78,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     websocket: websocketModule?.default as ServerOptions['websocket'],
     // Dev is a persistent process, so schedules tick in-process, like prod on Bun.
     schedules: await scheduleServerOptions(app, (file) => vite.ssrLoadModule(file) as any),
+    skills: app.skills,
     mcpAuth: mcpAuthOptions(app.mcpAuth),
     agents: app.agents,
     i18n: i18nModule?.default as ServerOptions['i18n'],

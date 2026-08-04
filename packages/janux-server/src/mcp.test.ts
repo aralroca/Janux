@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { jsx, schema, str } from 'janux';
 import { api } from './api';
 import { createJanuxServer } from './server';
+import { discoverSkills } from './skills';
 
 const apis = {
   greet: api({
@@ -83,6 +84,29 @@ describe('hosted MCP endpoint (/_janux/mcp)', () => {
 
     expect(read.body.result.contents[0].text).toContain('# Home');
     expect(read.body.result.contents[0].text).toContain('Welcome to demo');
+  });
+
+  it('exposes skills as resources — the list is the index, the read is the body', async () => {
+    const target = server({ skills: discoverSkills(`${import.meta.dirname}/__fixtures__/skills`) });
+    const list = await rpc(target, 'resources/list');
+    const refund = list.body.result.resources.find((r: any) => r.uri === 'janux://skill/refund-order');
+
+    expect(refund.mimeType).toBe('text/markdown');
+    expect(refund.description).toContain('Refund an order end to end');
+    expect(refund.description).toContain('The customer asks for a refund');
+    // The body is what `resources/read` is for: listing it would defeat the point.
+    expect(JSON.stringify(list.body.result.resources)).not.toContain('Find the order');
+
+    const read = await rpc(target, 'resources/read', { uri: 'janux://skill/refund-order' });
+
+    expect(read.body.result.contents[0].text).toContain('Find the order with `api.orders.find`');
+  });
+
+  it('answers -32602 for a skill nobody declared', async () => {
+    const target = server({ skills: discoverSkills(`${import.meta.dirname}/__fixtures__/skills`) });
+    const { body } = await rpc(target, 'resources/read', { uri: 'janux://skill/invented' });
+
+    expect(body.error.code).toBe(-32602);
   });
 
   it('401s with WWW-Authenticate when auth is configured and the token is bad', async () => {

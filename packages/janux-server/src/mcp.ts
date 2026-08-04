@@ -1,6 +1,7 @@
 import { toJsonSchema, type Ctx, type GuardValue } from 'janux';
 import { resolveApiGuard, type ApiTool } from './api';
 import { mcpLandingPage } from './mcp-landing';
+import type { Skill } from './skills';
 import { decorateResult, discoverResult, modernGate } from './mcp-modern';
 
 /**
@@ -23,6 +24,8 @@ export interface McpDeps {
   invoke(tool: string, input: unknown, ctx: Ctx): Promise<unknown>;
   listPages(): Promise<string[]>;
   readPage(path: string, ctx: Ctx): Promise<string | undefined>;
+  /** The app's skills, projected as resources — see `skillResources`. */
+  skills?: readonly Skill[];
   auth?: McpAuth;
 }
 
@@ -73,6 +76,34 @@ function pageUri(path: string): string {
   return `janux://page${path}`;
 }
 
+const SKILL_URI = 'janux://skill/';
+
+/**
+ * Skills, as MCP already models them: the resource *list* is the index (name,
+ * what it is, when to reach for it) and `resources/read` is the body. An
+ * external client pays for the procedure only when it decides to follow it —
+ * the same on-demand contract the built-in copilot gets from `load_skill`,
+ * spoken in the protocol every other client already implements.
+ */
+function skillResources(skills: readonly Skill[]) {
+  return skills.map((skill) => ({
+    uri: `${SKILL_URI}${skill.name}`,
+    name: skill.name,
+    description: skill.when ? `${skill.description} Use when: ${skill.when}` : skill.description,
+    mimeType: 'text/markdown',
+  }));
+}
+
+/** One resource body, whichever scheme addressed it. Unknown URI ⇒ undefined ⇒ -32602. */
+async function readResource(uri: string, deps: McpDeps, ctx: Ctx): Promise<string | undefined> {
+  if (uri?.startsWith(SKILL_URI)) {
+    return (deps.skills ?? []).find((skill) => skill.name === uri.slice(SKILL_URI.length))?.body;
+  }
+  if (!uri?.startsWith('janux://page')) return undefined;
+
+  return deps.readPage(uri.slice('janux://page'.length) || '/', ctx);
+}
+
 async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx): Promise<Record<string, unknown> | undefined> {
   const { id, method, params } = rpc;
 
@@ -107,13 +138,15 @@ async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx): Promise<R
       const pages = await deps.listPages();
 
       return rpcResult(id, {
-        resources: pages.map((path) => ({ uri: pageUri(path), name: path, mimeType: 'text/markdown' })),
+        resources: [
+          ...pages.map((path) => ({ uri: pageUri(path), name: path, mimeType: 'text/markdown' })),
+          ...skillResources(deps.skills ?? []),
+        ],
       });
     }
     case 'resources/read': {
       const uri = params?.uri as string;
-      const path = uri?.startsWith('janux://page') ? uri.slice('janux://page'.length) || '/' : undefined;
-      const text = path ? await deps.readPage(path, ctx) : undefined;
+      const text = await readResource(uri, deps, ctx);
 
       if (text === undefined) return rpcError(id, -32602, `Unknown resource: ${uri}`);
 

@@ -253,6 +253,9 @@ Not built yet: fetching keys from a signature-agent directory (SSRF story needed
 | `apiManifestTools(tools, ctx)` | `→ ManifestTool[]` | Projects api() tools into the manifest (non-`forbidden` only, with JSON Schema input). |
 | `isApi(value)` | `→ value is ApiDef` | Type guard for an `api()` result. |
 | `createFsRouter(dir)` | `→ { routes, match(pathname) }` | The file-system router. `match` returns `{ filePath, pattern, params }`, static routes preferred over dynamic. |
+| `discoverSkills(dir)` | `→ Skill[]` | Reads a `src/skills/**` directory: flat `*.md` files and `<name>/SKILL.md` packages, sorted by name, frontmatter validated. A missing directory is simply no skills. See the [skills guide](/docs/guide/skills). |
+| `parseSkill(source, id, file?)` | `→ Skill` | One skill file: `{ name, description, when?, tools, body, file }`. Throws on missing frontmatter or a missing `description`. |
+| `skillIndex(skills)` | `→ SkillSummary[]` | Drops every body, leaving what the manifest and MCP's resource list carry. |
 | `buildLlmsTxt(config, pages, tools)` | `→ string` | Renders the `llms.txt` body — pages plus the agent tool index (`confirm` tools annotated). |
 | `createAgentAuth(config)` | `→ { policy, identify(req) }` | Web Bot Auth verifier. `identify` returns `{ verified, keyId } | { verified: false } | null` (unsigned). |
 | `strictPolicy(nonce)` | `string → string` | The recommended `Content-Security-Policy` value: `script-src 'nonce-…' 'strict-dynamic'; object-src 'none'; base-uri 'none'`. Compose your own policy on top of it in `csp.header`. |
