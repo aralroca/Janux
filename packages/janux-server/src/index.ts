@@ -4,6 +4,7 @@ export {
   createJanuxServer,
   NAVIGATION_HEADER,
   type CtxBag,
+  type InstanceHooks,
   type ServerOptions,
   type AgentMount,
   type AgentDeps,

@@ -40,6 +40,13 @@ export interface IntentHooks {
   onAudit?: (entry: AuditEntry) => void;
   onProposal?: (proposal: Proposal) => void;
   trackPending: <T>(work: Promise<T>) => Promise<T>;
+  /**
+   * Whether a parked proposal carries a shadow-run diff. `false` for a host
+   * that shows none: computing it means running the intent's body speculatively,
+   * and a body whose effects are not state writes (an `api()` call, a message)
+   * would have happened before the human said yes.
+   */
+  proposalDiff?: boolean;
   /** Dev only: the island this pipeline belongs to, for the error overlay's chain. */
   devUri?: string;
 }
@@ -237,7 +244,9 @@ async function runInvocation(
       span?.setAttributes({ 'janux.proposal.id': proposalId });
       audit(hooks, { ...invoked, input: parsed, ok: true, proposed: true });
 
-      return propose(proposalId, invoked, parsed, approvedRun(proposalId, invoked, id, parsed, run, hooks), hooks, dryRunDiff(def, bag, parsed));
+      const diff = hooks.proposalDiff === false ? undefined : dryRunDiff(def, bag, parsed);
+
+      return propose(proposalId, invoked, parsed, approvedRun(proposalId, invoked, id, parsed, run, hooks), hooks, diff);
     }
     const result = await run();
 

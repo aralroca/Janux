@@ -46,7 +46,7 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 | `onAudit` | `(entry: AuditEntry) => void` | Called for every api() dispatch: tool, origin, guard, ok, and the verified agent key |
 | `runtimeUrl`, `stylesheets`, `favicon`, `title`, `lang`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
 
-Returns `{ fetch(req): Promise<Response>, apiTools, manifestFor, listPages, notFoundPage }` — mount `fetch` on Bun.serve, or anything Request/Response-shaped. `notFoundPage()` renders the app's `_404.tsx` as a standalone document (or `undefined` when the app has none), which is how `janux build` writes `404.html` for a static host.
+Returns `{ fetch(req): Promise<Response>, apiTools, manifestFor, instancesFor, listPages, notFoundPage }` — mount `fetch` on Bun.serve, or anything Request/Response-shaped. `notFoundPage()` renders the app's `_404.tsx` as a standalone document (or `undefined` when the app has none), which is how `janux build` writes `404.html` for a static host. `instancesFor(path, ctx, hooks?)` is the same mounted tree `manifestFor` describes, live instead of serialized — the islands and stores a fresh render mounts, so a caller outside the browser can invoke an intent on one (`janux run` does). Its optional `hooks` carry the audit sink and the `onProposal` a `confirm` guard hands its parked `Proposal` to.
 
 ## Route modules
 
