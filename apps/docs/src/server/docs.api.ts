@@ -136,7 +136,10 @@ export const SECTIONS: SectionDef[] = [
     groups: [
       { label: 'UI patterns', slugs: ['forms', 'optimistic-ui', 'error-handling', 'cross-island-events'] },
       { label: 'Server & project', slugs: ['auth-and-context', 'custom-server', 'csp', 'monorepo-setup'] },
-      { label: 'Agents & MCP', slugs: ['local-model-copilot', 'external-mcp-clients', 'debugging-webmcp', 'agent-evals-in-ci'] },
+      {
+        label: 'Agents & MCP',
+        slugs: ['local-model-copilot', 'external-mcp-clients', 'a2a-and-agent-card', 'debugging-webmcp', 'agent-evals-in-ci'],
+      },
       { label: 'Testing & deployment', slugs: ['testing-components', 'deploying', 'adapters', 'vercel', 'docker', 'sentry'] },
     ],
   },

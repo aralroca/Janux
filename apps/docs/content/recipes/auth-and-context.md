@@ -273,4 +273,4 @@ A Web Bot Auth caller ([`agents`](/docs/guide/agent-and-copilot)) is cross-site 
 
 So the exemption cannot be borrowed. Only the signature counts: `x-janux-origin: agent` is a free-to-type hint about which guard rules apply, never a claim of identity, and a signature that fails to verify buys nothing — the request is refused as forgery.
 
-`/_janux/mcp` sits outside the check for the same reason: external MCP clients are cross-site by definition and authenticate with a bearer token ([`mcpAuth`](/docs/recipes/external-mcp-clients)), not with an ambient cookie. There is no browser to trick into sending a credential it holds.
+`/_janux/mcp` and `/_janux/a2a` sit outside the check for the same reason: external MCP and A2A clients are cross-site by definition and authenticate with a bearer token ([`mcpAuth`](/docs/recipes/external-mcp-clients)), not with an ambient cookie. There is no browser to trick into sending a credential it holds.

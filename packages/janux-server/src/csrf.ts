@@ -36,10 +36,10 @@ const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
  *
  * Listed positively rather than as "`/_janux/*` except…" because the rest of that
  * namespace is reads — the manifest, `.md` projections, the runtime script — and
- * `/_janux/mcp` is an API for *external* MCP clients, which are cross-site by
- * definition and authenticate with a bearer token (`mcpAuth`) instead of an
- * ambient cookie. Nothing there is forgeable, and a sweep would only have to
- * carve them back out one by one.
+ * `/_janux/mcp` and `/_janux/a2a` are APIs for *external* agents, which are
+ * cross-site by definition and authenticate with a bearer token (`mcpAuth`)
+ * instead of an ambient cookie. Nothing there is forgeable, and a sweep would
+ * only have to carve them back out one by one.
  */
 const INVOCATION_PATHS = ['/_janux/api/', '/_janux/approve', '/_janux/reject', '/_janux/agent', '/_janux/llm'];
 

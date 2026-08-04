@@ -25,6 +25,35 @@ export function auditManifest(manifest: ManifestLike): VerifyFinding[] {
     }));
 }
 
+/**
+ * Contract checks over the A2A surface (`/.well-known/agent-card.json`).
+ *
+ * The card is generated from the same `api()` tools everything else is, so
+ * these do not re-check derivation — they check that it is still happening. A
+ * skill the app does not have means somebody started maintaining the card by
+ * hand, which is the exact failure the card exists to make impossible; and an
+ * outside agent has no page to fall back on, so a tool it is offered without a
+ * description is a tool it can only guess at.
+ */
+export function auditAgentCard(
+  card: { skills: { id: string; description: string; tags: string[] }[] },
+  tools: ReadonlySet<string>,
+): VerifyFinding[] {
+  const advertised = card.skills.filter((skill) => skill.tags.includes('tool'));
+  const unknown = advertised
+    .filter((skill) => !tools.has(`api.${skill.id}`))
+    .map((skill) => ({
+      level: 'error' as const,
+      tool: skill.id,
+      message: 'the agent card advertises a tool this app does not have — the card is not derived from the app',
+    }));
+  const undescribed = advertised
+    .filter((skill) => tools.has(`api.${skill.id}`) && !skill.description)
+    .map((skill) => ({ level: 'error' as const, tool: skill.id, message: 'missing description (advertised on the agent card)' }));
+
+  return [...unknown, ...undescribed];
+}
+
 function dedupeFindings(findings: VerifyFinding[]): VerifyFinding[] {
   const seen = new Set<string>();
 
@@ -144,12 +173,13 @@ export function auditSkills(skills: readonly Skill[], tools: ReadonlySet<string>
   }));
 }
 
-function report(findings: VerifyFinding[], skillCount = 0): void {
+function report(findings: VerifyFinding[], skillCount = 0, cardSkills = 0): void {
   const errors = findings.filter((finding) => finding.level === 'error').length;
   const skillsOk = skillCount > 0 ? `, and ${skillCount} skill(s) name only tools that exist` : '';
+  const cardOk = `, and the agent card advertises ${cardSkills} skill(s) the app really has`;
 
   if (findings.length === 0) {
-    console.log(`janux verify: agent surface OK — every reachable tool has a description${skillsOk}.`);
+    console.log(`janux verify: agent surface OK — every reachable tool has a description${skillsOk}${cardOk}.`);
 
     return;
   }
@@ -172,6 +202,14 @@ function memoized(manifestFor: (path: string) => Promise<unknown>): (path: strin
   };
 }
 
+type CardSkills = Parameters<typeof auditAgentCard>[0];
+
+async function agentCardOf(server: ReturnType<typeof createJanuxServer>): Promise<CardSkills> {
+  const response = await server.fetch(new Request('http://localhost/.well-known/agent-card.json'));
+
+  return response.json() as Promise<CardSkills>;
+}
+
 export async function verify({ root }: CliCommand): Promise<void> {
   // A check must not run the app's background jobs — see `ProdOptions`.
   const options = await prodServerOptions(root, undefined, { schedules: false });
@@ -181,8 +219,12 @@ export async function verify({ root }: CliCommand): Promise<void> {
   const skills = options.skills ?? [];
   const surface = await collectFindings(patterns, manifestFor);
   const complete = !surface.some((finding) => finding.level === 'warn');
-  const findings = [...surface, ...auditSkills(skills, await knownTools(patterns, manifestFor), complete)];
+  const tools = await knownTools(patterns, manifestFor);
+  // Read through the endpoint an outside agent reads, not through an internal
+  // call: what this checks is what a client is actually served.
+  const card = await agentCardOf(server);
+  const findings = [...surface, ...auditSkills(skills, tools, complete), ...auditAgentCard(card, tools)];
 
-  report(findings, skills.length);
+  report(findings, skills.length, card.skills.length);
   if (findings.some((finding) => finding.level === 'error')) process.exitCode = 1;
 }

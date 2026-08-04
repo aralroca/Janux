@@ -374,6 +374,24 @@
         "vite": "^8.1.5",
       },
     },
+    "examples/a2a-buyer": {
+      "name": "janux-example-a2a-buyer",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
+    "examples/a2a-supplier": {
+      "name": "janux-example-a2a-supplier",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/agent-evals": {
       "name": "janux-example-agent-evals",
       "version": "0.2.1",
@@ -2246,6 +2264,10 @@
     "janux-bench-runtime-stress-shared": ["janux-bench-runtime-stress-shared@workspace:benchmarks/runtime-stress"],
 
     "janux-docs": ["janux-docs@workspace:apps/docs"],
+
+    "janux-example-a2a-buyer": ["janux-example-a2a-buyer@workspace:examples/a2a-buyer"],
+
+    "janux-example-a2a-supplier": ["janux-example-a2a-supplier@workspace:examples/a2a-supplier"],
 
     "janux-example-agent-evals": ["janux-example-agent-evals@workspace:examples/agent-evals"],
 

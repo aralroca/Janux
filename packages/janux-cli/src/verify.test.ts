@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { component, intent, jsx, schema, str } from 'janux';
 import { api, createJanuxServer, parseSkill } from '@janux/server';
-import { auditManifest, auditSkills, collectFindings, knownTools } from './verify';
+import { auditAgentCard, auditManifest, auditSkills, collectFindings, knownTools } from './verify';
 
 const apis = {
   described: api({
@@ -155,6 +155,40 @@ describe('a tool list nobody could complete', () => {
 
   it('still fails the build when every route rendered', () => {
     expect(auditSkills([lying], new Set(['bare-cart.add']))[0]!.level).toBe('error');
+  });
+});
+
+/**
+ * The A2A surface: the card is derived, so what `janux verify` can still catch
+ * is the day it stops being — a skill the app no longer has, and a description
+ * an outside agent would read as the whole documentation of a tool.
+ */
+describe('auditAgentCard', () => {
+  const tools = new Set(['api.shop.described', 'bare-cart.add']);
+  const card = (skills: { id: string; description: string; tags: string[] }[]) => ({ skills });
+
+  it('passes a card whose tool skills all exist and are described', () => {
+    expect(auditAgentCard(card([{ id: 'shop.described', description: 'Search things', tags: ['tool', 'auto'] }]), tools)).toEqual([]);
+  });
+
+  it('errors on an advertised tool the app does not have', () => {
+    const findings = auditAgentCard(card([{ id: 'shop.invented', description: 'x', tags: ['tool', 'auto'] }]), tools);
+
+    expect(findings[0]).toEqual({
+      level: 'error',
+      tool: 'shop.invented',
+      message: 'the agent card advertises a tool this app does not have — the card is not derived from the app',
+    });
+  });
+
+  it('errors on a tool advertised to outside agents with no description at all', () => {
+    const findings = auditAgentCard(card([{ id: 'shop.described', description: '', tags: ['tool', 'auto'] }]), tools);
+
+    expect(findings[0]!.message).toContain('missing description');
+  });
+
+  it('leaves procedure skills to the skill audit, which reads their bodies', () => {
+    expect(auditAgentCard(card([{ id: 'skill:refund', description: 'How to refund.', tags: ['procedure'] }]), tools)).toEqual([]);
   });
 });
 

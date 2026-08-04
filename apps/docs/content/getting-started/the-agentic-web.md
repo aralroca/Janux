@@ -28,6 +28,7 @@ The good news is that the Agentic Web is standardizing in the open, and the laye
 | Layer | Standard | What Janux does |
 |---|---|---|
 | Tools over HTTP | **MCP** (Model Context Protocol) | A real, stateless MCP server at `/_janux/mcp`, generated from your `api()` functions. Dual-era: negotiates `2026-07-28` and `2025-06-18`. |
+| Agent to agent | **A2A** (Agent2Agent) | A derived `/.well-known/agent-card.json` and a JSON-RPC endpoint at `/_janux/a2a`, over the same pipeline and the same guards as MCP — a `confirm` guard arrives as `TASK_STATE_INPUT_REQUIRED`. See [A2A and the agent card](/docs/recipes/a2a-and-agent-card). |
 | Tools in the browser | **WebMCP** (`document.modelContext`) | Every mounted intent registers itself the moment its island mounts, so browser agents and the DevTools panel see it. Polyfilled where the API is missing. |
 | Discovery | **`llms.txt`** + Markdown projections | An opt-in index at `/llms.txt` (dynamic routes expanded via `staticParams`), and any page readable as Markdown by appending `.md`. |
 | Identity | **Web Bot Auth** (RFC 9421) | Signed agent requests verified per call, under an `observe` or `require` policy. |

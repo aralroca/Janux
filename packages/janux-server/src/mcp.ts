@@ -1,5 +1,6 @@
 import { toJsonSchema, type Ctx, type GuardValue } from 'janux';
-import { resolveApiGuard, type ApiTool } from './api';
+import type { ApiTool } from './api';
+import { callableTools, refuseUnauthenticated, type HostedAuth } from './agent-surface';
 import { mcpLandingPage } from './mcp-landing';
 import type { Skill } from './skills';
 import { decorateResult, discoverResult, modernGate } from './mcp-modern';
@@ -9,14 +10,12 @@ import { decorateResult, discoverResult, modernGate } from './mcp-modern';
  * streamable HTTP (JSON-RPC 2.0, stateless — a fresh logical server per
  * request, no session affinity). It advertises the app's `api()` functions as
  * tools and its pages as resources, generated from the app — zero drift.
+ *
+ * Who may connect and what they are told exists come from `agent-surface.ts`,
+ * shared with the A2A endpoint next door.
  */
 
-export interface McpAuth {
-  /** Verifies a bearer token; null → 401 with WWW-Authenticate. */
-  verify(token: string, req: Request): Promise<unknown | null> | unknown | null;
-  /** Advertised in WWW-Authenticate resource metadata. */
-  resourceMetadataUrl?: string;
-}
+export type McpAuth = HostedAuth;
 
 export interface McpDeps {
   serverName: string;
@@ -53,23 +52,6 @@ function toolDescriptor(tool: ApiTool, guard: GuardValue) {
     inputSchema: tool.input ? toJsonSchema(tool.input) : { type: 'object', properties: {} },
     annotations: guard === 'confirm' ? { requiresApproval: true } : undefined,
   };
-}
-
-/**
- * What this caller may be told exists — the same answer `apiManifestTools`
- * gives the app's own pages.
- *
- * Listing every tool and refusing the forbidden ones at call time is not a
- * gate: the name, the description and the input schema of a tool an agent may
- * never call were handed to it anyway, which is exactly what `forbidden`
- * exists to prevent. The guard is resolved once per listing, like
- * `apiManifestTools` and `toolsFor` do it, so a guard that answers differently
- * on each call cannot pass the filter and then be advertised as forbidden.
- */
-function callableTools(tools: ApiTool[], ctx: Ctx): { tool: ApiTool; guard: GuardValue }[] {
-  return tools
-    .map((tool) => ({ tool, guard: resolveApiGuard(tool, ctx, 'agent') }))
-    .filter(({ guard }) => guard !== 'forbidden');
 }
 
 function pageUri(path: string): string {
@@ -157,15 +139,6 @@ async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx): Promise<R
   }
 }
 
-function unauthorized(auth?: McpAuth): Response {
-  const metadata = auth?.resourceMetadataUrl ? `, resource_metadata="${auth.resourceMetadataUrl}"` : '';
-
-  return new Response(null, {
-    status: 401,
-    headers: { 'www-authenticate': `Bearer realm="janux-mcp"${metadata}` },
-  });
-}
-
 export function createMcpEndpoint(deps: McpDeps) {
   return async function handleMcp(req: Request, ctx: Ctx): Promise<Response> {
     if (req.method === 'GET') {
@@ -186,13 +159,9 @@ export function createMcpEndpoint(deps: McpDeps) {
       });
     }
     if (req.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
-    if (deps.auth) {
-      const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-      const identity = token ? await deps.auth.verify(token, req) : null;
+    const refused = await refuseUnauthenticated(req, ctx, 'janux-mcp', deps.auth);
 
-      if (!identity) return unauthorized(deps.auth);
-      (ctx as any).mcpIdentity = identity;
-    }
+    if (refused) return refused;
     const body = (await req.json().catch(() => undefined)) as RpcRequest | RpcRequest[] | undefined;
 
     if (!body) return Response.json(rpcError(null, -32700, 'Parse error'), { status: 400 });

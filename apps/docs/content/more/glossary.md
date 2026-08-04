@@ -49,6 +49,8 @@ description: "The vocabulary this documentation uses: bifacial component, island
 
 **Hosted MCP endpoint** — `/_janux/mcp`: a real, stateless MCP server generated from the app, so an external client (Claude Code, CI, any agent) drives the same tools by URL.
 
+**Agent card** — `/.well-known/agent-card.json`: the [A2A](https://a2a-protocol.org/) discovery document, derived from the app's `api()` tools and skills (never written by hand) and served next to the A2A endpoint at `/_janux/a2a`.
+
 **llms.txt** — an opt-in markdown index at `/llms.txt`: every page (dynamic routes enumerated by `staticParams`) and every server tool, with approval-gated ones annotated.
 
 **Query cache** — `useQuery` / `mutation` / `QueryClient` from `janux/query`: server state with staleness, background revalidation and optimistic rollback. Component state stays in `schema`.

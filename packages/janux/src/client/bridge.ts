@@ -188,6 +188,10 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
   const { registry } = mount;
   // api() proposals mirrored from the server: their settlement is an HTTP call.
   const remoteProposals = new Set<string>();
+  // Proposals this page has already settled. Without it, a second approval of
+  // a locally-settled id would look exactly like a token parked elsewhere —
+  // and be forwarded to the server instead of refused where it is already known.
+  const settledHere = new Set<string>();
 
   return {
     async read(uri) {
@@ -261,9 +265,17 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
     },
 
     async approve(id) {
+      if (settledHere.has(id)) throw new Error(`Janux: unknown proposal "${id}"`);
       const proposal = proposals.get(id);
 
-      if (!proposal) throw new Error(`Janux: unknown proposal "${id}"`);
+      // Never seen here: a call an agent parked from somewhere else entirely —
+      // over MCP, or over A2A from another app — and settled *on this page*
+      // because the human who decides is on this site, not wherever the request
+      // came from. Only the server can tell a stale token from a foreign one
+      // (it holds the vault and the key), so refusing locally would be the
+      // client guessing at an answer it does not have.
+      if (!proposal) return postJson('/_janux/approve', { id }, false);
+      settledHere.add(id);
       proposals.delete(id);
       if (remoteProposals.delete(id)) return settleApiProposal(proposal);
       const [component, intentName] = splitTool(proposal.tool);
@@ -292,7 +304,10 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
     },
 
     reject(id) {
-      if (remoteProposals.delete(id)) rejectApiProposal(id);
+      // Same two cases as `approve`: a mirrored api() proposal, or one this page
+      // never saw. Both live on the server, and both are dropped there.
+      if (remoteProposals.delete(id) || !(proposals.has(id) || settledHere.has(id))) rejectApiProposal(id);
+      settledHere.add(id);
       // Dev only: a bare Map delete is invisible, and the devtools Proposals tab must follow it.
       if (import.meta.env?.DEV) document.dispatchEvent(new CustomEvent('janux:proposal-settled', { detail: id }));
 

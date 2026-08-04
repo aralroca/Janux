@@ -25,6 +25,8 @@ import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from 
 import { createResponseCache } from './response-cache';
 import { createHttpHandlers, readBodyWithin, type HandlerModule } from './http-handlers';
 import { createMcpEndpoint, type McpAuth } from './mcp';
+import { A2A_PATH, createA2aEndpoint } from './a2a';
+import { AGENT_CARD_PATHS } from './a2a-card';
 import { skillIndex, type Skill } from './skills';
 import { handleScheduleTick, type SchedulesConfig } from './schedules';
 import { pageMarkdown } from './md-projection';
@@ -807,6 +809,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
       () => record.execute(),
     );
 
+    // A remote agent may be waiting on the A2A task that mirrors this proposal.
+    // Its outcome is this one — reported, never re-executed.
+    a2aEndpoint.settled(record.id, { ok: true, result });
+
     return json({ ok: true, result });
   };
 
@@ -870,6 +876,21 @@ export function createJanuxServer(options: ServerOptions = {}) {
     readPage: readPageMarkdown,
     skills,
     auth: options.mcpAuth,
+  });
+
+  /**
+   * The same app, one protocol over: A2A gets `invokeTool` — the identical
+   * seam MCP and the copilot loop call — so a tool is listed, refused, parked
+   * and audited the same way whichever protocol asked for it.
+   */
+  const a2aEndpoint = createA2aEndpoint({
+    serverName: options.title ?? 'janux-app',
+    description: options.llmsTxt?.description,
+    tools: apiTools,
+    invoke: (tool, input, ctx) => invokeTool(tool, input, ctx),
+    skills,
+    auth: options.mcpAuth,
+    siteUrl,
   });
 
   const handlePage = (req: Request, pathname: string, kind?: ErrorPageKind, span?: JanuxSpan): Promise<Response> => {
@@ -1057,11 +1078,13 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
       if (body instanceof Response) return body;
       const { id } = body as { id?: unknown };
-      const settled = proposals.reject(typeof id === 'string' ? id : '', sessionOf(req));
+      const token = typeof id === 'string' ? id : '';
+      const settled = proposals.reject(token, sessionOf(req));
 
       // A foreign session must not cancel the owner's pending decision; an
       // unknown token stays the quiet `ok: false` the client mirror expects.
       if ('error' in settled) return settled.error === 'invalid' ? settleRefusal('invalid') : json({ ok: false });
+      a2aEndpoint.settled(token.split('.')[0]!, { ok: false });
 
       return json({ ok: true });
     }
@@ -1110,6 +1133,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
       );
     }
     if (pathname === '/_janux/mcp') return mcpEndpoint(req, await ctxWithAgent(req));
+    if (pathname === A2A_PATH) return a2aEndpoint.handle(req, await ctxWithAgent(req));
+    // Same ctx as the MCP listing: the card is a listing, and a listing built
+    // from the human's grant alone would advertise tools the agent may not spend.
+    if (AGENT_CARD_PATHS.includes(pathname)) return a2aEndpoint.card(req, await ctxWithAgent(req));
     if (pathname.endsWith('.md')) {
       const markdown = await readPageMarkdown(pathname.slice(0, -3) || '/', await resolveCtx(req));
 

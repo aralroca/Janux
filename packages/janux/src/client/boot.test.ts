@@ -644,6 +644,53 @@ describe('bridge api.* server tools', () => {
     expect(client.proposals.has('prop_api_1')).toBe(false);
   });
 
+  /**
+   * The human who settles a `confirm` guard is on the app that owns the tool,
+   * not on whatever parked the call: an agent reaching in over MCP or A2A
+   * leaves a proposal no page here ever mirrored. The bridge forwards it rather
+   * than inventing a refusal — the vault, which holds the key, decides.
+   */
+  it('approves a proposal parked by a remote agent, which this page never mirrored', async () => {
+    respond = () => ({ ok: true, result: { id: 7, shipped: true } });
+    const client = await serveAndBoot();
+    const settled = await client.approve('prop_api_remote.signature');
+
+    expect(settled).toEqual({ id: 7, shipped: true });
+    const request = requests.at(-1)!;
+
+    expect(request.url).toBe('/_janux/approve');
+    expect(JSON.parse(String(request.init.body))).toEqual({ id: 'prop_api_remote.signature' });
+    expect((request.init.headers as any)['x-janux-origin']).toBeUndefined();
+  });
+
+  it('lets the server refuse a token this page cannot judge', async () => {
+    respond = () => ({ ok: false, error: 'proposal token does not match this session and payload' });
+    const client = await serveAndBoot();
+
+    expect(client.approve('prop_api_stolen.signature')).rejects.toThrow('does not match this session');
+  });
+
+  it('rejects a remotely parked proposal on the server too', async () => {
+    respond = () => ({ ok: true, result: true });
+    const client = await serveAndBoot();
+
+    client.reject('prop_api_remote.signature');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(requests.at(-1)!.url).toBe('/_janux/reject');
+  });
+
+  it('still refuses a proposal this page already settled, without asking the server again', async () => {
+    respond = (url) => (url.startsWith('/_janux/api/') ? proposalBody : { ok: true, result: true });
+    const client = await serveAndBoot();
+
+    await client.call('api.payments.transfer', { to: 'Acme' });
+    await client.approve('prop_api_1');
+    const settlements = requests.filter((request) => request.url === '/_janux/approve').length;
+
+    expect(client.approve('prop_api_1')).rejects.toThrow('unknown proposal');
+    expect(requests.filter((request) => request.url === '/_janux/approve')).toHaveLength(settlements);
+  });
+
   it('reject clears the mirrored proposal locally and tells the server', async () => {
     respond = (url) => (url.startsWith('/_janux/api/') ? proposalBody : { ok: true, result: true });
     const client = await serveAndBoot();

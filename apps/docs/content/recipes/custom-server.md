@@ -44,6 +44,8 @@ Anything you don't intercept before it. These paths belong to the framework:
 | `/_janux/approve`, `/_janux/reject` | human-in-the-loop proposal resolution |
 | `/_janux/manifest?path=…` | the page's agent surface (tools, resources, routes) |
 | `/_janux/mcp` | hosted MCP endpoint (JSON-RPC) |
+| `/_janux/a2a` | hosted [A2A endpoint](/docs/recipes/a2a-and-agent-card) (JSON-RPC); a `GET` answers with the agent card |
+| `/.well-known/agent-card.json` | the A2A agent card, derived from the app |
 | `/_janux/agent`, `/_janux/llm` | the copilot mount, when an agent is configured |
 | `/llms.txt` | when `llmsTxt` is configured |
 | `/sitemap.xml`, `/robots.txt` | when `siteUrl` is configured |
