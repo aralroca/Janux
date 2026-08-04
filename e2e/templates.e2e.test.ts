@@ -120,6 +120,20 @@ describe.skipIf(!isBuilt(appRoot('templates/dashboard')))('templates/dashboard i
       await page.waitForSelector('.badge.resolved');
       // …and its maintenance call parked as a proposal instead of executing.
       await page.waitForSelector('.proposal');
+      // TEMPORARY DIAGNOSTIC — remove once the WebKit-on-Linux failure is understood.
+      if ((await page.locator('.maintenance').count()) !== 0) {
+        const board = await (await fetch(`${app.base}/_janux/agent`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ messages: [], path: '/' }),
+        }).catch(() => undefined))?.text();
+
+        console.log('DIAG maintenance text:', await page.locator('.maintenance').allTextContents());
+        console.log('DIAG activity:', await page.locator('.activity li').allTextContents());
+        console.log('DIAG chat:', await page.locator('.chat li').allTextContents());
+        console.log('DIAG proposal:', await page.locator('.proposal p').allTextContents());
+        console.log('DIAG agent probe:', board?.slice(0, 300));
+      }
       expect(await page.locator('.maintenance').count()).toBe(0);
 
       await page.click('.proposal button:has-text("Approve")');
