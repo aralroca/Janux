@@ -141,6 +141,7 @@ describe('generateApp — every path field, not just the remembered ones', () =>
       'src/matchers.ts': 'export const id = (value: string) => value.length > 0;',
       'src/client.ts': 'export {};',
       'src/styles.css': 'body { margin: 0; }',
+      'src/schedules/nightly.ts': 'export default { cron: "@daily", run: () => {} };',
     };
 
     Object.entries(files).forEach(([file, contents]) => {
@@ -182,6 +183,39 @@ describe('generateApp — the WebSocket module', () => {
 
     expect(source).toContain('websocketModule: path("src/ws.ts")');
     expect(source).not.toContain(root);
+  });
+});
+
+describe('generateApp — schedules', () => {
+  function appWithSchedules(): string {
+    const root = mkdtempSync(join(tmpdir(), 'janux-adapter-schedules-'));
+
+    mkdirSync(join(root, 'src/routes'), { recursive: true });
+    mkdirSync(join(root, 'src/schedules/billing'), { recursive: true });
+    writeFileSync(join(root, 'src/routes/index.tsx'), 'export default () => null;');
+    writeFileSync(join(root, 'src/schedules/nightly.ts'), 'export default { cron: "@daily", run: () => {} };\n');
+    writeFileSync(join(root, 'src/schedules/billing/sweep.ts'), 'export default { cron: "@hourly", run: () => {} };\n');
+    writeFileSync(join(root, 'src/schedules/_config.ts'), 'export default {};\n');
+
+    return root;
+  }
+
+  it('inlines every schedule module, the shared _config included', async () => {
+    const root = appWithSchedules();
+    const modules = appModules(await resolveAppConfig(root)).map((file) => toPosix(file.slice(root.length + 1)));
+
+    expect(modules).toContain('src/schedules/nightly.ts');
+    expect(modules).toContain('src/schedules/billing/sweep.ts');
+    expect(modules).toContain('src/schedules/_config.ts');
+  });
+
+  it('records how the deployment fires them, and only when it is not the default', async () => {
+    const root = appWithSchedules();
+    const config = await resolveAppConfig(root);
+
+    expect(generateApp(root, config, '@janux/test', 'http')).toContain("scheduleTrigger: 'http',");
+    expect(generateApp(root, config, '@janux/test', 'process')).not.toContain('scheduleTrigger');
+    expect(generateApp(root, config)).not.toContain('scheduleTrigger');
   });
 });
 

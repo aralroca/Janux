@@ -67,7 +67,9 @@ afterAll(async () => {
 
 describe('capabilities', () => {
   it('declares everything Node can actually do', () => {
-    expect(capabilities).toEqual({ websocket: true, streaming: true, filesystem: true });
+    // A persistent process, so schedules tick in-process rather than waiting
+    // for a platform cron to call in.
+    expect(capabilities).toEqual({ websocket: true, streaming: true, filesystem: true, schedules: 'process' });
   });
 });
 

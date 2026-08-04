@@ -24,6 +24,7 @@ export { registerInstrumentation, type InstrumentationModule } from './instrumen
  * native binding does not exist.
  */
 export { builtFontAssets } from './fonts';
+export { scheduleFiles, scheduleName, scheduleConfigFile, scheduleServerOptions } from './schedules';
 
 export type JanuxPluginOptions = JanuxConfig;
 
@@ -39,6 +40,8 @@ export interface JanuxAppConfig {
   ctxModule?: string;
   matchersModule?: string;
   websocketModule?: string;
+  /** `src/schedules/`, when the app has one — each file is a schedule (see `schedules.ts`). */
+  schedulesDir?: string;
   /** `src/feed.ts`, whose default export is the app's `FeedConfig`. */
   feedModule?: string;
   /** `src/instrumentation.ts`, loaded and `register()`ed before the server serves. */
@@ -142,6 +145,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     ctxModule: optional(resolve(root, 'src/ctx.ts')),
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
     websocketModule: options.websocket ? resolve(root, options.websocket) : optional(resolve(root, 'src/ws.ts')),
+    schedulesDir: optional(resolve(root, 'src/schedules')),
     feedModule: optional(resolve(root, 'src/feed.ts')),
     instrumentationModule: optional(resolve(root, 'src/instrumentation.ts')),
     mcpAuth: options.mcpAuth,

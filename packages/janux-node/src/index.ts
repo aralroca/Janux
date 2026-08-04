@@ -40,7 +40,13 @@ const LAUNCHER = "import './.janux/index.js';\n";
  * asks of a runtime. WebSockets need the `ws` package, which this adapter
  * depends on — the same module `janux dev` already uses.
  */
-export const capabilities: AdapterCapabilities = { websocket: true, streaming: true, filesystem: true };
+export const capabilities: AdapterCapabilities = {
+  websocket: true,
+  streaming: true,
+  filesystem: true,
+  // A Node deployment is a persistent process, so schedules tick in-process.
+  schedules: 'process',
+};
 
 /**
  * Boots a built app. This is what the generated `build/index.js` calls, and it

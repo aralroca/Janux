@@ -35,7 +35,7 @@ import type { JanuxAdapter } from '@janux/cli/adapter';
 export function myPlatform(): JanuxAdapter {
   return {
     name: '@acme/janux-myplatform',
-    capabilities: { websocket: false, streaming: true, filesystem: false },
+    capabilities: { websocket: false, streaming: true, filesystem: false, schedules: 'http' },
     async adapt(builder) {
       await builder.writeEntry({
         imports: ["import { createRequestHandler } from '@janux/cli/adapter';"],
@@ -66,6 +66,9 @@ Every flag is declared, never detected. Janux cannot test whether your platform 
 | `websocket` | can hold a connection open for its lifetime | `src/ws.ts` does not work |
 | `streaming` | can send a body in chunks | streaming SSR and `<Suspense>` arrive all at once, at the end |
 | `filesystem` | has a writable disk while serving | `spoolMultipart()` cannot spool uploads |
+| `schedules` | how it can trigger [`src/schedules/`](/docs/reference/agent-schedules) | `false` — scheduled jobs cannot run at all |
+
+`schedules` is the one flag that is not a boolean, because the honest answer is not yes-or-no: `'process'` when the target has something persistent to hold the tick loop, `'http'` when it has not and the platform's cron must POST `/_janux/schedules/tick`, `false` when it can do neither. Declaring `'http'` is what makes the endpoint exist — and what makes `JANUX_CRON_SECRET` required.
 
 `unsupportedFeatures()` turns the flags plus the app's own shape into the list worth printing — it stays quiet about WebSockets for an app that has none:
 
@@ -183,7 +186,7 @@ export function deno(): JanuxAdapter {
   return {
     name: '@acme/janux-deno',
     // Deno Deploy runs a long-lived isolate with a writable /tmp.
-    capabilities: { websocket: true, streaming: true, filesystem: true },
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'process' },
 
     async adapt(builder) {
       await builder.writeEntry({

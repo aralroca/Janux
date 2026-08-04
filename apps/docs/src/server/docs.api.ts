@@ -115,7 +115,15 @@ export const SECTIONS: SectionDef[] = [
       { label: 'Packages', slugs: ['core-api', 'schema-api', 'server-api', 'agent-api', 'content-api', 'observability-api', 'testing-api'] },
       {
         label: 'Agent harness',
-        slugs: ['agent-memory', 'agent-guardrails', 'agent-workflows', 'agent-rate-limit', 'agent-mcp-client', 'agent-attachments'],
+        slugs: [
+          'agent-memory',
+          'agent-guardrails',
+          'agent-workflows',
+          'agent-schedules',
+          'agent-rate-limit',
+          'agent-mcp-client',
+          'agent-attachments',
+        ],
       },
       { label: 'Reactivity', slugs: ['signal', 'computed', 'watch', 'batch', 'untrack', 'owners', 'for'] },
       { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus', 'i18n-api', 'worker'] },

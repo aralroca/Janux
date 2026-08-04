@@ -83,7 +83,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `@janux/agent`
 
-- **Stable** — `AttachmentError`, `acceptAttachments`, `allowsTool`, `approxTokens`, `callProvider`, `createMemory`, `createMemoryCounterStore`, `createMemoryStorage`, `createPgStorage`, `createRateLimiter`, `createRedisCounterStore`, `createStep`, `createWorkflow`, `createWorkflowRunner`, `defineAgent`, `historyTokenBudget`, `injectionGuard`, `piiFilter`, `resolveModel`, `runProcessors`, `setupCard`, `unicodeNormalizer`
+- **Stable** — `AttachmentError`, `acceptAttachments`, `allowsTool`, `approxTokens`, `callProvider`, `createMemory`, `createMemoryCounterStore`, `createMemoryStorage`, `createPgStorage`, `createRateLimiter`, `createRedisCounterStore`, `createScheduler`, `createStep`, `createWorkflow`, `createWorkflowRunner`, `defineAgent`, `defineSchedule`, `defineScheduleConfig`, `historyTokenBudget`, `injectionGuard`, `isValidCron`, `nextOccurrence`, `piiFilter`, `resolveModel`, `runProcessors`, `setupCard`, `unicodeNormalizer`
 - **Experimental** — `connectMcp`, `createMcpPool`
 - **Internal** — _none_
 

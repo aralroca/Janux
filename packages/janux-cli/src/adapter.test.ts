@@ -29,7 +29,7 @@ function scaffold(): string {
 }
 
 const FIXTURE = join(import.meta.dirname, '__fixtures__/adapter-app');
-const FULL: AdapterCapabilities = { websocket: true, streaming: true, filesystem: true };
+const FULL: AdapterCapabilities = { websocket: true, streaming: true, filesystem: true, schedules: 'process' };
 
 /** What an adapter's generated `.janux/app.ts` hands the handler: modules keyed by absolute path. */
 async function prebuiltFixture() {
@@ -81,9 +81,28 @@ describe('unsupportedFeatures', () => {
     await rm(root, { recursive: true, force: true });
   });
 
+  it('names src/schedules when the target has no way to trigger them', async () => {
+    const root = scaffold();
+
+    mkdirSync(join(root, 'src/schedules'), { recursive: true });
+    writeFileSync(join(root, 'src/schedules/nightly.ts'), 'export default { cron: "@daily", run: () => {} };\n');
+    const gaps = unsupportedFeatures(await resolveAppConfig(root), { ...FULL, schedules: false });
+
+    expect(gaps).toHaveLength(1);
+    expect(gaps[0]).toContain('src/schedules');
+    // An app without schedules loses nothing on the same target.
+    expect(unsupportedFeatures(await resolveAppConfig(scaffold()), { ...FULL, schedules: false })).toEqual([]);
+    await rm(root, { recursive: true, force: true });
+  });
+
   it('warns about buffering and uploads from the capabilities alone', async () => {
     const root = scaffold();
-    const gaps = unsupportedFeatures(await resolveAppConfig(root), { websocket: true, streaming: false, filesystem: false });
+    const gaps = unsupportedFeatures(await resolveAppConfig(root), {
+      websocket: true,
+      streaming: false,
+      filesystem: false,
+      schedules: 'process',
+    });
 
     expect(gaps.join('\n')).toContain('streaming SSR');
     expect(gaps.join('\n')).toContain('spoolMultipart');

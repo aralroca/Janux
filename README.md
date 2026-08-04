@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-10946%20passing-brightgreen" alt="10946 tests passing" />
+  <img src="https://img.shields.io/badge/tests-11024%20passing-brightgreen" alt="11024 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -230,7 +230,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 98 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 99 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -314,7 +314,7 @@ Full gallery with screenshots: **[janux.build/docs/more/templates](https://janux
 | [`human-in-the-loop`](examples/human-in-the-loop) | Who invokes changes what happens: the same `confirm` intent executes on a human click but parks as a Proposal for an agent, with an approvals inbox and an origin-labeled audit trail. |
 | [`with-mcp-url`](examples/with-mcp-url) | The app as a bearer-protected MCP server by URL, with a committed tool contract (`agent-contract.json`) that turns CI red if the agent surface drifts. |
 | [`with-mcp-client`](examples/with-mcp-client) | The outbound direction: the app's agent connects to an external MCP server by URL, filters the remote tools and re-exposes them on its own surface. |
-| [`durable-agent`](examples/durable-agent) | The harness in production shape: Postgres conversation memory that survives restarts, Redis rate limiting, injection guardrails, and a durable two-step workflow. |
+| [`durable-agent`](examples/durable-agent) | The harness in production shape: Postgres conversation memory that survives restarts, Redis rate limiting, injection guardrails, a durable two-step workflow, and a schedule that triggers it and resumes the same run after the process is killed. |
 | [`with-local-llm`](examples/with-local-llm) | The copilot's model runs in the browser over WebGPU (`localLlm()`), with `supportsLocalLlm()` detection, a `serverLlm()` fallback and a live local↔cloud swap. |
 | [`agent-evals`](examples/agent-evals) | `janux eval` as a CI gate: scripted, model-free agent tasks replayed over the real webMCP surface, including a human approval step — plus a broken eval that proves the gate can fail. |
 

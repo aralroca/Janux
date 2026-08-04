@@ -86,6 +86,20 @@ describe('resolveAppConfig src/ctx.ts', () => {
   });
 });
 
+describe('resolveAppConfig schedules directory', () => {
+  it('resolves src/schedules by convention when it exists', async () => {
+    const root = app({});
+
+    mkdirSync(join(root, 'src/schedules'), { recursive: true });
+
+    expect((await resolveAppConfig(root)).schedulesDir).toBe(join(root, 'src/schedules'));
+  });
+
+  it('is undefined without the directory', async () => {
+    expect((await resolveAppConfig(app({}))).schedulesDir).toBeUndefined();
+  });
+});
+
 describe('resolveAppConfig websocket module', () => {
   it('resolves src/ws.ts by convention', async () => {
     const root = app({});

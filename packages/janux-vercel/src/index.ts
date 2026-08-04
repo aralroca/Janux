@@ -16,7 +16,14 @@ export type VercelApp = JanuxApp;
  * to hold a WebSocket open. An app with `src/ws.ts` is told at build time
  * rather than in production.
  */
-export const capabilities: AdapterCapabilities = { websocket: false, streaming: true, filesystem: true };
+export const capabilities: AdapterCapabilities = {
+  websocket: false,
+  streaming: true,
+  filesystem: true,
+  // No persistent process on a function: Vercel Cron POSTs /_janux/schedules/tick
+  // (crons in vercel.json, JANUX_CRON_SECRET as the bearer).
+  schedules: 'http',
+};
 
 /**
  * Vercel's Bun runtime takes a function that default-exports `{ fetch }` — the

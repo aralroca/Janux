@@ -57,7 +57,12 @@ async function write(path: string, contents: string): Promise<void> {
   await writeFile(path, contents);
 }
 
-export function createAdapterBuilder(root: string, config: JanuxAppConfig, name: string): AdapterBuilder {
+export function createAdapterBuilder(
+  root: string,
+  config: JanuxAppConfig,
+  name: string,
+  scheduleTrigger?: 'process' | 'http',
+): AdapterBuilder {
   const copyDir = (from: string, to: string): boolean => {
     if (!existsSync(join(root, from))) return false;
     mkdirSync(join(root, to), { recursive: true });
@@ -72,7 +77,7 @@ export function createAdapterBuilder(root: string, config: JanuxAppConfig, name:
     clientDir: join(root, 'dist/client'),
 
     writeEntry: async (entry) => {
-      await write(join(root, GENERATED_DIR, 'app.ts'), generateApp(root, config, name));
+      await write(join(root, GENERATED_DIR, 'app.ts'), generateApp(root, config, name, scheduleTrigger));
       await write(join(root, GENERATED_DIR, 'entry.ts'), entrySource(entry));
     },
 
@@ -104,6 +109,9 @@ export function createAdapterBuilder(root: string, config: JanuxAppConfig, name:
 /** Resolves the app and runs the adapter over it — what every adapter's CLI does. */
 export async function runAdapter(adapter: JanuxAdapter, root: string): Promise<void> {
   const config = await resolveAppConfig(root);
+  // A target that cannot hold the tick loop gets the http trigger: the endpoint
+  // exists (secret-gated) and no loop ever starts inside a function instance.
+  const trigger = adapter.capabilities.schedules === 'process' ? 'process' : 'http';
 
-  await adapter.adapt(createAdapterBuilder(root, config, adapter.name));
+  await adapter.adapt(createAdapterBuilder(root, config, adapter.name, trigger));
 }

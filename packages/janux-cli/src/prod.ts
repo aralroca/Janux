@@ -12,6 +12,7 @@ import {
   mcpAuthOptions,
   registerInstrumentation,
   resolveAppConfig,
+  scheduleServerOptions,
   shellOptions,
   type JanuxAppConfig,
 } from '@janux/vite/config';
@@ -40,6 +41,12 @@ import {
 export interface PrebuiltApp {
   config: JanuxAppConfig;
   modules: Record<string, Record<string, unknown>>;
+  /**
+   * How this deployment fires schedules, declared by the adapter that generated
+   * it: 'http' where no persistent process exists (serverless), absent/'process'
+   * where one does.
+   */
+  scheduleTrigger?: 'process' | 'http';
 }
 
 /**
@@ -96,7 +103,21 @@ async function optionalModule(load: Loader, file: string | undefined): Promise<R
   return file ? load(file) : undefined;
 }
 
-export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): Promise<ServerOptions> {
+/**
+ * `schedules: false` for a caller that builds this wiring without serving with
+ * it — `janux build`'s prerender and `janux verify`. Mounting background jobs
+ * there would have a build machine claim occurrences from the production store
+ * and run them, which is a charge nobody authorised.
+ */
+export interface ProdOptions {
+  schedules?: boolean;
+}
+
+export async function prodServerOptions(
+  root: string,
+  prebuilt?: PrebuiltApp,
+  options: ProdOptions = {},
+): Promise<ServerOptions> {
   const app = prebuilt?.config ?? (await resolveAppConfig(root));
   const load = moduleLoader(prebuilt);
 
@@ -135,6 +156,7 @@ export async function prodServerOptions(root: string, prebuilt?: PrebuiltApp): P
     ctxFor: ctxModule?.default,
     matchers: matchersModule,
     websocket: websocketModule?.default,
+    schedules: options.schedules === false ? undefined : await scheduleServerOptions(app, load, prebuilt?.scheduleTrigger),
     mcpAuth: mcpAuthOptions(app.mcpAuth),
     agents: app.agents,
     httpHandlers: app.httpHandlersDir ? { dir: app.httpHandlersDir, loadModule: load as any } : undefined,
