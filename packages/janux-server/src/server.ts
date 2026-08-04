@@ -23,6 +23,7 @@ import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from 
 import { createResponseCache } from './response-cache';
 import { createHttpHandlers, readBodyWithin, type HandlerModule } from './http-handlers';
 import { createMcpEndpoint, type McpAuth } from './mcp';
+import { skillIndex, type Skill } from './skills';
 import { handleScheduleTick, type SchedulesConfig } from './schedules';
 import { pageMarkdown } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
@@ -65,6 +66,12 @@ export interface AgentDeps {
   tools: ApiTool[];
   invoke: (tool: string, input: unknown) => Promise<unknown>;
   manifestFor: (path: string) => Promise<unknown>;
+  /**
+   * One skill's body, by name — the on-demand half of `manifest.skills`.
+   * A read, never an invocation: the tools the procedure names are still called
+   * through `invoke`, with their guards.
+   */
+  loadSkill?: (name: string) => string | undefined;
 }
 
 /**
@@ -136,6 +143,12 @@ export interface ServerOptions {
   httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
   /** Bearer verification for the hosted MCP endpoint (`/_janux/mcp`). Absent → open. */
   mcpAuth?: McpAuth;
+  /**
+   * Procedures the model loads on demand — `src/skills/**`, discovered by the
+   * app config layer (`discoverSkills`). Their index rides in every manifest;
+   * their bodies are fetched one at a time. See `skills.ts`.
+   */
+  skills?: Skill[];
   /**
    * Origins allowed to reach the invocation endpoints (`api()`, proposals, the
    * agent loop) besides the app's own — a partner front-end on another host, say.
@@ -341,6 +354,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
   if (options.schedules?.trigger === 'process') options.schedules.mount.start();
   const csp = resolveCsp(options.csp, options.staticExport);
   const apiTools = collectApis(options.apis ?? {});
+  const skills = options.skills ?? [];
   const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
   const httpHandlers = options.httpHandlers
     ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers, cache: options.cache })
@@ -573,7 +587,14 @@ export function createJanuxServer(options: ServerOptions = {}) {
     // (ui_navigate) — patterns only, params stay for the model to fill.
     const routes = [...Object.keys(options.routes ?? {}), ...(router?.routes.map((route) => route.pattern) ?? [])];
 
-    return { ...base, routes, tools: [...base.tools, ...apiManifestTools(apiTools, ctx)] };
+    // The index only. A body in every manifest is the context-window cost that
+    // skills exist to avoid — it is fetched one at a time, by name.
+    return {
+      ...base,
+      routes,
+      tools: [...base.tools, ...apiManifestTools(apiTools, ctx)],
+      ...(skills.length > 0 && { skills: skillIndex(skills) }),
+    };
   };
 
   const manifestFor = async (pathname: string, ctx: Ctx): Promise<unknown> => {
@@ -757,6 +778,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     invoke: (tool, input, ctx) => invokeTool(tool, input, ctx),
     listPages,
     readPage: readPageMarkdown,
+    skills,
     auth: options.mcpAuth,
   });
 
@@ -1009,6 +1031,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
         tools: apiTools,
         invoke: (tool, input) => invokeTool(tool, input, ctx),
         manifestFor: (path) => manifestFor(path, ctx),
+        loadSkill: (name) => skills.find((skill) => skill.name === name)?.body,
       });
     }
 

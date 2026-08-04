@@ -77,7 +77,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `@janux/server`
 
-- **Stable** — `NAVIGATION_HEADER`, `NONCE_HEADER`, `api`, `apiManifestTools`, `buildLlmsTxt`, `collectApis`, `createFsRouter`, `createJanuxServer`, `createResponseCache`, `htmlDocument`, `invokeApi`, `isApi`, `mockApi`, `resetApiMocks`, `revalidatePath`, `revalidateTag`, `strictPolicy`
+- **Stable** — `NAVIGATION_HEADER`, `NONCE_HEADER`, `api`, `apiManifestTools`, `buildLlmsTxt`, `collectApis`, `createFsRouter`, `createJanuxServer`, `createResponseCache`, `discoverSkills`, `htmlDocument`, `invokeApi`, `isApi`, `mockApi`, `parseSkill`, `resetApiMocks`, `revalidatePath`, `revalidateTag`, `skillIndex`, `strictPolicy`
 - **Experimental** — `createAgentAuth`
 - **Internal** — `acceptsType`, `createHttpHandlers`, `formDataWithin`, `matchesType`, `readBodyWithin`, `rejectOversized`, `sniffContentType`, `spoolMultipart`
 

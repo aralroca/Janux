@@ -1,0 +1,34 @@
+{
+  "name": "the whole return, in the order the skill prescribes",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.returns.order",
+      "input": { "id": "A-1002" },
+      "expect": { "result": { "sku": "TSHIRT", "qty": 1, "reason": "wrong-size", "status": "open" } }
+    },
+    {
+      "tool": "api.returns.policy",
+      "input": { "reason": "wrong-size" },
+      "expect": { "result": { "code": "RET-SIZ-2", "restock": true, "windowDays": 14 } }
+    },
+    {
+      "tool": "api.returns.refund",
+      "input": { "orderId": "A-1002", "policyCode": "$steps[1].result.code" },
+      "expect": { "result": { "status": "proposal" } }
+    },
+    {
+      "approve": "$steps[2].result.id",
+      "expect": { "result": { "refunded": 2500, "restockRequired": true, "sku": "TSHIRT", "qty": 1 } }
+    },
+    {
+      "tool": "api.returns.restock",
+      "input": { "sku": "TSHIRT", "qty": 1 },
+      "expect": { "result": { "sku": "TSHIRT", "stock": 41 } }
+    },
+    {
+      "tool": "api.returns.levels",
+      "expect": { "result": { "items": { "$some": { "sku": "TSHIRT", "stock": 41 } } } }
+    }
+  ]
+}

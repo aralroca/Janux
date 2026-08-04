@@ -1,0 +1,29 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.masthead h1 {
+  margin-bottom: 4px;
+}
+
+.hint {
+  color: color-mix(in srgb, currentColor 65%, transparent);
+  line-height: 1.6;
+}
+
+.desk ul {
+  padding-left: 20px;
+  line-height: 1.8;
+}
+
+.note {
+  border-left: 3px solid currentColor;
+  padding-left: 12px;
+}

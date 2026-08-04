@@ -1,0 +1,29 @@
+{
+  "name": "the same return, guessed instead of looked up, never settles",
+  "reset": true,
+  "steps": [
+    {
+      "tool": "api.returns.order",
+      "input": { "id": "A-1002" },
+      "expect": { "result": { "reason": "wrong-size" } }
+    },
+    {
+      "tool": "api.returns.refund",
+      "input": { "orderId": "A-1002", "policyCode": "RET-SIZ-1" },
+      "expect": { "result": { "status": "proposal" } }
+    },
+    {
+      "approve": "$steps[1].result.id",
+      "expect": { "ok": false, "status": 500 }
+    },
+    {
+      "tool": "api.returns.order",
+      "input": { "id": "A-1002" },
+      "expect": { "result": { "status": "open" } }
+    },
+    {
+      "tool": "api.returns.levels",
+      "expect": { "result": { "items": { "$some": { "sku": "TSHIRT", "stock": 40 } } } }
+    }
+  ]
+}

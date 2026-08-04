@@ -157,6 +157,7 @@ export async function prodServerOptions(
     matchers: matchersModule,
     websocket: websocketModule?.default,
     schedules: options.schedules === false ? undefined : await scheduleServerOptions(app, load, prebuilt?.scheduleTrigger),
+    skills: app.skills,
     mcpAuth: mcpAuthOptions(app.mcpAuth),
     agents: app.agents,
     httpHandlers: app.httpHandlersDir ? { dir: app.httpHandlersDir, loadModule: load as any } : undefined,

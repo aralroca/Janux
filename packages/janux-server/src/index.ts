@@ -11,6 +11,7 @@ export {
   type WebSocketUpgrader,
 } from './server';
 export { createFsRouter, type Matcher, type RouteMatch } from './router';
+export { discoverSkills, parseSkill, skillIndex, type Skill, type SkillSummary } from './skills';
 export type { SchedulesMount, SchedulesConfig } from './schedules';
 export type { CacheConfig, CacheDecision } from './cache';
 export { createResponseCache, revalidatePath, revalidateTag, type ResponseCacheConfig } from './response-cache';

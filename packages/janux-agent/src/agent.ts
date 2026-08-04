@@ -9,6 +9,8 @@ import { createRemoteToolbox, type McpAgentConnection, type RemoteToolbox } from
 import { resolveModel, setupCard, type ModelEnv } from './model';
 import { tracedAgentTurn, tracedRound, turnUsageAttributes, type ModelCost } from './tracing';
 import { allowsTool, type ToolFilter } from './tool-filter';
+import { loadSkillBody, loadSkillTools, skillsSection, LOAD_SKILL } from './skills';
+import type { ManifestSkill } from 'janux/manifest';
 import { turnBill } from './usage';
 import { callProvider, type AgentTool, type ChatMessage, type FetchLike, type TokenUsage, type ToolCall } from './providers';
 
@@ -87,9 +89,13 @@ function systemPrompt(config: AgentConfig, manifest: any): string {
     ? `App routes (use ui_navigate to reach any of them; fill [params] with known values): ${routes.join(', ')}`
     : undefined;
 
-  return [config.instructions, SYSTEM_PREAMBLE, `Mounted resources: ${resources}`, routeMap]
+  return [config.instructions, SYSTEM_PREAMBLE, `Mounted resources: ${resources}`, routeMap, skillsSection(manifestSkills(manifest))]
     .filter(Boolean)
     .join('\n\n');
+}
+
+function manifestSkills(manifest: any): ManifestSkill[] {
+  return (manifest.skills ?? []) as ManifestSkill[];
 }
 
 /**
@@ -200,10 +206,12 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       };
       const manifest: any = await deps.manifestFor(body.path ?? '/');
       const remoteTools = toolbox ? await toolbox.tools() : [];
+      const skills = manifestSkills(manifest);
       const tools = [
         ...manifestTools(manifest, config.tools),
         ...CLIENT_TOOL_SPECS.map((spec) => ({ name: spec.name, description: spec.description, input: spec.parameters })),
         ...remoteTools.map(({ name, description, input }) => ({ name, description, input })),
+        ...loadSkillTools(skills),
       ];
       const system = systemPrompt(config, manifest);
       const turn = await turnMessages(body, config.harness, identity).catch((error) => {
@@ -274,10 +282,15 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
           }
           const serverCalls = reply.toolCalls.filter((call) => call.name.startsWith('api.'));
           const remoteCalls = reply.toolCalls.filter((call) => toolbox?.owns(call.name));
-          const uiCalls = reply.toolCalls.filter((call) => !serverCalls.includes(call) && !remoteCalls.includes(call));
+          // Loading a skill is a read the server already holds the answer to: it
+          // never travels to the browser as a ui call, and never runs a tool.
+          const skillCalls = reply.toolCalls.filter((call) => call.name === LOAD_SKILL);
+          const handled = [...serverCalls, ...remoteCalls, ...skillCalls];
+          const uiCalls = reply.toolCalls.filter((call) => !handled.includes(call));
 
           messages.push(...(await toolResults(serverCalls, (call) => deps.invoke(call.name, call.input))));
           messages.push(...(await toolResults(remoteCalls, (call) => toolbox!.call(call.name, call.input))));
+          messages.push(...(await toolResults(skillCalls, async (call) => loadSkillBody(call.input, skills, deps))));
           if (uiCalls.length > 0) return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId, ...billed() });
         }
 
