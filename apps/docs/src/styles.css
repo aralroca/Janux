@@ -751,6 +751,18 @@ pre.shiki .line.highlighted {
   text-decoration: none;
 }
 
+/* ── Images ─────────────────────────────────────────────────────── */
+/* Authored at their intrinsic size — the width/height attributes are there to
+   reserve the box and keep the page from shifting as they load — so they need
+   the containment `pre` and `table` already get: fit the column instead of
+   pushing the whole document sideways. `height: auto` is the half that is easy
+   to forget: without it the attribute keeps the original height and a narrowed
+   picture is squashed. */
+article img {
+  max-width: 100%;
+  height: auto;
+}
+
 /* ── Tables ─────────────────────────────────────────────────────── */
 /* Block + overflow keeps wide tables scrollable instead of clipped. */
 table {
