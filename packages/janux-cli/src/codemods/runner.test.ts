@@ -26,6 +26,13 @@ describe('sourceFiles', () => {
     expect(sourceFiles(root).sort()).toEqual(['src/a.tsx', 'src/deep/b.ts']);
   });
 
+  /** A directory can be named like a source file; handing one to `readFileSync` takes the command down. */
+  it('answers files only, not a directory whose name looks like one', () => {
+    const root = app({ 'src/a.tsx': '', 'src/Widget.tsx/index.ts': '' });
+
+    expect(sourceFiles(root).sort()).toEqual(['src/Widget.tsx/index.ts', 'src/a.tsx']);
+  });
+
   it('never descends into build output or dependencies', () => {
     const root = app({ 'src/a.tsx': '', 'node_modules/x/i.ts': '', 'dist/b.js': '', '.next/c.ts': '' });
 

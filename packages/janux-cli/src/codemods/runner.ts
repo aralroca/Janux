@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { unifiedDiff } from './diff';
 import type { Codemod } from './types';
@@ -17,12 +17,21 @@ const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'build', 'coverage', '
 /** Files a codemod could conceivably read; the rest are assets it has no opinion on. */
 const CANDIDATE = /\.([cm]?[jt]sx?|astro|css|scss|mdx?)$/;
 
-/** Every candidate file under the app root, app-relative and forward-slashed. */
+/**
+ * Every candidate file under the app root, app-relative and forward-slashed.
+ *
+ * Read as names rather than as `Dirent`s: `Dirent.parentPath` is newer than the
+ * Bun floor `engines` declares, and a floor CI exercises is a floor the code has
+ * to hold to. The recursive read already answers root-relative paths, so there
+ * is nothing to rejoin — `statSync` is only asked about the handful that got
+ * past the extension filter, and only so a directory named like a source file
+ * cannot reach `readFileSync` and take the whole command down.
+ */
 export function sourceFiles(root: string): string[] {
-  return readdirSync(root, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile() && CANDIDATE.test(entry.name))
-    .map((entry) => join(entry.parentPath, entry.name).slice(root.length + 1).replaceAll('\\', '/'))
-    .filter((path) => !path.split('/').some((segment) => SKIP_DIRECTORIES.has(segment)));
+  return readdirSync(root, { recursive: true, encoding: 'utf8' })
+    .map((name) => String(name).replaceAll('\\', '/'))
+    .filter((path) => CANDIDATE.test(path) && !path.split('/').some((segment) => SKIP_DIRECTORIES.has(segment)))
+    .filter((path) => statSync(join(root, path)).isFile());
 }
 
 export interface PlannedChange {
