@@ -189,6 +189,11 @@ kbd {
   color: var(--heading);
 }
 
+.top-links a.active {
+  color: var(--heading);
+  font-weight: 600;
+}
+
 .theme-toggle {
   display: flex;
   align-items: center;
@@ -744,6 +749,18 @@ pre.shiki .line.highlighted {
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
+}
+
+/* ── Images ─────────────────────────────────────────────────────── */
+/* Authored at their intrinsic size — the width/height attributes are there to
+   reserve the box and keep the page from shifting as they load — so they need
+   the containment `pre` and `table` already get: fit the column instead of
+   pushing the whole document sideways. `height: auto` is the half that is easy
+   to forget: without it the attribute keeps the original height and a narrowed
+   picture is squashed. */
+article img {
+  max-width: 100%;
+  height: auto;
 }
 
 /* ── Tables ─────────────────────────────────────────────────────── */

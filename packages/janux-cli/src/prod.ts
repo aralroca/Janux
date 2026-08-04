@@ -133,6 +133,7 @@ export async function prodServerOptions(
   const i18nModule = await optionalModule(load, app.i18nModule);
   const middlewareModule = await optionalModule(load, app.middlewareModule);
   const ctxModule = await optionalModule(load, app.ctxModule);
+  const sessionModule = await optionalModule(load, app.sessionModule);
   const matchersModule = await optionalModule(load, app.matchersModule);
   const websocketModule = await optionalModule(load, app.websocketModule);
   const feedModule = await optionalModule(load, app.feedModule);
@@ -154,6 +155,7 @@ export async function prodServerOptions(
     i18n: i18nModule?.default,
     middleware: middlewareModule?.default,
     ctxFor: ctxModule?.default,
+    session: sessionModule?.default,
     matchers: matchersModule,
     websocket: websocketModule?.default,
     schedules: options.schedules === false ? undefined : await scheduleServerOptions(app, load, prebuilt?.scheduleTrigger),

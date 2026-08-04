@@ -15,6 +15,7 @@ export const pay = api({
   input: schema({ total: money() }),
   output: schema({ orderId: str() }),   // validated after run (dev safety net)
   guard: 'confirm',
+  scopes: ['orders:write'],             // authorization: absent from the manifest AND refused, out of scope
   run: ({ input, ctx }) => payments.charge(input.total, ctx.userId),
 });
 ```
@@ -35,7 +36,8 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 | `apis` | `Record<module, moduleExports>` | api() modules |
 | `storeDefs` | `Record<alias, StoreDef>` | Stores available during SSR |
 | `agent` | `AgentMount` | Mounted at `/_janux/agent` |
-| `ctxFor` | `(req) => Ctx` | Auth: builds the per-request context |
+| `ctxFor` | `(req, { session, agent }) => Ctx` | Auth: builds the per-request context. The bag carries what the framework already verified — the session cookie's payload and the Web Bot Auth identity |
+| `session` | `SessionStore` | Signed session cookies (`createSessionStore`); the server reads them and carries a rotated cookie out on the response |
 | `llmsTxt` | `{ title?, description? }` | Opt-in: serves `GET /llms.txt` — pages + agent tools index (`confirm` tools annotated "requires human approval"; dynamic routes expanded via `staticParams`) |
 | `agents` | `{ webBotAuth: { keys }, policy? }` | Web Bot Auth agent identity — see below |
 | `websocket` | `{ path, data?, open?, message?, close?, drain? }` | First-class WebSocket endpoint (`WebSocketConfig`): `janux dev`/`janux start` upgrade `path` themselves; a custom `Bun.serve` uses the returned `serve(req, bunServer)` + `websocket` handlers — see [custom server](/docs/recipes/custom-server). The pure `fetch` answers `426` on `path` |
@@ -44,7 +46,7 @@ Conventions: files live in `src/server/<module>.api.ts`; tool names become `api.
 | `onAudit` | `(entry: AuditEntry) => void` | Called for every api() dispatch: tool, origin, guard, ok, and the verified agent key |
 | `runtimeUrl`, `stylesheets`, `favicon`, `title`, `lang`, `islandModules` | | Shell wiring (the CLI/plugin set these for you) |
 
-Returns `{ fetch(req): Promise<Response>, apiTools, manifestFor, listPages, notFoundPage }` — mount `fetch` on Bun.serve, or anything Request/Response-shaped. `notFoundPage()` renders the app's `_404.tsx` as a standalone document (or `undefined` when the app has none), which is how `janux build` writes `404.html` for a static host.
+Returns `{ fetch(req): Promise<Response>, apiTools, manifestFor, instancesFor, listPages, notFoundPage }` — mount `fetch` on Bun.serve, or anything Request/Response-shaped. `notFoundPage()` renders the app's `_404.tsx` as a standalone document (or `undefined` when the app has none), which is how `janux build` writes `404.html` for a static host. `instancesFor(path, ctx, hooks?)` is the same mounted tree `manifestFor` describes, live instead of serialized — the islands and stores a fresh render mounts, so a caller outside the browser can invoke an intent on one (`janux run` does). Its optional `hooks` carry the audit sink and the `onProposal` a `confirm` guard hands its parked `Proposal` to.
 
 ## Route modules
 
@@ -196,6 +198,32 @@ const vary = NAVIGATION_HEADER;
 If you cache pages at the edge, **vary on that header** — a navigation response and a first-load response are not interchangeable.
 
 > **Warning:** the origin header is not a security boundary — `human` is the default and the *most privileged* origin by design. Authentication belongs in `ctxFor`; guards control the agent, not the network.
+
+## Sessions (createSessionStore)
+
+Janux authenticates nobody — `issue()` is called by *your* login handler, once *your* provider decided who this is. What the store owns is the cookie: signed, expiring, rotating.
+
+```ts title="src/session.ts"
+import { createSessionStore } from '@janux/server';
+
+export default createSessionStore<{ userId: string; scopes: string[] }>({
+  secret: process.env.SESSION_SECRET!,
+  ttlMs: 7 * 24 * 60 * 60_000,   // default: 7 days
+  rotateAfterMs: 12 * 60 * 60_000, // default: half the ttl
+});
+```
+
+| Member | Signature | What it does |
+|---|---|---|
+| `issue(data)` | `→ Set-Cookie string` | A new session. Call it on login **and on privilege change** — a fresh value is what defeats fixation |
+| `read(req)` | `→ { data, expiresAt, renew? } \| undefined` | Verified and unexpired, or nothing. `renew` is present past `rotateAfterMs` |
+| `clear()` | `→ Set-Cookie string` | Ends it browser-side |
+
+Options: `secret` (required), `name` (`janux_session`), `ttlMs`, `rotateAfterMs`, `path`, `domain`, `sameSite` (`Lax`), `secure` (`true`), `now` (injectable clock).
+
+`src/session.ts` is the convention — `janux dev` and `janux start` pass its default export as the `session` option, which is what makes rotation automatic: the server reads the cookie once per request, hands the payload to `ctxFor`, and appends the renewed `Set-Cookie` to whatever response comes back. Nothing is stored server-side, so the payload is **signed, not encrypted** (an id and a grant, never a secret), and a replaced cookie stays valid until its own expiry.
+
+The store mints **no CSRF token**: every mutating `/_janux/*` request is already refused cross-site by the invocation pipeline, before a handler runs. See the [auth recipe](/docs/recipes/auth-and-context).
 
 ## Verified agent identity (Web Bot Auth)
 
