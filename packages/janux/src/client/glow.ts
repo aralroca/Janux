@@ -31,11 +31,17 @@ export function emitToolTarget(detail: ToolTargetDetail): void {
 
 let suspensions = 0;
 
+/** Whether a richer feedback layer currently holds the painting claim. Shared by every built-in layer. */
+export function feedbackSuspended(): boolean {
+  return suspensions > 0;
+}
+
 /**
  * Hands the agent feedback over to a richer layer (status chips, an animated
- * ring, a backdrop veil): the events keep flowing, but the built-in glow stops
- * painting so the two never highlight the same element at once. Returns a
- * resume function; nested suspensions each hold their own claim.
+ * ring, a backdrop veil): the events keep flowing, but the built-in layers —
+ * the glow and the simulated cursor — stop painting so two layers never
+ * highlight the same element at once. Returns a resume function; nested
+ * suspensions each hold their own claim.
  */
 export function suspendAgentGlow(): () => void {
   let released = false;
@@ -53,7 +59,7 @@ export function suspendAgentGlow(): () => void {
    view styles (e.g. a button that sets its own box-shadow). */
 const GLOW_CSS = `
 .${GLOW_CLASS} {
-  box-shadow: 0 0 0 3px var(--janux-glow-ring, rgba(124, 58, 237, 0.55)),
+  box-shadow: 0 0 0 3px var(--janux-glow-ring, rgba(37, 99, 235, 0.55)),
     0 0 var(--janux-glow-spread, 34px) 4px var(--janux-glow-halo, rgba(34, 211, 238, 0.35)) !important;
   border-radius: var(--janux-glow-radius, 18px);
   transition: box-shadow 0.25s;
@@ -145,9 +151,26 @@ export function glowTargetFor(tool: string, input?: unknown, scope: ParentNode =
   return isPainted(island) ? island : undefined;
 }
 
+/** Long enough for the frame on which a declared selector's target mounts (a React Flow node). */
+const DECLARED_TARGET_RETRY_MS = 32;
+const DECLARED_TARGET_TRIES = 10;
+
+/**
+ * Paints a declared `glowTarget` selector, waiting out the tick on which the
+ * DOM the intent created mounts — pointing at an element on `ok` would be too
+ * early, so the selector is retried for a few frames and then given up on.
+ */
+export function withDeclaredTarget(selector: string, paint: (el: Element) => void, tries = DECLARED_TARGET_TRIES): void {
+  const el = document.querySelector(selector);
+
+  if (el) return paint(el);
+  if (tries > 0) setTimeout(() => withDeclaredTarget(selector, paint, tries - 1), DECLARED_TARGET_RETRY_MS);
+}
+
 /**
  * Highlights what an agent is operating (gui-agent style): listens to
- * `janux:tool-call` bridge events and glows the matching island, plus
+ * `janux:tool-call` bridge events and glows the matching island — or, when the
+ * intent declares a `glowTarget`, the exact element the run created — plus
  * `janux:tool-target` for the elements the DOM-fallback tools touch. Returns a
  * disposer. `boot({ glow: true })` wires this for you.
  */
@@ -164,7 +187,7 @@ export function enableAgentGlow(options: GlowOptions = {}): () => void {
     if (element) glowElement(element, TARGET_GLOW_MS);
   };
   const onToolCall = (event: Event): void => {
-    const { tool, input, phase, guard, approval } = (event as CustomEvent).detail ?? {};
+    const { tool, input, phase, guard, approval, glowTarget, glowTargetPending } = (event as CustomEvent).detail ?? {};
 
     // confirm-guarded calls only PROPOSE — nothing executes, nothing glows.
     // The glow fires on approval, when the action actually runs.
@@ -174,12 +197,16 @@ export function enableAgentGlow(options: GlowOptions = {}): () => void {
 
       lit.delete(tool);
       if (painted) setTimeout(() => painted.classList.remove(GLOW_CLASS), duration);
+      // The DOM a declared `glowTarget` names only exists after the run — a
+      // React Flow node, a row an intent appended — so it is lit on `ok`.
+      if (phase === 'ok' && glowTarget && !suspensions) withDeclaredTarget(glowTarget, (el) => glowElement(el, duration));
 
       return;
     }
     if (suspensions) return;
-    // This layer is a class toggle: it can't wait for DOM an intent creates, so
-    // it keeps lighting the island even when the call declares a `glowTarget`.
+    // A declared target arrives with `ok`: guessing from the view now would
+    // ring the island first and the intent's real target a moment later.
+    if (glowTargetPending) return;
     const target = tool ? glowTargetFor(tool, input) : undefined;
 
     if (!target) return;

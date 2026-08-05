@@ -5,4 +5,4 @@
  */
 export * from 'janux';
 export { jsxDEV } from 'janux/jsx-dev-runtime';
-export { toDomNodes, morph, injectGlowStyles, glowElement } from 'janux/client';
+export { toDomNodes, morph, injectGlowStyles, glowElement, injectCursorStyles, moveCursorTo } from 'janux/client';
