@@ -35,17 +35,24 @@ export const IncidentBoard = component({
     }),
   },
 
-  view: ({ state, board }: any) => (
-    <section class="board">
-      <h2>Incidents</h2>
-      <ul class="incidents">
-        {(board?.incidents ?? []).map((incident: any) => (
-          <li key={incident.id} class={state.focused === incident.id ? 'incident focused' : 'incident'}>
-            <strong>{incident.id}</strong> — {incident.service} (sev {incident.severity}), {incident.status}
-            <span class="summary">{incident.summary}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  ),
+  // Sources arrive in the `sources` bag and expose `.value`/`.pending`/`.error`
+  // — reading `board.incidents` off the top-level bag instead silently yields
+  // undefined, and a `?? []` turns that into an empty board nobody questions.
+  view: ({ state, sources }: any) => {
+    const incidents = (sources.board.value?.incidents ?? []) as any[];
+
+    return (
+      <section class="board">
+        <h2>Incidents</h2>
+        <ul class="incidents">
+          {incidents.map((incident) => (
+            <li key={incident.id} class={state.focused === incident.id ? 'incident focused' : 'incident'}>
+              <strong>{incident.id}</strong> — {incident.service} (sev {incident.severity}), {incident.status}
+              <span class="summary">{incident.summary}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  },
 });

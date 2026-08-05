@@ -70,8 +70,14 @@ describe('examples/with-channels SSR', () => {
     const html = await home.text();
 
     expect(home.status).toBe(200);
-    expect(html).toContain('INC-41');
     expect(html).toContain('/_janux/channels/webhook');
+    // The RENDERED list, not the resume payload: sources load before the view
+    // on SSR, so an empty <ul> beside a payload full of incidents means the
+    // view is reading the source wrong and `?? []` is hiding it.
+    const list = html.slice(html.indexOf('<ul class="incidents">'), html.indexOf('</ul>'));
+
+    expect(list).toContain('INC-41');
+    expect(list).toContain('checkout');
   });
 });
 
