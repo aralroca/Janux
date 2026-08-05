@@ -401,7 +401,7 @@ Everything is optional — the defaults are the [conventional layout](#project-c
 | `agentModule` | `src/agent.ts` | `defineAgent()` default export; absent → the built-in default agent |
 | `storesModule` | `src/stores.ts` | Store defs available during SSR |
 | `websocket` | `src/ws.ts` | Module whose default export is the first-class WebSocket endpoint (`{ path, ...handlers }`) — `janux dev` and `janux start` upgrade it themselves ([custom server](/docs/recipes/custom-server#first-class-websockets)) |
-| `mcpAuth` | off | `{ tokenEnv?, token?, resourceMetadataUrl? }` — bearer-protect `POST /_janux/mcp`; `tokenEnv` names the env var read at boot and wins over the literal `token`. The GET landing stays public and prints `$TOKEN`-placeholder connect commands |
+| `mcpAuth` | off | `{ tokenEnv?, token?, resourceMetadataUrl? }` — bearer-protect `POST /_janux/mcp` and `POST /_janux/a2a`; `tokenEnv` names the env var read at boot and wins over the literal `token`. The GET landing stays public and prints `$TOKEN`-placeholder connect commands |
 | `agents` | off | `{ webBotAuth: { keys }, policy? }` — Web Bot Auth agent verification (see [Server API](/docs/reference/server-api)) |
 
 ## output

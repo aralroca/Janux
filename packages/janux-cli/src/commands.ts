@@ -57,15 +57,17 @@ export async function viteOptions(root: string, mode: ViteMode): Promise<Record<
 }
 
 /**
- * Everything `janux dev` serves beyond the app itself. The MCP endpoint is on
- * the list because it is the URL you hand to an external client, and a URL
- * nobody prints is a URL nobody uses.
+ * Everything `janux dev` serves beyond the app itself. The MCP and A2A
+ * endpoints are on the list because they are the URLs you hand to an external
+ * client, and a URL nobody prints is a URL nobody uses.
  */
 const DEV_ENDPOINTS = [
   ['app', '/'],
   ['manifest', '/_janux/manifest'],
   ['agent', '/_janux/agent'],
   ['mcp', '/_janux/mcp'],
+  ['a2a', '/_janux/a2a'],
+  ['card', '/.well-known/agent-card.json'],
 ] as const;
 
 /** The endpoint list, URLs aligned in one column. */

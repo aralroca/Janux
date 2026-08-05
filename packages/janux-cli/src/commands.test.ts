@@ -177,7 +177,7 @@ describe('prodServerOptions shell fields', () => {
 });
 
 describe('devBanner', () => {
-  it('advertises every endpoint the dev server exposes, MCP included', () => {
+  it('advertises every endpoint the dev server exposes, MCP and A2A included', () => {
     const lines = devBanner(4321).split('\n');
 
     expect(lines).toEqual([
@@ -185,6 +185,8 @@ describe('devBanner', () => {
       '  → manifest: http://localhost:4321/_janux/manifest',
       '  → agent:    http://localhost:4321/_janux/agent',
       '  → mcp:      http://localhost:4321/_janux/mcp',
+      '  → a2a:      http://localhost:4321/_janux/a2a',
+      '  → card:     http://localhost:4321/.well-known/agent-card.json',
     ]);
   });
 

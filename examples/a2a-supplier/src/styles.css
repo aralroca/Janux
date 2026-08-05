@@ -1,0 +1,128 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  padding: 20px 0;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.brand {
+  font-weight: 600;
+}
+
+.bar-hint,
+.hint {
+  color: color-mix(in srgb, currentColor 65%, transparent);
+  line-height: 1.6;
+}
+
+.desk {
+  margin: 28px 0;
+}
+
+h2 {
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, currentColor 65%, transparent);
+}
+
+ul,
+ol {
+  padding-left: 18px;
+  line-height: 1.7;
+}
+
+.links,
+.catalog,
+.shipments,
+.steps {
+  padding-left: 18px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 16px 0;
+}
+
+button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.ghost {
+  background: transparent;
+}
+
+button.sku.on {
+  border-color: currentColor;
+  font-weight: 600;
+}
+
+code,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  font-size: 13px;
+}
+
+.token,
+.task-id {
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.parked {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.ok {
+  color: #2e7d32;
+}
+
+.bad {
+  color: #c62828;
+}
+
+.at {
+  color: color-mix(in srgb, currentColor 55%, transparent);
+  font-size: 12px;
+}

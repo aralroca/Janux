@@ -1,0 +1,16 @@
+{
+  "name": "janux-example-a2a-supplier",
+  "private": true,
+  "version": "0.2.1",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev --port 4341",
+    "build": "janux build",
+    "start": "janux start --port 4341"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/cli": "workspace:*"
+  }
+}
