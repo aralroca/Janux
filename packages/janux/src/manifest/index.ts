@@ -1,6 +1,7 @@
 import { toJsonSchema, type JxType } from '../schema';
 import type { ComponentDef, Ctx } from '../define/types';
 import { resolveGuard } from '../runtime/intents';
+import { untrustedFields } from '../taint/fields';
 import type { JanuxInstance } from '../runtime/instance';
 
 export interface ManifestTool {
@@ -19,6 +20,8 @@ export interface ManifestResource {
   schema?: Record<string, unknown>;
   readers?: string[];
   opaque?: boolean;
+  /** Paths whose content the app did not author — present only when there are any. */
+  untrusted?: string[];
 }
 
 /**
@@ -107,6 +110,7 @@ function safeReady(intentDef: NonNullable<ComponentDef['intents']>[string], inst
 
 function resourceFor(def: ComponentDef, key?: string, readers?: string[]): ManifestResource[] {
   if (!def.state) return [];
+  const untrusted = untrustedFields(def.state);
 
   return [
     {
@@ -114,6 +118,7 @@ function resourceFor(def: ComponentDef, key?: string, readers?: string[]): Manif
       description: def.description,
       schema: toJsonSchema(def.state),
       readers,
+      ...(untrusted.length > 0 && { untrusted }),
     },
   ];
 }

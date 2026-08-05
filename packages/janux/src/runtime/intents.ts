@@ -6,7 +6,18 @@ import { isTracing, withSpan, type JanuxSpan, type SpanAttributes } from '../obs
 import { withGate, type MutationGate } from '../state/mutation-gate';
 import { publishJanuxError } from '../dev/error-channel';
 import { allowsScopes } from './scopes';
+import { guardUnderTaint, originUnderTaint } from '../taint/policy';
 import type { ComponentDef, Ctx, GuardValue, IntentDef, Origin, RunBag } from '../define/types';
+
+/**
+ * Who is asking, and through what. `tainted` says the chain reached this call
+ * by way of content the app did not author — see `janux/taint`. It is a fact
+ * about the call, carried like the origin, never something app code sets.
+ */
+export interface Caller {
+  origin: Origin;
+  tainted?: boolean;
+}
 
 export interface AuditEntry {
   tool: string;
@@ -14,6 +25,8 @@ export interface AuditEntry {
   guard: GuardValue;
   input: unknown;
   ok: boolean;
+  /** The chain came through untrusted content; origin and guard reflect it. */
+  tainted?: boolean;
   error?: string;
   at: number;
   /** Verified Web Bot Auth key id, when the caller is an authenticated agent. */
@@ -132,11 +145,12 @@ function audit(hooks: IntentHooks, entry: Omit<AuditEntry, 'at'>): void {
   hooks.onAudit?.({ ...entry, at: Date.now() });
 }
 
-/** Who is invoking what, under which guard — the three facts every span and every audit entry repeats. */
+/** Who is invoking what, under which guard — the facts every span and every audit entry repeats. */
 interface Invoked {
   tool: string;
   guard: GuardValue;
   origin: Origin;
+  tainted?: boolean;
 }
 
 /** The two halves of `tool`, kept apart for the dev overlay's error chain. */
@@ -150,8 +164,14 @@ interface IntentId {
  * knows the answers: which named intent, which guard decided, and whether a
  * human or an agent asked.
  */
-function attributesOf({ tool, guard, origin }: Invoked, proposal?: string): SpanAttributes {
-  return { 'janux.intent': tool, 'janux.guard': guard, 'janux.origin': origin, 'janux.proposal.id': proposal };
+function attributesOf({ tool, guard, origin, tainted }: Invoked, proposal?: string): SpanAttributes {
+  return {
+    'janux.intent': tool,
+    'janux.guard': guard,
+    'janux.origin': origin,
+    'janux.tainted': tainted,
+    'janux.proposal.id': proposal,
+  };
 }
 
 async function execute(def: IntentDef, bag: RunBag, input: unknown, origin: Origin, gate: MutationGate): Promise<unknown> {
@@ -281,11 +301,17 @@ export function invokeIntent(
   def: IntentDef,
   bag: RunBag,
   input: unknown,
-  origin: Origin,
+  caller: Caller,
   hooks: IntentHooks,
 ): Promise<unknown> {
   const tool = `${componentName}.${intentName}`;
-  const invoked: Invoked = { tool, guard: resolveGuard(def, bag.ctx, origin, tool), origin };
+  // Taint is applied here, before anything reads either value: the origin
+  // first, because `confirm` only parks for an agent, and the guard second, so
+  // an irreversible effect reached from untrusted content lands on a human.
+  const { tainted } = caller;
+  const origin = originUnderTaint(caller.origin, tainted);
+  const guard = guardUnderTaint(resolveGuard(def, bag.ctx, origin, tool), def.effect, tainted);
+  const invoked: Invoked = { tool, guard, origin, tainted };
   const id: IntentId = { component: componentName, name: intentName };
 
   // Guarded rather than left to `withSpan`: an uninstrumented click must not

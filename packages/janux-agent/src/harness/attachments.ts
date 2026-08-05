@@ -14,6 +14,12 @@ export interface IncomingAttachment {
 export interface AcceptedAttachment extends IncomingAttachment {
   ref: string;
   bytes: number;
+  /**
+   * Always true. An uploaded file is content the app did not author, so
+   * whatever an app extracts from it belongs inside `fenceUntrusted(…, {
+   * source: 'attachment' })` before it reaches the model — see `janux/taint`.
+   */
+  untrusted: true;
 }
 
 export interface AttachmentPolicy {
@@ -65,7 +71,7 @@ export function acceptAttachments(
     // counting it as zero let four 50MB markers pass a 1KB request budget.
     total += isMarker ? attachment.data.length : bytes;
 
-    return { ...attachment, ref: `att_${index + 1}`, bytes };
+    return { ...attachment, ref: `att_${index + 1}`, bytes, untrusted: true as const };
   });
 
   if (total > rules.maxRequestBytes) throw new AttachmentError('request_too_big');
