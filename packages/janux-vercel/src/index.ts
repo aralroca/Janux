@@ -23,6 +23,8 @@ export const capabilities: AdapterCapabilities = {
   // No persistent process on a function: Vercel Cron POSTs /_janux/schedules/tick
   // (crons in vercel.json, JANUX_CRON_SECRET as the bearer).
   schedules: 'http',
+  // Redirects for a static export become Build Output API routes — see output.ts.
+  redirects: true,
 };
 
 /**

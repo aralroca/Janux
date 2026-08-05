@@ -29,7 +29,7 @@ function scaffold(): string {
 }
 
 const FIXTURE = join(import.meta.dirname, '__fixtures__/adapter-app');
-const FULL: AdapterCapabilities = { websocket: true, streaming: true, filesystem: true, schedules: 'process' };
+const FULL: AdapterCapabilities = { websocket: true, streaming: true, filesystem: true, schedules: 'process', redirects: true };
 
 /** What an adapter's generated `.janux/app.ts` hands the handler: modules keyed by absolute path. */
 async function prebuiltFixture() {
@@ -102,10 +102,32 @@ describe('unsupportedFeatures', () => {
       streaming: false,
       filesystem: false,
       schedules: 'process',
+      redirects: true,
     });
 
     expect(gaps.join('\n')).toContain('streaming SSR');
     expect(gaps.join('\n')).toContain('spoolMultipart');
+    await rm(root, { recursive: true, force: true });
+  });
+
+  /**
+   * `output: 'static'` leaves no server to apply the app's `redirects`/
+   * `rewrites`, so they are only real if the host's own config can express
+   * them. A target that cannot say so is the one case where a declared rule
+   * silently does nothing — which is exactly what this reports at build time.
+   */
+  it('names the declared redirects a static target cannot express', async () => {
+    const root = scaffold();
+
+    writeFileSync(join(root, 'janux.config.ts'), `export default { output: 'static', redirects: [{ from: '/old', to: '/' }] };\n`);
+    const config = await resolveAppConfig(root);
+
+    expect(unsupportedFeatures(config, { ...FULL, redirects: false })).toHaveLength(1);
+    expect(unsupportedFeatures(config, { ...FULL, redirects: false })[0]).toContain('redirects');
+    // The same target serves them fine for an app that keeps its server.
+    expect(unsupportedFeatures({ ...config, output: 'bun' }, { ...FULL, redirects: false })).toEqual([]);
+    // And an app declaring none loses nothing either way.
+    expect(unsupportedFeatures({ ...config, redirects: [] }, { ...FULL, redirects: false })).toEqual([]);
     await rm(root, { recursive: true, force: true });
   });
 });

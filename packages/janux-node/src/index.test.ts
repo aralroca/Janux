@@ -68,8 +68,10 @@ afterAll(async () => {
 describe('capabilities', () => {
   it('declares everything Node can actually do', () => {
     // A persistent process, so schedules tick in-process rather than waiting
-    // for a platform cron to call in.
-    expect(capabilities).toEqual({ websocket: true, streaming: true, filesystem: true, schedules: 'process' });
+    // for a platform cron to call in. `redirects: false` is not a gap: this
+    // target IS a running Janux server, which applies them itself — the flag
+    // speaks for a static export, and a static export has no Node process.
+    expect(capabilities).toEqual({ websocket: true, streaming: true, filesystem: true, schedules: 'process', redirects: false });
   });
 });
 

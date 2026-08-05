@@ -13,8 +13,10 @@ import {
   writeFontAssets,
   writeImageVariants,
 } from '@janux/vite';
+import { routingRuleCount } from './adapter';
 import { prodServerOptions } from './prod';
 import { staticResponse } from './static-assets';
+import type { JanuxAppConfig } from '@janux/vite/config';
 import type { FontConfig } from 'janux';
 import type { CliCommand } from './args';
 
@@ -195,7 +197,7 @@ export async function build({ root }: Pick<CliCommand, 'root'>): Promise<void> {
   else if (retireServiceWorker(join(root, 'dist/client'))) {
     console.log('janux build: removed sw.js — the app has no src/sw.ts.');
   }
-  if (app.output === 'static') await prerenderStatic(root);
+  if (app.output === 'static') await prerenderStatic(root, app);
 }
 
 type PageServer = {
@@ -256,8 +258,25 @@ async function writeNotFound(server: PageServer, outDir: string): Promise<void> 
   if (response) await Bun.write(join(outDir, '404.html'), await response.text());
 }
 
+/**
+ * What `output: "static"` cannot do for itself, as a build message — or nothing.
+ *
+ * Redirects and rewrites are the one declared behaviour a prerender cannot
+ * carry: there is no server left to apply them, so they only exist if the host
+ * does. An adapter that can express them says so (`capabilities.redirects`);
+ * `janux build` on its own has no host to ask, so it says which rules are on
+ * their own.
+ */
+export function staticRoutingNotice(app: JanuxAppConfig): string | undefined {
+  const declared = routingRuleCount(app);
+
+  if (app.output !== 'static' || declared === 0) return undefined;
+
+  return `janux build: ${declared} redirects/rewrites declared, and output: "static" leaves no server to apply them — deploy through an adapter that writes them into the host's config, or configure the host yourself.`;
+}
+
 /** `output: "static"`: prerenders every concrete page into dist/client. */
-async function prerenderStatic(root: string): Promise<void> {
+async function prerenderStatic(root: string, app: JanuxAppConfig): Promise<void> {
   publishAppRoot(root);
   // A build renders pages; it does not serve, so it must not run the app's
   // background jobs — see `ProdOptions`.
@@ -269,6 +288,9 @@ async function prerenderStatic(root: string): Promise<void> {
   await writeGeneratedFiles(server, outDir);
   if (options.i18n) await Bun.write(join(outDir, 'index.html'), localeRedirectStub(options.i18n.locales, options.i18n.defaultLocale));
   console.log(`janux build: prerendered ${count} pages (output: static).`);
+  const notice = staticRoutingNotice(app);
+
+  if (notice) console.log(notice);
 }
 
 /**

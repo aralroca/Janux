@@ -60,6 +60,13 @@ export interface AdapterCapabilities {
    * rather than letting production discover it.
    */
   schedules: 'process' | 'http' | false;
+  /**
+   * Can express the app's `redirects`/`rewrites` in the platform's own routing
+   * config. It only matters for `output: 'static'`, which leaves no server to
+   * apply them: with a server running, Janux is the one implementation of these
+   * rules and an adapter restating them would be a second, free to disagree.
+   */
+  redirects: boolean;
 }
 
 /** The entry an adapter asks the builder to generate. */
@@ -138,6 +145,11 @@ async function boot(app: JanuxApp | undefined): Promise<JanuxRequestHandler> {
   return createJanuxServer(await prodServerOptions(app?.root ?? process.cwd(), app));
 }
 
+/** How big a migration map the app brought — the common answer is none. */
+export function routingRuleCount(config: JanuxAppConfig): number {
+  return (config.redirects?.length ?? 0) + (config.rewrites?.length ?? 0);
+}
+
 /** The app features a target cannot serve, so `adapt()` can say so instead of letting production say it. */
 export function unsupportedFeatures(config: JanuxAppConfig, capabilities: AdapterCapabilities): string[] {
   const gaps: string[] = [];
@@ -145,6 +157,9 @@ export function unsupportedFeatures(config: JanuxAppConfig, capabilities: Adapte
   if (config.websocketModule && !capabilities.websocket) gaps.push('src/ws.ts — this target cannot hold WebSockets open');
   if (config.schedulesDir && !capabilities.schedules) {
     gaps.push('src/schedules/ — this target has no way to trigger scheduled jobs');
+  }
+  if (routingRuleCount(config) > 0 && config.output === 'static' && !capabilities.redirects) {
+    gaps.push('redirects/rewrites — a static export has no server to apply them and this target cannot express them in its own config');
   }
   if (!capabilities.streaming) gaps.push('streaming SSR — responses will be buffered before they are sent');
   if (!capabilities.filesystem) gaps.push('spoolMultipart() — this target has no writable filesystem for uploads');
