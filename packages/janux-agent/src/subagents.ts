@@ -131,19 +131,20 @@ function subagentSurface(sub: SubagentConfig, ctx: DelegationContext): AgentTool
 
 /** Executes one subagent tool call — or refuses it, if it falls outside the intersection. */
 async function dispatchCall(call: ToolCall, sub: SubagentConfig, ctx: DelegationContext): Promise<string> {
-  const allowed = allowedFor(sub, ctx.parentTools);
+  const forbidden = JSON.stringify({ error: `tool_forbidden: ${call.name} is not on this subagent's tool surface` });
   const run = () => {
     if (call.name.startsWith('api.')) return ctx.deps.invoke(call.name, call.input);
     if (ctx.ownsRemote(call.name) && ctx.callRemote) return ctx.callRemote(call.name, call.input);
 
-    return Promise.reject(new Error(`tool_forbidden: ${call.name} is not on this subagent's tool surface`));
+    return undefined;
   };
 
-  if (!allowed(call.name)) return JSON.stringify({ error: `tool_forbidden: ${call.name} is not on this subagent's tool surface` });
+  if (!allowedFor(sub, ctx.parentTools)(call.name)) return forbidden;
+  const running = run();
 
-  return run()
-    .then((result) => JSON.stringify(result ?? null))
-    .catch((error) => JSON.stringify({ error: String(error) }));
+  if (!running) return forbidden;
+
+  return running.then((result) => JSON.stringify(result ?? null)).catch((error) => JSON.stringify({ error: String(error) }));
 }
 
 type SubagentRound = Awaited<ReturnType<typeof callProvider>> | { providerError: string };

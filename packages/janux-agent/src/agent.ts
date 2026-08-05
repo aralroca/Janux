@@ -89,6 +89,11 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 }
 
+/** Own-property lookup only: model- and caller-supplied names must never resolve down the prototype chain. */
+function declared<T>(map: Record<string, T> | undefined, name: string): T | undefined {
+  return map && Object.hasOwn(map, name) ? map[name] : undefined;
+}
+
 function manifestTools(manifest: any, filter: ToolFilter | undefined): AgentTool[] {
   return (manifest.tools ?? [])
     .filter((tool: any) => allowsTool(tool.name, filter))
@@ -222,7 +227,7 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
         continuation?: boolean;
         toolResults?: { name: string; output: unknown }[];
       };
-      if (body.agent && !config.handoffs?.[body.agent]) {
+      if (body.agent && !declared(config.handoffs, body.agent)) {
         return json({ type: 'error', error: 'unknown_agent', message: `No agent "${body.agent}" is declared for handoff.` }, 400);
       }
       const manifest: any = await deps.manifestFor(body.path ?? '/');
@@ -242,7 +247,7 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
 
       // The turn's acting agent: the root, or — sticky across turns, or mid-
       // turn after a transfer — one of the declared handoff targets.
-      let active = body.agent ? { name: body.agent, target: config.handoffs![body.agent]! } : undefined;
+      let active = body.agent ? { name: body.agent, target: declared(config.handoffs, body.agent)! } : undefined;
       const resolvedActive = active?.target.model ? resolveModel(active.target.model, env, active.target.modelOptions) : model;
 
       if (!resolvedActive) return json({ type: 'error', error: 'handoff_model_unavailable' }, 502);
@@ -295,7 +300,7 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       };
       const delegate = async (call: ToolCall) => {
         const name = call.name.slice(DELEGATE_PREFIX.length);
-        const sub = config.subagents?.[name];
+        const sub = declared(config.subagents, name);
 
         // Subagents belong to the root agent: a handoff target that asks for
         // one is out of its surface, the same as any other undeclared tool.
@@ -353,11 +358,11 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
           // — dialogue kept, tool noise dropped — and answers from here on.
           const transferCall = active
             ? undefined
-            : reply.toolCalls.find((call) => call.name.startsWith(HANDOFF_PREFIX) && config.handoffs?.[call.name.slice(HANDOFF_PREFIX.length)]);
+            : reply.toolCalls.find((call) => call.name.startsWith(HANDOFF_PREFIX) && declared(config.handoffs, call.name.slice(HANDOFF_PREFIX.length)));
 
           if (transferCall) {
             const name = transferCall.name.slice(HANDOFF_PREFIX.length);
-            const target = config.handoffs![name]!;
+            const target = declared(config.handoffs, name)!;
             const nextModel = target.model ? resolveModel(target.model, env, target.modelOptions) : model;
 
             if (!nextModel) return json({ type: 'error', error: 'handoff_model_unavailable', threadId: turn.threadId, ...billed() }, 502);

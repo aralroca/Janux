@@ -52,6 +52,9 @@ export function filterHandoffHistory(messages: ChatMessage[]): ChatMessage[] {
     (message) =>
       (message.role === 'user' || message.role === 'assistant') &&
       !message.toolCalls?.length &&
+      // The type says string, but this history came off the wire — anything
+      // that is not plain non-empty text is noise by definition.
+      typeof message.content === 'string' &&
       message.content !== '' &&
       !message.content.startsWith(UI_RESULTS_PREFIX),
   );

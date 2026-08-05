@@ -253,6 +253,22 @@ describe('a subagent is not a privilege escalation', () => {
   });
 });
 
+describe('delegation name lookups stay off the prototype chain', () => {
+  it('delegate__constructor is an unknown subagent, not a crash', async () => {
+    const { fetchImpl, calls } = scriptedFetch([
+      toolUse('d1', 'delegate__constructor', { task: 'x' }),
+      text('ok'),
+    ]);
+    const server = buildServer(defineAgent({ subagents: { research: RESEARCH } }, { env, fetchImpl }));
+    const body: any = await (await ask(server, userTurn)).json();
+
+    expect(body.type).toBe('text');
+    const report = calls[1]!.body.messages.find((m: any) => m.content?.[0]?.type === 'tool_result');
+
+    expect(report.content[0].content).toContain('unknown_subagent');
+  });
+});
+
 describe('subagent budgets', () => {
   it('cuts the loop at maxTurns and reports it to the parent', async () => {
     const loop = () => toolUse('s1', 'api__kb__search', { q: 'x' });

@@ -190,6 +190,22 @@ describe('handoff is sticky across turns', () => {
     expect(response.status).toBe(400);
     expect(((await response.json()) as any).error).toBe('unknown_agent');
   });
+
+  it('name lookups stay off the prototype chain: "constructor" is not an agent', async () => {
+    const { fetchImpl, calls } = scriptedFetch([
+      toolUse('h1', 'handoff__constructor', {}),
+      text('sorry'),
+    ]);
+    const server = buildServer(defineAgent(BASE, { env, fetchImpl }));
+
+    expect((await ask(server, { agent: 'constructor', messages: [{ role: 'user', content: 'hi' }] })).status).toBe(400);
+    const body: any = await (await ask(server, { messages: noisyHistory })).json();
+
+    expect(body).toMatchObject({ type: 'text', text: 'sorry' });
+    const refusal = calls[1]!.body.messages.findLast((m: any) => m.content?.[0]?.type === 'tool_result');
+
+    expect(refusal.content[0].content).toContain('unknown_agent');
+  });
 });
 
 describe('handoff traces (punto 18 coherence)', () => {
