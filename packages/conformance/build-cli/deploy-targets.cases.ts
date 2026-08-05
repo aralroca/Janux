@@ -21,6 +21,10 @@ export interface CapabilityCase {
   websocketModule: boolean;
   /** `true` when the app has a `src/schedules/`. */
   schedulesDir?: boolean;
+  /** `'static'` when the app prerenders — the only mode where declared rules need the host. */
+  output?: 'static' | 'bun';
+  /** How many `redirects`/`rewrites` janux.config.ts declared. */
+  routingRules?: number;
   capabilities: AdapterCapabilities;
   /** The feature each gap must name, in order. */
   gaps: string[];
@@ -32,55 +36,56 @@ const WS = 'src/ws.ts';
 const STREAM = 'streaming SSR';
 const SPOOL = 'spoolMultipart()';
 const SCHEDULES = 'src/schedules/';
+const RULES = 'redirects/rewrites';
 
 export const CAPABILITY_CASES: CapabilityRow[] = [
   {
     id: 'build2-target-that-can-do-everything-warns-about-nothing',
     src: 'janux',
     websocketModule: true,
-    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'process' },
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'process', redirects: true },
     gaps: [],
   },
   {
     id: 'build2-target-without-websockets-names-the-app-file-it-breaks',
     src: 'janux',
     websocketModule: true,
-    capabilities: { websocket: false, streaming: true, filesystem: true, schedules: 'process' },
+    capabilities: { websocket: false, streaming: true, filesystem: true, schedules: 'process', redirects: true },
     gaps: [WS],
   },
   {
     id: 'build2-an-app-with-no-websockets-hears-nothing-about-them',
     src: 'janux',
     websocketModule: false,
-    capabilities: { websocket: false, streaming: true, filesystem: true, schedules: 'process' },
+    capabilities: { websocket: false, streaming: true, filesystem: true, schedules: 'process', redirects: true },
     gaps: [],
   },
   {
     id: 'build2-a-buffering-target-says-so-whatever-the-app-does',
     src: 'janux',
     websocketModule: false,
-    capabilities: { websocket: true, streaming: false, filesystem: true, schedules: 'process' },
+    capabilities: { websocket: true, streaming: false, filesystem: true, schedules: 'process', redirects: true },
     gaps: [STREAM],
   },
   {
     id: 'build2-a-read-only-target-names-the-upload-primitive',
     src: 'janux',
     websocketModule: false,
-    capabilities: { websocket: true, streaming: true, filesystem: false, schedules: 'process' },
+    capabilities: { websocket: true, streaming: true, filesystem: false, schedules: 'process', redirects: true },
     gaps: [SPOOL],
   },
   {
     id: 'build2-every-gap-is-reported-in-one-pass',
     src: 'janux',
     websocketModule: true,
-    capabilities: { websocket: false, streaming: false, filesystem: false, schedules: 'process' },
+    capabilities: { websocket: false, streaming: false, filesystem: false, schedules: 'process', redirects: true },
     gaps: [WS, STREAM, SPOOL],
   },
   {
     id: 'build2-streaming-and-uploads-are-reported-without-a-websocket-module',
     src: 'janux',
     websocketModule: false,
-    capabilities: { websocket: true, streaming: false, filesystem: false, schedules: 'process' },
+    capabilities: { websocket: true, streaming: false, filesystem: false, schedules: 'process', redirects: true },
     gaps: [STREAM, SPOOL],
   },
   {
@@ -88,7 +93,7 @@ export const CAPABILITY_CASES: CapabilityRow[] = [
     src: 'janux',
     websocketModule: false,
     schedulesDir: true,
-    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: false },
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: false, redirects: true },
     gaps: [SCHEDULES],
   },
   {
@@ -96,7 +101,7 @@ export const CAPABILITY_CASES: CapabilityRow[] = [
     src: 'janux',
     websocketModule: false,
     schedulesDir: false,
-    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: false },
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: false, redirects: true },
     gaps: [],
   },
   {
@@ -105,7 +110,48 @@ export const CAPABILITY_CASES: CapabilityRow[] = [
     src: 'janux',
     websocketModule: false,
     schedulesDir: true,
-    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'http' },
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'http', redirects: true },
+    gaps: [],
+  },
+  {
+    /**
+     * The one feature whose gap depends on the output mode: a static export
+     * leaves no server to apply the declared rules, so they exist only if the
+     * host's config can say them.
+     */
+    id: 'build2-a-static-export-on-a-target-that-cannot-express-redirects-is-told',
+    src: 'janux',
+    websocketModule: false,
+    output: 'static',
+    routingRules: 2,
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'process', redirects: false },
+    gaps: [RULES],
+  },
+  {
+    id: 'build2-a-static-export-on-a-target-that-can-express-them-hears-nothing',
+    src: 'janux',
+    websocketModule: false,
+    output: 'static',
+    routingRules: 2,
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'process', redirects: true },
+    gaps: [],
+  },
+  {
+    /** With a server running, Janux applies them — the flag is irrelevant. */
+    id: 'build2-a-server-app-keeps-its-redirects-whatever-the-target-can-express',
+    src: 'janux',
+    websocketModule: false,
+    output: 'bun',
+    routingRules: 2,
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'process', redirects: false },
+    gaps: [],
+  },
+  {
+    id: 'build2-an-app-declaring-no-redirects-is-never-warned-about-them',
+    src: 'janux',
+    websocketModule: false,
+    output: 'static',
+    capabilities: { websocket: true, streaming: true, filesystem: true, schedules: 'process', redirects: false },
     gaps: [],
   },
 ];

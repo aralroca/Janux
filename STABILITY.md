@@ -23,7 +23,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `janux`
 
-- **Stable** — `CLIENT_TOOL_NAMES`, `CLIENT_TOOL_SPECS`, `CONFIG_SCRIPT_ID`, `FONT_ROUTE`, `For`, `Fragment`, `IMAGE_FORMATS`, `IMAGE_WIDTHS`, `Image`, `JanuxIntentError`, `JxType`, `SPECULATION_SCRIPT_ID`, `allowsScopes`, `articleJsonLd`, `batch`, `bool`, `breadcrumbJsonLd`, `buildDefault`, `buildManifest`, `cacheHeaders`, `cachePolicy`, `coerceForm`, `component`, `computed`, `createBus`, `createInstance`, `createRoot`, `defineConfig`, `effect`, `enums`, `every`, `fallbackOverrides`, `fontFaceCss`, `fontPreloadHrefs`, `formatElements`, `getI18n`, `getOwner`, `grantedScopes`, `int`, `intent`, `isNotFoundError`, `isOptimizable`, `jsx`, `jsxs`, `list`, `money`, `notFound`, `num`, `obj`, `onCleanup`, `onEvent`, `organizationJsonLd`, `parseDuration`, `parseVariantUrl`, `renderToStream`, `renderToString`, `resolveGuard`, `runWithOwner`, `schema`, `selectMessages`, `signal`, `source`, `speculationRules`, `store`, `str`, `toJsonSchema`, `toRaw`, `translateCore`, `untrack`, `validate`, `variantUrl`, `watch`
+- **Stable** — `CLIENT_TOOL_NAMES`, `CLIENT_TOOL_SPECS`, `CONFIG_SCRIPT_ID`, `FONT_ROUTE`, `For`, `Fragment`, `IMAGE_FORMATS`, `IMAGE_WIDTHS`, `Image`, `JanuxIntentError`, `JxType`, `SPECULATION_SCRIPT_ID`, `allowsScopes`, `articleJsonLd`, `batch`, `bool`, `breadcrumbJsonLd`, `buildDefault`, `buildManifest`, `cacheHeaders`, `cachePolicy`, `coerceForm`, `component`, `computed`, `createBus`, `createInstance`, `createRoot`, `defineConfig`, `effect`, `enums`, `every`, `fallbackOverrides`, `fenceUntrusted`, `fontFaceCss`, `fontPreloadHrefs`, `formatElements`, `getI18n`, `getOwner`, `grantedScopes`, `guardUnderTaint`, `hasUntrusted`, `int`, `intent`, `isNotFoundError`, `isOptimizable`, `jsx`, `jsxs`, `list`, `money`, `notFound`, `num`, `obj`, `onCleanup`, `onEvent`, `organizationJsonLd`, `originUnderTaint`, `parseDuration`, `parseVariantUrl`, `renderToStream`, `renderToString`, `resolveGuard`, `runWithOwner`, `schema`, `selectMessages`, `signal`, `source`, `speculationRules`, `store`, `str`, `toJsonSchema`, `toRaw`, `translateCore`, `untrack`, `untrustedFields`, `validate`, `variantUrl`, `watch`
 - **Experimental** — _none_
 - **Internal** — _none_
 
@@ -83,7 +83,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `@janux/server`
 
-- **Stable** — `CHANNELS_PREFIX`, `NAVIGATION_HEADER`, `NONCE_HEADER`, `api`, `apiManifestTools`, `buildLlmsTxt`, `channelOf`, `collectApis`, `createFsRouter`, `createJanuxServer`, `createResponseCache`, `createSessionStore`, `discoverSkills`, `handleChannel`, `htmlDocument`, `invokeApi`, `isApi`, `mockApi`, `parseSkill`, `resetApiMocks`, `revalidatePath`, `revalidateTag`, `skillIndex`, `strictPolicy`
+- **Stable** — `CHANNELS_PREFIX`, `NAVIGATION_HEADER`, `NONCE_HEADER`, `api`, `apiManifestTools`, `buildLlmsTxt`, `channelOf`, `collectApis`, `createFsRouter`, `createJanuxServer`, `createResponseCache`, `createSessionStore`, `discoverSkills`, `handleChannel`, `htmlDocument`, `invokeApi`, `isApi`, `mockApi`, `parsePattern`, `parseSkill`, `resetApiMocks`, `revalidatePath`, `revalidateTag`, `skillIndex`, `strictPolicy`
 - **Experimental** — `createAgentAuth`
 - **Internal** — `acceptsType`, `createHttpHandlers`, `formDataWithin`, `matchesType`, `readBodyWithin`, `rejectOversized`, `sniffContentType`, `spoolMultipart`
 

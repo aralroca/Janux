@@ -107,17 +107,68 @@ Janux logs the failure server-side before rendering it. Two things this does **n
 
 With `output: 'static'`, `janux build` writes `_404.tsx` to `404.html` — the file static hosts serve for a path they have nothing at.
 
+## Redirects & rewrites
+
+Every product with a history arrives with a map of URLs it used to answer. Declare it in `janux.config.ts` and it stays part of the app — inside the router, visible to the manifest, checked by the same tests as everything else — instead of moving into an nginx file nobody opens again:
+
+```ts title="janux.config.ts"
+import { defineConfig } from 'janux';
+
+export default defineConfig({
+  redirects: [
+    { from: '/kb/[slug]', to: '/wiki/[slug]' },
+    { from: '/legacy-docs/[...path]', to: '/docs/[...path]' },
+    { from: '/plans', to: '/pricing', status: 301 },
+  ],
+  rewrites: [{ from: '/handbook/[...path]', to: '/docs/[...path]' }],
+});
+```
+
+A **redirect** answers with a status and a `Location`; the browser's address bar changes. A **rewrite** serves a different route and says nothing; the address bar keeps what the visitor typed.
+
+`from` is written in the **same segment grammar as the route files** — `[param]`, `[param=matcher]`, `[...rest]`, `[[...rest]]`, the app's own matchers included. There is no second pattern language to learn and none to disagree with the router. Whatever `from` captured can be spent in `to` by name, and the query string the visitor arrived with travels along unless `to` asks its own.
+
+`status` defaults to **308**: permanent, and the only redirect status that may not turn a POST into a GET. `301`, `302` and `307` are there for the cases that need them. A `to` naming another origin is an ordinary off-site redirect.
+
+### Order and precedence
+
+Rules resolve **in declaration order, first match wins** — a migration map is a list its author has ordered on purpose, unlike the route tree, which sorts by specificity. Against everything else that can answer a request:
+
+```
+src/middleware.ts  →  redirects  →  rewrites  →  locale redirect (i18n)  →  the route
+```
+
+Middleware still goes first, so the app keeps its escape hatch. Declared rules resolve **before** the [i18n](/docs/guide/i18n) locale redirect, so `/kb/routing` is answered as itself rather than bounced to `/en/kb/routing` first — you write the map once, not once per locale.
+
+### What a rewrite may not do
+
+- **It cannot address `/_janux/*`.** That is where the invocation pipeline enforces guards, and a URL that could be pointed at it would be a way around them. A literal `/_janux` destination fails at boot; one assembled from the URL at request time is refused and the request goes on unrewritten.
+- **It cannot leave the app.** `to` must be a route of this app. Proxying somebody else's origin — an analytics endpoint, an auth `.well-known` — needs streaming, header forwarding and timeouts, so it stays a job for `src/middleware.ts`.
+- **It cannot loop.** Rewrites chain until they settle, up to 8 hops; a cycle raises an error naming the chain instead of hanging.
+
+An app that declares neither pays nothing: with no rules, there is nothing to compile and nothing to match.
+
+### With `output: 'static'`
+
+A static export leaves no server, so these rules can only be applied by the host. An adapter that can express them writes them into the platform's own config — `@janux/vercel` compiles them into the Build Output routing table ahead of the filesystem handler. `janux build` on its own has no host to ask, so it prints which rules are on their own, and `janux build` through an adapter that cannot express them says so too.
+
+What no static host can reproduce is anything the rules depend on at request time: the locale redirect still runs in the browser (from `index.html`), and a `[param=matcher]` narrows to *a* segment rather than to its type, because the CDN cannot run the app's matcher. When either matters, keep a server.
+
 ## Middleware
 
-`src/middleware.ts` runs before routing on every request; return a `Response` to short-circuit (redirects, locale hardening, auth gates), or nothing to continue:
+`src/middleware.ts` runs before routing on every request; return a `Response` to short-circuit (auth gates, header hardening, proxying another origin), or nothing to continue:
 
 ```ts title="src/middleware.ts"
 export default function middleware(req: Request): Response | undefined {
   const url = new URL(req.url);
 
-  if (url.pathname === '/old') return new Response(null, { status: 308, headers: { location: '/new' } });
+  if (url.pathname.startsWith('/admin') && !req.headers.get('cookie')?.includes('staff=')) {
+    return new Response(null, { status: 302, headers: { location: '/login' } });
+  }
 }
 ```
+
+A URL that simply moved does not need any of this — declare it in `redirects` above and the router keeps it.
 
 ## SPA navigation
 

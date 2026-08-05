@@ -18,6 +18,7 @@ export type {
   EffectDef,
   SourceDef,
   Ctx,
+  Effect,
   Guard,
   GuardValue,
   Origin,
@@ -51,8 +52,17 @@ export { signal, computed, effect as watch, batch, untrack, createRoot, onCleanu
 export type { Owner } from './signals';
 export { createInstance, type JanuxInstance, type InstanceOptions } from './runtime/instance';
 export { createBus, type EventBus } from './runtime/bus';
-export { JanuxIntentError, resolveGuard, type AuditEntry, type Proposal } from './runtime/intents';
+export { JanuxIntentError, resolveGuard, type AuditEntry, type Caller, type Proposal } from './runtime/intents';
 export { allowsScopes, grantedScopes } from './runtime/scopes';
+export {
+  fenceUntrusted,
+  guardUnderTaint,
+  hasUntrusted,
+  originUnderTaint,
+  untrustedFields,
+  type Provenance,
+  type TaintSource,
+} from './taint';
 export { Fragment, jsx, jsxs, type JanuxNode } from './jsx-runtime';
 export { For, type ForProps } from './for';
 export { toRaw } from './state/reactive-state';
@@ -71,6 +81,8 @@ export {
   type McpAuthConfig,
   type CspConfig,
   type NavigationConfig,
+  type RedirectRule,
+  type RewriteRule,
   type ServiceWorkerConfig,
   type SpeculationRulesConfig,
 } from './config';

@@ -3,6 +3,7 @@ import { cp, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { JanuxAppConfig } from '@janux/vite/config';
 import { BUNDLE_PATH, buildFunction } from './build';
+import { hostRoutes } from './host-routing';
 
 /**
  * The deployment, written as a Build Output API directory.
@@ -70,9 +71,16 @@ async function writeFunction(root: string, app: JanuxAppConfig, { include = [], 
   return bytes;
 }
 
-/** Static assets first (the CDN answers those), then the app. */
-function routes(server: boolean): unknown[] {
-  if (!server) return [{ handle: 'filesystem' }];
+/**
+ * Static assets first (the CDN answers those), then the app.
+ *
+ * A static export has no server left to apply the declared `redirects`/
+ * `rewrites`, so they are compiled into the table ahead of `filesystem`. A
+ * server deployment gets none of them here on purpose: the function applies
+ * them itself, and a copy in the platform's table could only ever disagree.
+ */
+export function routes(server: boolean, app: JanuxAppConfig): unknown[] {
+  if (!server) return [...hostRoutes(app.redirects, app.rewrites), { handle: 'filesystem' }];
 
   return [{ handle: 'filesystem' }, { src: '/(.*)', dest: '/index' }];
 }
@@ -89,7 +97,7 @@ export async function writeVercelOutput(root: string, app: JanuxAppConfig, optio
   if (existsSync(join(root, 'dist/client'))) {
     await cp(join(root, 'dist/client'), join(root, STATIC_DIR), { recursive: true });
   }
-  await Bun.write(join(root, OUTPUT_DIR, 'config.json'), `${JSON.stringify({ version: 3, routes: routes(server) }, null, 2)}\n`);
+  await Bun.write(join(root, OUTPUT_DIR, 'config.json'), `${JSON.stringify({ version: 3, routes: routes(server, app) }, null, 2)}\n`);
 
   return server ? writeFunction(root, app, options) : 0;
 }

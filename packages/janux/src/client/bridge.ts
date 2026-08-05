@@ -1,5 +1,6 @@
 import { buildManifest, type Manifest } from '../manifest';
 import { resolveGuard } from '../runtime/intents';
+import { guardUnderTaint } from '../taint/policy';
 import { flushRenders } from '../runtime/render-queue';
 import type { JanuxInstance } from '../runtime/instance';
 import type { Proposal } from '../runtime/intents';
@@ -7,9 +8,15 @@ import { ensureStore, mountIsland, type MountContext } from './mount';
 import type { ClientRegistry } from './registry';
 import { CLIENT_TOOL_NAMES, executeClientTool } from './client-tools';
 
+/** What a caller declares about the chain it is calling from — see `janux/taint`. */
+export interface CallOptions {
+  /** The turn reached this call through content the app did not author. */
+  tainted?: boolean;
+}
+
 export interface JanuxBridge {
   read(uri: string): Promise<Record<string, unknown>>;
-  call(tool: string, input?: unknown): Promise<unknown>;
+  call(tool: string, input?: unknown, opts?: CallOptions): Promise<unknown>;
   approve(id: string): Promise<unknown>;
   reject(id: string): boolean;
   settled(scope?: string): Promise<void>;
@@ -75,22 +82,27 @@ function glowTargetOf(instance: JanuxInstance, intentName: string, input: unknow
 }
 
 /** Resolves an intent's guard synchronously from the registered defs (no mount needed). */
-function guardOf(mount: MountContext, component: string, intentName: string): string {
+function guardOf(mount: MountContext, component: string, intentName: string, tainted?: boolean): string {
   const intentDef = intentDefOf(mount, component, intentName);
 
   // `unknown`, not `auto`. Anything watching `janux:tool-call` to audit agent
   // activity was being told a tool it could not even resolve was unguarded.
-  return intentDef ? resolveGuard(intentDef, mount.ctx, 'agent') : 'unknown';
+  // The taint is applied here too, so the event says what the pipeline will do
+  // rather than what the declaration alone would suggest.
+  if (!intentDef) return 'unknown';
+
+  return guardUnderTaint(resolveGuard(intentDef, mount.ctx, 'agent'), intentDef.effect, tainted);
 }
 
 const API_PREFIX = 'api.';
 
 /** POSTs JSON and unwraps the server's `{ ok, result }` envelope; a refusal becomes a thrown error. */
-async function postJson(url: string, payload: unknown, asAgent: boolean): Promise<unknown> {
+async function postJson(url: string, payload: unknown, asAgent: boolean, tainted?: boolean): Promise<unknown> {
   const origin: Record<string, string> = asAgent ? { 'x-janux-origin': 'agent' } : {};
+  const taint: Record<string, string> = tainted ? { 'x-janux-tainted': '1' } : {};
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', ...origin },
+    headers: { 'content-type': 'application/json', ...origin, ...taint },
     body: JSON.stringify(payload ?? {}),
   });
   const body: any = await response.json().catch(() => ({}));
@@ -118,11 +130,17 @@ function mirrorApiProposal(tool: string, result: any, mount: MountContext, remot
 }
 
 /** The manifest announces api.* tools, so the bridge dispatches them too — over their HTTP endpoint. */
-async function callApiTool(tool: string, input: unknown, mount: MountContext, remote: Set<string>): Promise<unknown> {
+async function callApiTool(
+  tool: string,
+  input: unknown,
+  mount: MountContext,
+  remote: Set<string>,
+  tainted?: boolean,
+): Promise<unknown> {
   // Encoded, not interpolated raw: tool names arrive over the public bridge,
   // and api names are `module.export` (dots only), so a name carrying slashes
   // or `..` would resolve out of /_janux/api/ — onto /_janux/llm, say.
-  const result: any = await postJson(`/_janux/api/${encodeURIComponent(tool.slice(API_PREFIX.length))}`, input, true);
+  const result: any = await postJson(`/_janux/api/${encodeURIComponent(tool.slice(API_PREFIX.length))}`, input, true, tainted);
 
   if (result?.status === 'proposal') mirrorApiProposal(tool, result, mount, remote);
 
@@ -201,7 +219,9 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
       return instance.resource();
     },
 
-    async call(tool, input) {
+    async call(tool, input, opts) {
+      const tainted = opts?.tainted || undefined;
+
       // Built-in client tools (navigation, view context, DOM fallback) run
       // before island resolution — same activity events, so the glow fires.
       if (CLIENT_TOOL_NAMES.has(tool)) {
@@ -223,7 +243,7 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
       if (tool.startsWith(API_PREFIX)) {
         emitToolEvent(tool, input, 'start', {});
         try {
-          const result: any = await callApiTool(tool, input, mount, remoteProposals);
+          const result: any = await callApiTool(tool, input, mount, remoteProposals, tainted);
           const proposed = result?.status === 'proposal';
 
           emitToolEvent(tool, input, proposed ? 'proposal' : 'ok', proposed ? { guard: 'confirm' } : {});
@@ -235,7 +255,7 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
         }
       }
       const [component, intentName] = splitTool(tool);
-      const guard = guardOf(mount, component, intentName);
+      const guard = guardOf(mount, component, intentName, tainted);
 
       emitToolEvent(tool, input, 'start', {
         guard,
@@ -248,7 +268,7 @@ export function createBridge(mount: MountContext, proposals: Map<string, Proposa
         const invoke = instance.intents[intentName];
 
         if (!invoke) throw new Error(`Janux: unknown tool "${tool}"`);
-        const result: any = await invoke(input, { origin: 'agent' });
+        const result: any = await invoke(input, { origin: 'agent', tainted });
         const proposed = result?.status === 'proposal';
 
         emitToolEvent(tool, input, proposed ? 'proposal' : 'ok', {

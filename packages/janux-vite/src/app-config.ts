@@ -12,6 +12,8 @@ import type {
   JanuxOutput,
   McpAuthConfig,
   NavigationConfig,
+  RedirectRule,
+  RewriteRule,
   ServiceWorkerConfig,
 } from 'janux';
 
@@ -80,6 +82,10 @@ export interface JanuxAppConfig {
   output: JanuxOutput;
   /** Fonts to self-host, as declared in janux.config.ts. */
   fonts: FontConfig[];
+  /** Legacy URLs answered with a 3xx, as declared in janux.config.ts. */
+  redirects?: RedirectRule[];
+  /** URLs served by another route of this app, as declared in janux.config.ts. */
+  rewrites?: RewriteRule[];
   navigation?: NavigationConfig;
   csp?: boolean | CspConfig;
   cache?: CacheConfig;
@@ -187,6 +193,8 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     llmsTxt: options.llmsTxt,
     output: options.output ?? 'bun',
     fonts: options.fonts ?? [],
+    redirects: options.redirects,
+    rewrites: options.rewrites,
     navigation: options.navigation,
     csp: options.csp,
     cache: options.cache,
@@ -232,6 +240,18 @@ export function shellOptions(
     cache: app.cache,
     ...fonts,
   };
+}
+
+/**
+ * The declared migration map, on its way to the server that applies it.
+ *
+ * Same reasoning as `shellOptions`: dev (the Vite plugin) and prod
+ * (`janux build` / `janux start`) build their `ServerOptions` separately, and a
+ * routing field wired into one and forgotten in the other is a redirect that
+ * works locally and 404s in production.
+ */
+export function routingOptions(app: JanuxAppConfig): Pick<ServerOptions, 'redirects' | 'rewrites'> {
+  return { redirects: app.redirects, rewrites: app.rewrites };
 }
 
 /**

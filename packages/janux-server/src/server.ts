@@ -1,11 +1,14 @@
 import {
   buildManifest,
+  hasUntrusted,
+  originUnderTaint,
   isNotFoundError,
   renderToStream,
   renderToString,
   selectMessages,
   translateCore,
   type AuditEntry,
+  type Caller,
   type ComponentDef,
   type CspConfig,
   type Ctx,
@@ -16,7 +19,9 @@ import {
   type JanuxInstance,
   type NavigationConfig,
   type PageMeta,
+  type RedirectRule,
   type RenderResult,
+  type RewriteRule,
 } from 'janux';
 import { pathToFileURL } from 'node:url';
 import { QueryClient } from 'janux/query';
@@ -30,8 +35,9 @@ import { AGENT_CARD_PATHS } from './a2a-card';
 import { skillIndex, type Skill } from './skills';
 import { handleScheduleTick, type SchedulesConfig } from './schedules';
 import { channelOf, handleChannel, type ChannelDef } from './channels';
-import { pageMarkdown } from './md-projection';
+import { pageMarkdown, type UntrustedIsland } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
+import { createRoutingRules } from './routing-rules';
 import type { ShellI18n } from './html-shell';
 import { assertValidInput, errorStatus, json } from './http';
 import { createProposalVault, proposalId, proposalSessionOf, sessionOf, withProposalSession, type SettleError } from './proposals';
@@ -78,7 +84,11 @@ export interface CtxBag {
 
 export interface AgentDeps {
   tools: ApiTool[];
-  invoke: (tool: string, input: unknown) => Promise<unknown>;
+  /**
+   * `tainted` marks a call the model reached for after untrusted content
+   * entered the turn. The pipeline is what acts on it — see `janux/taint`.
+   */
+  invoke: (tool: string, input: unknown, opts?: { tainted?: boolean }) => Promise<unknown>;
   manifestFor: (path: string) => Promise<unknown>;
   /**
    * One skill's body, by name — the on-demand half of `manifest.skills`.
@@ -190,6 +200,10 @@ export interface ServerOptions {
   matchers?: Record<string, (value: string) => boolean>;
   /** Runs before routing; returning a Response short-circuits the request. */
   middleware?: (req: Request) => Response | undefined | Promise<Response | undefined>;
+  /** Legacy URLs answered with a 3xx before the route is resolved (janux.config.ts). */
+  redirects?: RedirectRule[];
+  /** URLs served by another route of this app, without the address bar changing (janux.config.ts). */
+  rewrites?: RewriteRule[];
   /** Arbitrary HTTP handlers: a `src/api/**` tree mounted (by default) at `/api`. */
   httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
   /** Bearer verification for the hosted MCP endpoint (`/_janux/mcp`). Absent → open. */
@@ -407,6 +421,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const apiTools = collectApis(options.apis ?? {});
   const skills = options.skills ?? [];
   const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
+  // Compiled once, and `undefined` for the app that declared none — which is
+  // what keeps this feature free for everybody who is not migrating anything.
+  const routingRules = createRoutingRules({ redirects: options.redirects, rewrites: options.rewrites, matchers: options.matchers });
   const httpHandlers = options.httpHandlers
     ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers, cache: options.cache })
     : undefined;
@@ -654,6 +671,17 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   type PageRender = Awaited<ReturnType<typeof renderPage>>;
 
+  /**
+   * The islands on a rendered page whose state declares `untrusted()` fields.
+   * Their subtrees are what the markdown projection fences — the page the
+   * browser gets is identical, the one the model reads says where a
+   * stranger's text begins and ends.
+   */
+  const untrustedIslands = (result: PageRender): UntrustedIsland[] =>
+    (result?.registry.islands ?? [])
+      .filter(({ def }) => hasUntrusted(def.state))
+      .map(({ def, key }) => ({ id: `${def.name}#${key}`, uri: `ui://${def.name}#${key}` }));
+
   /** The manifest of a rendered page — or, without one, of the app alone: same shape, no islands. */
   const manifestOf = (result: PageRender, ctx: Ctx): unknown => {
     const entries = result
@@ -704,19 +732,21 @@ export function createJanuxServer(options: ServerOptions = {}) {
   };
 
   /** Agent + `confirm`: register a pending proposal for a human instead of running the tool. */
-  const registerProposal = (tool: ApiTool, input: unknown, ctx: Ctx, id: string) => {
+  const registerProposal = (tool: ApiTool, input: unknown, ctx: Ctx, id: string, caller: Caller) => {
     const parsed = tool.input ? assertValidInput(tool, input) : input;
     // The approved call still CAME through the agent surface — a human only
     // authorized it. Executing as 'agent' keeps run()/guards/audit consistent
     // with the client-side approval path and with the documented origin rules.
-    const execute = () => invokeApi(tool, parsed, ctx, 'agent', options.onAudit, { span: 'janux.api.execute', proposal: id });
+    // The taint rides along for the same reason: the trail should say what the
+    // human was approving, not that the chain became clean by being approved.
+    const execute = () => invokeApi(tool, parsed, ctx, caller, options.onAudit, { span: 'janux.api.execute', proposal: id });
     // The signed token goes only to the proposer; spans and audit entries carry
     // the bare id, which on its own can no longer settle anything.
     const token = proposals.park({ id, tool: tool.name, input: parsed, execute, session: proposalSessionOf(ctx) });
 
     // `proposed`, not `ok` — nothing ran yet, and an audit trail that records an
     // unapproved proposal as a success is worse than no trail at all.
-    options.onAudit?.(apiAuditEntry(tool, 'agent', 'confirm', ctx, { input: parsed, ok: true, proposed: true }));
+    options.onAudit?.(apiAuditEntry(tool, 'agent', 'confirm', ctx, { input: parsed, ok: true, proposed: true, tainted: caller.tainted }));
 
     return { status: 'proposal' as const, id: token, tool: tool.name, input: parsed };
   };
@@ -726,13 +756,13 @@ export function createJanuxServer(options: ServerOptions = {}) {
    * the event a reviewer wants to see, and the approval — if it ever comes —
    * arrives in a different request, on a different trace, linked by this id.
    */
-  const proposeApi = (tool: ApiTool, input: unknown, ctx: Ctx) => {
+  const proposeApi = (tool: ApiTool, input: unknown, ctx: Ctx, caller: Caller = { origin: 'agent' }) => {
     const id = proposalId('api');
 
     return withSpan(
       'janux.api',
-      () => apiAttributes(tool, 'confirm', 'agent', id),
-      async () => registerProposal(tool, input, ctx, id),
+      () => apiAttributes(tool, 'confirm', 'agent', id, caller.tainted),
+      async () => registerProposal(tool, input, ctx, id, caller),
     );
   };
 
@@ -741,13 +771,14 @@ export function createJanuxServer(options: ServerOptions = {}) {
    * endpoint. Origin is always `agent` here, so `confirm` must gate — the HTTP
    * path is not the only door a model knocks on.
    */
-  const invokeTool = async (name: string, input: unknown, ctx: Ctx): Promise<unknown> => {
+  const invokeTool = async (name: string, input: unknown, ctx: Ctx, tainted?: boolean): Promise<unknown> => {
     const tool = apiTools.find((candidate) => `api.${candidate.name}` === name || candidate.name === name);
+    const caller: Caller = { origin: 'agent', tainted };
 
     if (!tool) throw Object.assign(new Error(`Unknown api tool "${name}"`), { code: 'invalid_input' });
-    if (resolveApiGuard(tool, ctx, 'agent') === 'confirm') return proposeApi(tool, input, ctx);
+    if (resolveApiGuard(tool, ctx, caller) === 'confirm') return proposeApi(tool, input, ctx, caller);
 
-    return invokeApi(tool, input, ctx, 'agent', options.onAudit);
+    return invokeApi(tool, input, ctx, caller, options.onAudit);
   };
 
   /**
@@ -760,7 +791,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
     return {
       tools: apiTools,
-      invoke: (tool, input) => invokeTool(tool, input, ctx),
+      invoke: (tool, input, opts) => invokeTool(tool, input, ctx, opts?.tainted),
       manifestFor: (path) => manifestFor(path, ctx),
       loadSkill: (name) => skills.find((skill) => skill.name === name)?.body,
     };
@@ -770,7 +801,13 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const tool = apiTools.find((candidate) => candidate.name === name);
 
     if (!tool) return json({ ok: false, error: `Unknown api "${name}"` }, 404);
-    const origin = req.headers.get('x-janux-origin') === 'agent' ? 'agent' : 'human';
+    // A caller that came through untrusted content says so, and saying so only
+    // ever costs it: the taint pins the origin to `agent` (see `janux/taint`),
+    // so this door cannot be the one where a poisoned chain reads as a person.
+    const tainted = req.headers.get('x-janux-tainted') === '1' || undefined;
+    const claimed = req.headers.get('x-janux-origin') === 'agent' ? 'agent' : 'human';
+    const caller: Caller = { origin: originUnderTaint(claimed, tainted), tainted };
+    const { origin } = caller;
     const input = await jsonBodyWithin(req);
 
     if (input instanceof Response) return input;
@@ -781,11 +818,11 @@ export function createJanuxServer(options: ServerOptions = {}) {
     }
 
     try {
-      if (origin === 'agent' && resolveApiGuard(tool, ctx, origin) === 'confirm') {
-        return json({ ok: true, result: await proposeApi(tool, input, ctx) });
+      if (origin === 'agent' && resolveApiGuard(tool, ctx, caller) === 'confirm') {
+        return json({ ok: true, result: await proposeApi(tool, input, ctx, caller) });
       }
 
-      return json({ ok: true, result: await invokeApi(tool, input, ctx, origin, options.onAudit) });
+      return json({ ok: true, result: await invokeApi(tool, input, ctx, caller, options.onAudit) });
     } catch (error) {
       return json({ ok: false, error: String(error) }, errorStatus(error));
     }
@@ -887,7 +924,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
     if (!result) return undefined;
 
-    return pageMarkdown(result.meta?.title ?? options.title, result.html);
+    return pageMarkdown(result.meta?.title ?? options.title, result.html, untrustedIslands(result));
   };
 
   const mcpEndpoint = createMcpEndpoint({
@@ -1070,10 +1107,25 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const handleRequest = async (req: Request, span: JanuxSpan): Promise<Response> => {
     const url = new URL(req.url);
-    const { pathname } = url;
     const intercepted = await options.middleware?.(req);
 
     if (intercepted) return intercepted;
+    /*
+     * The declared `redirects`/`rewrites`, at the one point every URL passes
+     * through and before anything has resolved a route — so a legacy URL is
+     * answered as itself rather than as its localized form (the i18n redirect
+     * lives further in, in `renderDocument`). Precedence is therefore
+     * middleware → redirects → rewrites → locale → route, which is what
+     * `routing-wiring.test.ts` pins down.
+     *
+     * A rewrite changes the path everything below resolves against and nothing
+     * the browser sees; it cannot name `/_janux/*`, so no endpoint below is
+     * reachable through one and no guard is skipped.
+     */
+    const redirected = routingRules?.redirect(url);
+
+    if (redirected) return redirected;
+    const pathname = routingRules?.rewrite(url.pathname) ?? url.pathname;
     /*
      * Before routing, and once for every invocation endpoint below: api calls,
      * proposal settlement and the agent loop all reach app code carrying whatever

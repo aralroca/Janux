@@ -12,6 +12,14 @@ const DEMOS: [string, string, string, string][] = [
   ['/boom', '_500.tsx', 'server error', 'A page that throws answers with its own page and a 500, layout aside.'],
 ];
 
+/** `[url, what janux.config.ts says about it, what the browser ends up showing]`. */
+const LEGACY: [string, string, string][] = [
+  ['/kb/getting-started', 'redirect 308', 'Lands on /wiki/getting-started — the address bar changes.'],
+  ['/legacy-docs/guides/deploy', 'redirect 308', 'The whole tail travels: /docs/guides/deploy.'],
+  ['/plans', 'redirect 301', 'The page is gone, so the old URL points at /pricing.'],
+  ['/handbook/guides/deploy', 'rewrite', 'Served by docs/[...path].tsx, and the URL stays /handbook/…'],
+];
+
 /** The home page: a map of every route pattern this example exercises. */
 export default function HomePage() {
   return (
@@ -32,6 +40,23 @@ export default function HomePage() {
             </a>
             <span class="pattern-kind">{kind}</span>
             <code class="pattern-file">{file}</code>
+            <p class="pattern-note">{what}</p>
+          </li>
+        ))}
+      </ul>
+      <h2 class="legacy-head">URLs with no file behind them</h2>
+      <p class="legacy-lead">
+        Declared in <code>janux.config.ts</code>, in the same segment grammar as the route files, and applied before
+        anything resolves a route. A redirect answers with a status and a <code>Location</code>; a rewrite serves
+        another route and leaves the address bar alone.
+      </p>
+      <ul class="patterns">
+        {LEGACY.map(([href, kind, what]) => (
+          <li class="pattern" key={href}>
+            <a class="pattern-url" href={href} data-native>
+              {href}
+            </a>
+            <span class="pattern-kind">{kind}</span>
             <p class="pattern-note">{what}</p>
           </li>
         ))}

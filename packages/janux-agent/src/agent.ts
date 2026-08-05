@@ -3,7 +3,7 @@ import type { JanuxSpan } from 'janux/observability';
 import type { HarnessMemory } from './harness/memory';
 import type { InputProcessor } from './harness/processors';
 import { filterHandoffHistory, handoffCost, handoffNote, handoffTools, HANDOFF_PREFIX, type HandoffConfig } from './handoff';
-import { CLIENT_TOOL_SPECS } from 'janux';
+import { CLIENT_TOOL_SPECS, fenceUntrusted } from 'janux';
 import { runProcessors } from './harness/processors';
 import { createRateLimiter, type RateLimitConfig, type RateLimiter } from './harness/rate-limit';
 import { createResumableStreams, type ResumableStreams, type ResumableStreamsConfig } from './harness/resumable';
@@ -174,18 +174,38 @@ function resumableStreamsFor(option: boolean | ResumableStreamsConfig | undefine
   return createResumableStreams(option === true ? {} : option);
 }
 
-async function toolResults(calls: ToolCall[], run: (call: ToolCall) => Promise<unknown>): Promise<ChatMessage[]> {
+/**
+ * `wrap` is how a result whose content the app did not author re-enters the
+ * turn: fenced, and named for what produced it. Only the successful result is
+ * wrapped — a transport error is the framework talking, not the remote.
+ */
+async function toolResults(
+  calls: ToolCall[],
+  run: (call: ToolCall) => Promise<unknown>,
+  wrap?: (call: ToolCall, content: string) => string,
+): Promise<ChatMessage[]> {
   const results: ChatMessage[] = [];
+  const carry = wrap ?? ((_call: ToolCall, text: string) => text);
 
   for (const call of calls) {
     const content = await run(call)
-      .then((result) => JSON.stringify(result ?? null))
+      .then((result) => carry(call, JSON.stringify(result ?? null)))
       .catch((error) => JSON.stringify({ error: String(error) }));
 
     results.push({ role: 'tool', toolCallId: call.id, content });
   }
 
   return results;
+}
+
+/** Everything a remote MCP server answers is content this app did not author. */
+function fenceRemote(call: ToolCall, content: string): string {
+  return fenceUntrusted(content, { source: 'remote-mcp', from: call.name });
+}
+
+/** Whether anything the mounted tree projects is fed by input the app did not author. */
+function mountsUntrusted(manifest: any): boolean {
+  return (manifest.resources ?? []).some((resource: any) => (resource.untrusted ?? []).length > 0);
 }
 
 const DEFAULT_REFUSAL = "I can't help with that request.";
@@ -305,13 +325,29 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       // and re-POSTs their outputs with the (possibly new) path — the manifest
       // above is already the destination page's, so the turn continues with
       // the tools that exist THERE.
+      /*
+       * What the mounted tree reads back is only as trustworthy as the state
+       * it projects. A page that declares `untrusted()` fields hands the model
+       * a stranger's text through its own tools, so from here the turn is
+       * tainted and the pipeline treats every later call accordingly.
+       */
+      let tainted = false;
+
       if (body.continuation && body.toolResults) {
         // Provider-agnostic observation: OpenAI-style APIs reject bare `tool`
         // messages without a matching tool_call id, so the executed results
-        // travel as a labeled user message inside the SAME turn.
+        // travel as a labeled user message inside the SAME turn. The label is
+        // exactly why they are fenced: a `user` message is the one role a
+        // model trusts most, and this one is machine output.
+        const observed = JSON.stringify(body.toolResults);
+
+        tainted = mountsUntrusted(manifest);
         turn.messages.push({
           role: 'user',
-          content: `[ui tool results] ${JSON.stringify(body.toolResults)}`,
+          untrusted: true,
+          content: `[ui tool results] ${
+            tainted ? fenceUntrusted(observed, { source: 'user-input', from: body.path ?? '/' }) : observed
+          }`,
         } as ChatMessage);
       }
       const guarded = await runProcessors(config.harness?.processors ?? [], {
@@ -428,8 +464,11 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
           const handled = [...serverCalls, ...remoteCalls, ...skillCalls, ...delegateCalls, ...handoffCalls];
           const uiCalls = reply.toolCalls.filter((call) => !handled.includes(call));
 
-          messages.push(...(await toolResults(serverCalls, (call) => deps.invoke(call.name, call.input))));
-          messages.push(...(await toolResults(remoteCalls, (call) => toolbox!.call(call.name, call.input))));
+          messages.push(...(await toolResults(serverCalls, (call) => deps.invoke(call.name, call.input, { tainted }))));
+          messages.push(...(await toolResults(remoteCalls, (call) => toolbox!.call(call.name, call.input), fenceRemote)));
+          // After the round, not during it: the calls the model made alongside
+          // a remote read were decided before that answer existed.
+          tainted ||= remoteCalls.length > 0;
           messages.push(...(await toolResults(skillCalls, async (call) => loadSkillBody(call.input, skills, deps))));
           messages.push(...(await toolResults(delegateCalls, delegate)));
           messages.push(
@@ -440,7 +479,18 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
             // as results the model can answer around — a turn that ends in
             // `ui_calls` nobody will run is a conversation left hanging.
             if (!channel) {
-              return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId, ...(active && { agent: active.name }), ...billed() });
+              // `tainted` travels with the calls so the bridge invokes them
+              // under the same rules this loop is already bound by — a client
+              // that drops it asks for more scrutiny than it needs, never less.
+              return json({
+                type: 'ui_calls',
+                calls: uiCalls,
+                messages,
+                threadId: turn.threadId,
+                ...(tainted && { tainted }),
+                ...(active && { agent: active.name }),
+                ...billed(),
+              });
             }
 
             messages.push(...(await toolResults(uiCalls, async (call) => unavailableOnChannel(call.name, channel))));

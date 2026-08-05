@@ -46,6 +46,10 @@ export const capabilities: AdapterCapabilities = {
   filesystem: true,
   // A Node deployment is a persistent process, so schedules tick in-process.
   schedules: 'process',
+  // Nothing to express: this target *is* a running Janux server, which applies
+  // the declared redirects itself. The flag speaks for a static export, and a
+  // static export has no Node process to deploy.
+  redirects: false,
 };
 
 /**
