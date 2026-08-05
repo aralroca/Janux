@@ -17,5 +17,5 @@ function startTicker(): void {
   }, 100);
 }
 
-boot({ defs: [PrimeLab], glow: true });
+boot({ defs: [PrimeLab], glow: true, cursor: true });
 startTicker();

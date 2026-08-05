@@ -31,11 +31,17 @@ export function emitToolTarget(detail: ToolTargetDetail): void {
 
 let suspensions = 0;
 
+/** Whether a richer feedback layer currently holds the painting claim. Shared by every built-in layer. */
+export function feedbackSuspended(): boolean {
+  return suspensions > 0;
+}
+
 /**
  * Hands the agent feedback over to a richer layer (status chips, an animated
- * ring, a backdrop veil): the events keep flowing, but the built-in glow stops
- * painting so the two never highlight the same element at once. Returns a
- * resume function; nested suspensions each hold their own claim.
+ * ring, a backdrop veil): the events keep flowing, but the built-in layers —
+ * the glow and the simulated cursor — stop painting so two layers never
+ * highlight the same element at once. Returns a resume function; nested
+ * suspensions each hold their own claim.
  */
 export function suspendAgentGlow(): () => void {
   let released = false;

@@ -41,7 +41,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `janux/client`
 
-- **Stable** — `GLOW_CLASS`, `KEEP_ATTRIBUTE`, `QueryClient`, `boot`, `clientApi`, `createModelContextPolyfill`, `dropzone`, `emitToolTarget`, `enableAgentGlow`, `getQueryClient`, `glowElement`, `glowTargetFor`, `hashKey`, `injectGlowStyles`, `installWebMCP`, `mutation`, `persistStore`, `query`, `suspendAgentGlow`, `urlState`, `useQuery`
+- **Stable** — `CURSOR_ID`, `GLOW_CLASS`, `KEEP_ATTRIBUTE`, `QueryClient`, `boot`, `clientApi`, `createModelContextPolyfill`, `dropzone`, `emitToolTarget`, `enableAgentCursor`, `enableAgentGlow`, `getQueryClient`, `glowElement`, `glowTargetFor`, `hashKey`, `injectCursorStyles`, `injectGlowStyles`, `installWebMCP`, `moveCursorTo`, `mutation`, `persistStore`, `query`, `suspendAgentGlow`, `urlState`, `useQuery`
 - **Experimental** — _none_
 - **Internal** — `appTools`, `collectPageLinks`, `createBridge`, `createClientRegistry`, `createNavigateTool`, `morph`, `mountEagerIslands`, `mountIsland`, `performNavigation`, `prefetch`, `prefetchOnHover`, `registerDef`, `toDomNodes`
 

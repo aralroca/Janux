@@ -201,6 +201,28 @@ janux-island {
 
 Lower-level pieces are exported from `janux/client` if you want custom behavior: `enableAgentGlow(options)` (returns a disposer), `glowElement(el, duration)`, `glowTargetFor(tool)`, `injectGlowStyles()` and the `GLOW_CLASS` constant.
 
+### The simulated cursor
+
+`cursor: true` (or `{ duration }`) adds a second layer: a simulated cursor that travels the screen element to element as the agent acts, starting from the center of the viewport on its first move. Glow and cursor consume the same events and combine freely — both, either, or neither:
+
+```ts title="src/client.ts"
+boot({ defs: [Cart], glow: true, cursor: true });
+```
+
+Like the glow, its look is yours via CSS custom properties (the overlay is `#janux-agent-cursor`):
+
+```css
+:root {
+  --janux-cursor-fill: #fff;                      /* arrow fill */
+  --janux-cursor-ring: rgba(124, 58, 237, 0.9);   /* arrow outline */
+  --janux-cursor-halo: rgba(34, 211, 238, 0.65);  /* glow around the arrow */
+  --janux-cursor-size: 26px;
+  --janux-cursor-travel: 0.6s;                    /* travel time between elements */
+}
+```
+
+Lower-level: `enableAgentCursor(options)` (returns a disposer), `moveCursorTo(el, duration)`, `injectCursorStyles()` and the `CURSOR_ID` constant.
+
 ### One seam, any feedback layer
 
 Two DOM events carry everything a visualization needs, and the runtime never hardcodes the pixels:
@@ -212,4 +234,4 @@ Two DOM events carry everything a visualization needs, and the runtime never har
 
 The built-in glow is simply the default consumer of both. Anything richer — status chips, an animated ring, a backdrop veil — listens to the same two events instead of replacing them, which is what [`createCopilot({ visualize })`](/docs/recipes/local-model-copilot) does.
 
-> **Tip:** try it in the [Playground](/playground) — the agent panel has a "✨ Glow" checkbox; call any tool and watch the preview.
+> **Tip:** try it in the [Playground](/playground) — the agent panel has "✨ Glow" and "🖱️ cursor" checkboxes (both on by default); call any tool and watch the preview.

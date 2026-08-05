@@ -50,15 +50,20 @@ function exampleInput(schema: any): Record<string, unknown> {
   return Object.fromEntries(entries);
 }
 
-function glowToggle(enabled: boolean, onToggle: (enabled: boolean) => void): HTMLElement {
+interface FeedbackToggle {
+  enabled: boolean;
+  onToggle: (enabled: boolean) => void;
+}
+
+function feedbackToggle(text: string, state: FeedbackToggle): HTMLElement {
   const label = el('label', 'glow-toggle');
   const box = document.createElement('input');
 
   box.type = 'checkbox';
-  box.checked = enabled;
-  box.addEventListener('change', () => onToggle(box.checked));
+  box.checked = state.enabled;
+  box.addEventListener('change', () => state.onToggle(box.checked));
   label.appendChild(box);
-  label.appendChild(document.createTextNode(' ✨ Glow the UI while the agent acts'));
+  label.appendChild(document.createTextNode(text));
 
   return label;
 }
@@ -69,11 +74,14 @@ export function renderAgentPanel(
   manifest: any,
   resource: any,
   onCall: CallFn,
-  glow?: { enabled: boolean; onToggle: (enabled: boolean) => void },
+  feedback?: { glow: FeedbackToggle; cursor: FeedbackToggle },
 ): void {
   pane.innerHTML = '';
   pane.appendChild(el('h2', '', '🤖 What the agent sees'));
-  if (glow) pane.appendChild(glowToggle(glow.enabled, glow.onToggle));
+  if (feedback) {
+    pane.appendChild(feedbackToggle(' ✨ Glow the UI while the agent acts', feedback.glow));
+    pane.appendChild(feedbackToggle(' 🖱️ Move a simulated cursor to what it touches', feedback.cursor));
+  }
   manifest.tools.forEach((tool: any) => pane.appendChild(toolRow(tool, onCall)));
   pane.appendChild(el('h2', '', `Resource <code>${resource.uri}</code>`));
   const pre = el('pre', 'resource shiki');

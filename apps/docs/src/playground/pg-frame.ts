@@ -11,6 +11,8 @@ import {
   morph,
   injectGlowStyles,
   glowElement,
+  injectCursorStyles,
+  moveCursorTo,
   type ComponentDef,
   type JanuxInstance,
   type Proposal,
@@ -21,6 +23,7 @@ const proposals = new Map<string, Proposal>();
 
 let generation = 0;
 let glowEnabled = true;
+let cursorEnabled = true;
 let current: JanuxInstance | undefined;
 let currentDef: ComponentDef | undefined;
 let stopRender: (() => void) | undefined;
@@ -111,6 +114,21 @@ function glowTarget(tool: string): Element {
   return root.querySelector(`[data-jxa="${marker}"], [data-jxform="${marker}"]`) ?? root;
 }
 
+/** Paints whichever feedback layers are on: glow ring, simulated cursor, or both. */
+function paintFeedback(tool: string): void {
+  if (!glowEnabled && !cursorEnabled) return;
+  const target = glowTarget(tool);
+
+  if (glowEnabled) {
+    injectGlowStyles();
+    glowElement(target, 900);
+  }
+  if (cursorEnabled) {
+    injectCursorStyles();
+    moveCursorTo(target);
+  }
+}
+
 /** Intent failures (e.g. validation) go to the parent overlay only — never nuke the preview. */
 function postError(error: unknown): void {
   post({ type: 'error', message: String(error) });
@@ -164,12 +182,10 @@ async function run(code: string): Promise<void> {
 async function handleMessage(data: any): Promise<void> {
   if (data?.type === 'run') await run(data.code);
   if (data?.type === 'glow') glowEnabled = data.enabled === true;
+  if (data?.type === 'cursor') cursorEnabled = data.enabled === true;
   if (data?.type === 'call') {
-    // confirm-guarded calls only propose — the glow fires on approval instead.
-    if (glowEnabled && guardFor(data.tool) !== 'confirm') {
-      injectGlowStyles();
-      glowElement(glowTarget(data.tool), 900);
-    }
+    // confirm-guarded calls only propose — the feedback fires on approval instead.
+    if (guardFor(data.tool) !== 'confirm') paintFeedback(data.tool);
     const result = await invokeIntent(data.tool.split('.')[1], data.input, 'agent').catch((error) => ({
       error: String(error),
     }));
@@ -181,10 +197,7 @@ async function handleMessage(data: any): Promise<void> {
 
     if (proposal) {
       proposals.delete(data.id);
-      if (glowEnabled) {
-        injectGlowStyles();
-        glowElement(glowTarget(proposal.tool), 900);
-      }
+      paintFeedback(proposal.tool);
       await proposal.execute();
       await report();
     }

@@ -127,6 +127,7 @@ export async function mountPlayground(): Promise<() => void> {
   let frame: FrameHost;
   let pendingProposal: any;
   let glowEnabled = true;
+  let cursorEnabled = true;
   const run = (): void => {
     els.error.hidden = true;
     els.loading.classList.add('on');
@@ -151,13 +152,17 @@ export async function mountPlayground(): Promise<() => void> {
     glowEnabled = enabled;
     frame.send({ type: 'glow', enabled });
   };
+  const toggleCursor = (enabled: boolean): void => {
+    cursorEnabled = enabled;
+    frame.send({ type: 'cursor', enabled });
+  };
   const onFrameMessage = (data: any): void => {
     if (data?.type === 'ready' || data?.type === 'error') els.loading.classList.remove('on');
     if (data?.type === 'frame-ready') run();
     if (data?.type === 'state') {
       renderAgentPanel(els.agent, data.manifest, data.resource, callTool, {
-        enabled: glowEnabled,
-        onToggle: toggleGlow,
+        glow: { enabled: glowEnabled, onToggle: toggleGlow },
+        cursor: { enabled: cursorEnabled, onToggle: toggleCursor },
       });
       showProposal();
     }

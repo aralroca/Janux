@@ -7,6 +7,7 @@ import { createBridge, type JanuxBridge } from './bridge';
 import { listen } from './events';
 import { mountDocumentForeigns, mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
+import { enableAgentCursor, type CursorOptions } from './cursor';
 import { enableAgentGlow, type GlowOptions } from './glow';
 import { installI18n } from './i18n';
 import type { NavigationConfig } from '../config';
@@ -26,6 +27,8 @@ export interface BootOptions {
   ctx?: Record<string, unknown>;
   /** Highlight islands while an agent operates them. `true` or `{ duration }`. */
   glow?: boolean | GlowOptions;
+  /** Simulated cursor that travels to each element an agent operates. Combines freely with `glow`. */
+  cursor?: boolean | CursorOptions;
   /**
    * SPA navigation via the Navigation API + streamed DOM diff. Default: true.
    * Overrides `navigation` from `janux.config.ts`, which is where an app
@@ -260,6 +263,7 @@ export function boot(options: BootOptions = {}): JanuxClient {
   installI18n(mount.ctx);
   listen(mount, (work) => trackInflight(mount, work));
   if (options.glow) enableAgentGlow(options.glow === true ? {} : options.glow);
+  if (options.cursor) enableAgentCursor(options.cursor === true ? {} : options.cursor);
   const navigation = shellNavigationConfig();
 
   if (options.navigation ?? navigation.spa ?? true) installNavigation(mount, navigation);
