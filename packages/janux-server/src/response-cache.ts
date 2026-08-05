@@ -68,6 +68,34 @@ const nextStamp = (): number => (sequence += 1);
 const invalidatedAt = new Map<string, number>();
 let epoch = 0;
 
+/**
+ * Who else wants to know. Invalidation is the one signal a stateless server
+ * genuinely has about its own content changing, so the MCP subscription stream
+ * is built on it rather than on a second mechanism that could disagree.
+ *
+ * A watcher that throws is the watcher's problem: revalidation must not fail
+ * because someone was listening.
+ */
+const watchers = new Set<(key: string) => void>();
+
+export function onInvalidated(watcher: (key: string) => void): () => void {
+  watchers.add(watcher);
+
+  return () => {
+    watchers.delete(watcher);
+  };
+}
+
+function notifyWatchers(key: string): void {
+  watchers.forEach((watcher) => {
+    try {
+      watcher(key);
+    } catch {
+      // A listening stream that broke cannot break the write that woke it.
+    }
+  });
+}
+
 function mark(key: string): void {
   const at = nextStamp();
 
@@ -76,6 +104,7 @@ function mark(key: string): void {
     epoch = at;
   }
   invalidatedAt.set(key, at);
+  notifyWatchers(key);
 }
 
 /** Drops every cached response carrying `tag`, here and (via the tag header) at the CDN. */

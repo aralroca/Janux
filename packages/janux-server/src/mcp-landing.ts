@@ -13,7 +13,8 @@ import type { ApiTool } from './api';
  * command that connects it, and the tools it serves.
  */
 
-const STYLE = `
+/** Shared with the elicitation page next door — the two browser-facing `/_janux/*` pages look like one app. */
+export const PAGE_STYLE = `
   :root { color-scheme: light dark; --bg: #fff; --fg: #111; --muted: #666; --line: #e5e5e5; --soft: #f6f6f6; --accent: #0062ff }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #212121; --fg: #ededed; --muted: #9a9a9a; --line: #3a3a3a; --soft: #1a1a1a; --accent: #47a8ff }
@@ -94,7 +95,7 @@ export function mcpLandingPage(serverName: string, endpoint: string, tools: ApiT
   return `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${name} — MCP endpoint</title><style>${STYLE}</style></head>
+<title>${name} — MCP endpoint</title><style>${PAGE_STYLE}</style></head>
 <body><main>
 <h1>${name} — MCP endpoint</h1>
 <p>You opened this in a browser, so you get the explanation. An MCP client gets the protocol.</p>

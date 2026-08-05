@@ -3,7 +3,17 @@ import type { ApiTool } from './api';
 import { callableTools, refuseUnauthenticated, type HostedAuth } from './agent-surface';
 import { mcpLandingPage } from './mcp-landing';
 import type { Skill } from './skills';
-import { decorateResult, discoverResult, modernGate } from './mcp-modern';
+import { decorateResult, discoverResult, isModern, modernGate } from './mcp-modern';
+import { listenStream, type SubscriptionDeps } from './mcp-subscriptions';
+import {
+  elicitsByUrl,
+  inputRequired,
+  isParkedProposal,
+  resolveRetry,
+  stillWaiting,
+  type ElicitationVault,
+  type Retry,
+} from './mcp-elicitation';
 
 /**
  * Hosted MCP endpoint (RFC 0002 §13.2): `/_janux/mcp` speaks MCP over
@@ -26,6 +36,10 @@ export interface McpDeps {
   /** The app's skills, projected as resources — see `skillResources`. */
   skills?: readonly Skill[];
   auth?: McpAuth;
+  /** The proposal vault, seen through the one door elicitation needs — see `mcp-elicitation.ts`. */
+  elicitation?: ElicitationVault;
+  /** The invalidation signal `subscriptions/listen` streams — see `mcp-subscriptions.ts`. */
+  subscriptions?: SubscriptionDeps;
 }
 
 interface RpcRequest {
@@ -86,7 +100,15 @@ async function readResource(uri: string, deps: McpDeps, ctx: Ctx): Promise<strin
   return deps.readPage(uri.slice('janux://page'.length) || '/', ctx);
 }
 
-async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx): Promise<Record<string, unknown> | undefined> {
+/** How a resolved retry answers: the result, the refusal, or the same question again. */
+function retryReply(retry: Retry, tool: string, origin: string): Record<string, unknown> {
+  if (retry.kind === 'result') return { content: [{ type: 'text', text: JSON.stringify(retry.result) }] };
+  if (retry.kind === 'refused') return { content: [{ type: 'text', text: retry.reason }], isError: true };
+
+  return stillWaiting(retry.state, tool, origin);
+}
+
+async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx, origin: string): Promise<Record<string, unknown> | undefined> {
   const { id, method, params } = rpc;
 
   switch (method) {
@@ -107,9 +129,18 @@ async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx): Promise<R
       return rpcResult(id, { tools: callableTools(deps.tools, ctx).map(({ tool, guard }) => toolDescriptor(tool, guard)) });
     case 'tools/call': {
       const name = params?.name as string;
+      const retry = deps.elicitation && resolveRetry(params, deps.elicitation);
+
+      if (retry) return rpcResult(id, retryReply(retry, name, origin));
 
       try {
         const result = await deps.invoke(name, params?.arguments ?? {}, ctx);
+
+        // A parked `confirm` call is the protocol's `input_required`, for a
+        // client that told us it can send its user to a page.
+        if (isParkedProposal(result) && deps.elicitation && elicitsByUrl(params)) {
+          return rpcResult(id, inputRequired(result, origin));
+        }
 
         return rpcResult(id, { content: [{ type: 'text', text: JSON.stringify(result) }] });
       } catch (error) {
@@ -170,10 +201,16 @@ export function createMcpEndpoint(deps: McpDeps) {
       const gate = modernGate(body, req.headers);
 
       if (gate) return Response.json(rpcError(body.id ?? null, gate.code, gate.message, gate.data), { status: 400 });
+      // A stream, not a reply: it leaves before the batching and decoration
+      // below, which exist to answer one message with one result.
+      if (body.method === 'subscriptions/listen' && deps.subscriptions && isModern(body, req.headers)) {
+        return listenStream(body, deps.subscriptions);
+      }
     }
     const batch = Array.isArray(body) ? body : [body];
+    const origin = new URL(req.url).origin;
     const respond = async (rpc: RpcRequest) => {
-      const reply = await handleMethod(rpc, deps, ctx);
+      const reply = await handleMethod(rpc, deps, ctx, origin);
 
       if (!reply || !('result' in reply)) return reply;
 
