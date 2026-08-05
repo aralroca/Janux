@@ -91,6 +91,12 @@ A resume runs the same gate as every other request to the mount: `identityFor` r
 
 Retention is bounded in both directions, so an abandoned turn cannot pin memory: it expires after `ttlMs`, and a turn that outgrows `maxBytes` has its payload dropped and stops being replayable. Neither ever truncates the live reader — the only thing given up is the *ability to replay*.
 
+## One instance holds the turn
+
+The log lives in the process that is generating the turn. That is the whole of it — a turn is seconds long and a few KiB, and writing every delta to a database would cost more than the answer.
+
+The consequence is worth stating plainly: **behind a load balancer, a resume that lands on a different instance finds nothing**. It answers `404`, the client stops asking and forgets the stream, and the reader loses the answer exactly as it would have without any of this — no duplicate turn, no error, no wedged page. So this degrades to today's behavior rather than breaking, but on a multi-instance deployment it only helps when the resume happens to come home. Session affinity is what makes it reliable there; a shared log would be the other answer, and `createResumableStreams` is the seam it would go behind.
+
 ## createResumableStreams(config)
 
 The retention log itself, should you want to drive it directly (the mount builds its own from `harness.resumableStreams`):
