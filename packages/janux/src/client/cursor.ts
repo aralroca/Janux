@@ -36,7 +36,7 @@ const CURSOR_CSS = `
 #${CURSOR_ID}.on { opacity: 1; }
 #${CURSOR_ID} path {
   fill: var(--janux-cursor-fill, #fff);
-  stroke: var(--janux-cursor-ring, rgba(124, 58, 237, 0.9));
+  stroke: var(--janux-cursor-ring, rgba(37, 99, 235, 0.9));
   stroke-width: 1.5;
 }`;
 

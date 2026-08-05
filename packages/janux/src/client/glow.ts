@@ -59,7 +59,7 @@ export function suspendAgentGlow(): () => void {
    view styles (e.g. a button that sets its own box-shadow). */
 const GLOW_CSS = `
 .${GLOW_CLASS} {
-  box-shadow: 0 0 0 3px var(--janux-glow-ring, rgba(124, 58, 237, 0.55)),
+  box-shadow: 0 0 0 3px var(--janux-glow-ring, rgba(37, 99, 235, 0.55)),
     0 0 var(--janux-glow-spread, 34px) 4px var(--janux-glow-halo, rgba(34, 211, 238, 0.35)) !important;
   border-radius: var(--janux-glow-radius, 18px);
   transition: box-shadow 0.25s;

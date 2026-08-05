@@ -192,7 +192,7 @@ Styling is yours via CSS custom properties:
 
 ```css
 janux-island {
-  --janux-glow-ring: rgba(124, 58, 237, 0.55);   /* inner ring */
+  --janux-glow-ring: rgba(37, 99, 235, 0.55);    /* inner ring */
   --janux-glow-halo: rgba(34, 211, 238, 0.35);   /* outer halo */
   --janux-glow-spread: 34px;
   --janux-glow-radius: 18px;
@@ -203,7 +203,7 @@ Lower-level pieces are exported from `janux/client` if you want custom behavior:
 
 Glow alone — the ring tours every element the agent touches:
 
-<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-glow-poster.jpg" aria-label="The console operated by an agent with only the glow enabled: a ring highlights each control as the matching tool call runs">
+<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-glow-poster.jpg" aria-label="A request typed into the assistant chat, with only the glow enabled: after sending, a blue ring highlights each control as the matching tool call runs">
   <source src="/agent-feedback-glow.webm" type="video/webm" />
   <source src="/agent-feedback-glow.mp4" type="video/mp4" />
 </video>
@@ -221,7 +221,7 @@ Like the glow, its look is yours via CSS custom properties (the overlay is `#jan
 ```css
 :root {
   --janux-cursor-fill: #fff;                      /* arrow fill */
-  --janux-cursor-ring: rgba(124, 58, 237, 0.9);   /* arrow outline */
+  --janux-cursor-ring: rgba(37, 99, 235, 0.9);    /* arrow outline */
   --janux-cursor-halo: rgba(34, 211, 238, 0.65);  /* glow around the arrow */
   --janux-cursor-size: 26px;
   --janux-cursor-travel: 0.6s;                    /* travel time between elements */
@@ -232,14 +232,14 @@ Lower-level: `enableAgentCursor(options)` (returns a disposer), `moveCursorTo(el
 
 Cursor alone — the arrow travels element to element as the agent acts:
 
-<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-cursor-poster.jpg" aria-label="The console operated by an agent with only the simulated cursor enabled: an arrow travels the screen to each control as the matching tool call runs">
+<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-cursor-poster.jpg" aria-label="A request typed into the assistant chat, with only the simulated cursor enabled: after sending, an arrow travels the screen to each control as the matching tool call runs">
   <source src="/agent-feedback-cursor.webm" type="video/webm" />
   <source src="/agent-feedback-cursor.mp4" type="video/mp4" />
 </video>
 
 And the default pairing — glow and cursor together:
 
-<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-glow-cursor-poster.jpg" aria-label="The console operated by an agent with glow and simulated cursor enabled together: the arrow travels to each control while the ring highlights it">
+<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-glow-cursor-poster.jpg" aria-label="A request typed into the assistant chat, with glow and simulated cursor enabled together: after sending, the arrow travels to each control while the blue ring highlights it">
   <source src="/agent-feedback-glow-cursor.webm" type="video/webm" />
   <source src="/agent-feedback-glow-cursor.mp4" type="video/mp4" />
 </video>
