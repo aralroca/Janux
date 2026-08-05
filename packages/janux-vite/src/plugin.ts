@@ -271,9 +271,16 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       // original module can never serve a stale run.
       this.addWatchFile(virtual.module);
       const tsx = virtual.module.split('?')[0]!.endsWith('x');
-      const code = extractIntentRun(readFileSync(virtual.module, 'utf8'), tsx, virtual.island, virtual.intent);
 
-      return code ? { code, map: null } : undefined;
+      try {
+        const code = extractIntentRun(readFileSync(virtual.module, 'utf8'), tsx, virtual.island, virtual.intent);
+
+        return code ? { code, map: null } : undefined;
+      } catch {
+        // The file left the disk mid-session: let resolution fail loudly
+        // downstream instead of throwing out of the hook.
+        return undefined;
+      }
     },
 
     /** The island catalog, read back by `prodServerOptions` as `islandModules`. */

@@ -30,11 +30,17 @@ import { parseWithSpanBase, sliceSpan, splice, type Span } from './spans';
 interface PathType {
   text: boolean;
   attr: boolean;
+  /** Non-nullable leaf: what `value`/`checked` demand — a bound control
+   * writes '' where the static path leaves a control alone on nullish. */
+  strict: boolean;
   props?: Map<string, PathType>;
   item?: PathType;
 }
 
-const OPAQUE: PathType = { text: false, attr: false };
+const OPAQUE: PathType = { text: false, attr: false, strict: false };
+
+/** The two attributes that are live control properties, held to the strict gate. */
+const CONTROL_ATTRS = new Set(['value', 'checked']);
 
 /** The builders whose value always renders the same as text, thunked or not. */
 const TEXT_SAFE_BUILDERS = new Set(['str', 'int', 'num', 'money', 'enums']);
@@ -101,7 +107,9 @@ function typeOf(node: any, trusted: Map<string, string>): PathType {
   const exported = calleeExport(base, trusted);
 
   if (exported === undefined) return OPAQUE;
-  if (LEAF_BUILDERS.has(exported)) return { text: TEXT_SAFE_BUILDERS.has(exported) && !unsafe, attr: true };
+  if (LEAF_BUILDERS.has(exported)) {
+    return { text: TEXT_SAFE_BUILDERS.has(exported) && !unsafe, attr: true, strict: !unsafe };
+  }
   if ((exported === 'obj' || exported === 'schema') && !unsafe) {
     const props = shapeOf(base.arguments?.[0]?.expression, trusted);
 
@@ -183,7 +191,7 @@ function statePath(expr: any): StatePath | undefined {
 }
 
 /** Whether the schema proves this path equivalent when thunked at this position. */
-function pathIsSafe(path: StatePath, shape: Map<string, PathType>, position: 'text' | 'attr'): boolean {
+function pathIsSafe(path: StatePath, shape: Map<string, PathType>, position: 'text' | 'attr' | 'strict'): boolean {
   let type: PathType | undefined = { ...OPAQUE, props: shape };
 
   for (const segment of path.segments) {
@@ -207,12 +215,15 @@ function taintedNames(node: any, out: Set<string>): Set<string> {
 
     return out;
   }
-  if (node.type === 'AssignmentExpression' && node.left?.type === 'Identifier') out.add(node.left.value);
+  // Destructuring assignment writes through patterns; `for (x of …)` writes
+  // its left-hand side each iteration when it is not a fresh declaration.
+  if (node.type === 'AssignmentExpression') patternNames(node.left, out);
   if (node.type === 'UpdateExpression' && node.argument?.type === 'Identifier') out.add(node.argument.value);
+  if ((node.type === 'ForOfStatement' || node.type === 'ForInStatement') && node.left?.type !== 'VariableDeclaration') {
+    patternNames(node.left, out);
+  }
   if (node.type === 'VariableDeclaration' && node.kind === 'var') {
-    node.declarations?.forEach((decl: any) => {
-      if (decl.id?.type === 'Identifier') out.add(decl.id.value);
-    });
+    node.declarations?.forEach((decl: any) => patternNames(decl.id, out));
   }
   Object.values(node).forEach((value) => taintedNames(value, out));
 
@@ -258,10 +269,15 @@ export function boundNames(node: any, out: Set<string>): Set<string> {
   if (node.type === 'VariableDeclarator') patternNames(node.id, out);
   if (node.type === 'CatchClause') patternNames(node.param, out);
   if (node.type === 'ArrowFunctionExpression') (node.params ?? []).forEach((p: any) => patternNames(p, out));
-  if (node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration') {
+  // SWC spells method params four ways; every one of them is a binding.
+  if (node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration' || node.type === 'MethodProperty' || node.type === 'Constructor') {
     if (node.identifier) out.add(node.identifier.value);
-    (node.params ?? []).forEach((p: any) => patternNames(p.pat, out));
+    (node.params ?? []).forEach((p: any) => patternNames(p.pat ?? p, out));
   }
+  if (node.type === 'ClassMethod' || node.type === 'PrivateMethod') {
+    (node.function?.params ?? []).forEach((p: any) => patternNames(p.pat, out));
+  }
+  if (node.type === 'SetterProperty') patternNames(node.param, out);
   if (node.type === 'ClassDeclaration' && node.identifier) out.add(node.identifier.value);
   Object.values(node).forEach((value) => boundNames(value, out));
 
@@ -317,8 +333,9 @@ function collectSites(node: any, view: ViewAnalysis): void {
       if (EVENT_PROP.test(attr.name.value) || BLOCKED_ATTRS.has(attr.name.value)) return;
       if (attr.value?.type !== 'JSXExpressionContainer') return;
       const path = statePath(attr.value.expression);
+      const position = CONTROL_ATTRS.has(attr.name.value) ? 'strict' : 'attr';
 
-      if (path && pathIsSafe(path, view.shape, 'attr')) {
+      if (path && pathIsSafe(path, view.shape, position)) {
         view.sites.push({ span: attr.value.expression.span, idents: path.idents });
       }
     });

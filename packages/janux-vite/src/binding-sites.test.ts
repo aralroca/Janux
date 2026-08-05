@@ -222,6 +222,50 @@ export const Card = component({
     expect(compileBindingSites(code, true)).toBeUndefined();
   });
 
+  /** Method params are bindings too — SWC spells them MethodProperty/ClassMethod, not Function*. */
+  it('bails when a method parameter shadows `state`', () => {
+    const method = island(`state: schema({ n: str() }),
+  view: ({ state }: any) => {
+    const helpers = { row(state: any) { return <b>{state.n}</b>; } };
+    return <div>{helpers.row({ n: 1 })}</div>;
+  },`);
+    const cls = island(`state: schema({ n: str() }),
+  view: ({ state }: any) => {
+    class H { row(state: any) { return <b>{state.n}</b>; } }
+    return <div>{new H().row({ n: 1 })}</div>;
+  },`);
+
+    expect(compileBindingSites(method, true)).toBeUndefined();
+    expect(compileBindingSites(cls, true)).toBeUndefined();
+  });
+
+  it('treats destructuring assignment and for-of over an existing binding as taint', () => {
+    const destructured = island(`state: schema({ xs: list(str()) }),
+  view: ({ state }: any) => { let i = 0; [i] = [2]; return <output>{state.xs[i]}</output>; },`);
+    const forOf = `${HEADER}let cursor = 0;
+export function sweep() { for (cursor of [0, 1]) {} }
+export const Card = component({
+  name: 'card',
+  state: schema({ xs: list(str()) }),
+  view: ({ state }: any) => <output>{state.xs[cursor]}</output>,
+});\n`;
+
+    expect(compileBindingSites(destructured, true)).toBeUndefined();
+    expect(compileBindingSites(forOf, true)).toBeUndefined();
+  });
+
+  /**
+   * A bound `value` writes '' where the static path leaves the control
+   * alone when the state goes nullish — so `value`/`checked` demand a
+   * non-nullable leaf, stricter than the ordinary attribute gate.
+   */
+  it('does not bind value to an optional leaf', () => {
+    const optional = island(`state: schema({ v: str().optional() }),
+  view: ({ state }: any) => <input value={state.v} />,`);
+
+    expect(compileBindingSites(optional, true)).toBeUndefined();
+  });
+
   it('bails out of a view that shadows or aliases `state`', () => {
     const shadow = island(`state: schema({ label: str() }),
   view: ({ state }: any) => { const render = (state: any) => <b>{state.label}</b>; return <span>{state.label}</span>; },`);

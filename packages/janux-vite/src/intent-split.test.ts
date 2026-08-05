@@ -77,6 +77,64 @@ export const Cart = component({
     expect(splitIntentsTransform(code, true, '/app/src/Cart.tsx')).toContain('import(');
   });
 
+  /**
+   * A global name is only an excuse when NOTHING in the module binds it: a
+   * module-scope `const fetch` wrapper must block extraction, and an
+   * imported `Headers` polyfill must travel with the chunk — never be
+   * silently swapped for the platform global.
+   */
+  it('never rebinds a module-shadowed or imported global', () => {
+    const shadowed = `${HEADER}const fetch = (u: string) => globalThis.fetch('/api' + u);
+export const Cart = component({
+  name: 'cart',
+  state: schema({ note: str() }),
+  intents: { go: intent({ run: async ({ state }: any) => { state.note = await fetch('/x'); } }) },
+  view: () => null,
+});\n`;
+    const polyfilled = `${HEADER}import { Headers } from './polyfill';
+export const Cart = component({
+  name: 'cart',
+  state: schema({ note: str() }),
+  intents: { go: intent({ run: ({ state }: any) => { state.note = String(new Headers({})); } }) },
+  view: () => null,
+});\n`;
+
+    expect(splitIntentsTransform(shadowed, true, '/app/src/Cart.tsx')).toBeUndefined();
+    expect(extractIntentRun(polyfilled, true, 'cart', 'go')).toContain("import { Headers } from './polyfill';");
+  });
+
+  /** `<T>expr` is the one Ts*Type* node with a runtime child — its reference must be seen. */
+  it('carries imports referenced through a TsTypeAssertion', () => {
+    const code = `import { component, intent, schema, str } from 'janux';
+import { cfg } from './cfg';
+export const Cart = component({
+  name: 'cart',
+  state: schema({ note: str() }),
+  intents: { go: intent({ run: ({ state }: any) => { state.note = <string>cfg; } }) },
+  view: () => null,
+});\n`;
+
+    expect(extractIntentRun(code, false, 'cart', 'go')).toContain("import { cfg } from './cfg';");
+  });
+
+  /** Two defs sharing an island name would collapse onto one virtual id — split neither. */
+  it('does not split duplicate island/intent pairs', () => {
+    const code = `${HEADER}export const A = component({
+  name: 'cart',
+  state: schema({ note: str() }),
+  intents: { go: intent({ run: ({ state }: any) => void (state.note = 'a') }) },
+  view: () => null,
+});
+export const B = component({
+  name: 'cart',
+  state: schema({ note: str() }),
+  intents: { go: intent({ run: ({ state }: any) => void (state.note = 'b') }) },
+  view: () => null,
+});\n`;
+
+    expect(splitIntentsTransform(code, true, '/app/src/Cart.tsx')).toBeUndefined();
+  });
+
   it('leaves referenced (non-inline) intents and non-function runs alone', () => {
     const referenced = `${HEADER}const saveDef = intent({ run: ({ state }: any) => void (state.note = 'x') });
 export const Cart = component({

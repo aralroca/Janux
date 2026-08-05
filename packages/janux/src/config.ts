@@ -276,6 +276,9 @@ export interface CompilerConfig {
    * Move provably self-contained intent `run()` bodies into their own
    * chunks, downloaded on first invocation. Client graph only — the server
    * keeps the full defs, so guards, schemas and the manifest never change.
+   * Trade-offs of the lazy stub: a split run is always async, so an agent
+   * proposal's shadow-run diff degrades to input-only for it, and its writes
+   * land after the synchronous batch. Pays when a run carries real weight.
    */
   splitIntents?: boolean;
 }

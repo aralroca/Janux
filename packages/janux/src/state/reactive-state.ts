@@ -258,8 +258,11 @@ export function createReactiveState<T extends object>(
     // A write that changes the container's KEY SET (a new key, array growth
     // by index, a length truncation) is a write TO the container — notify it
     // the way push/splice already do, or a binding that dropped the container
-    // subscription for its leaves never hears the shape changed.
-    const structural = !Object.prototype.hasOwnProperty.call(raw, key) || (Array.isArray(raw) && key === 'length');
+    // subscription for its leaves never hears the shape changed. The root is
+    // the documented exception (see notification-granularity conformance):
+    // nothing can subscribe to '', so a top-level new key notifies only itself.
+    const structural =
+      path !== '' && (!Object.prototype.hasOwnProperty.call(raw, key) || (Array.isArray(raw) && key === 'length'));
 
     Reflect.set(raw, key, plainify(value, target, undefined, true));
     touch(structural ? path : target);
@@ -273,8 +276,9 @@ export function createReactiveState<T extends object>(
 
     assertMutable(gate, target);
     Reflect.deleteProperty(raw, key);
-    // Removing a key is always structural: the container is what changed.
-    touch(path);
+    // Removing a key is structural: the container is what changed (except at
+    // the unsubscribable root, where only the key itself can have readers).
+    touch(path === '' ? target : path);
 
     return true;
   };

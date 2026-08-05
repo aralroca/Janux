@@ -42,6 +42,8 @@ function referencedIdents(node: any, out: Set<string>): Set<string> {
 
     return out;
   }
+  // `<T>expr` is the one Ts*Type* node carrying a runtime child.
+  if (node.type === 'TsTypeAssertion') return referencedIdents(node.expression, out);
   if (typeof node.type === 'string' && node.type.startsWith('Ts') && node.type.includes('Type')) return out;
   if (node.type === 'Identifier') {
     out.add(node.value);
@@ -152,18 +154,29 @@ function splitRuns(body: any[]): SplitRun[] {
       // The collision kill rule: an inner binding that reuses a module-scope
       // name could hide a genuine outer reference from the free-variable set.
       if ([...bound].some((name) => scope.has(name))) return;
-      const free = [...referencedIdents(run, new Set<string>())].filter(
-        (name) => !bound.has(name) && !GLOBALS.has(name),
-      );
+      const free = [...referencedIdents(run, new Set<string>())].filter((name) => !bound.has(name));
 
-      if (!free.every((name) => importedNames.has(name))) return;
+      // Imports travel with the chunk. Any OTHER module-scope name means the
+      // run is not self-contained, and only a name the module binds nowhere
+      // may fall back to a global — a `const fetch` wrapper or an imported
+      // `Headers` polyfill must never be swapped for the platform's.
+      if (!free.every((name) => importedNames.has(name) || (!scope.has(name) && GLOBALS.has(name)))) return;
       const needed = imports.filter((imp) => free.some((name) => imp.locals.has(name)));
 
       runs.push({ island, intent: intentName, runSpan: run.span, importSpans: needed.map((imp) => imp.span) });
     });
   });
+  // Two defs sharing an island name would collapse onto one virtual id and
+  // both stubs would execute the first run — split neither.
+  const counts = new Map<string, number>();
 
-  return runs;
+  runs.forEach(({ island, intent }) => {
+    const key = `${island}:${intent}`;
+
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  });
+
+  return runs.filter(({ island, intent }) => counts.get(`${island}:${intent}`) === 1);
 }
 
 /**
