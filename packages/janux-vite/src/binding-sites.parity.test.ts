@@ -11,17 +11,19 @@ import { compileBindingSites } from './binding-sites';
  * for an app module Vite transformed.
  */
 
-const SOURCE = `import { component, schema, str, int, obj } from 'janux';
+const SOURCE = `import { component, schema, str, int, bool, obj } from 'janux';
 
 export const Card = component({
   name: 'parity-card',
   state: schema({
     count: int().default(3),
     tone: str().default('warm'),
+    on: bool().default(false),
+    note: str().optional(),
     user: obj({ name: str().default('ada') }),
   }),
   view: ({ state }: any) => (
-    <section data-tone={state.tone} class="card">
+    <section data-tone={state.tone} class="card" hidden={state.on} aria-busy={state.on} data-note={state.note}>
       <b>{state.user.name}</b>
       <span>{state.count}</span>
     </section>
@@ -54,14 +56,22 @@ describe('compiled and original modules render identical HTML', () => {
     const { renderToString } = await import('janux/server');
     const original = await loadVariant('original', SOURCE);
     const evolved = await loadVariant('compiled', compiled!);
-    // `<>&"` in state: escaping must survive the thunk hop identically.
-    const state = { count: 5, tone: 'a"b<c>&d', user: { name: '<i>&amp;' } };
-    const html = async (def: any) => (await renderToString(def.view({ state }))).html;
+    // `<>&"` in state: escaping must survive the thunk hop identically. The
+    // boolean and the absent optional exercise the lax attribute gate.
+    const states = [
+      { count: 5, tone: 'a"b<c>&d', on: false, user: { name: '<i>&amp;' } },
+      { count: 0, tone: '', on: true, note: 'kept', user: { name: 'ada' } },
+    ];
+    const html = async (def: any, state: unknown) => (await renderToString(def.view({ state }))).html;
 
-    const originalHtml = await html(original);
+    for (const state of states) {
+      expect(await html(evolved, state)).toBe(await html(original, state));
+    }
+    const visible = await html(original, states[0]);
 
-    expect(await html(evolved)).toBe(originalHtml);
-    expect(originalHtml).toContain('class="card"');
-    expect(originalHtml).toContain('<span>5</span>');
+    expect(visible).toContain('class="card"');
+    expect(visible).toContain('<span>5</span>');
+    expect(visible).not.toContain('hidden');
+    expect(await html(original, states[1])).toContain('aria-busy="true"');
   });
 });

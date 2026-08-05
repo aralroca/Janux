@@ -113,19 +113,41 @@ export const Card = component({
     expect(compileBindingSites(code, true)).toBeUndefined();
   });
 
-  it('does not touch events, value/checked, or unsafe attribute types', () => {
+  it('does not touch events or value/checked', () => {
     const events = island(`state: schema({ label: str() }),
   intents: { go: intent({ run: () => {} }) },
   view: ({ state, intents }: any) => <button onClick={intents.go}>{state.label}</button>,`);
     const value = island(`state: schema({ text: str() }),
   view: ({ state }: any) => <input value={state.text} />,`);
-    const boolAttr = island(`state: schema({ on: bool() }),
-  view: ({ state }: any) => <div aria-busy={state.on}>x</div>,`);
+    const checked = island(`state: schema({ on: bool() }),
+  view: ({ state }: any) => <input type="checkbox" checked={state.on} />,`);
 
     expect(compileBindingSites(events, true)).toContain('{() => (state.label)}');
     expect(compileBindingSites(events, true)).toContain('onClick={intents.go}');
     expect(compileBindingSites(value, true)).toBeUndefined();
-    expect(compileBindingSites(boolAttr, true)).toBeUndefined();
+    expect(compileBindingSites(checked, true)).toBeUndefined();
+  });
+
+  /**
+   * Attribute position is the lax case: absent-for-falsy and the aria
+   * "true"/"false" stringification are identical for a static value and a
+   * resolved thunk, so ANY leaf builder qualifies — modifiers included.
+   * Text position stays strict (JSX drops what textOf renders).
+   */
+  it('rewrites boolean and optional paths in attribute position only', () => {
+    const boolAttr = island(`state: schema({ on: bool() }),
+  view: ({ state }: any) => <div aria-busy={state.on} hidden={state.on}>x</div>,`);
+    const optional = island(`state: schema({ note: str().optional() }),
+  view: ({ state }: any) => <p data-note={state.note}>x</p>,`);
+    const objAttr = island(`state: schema({ user: obj({ name: str() }) }),
+  view: ({ state }: any) => <p data-user={state.user}>x</p>,`);
+    const out = compileBindingSites(boolAttr, true);
+
+    expect(out).toContain('aria-busy={() => (state.on)}');
+    expect(out).toContain('hidden={() => (state.on)}');
+    expect(compileBindingSites(optional, true)).toContain('data-note={() => (state.note)}');
+    // A container is not a leaf: nothing proves how it serializes.
+    expect(compileBindingSites(objAttr, true)).toBeUndefined();
   });
 
   it('does not touch dynamic or non-path expressions', () => {

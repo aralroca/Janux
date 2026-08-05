@@ -32,18 +32,25 @@ interface Edit {
 /**
  * What the schema proves about one path. Text position is the strict case:
  * JSX drops null/undefined/boolean where `textOf` renders them, so only a
- * non-nullable string/number leaf is equivalent as text. `props` carries an
- * `obj()`'s resolved shape; a leaf (or anything unresolvable) has none.
+ * non-nullable string/number leaf is equivalent as text (`text`). Attribute
+ * position is lax: absent-for-falsy and the aria stringification treat a
+ * static value and a resolved thunk identically, so any leaf qualifies
+ * (`attr`). `props` carries an `obj()`'s resolved shape; a leaf (or
+ * anything unresolvable) has none.
  */
 interface PathType {
-  safe: boolean;
+  text: boolean;
+  attr: boolean;
   props?: Map<string, PathType>;
 }
 
-const OPAQUE: PathType = { safe: false };
+const OPAQUE: PathType = { text: false, attr: false };
 
 /** The builders whose value always renders the same as text, thunked or not. */
 const TEXT_SAFE_BUILDERS = new Set(['str', 'int', 'num', 'money', 'enums']);
+
+/** Every scalar builder: provable in attribute position whatever its modifiers. */
+const LEAF_BUILDERS = new Set([...TEXT_SAFE_BUILDERS, 'bool']);
 
 /** Chained modifiers that reintroduce null/undefined into a leaf. */
 const UNSAFE_MODIFIERS = new Set(['optional', 'nullable']);
@@ -106,11 +113,11 @@ function typeOf(node: any, trusted: Map<string, string>): PathType {
   const exported = calleeExport(base, trusted);
 
   if (exported === undefined) return OPAQUE;
-  if (TEXT_SAFE_BUILDERS.has(exported)) return { safe: !unsafe };
+  if (LEAF_BUILDERS.has(exported)) return { text: TEXT_SAFE_BUILDERS.has(exported) && !unsafe, attr: true };
   if ((exported === 'obj' || exported === 'schema') && !unsafe) {
     const props = shapeOf(base.arguments?.[0]?.expression, trusted);
 
-    return props ? { safe: false, props } : OPAQUE;
+    return props ? { text: false, attr: false, props } : OPAQUE;
   }
 
   return OPAQUE;
@@ -153,8 +160,8 @@ function statePath(expr: any): string[] | undefined {
   return current?.type === 'Identifier' && current.value === 'state' && segments.length > 0 ? segments : undefined;
 }
 
-/** Whether the schema proves this path a non-nullable string/number leaf. */
-function pathIsSafe(segments: string[], shape: Map<string, PathType>): boolean {
+/** Whether the schema proves this path equivalent when thunked at this position. */
+function pathIsSafe(segments: string[], shape: Map<string, PathType>, position: 'text' | 'attr'): boolean {
   let props: Map<string, PathType> | undefined = shape;
   let type: PathType | undefined;
 
@@ -164,7 +171,7 @@ function pathIsSafe(segments: string[], shape: Map<string, PathType>): boolean {
     props = type.props;
   }
 
-  return type?.safe === true;
+  return type?.[position] === true;
 }
 
 /** Whether this pattern binds the name (so the view's `state` is shadowed past it). */
@@ -247,14 +254,14 @@ function collectSites(node: any, view: ViewAnalysis): void {
       if (attr.value?.type !== 'JSXExpressionContainer') return;
       const segments = statePath(attr.value.expression);
 
-      if (segments && pathIsSafe(segments, view.shape)) view.edits.push(attr.value.expression.span);
+      if (segments && pathIsSafe(segments, view.shape, 'attr')) view.edits.push(attr.value.expression.span);
     });
     node.children?.forEach((child: any) => {
       if (child.type !== 'JSXExpressionContainer') return collectSites(child, view);
       const segments = statePath(child.expression);
       const siblings = node.children.filter((other: any) => other !== child);
 
-      if (segments && pathIsSafe(segments, view.shape) && !siblings.some(rendersText)) {
+      if (segments && pathIsSafe(segments, view.shape, 'text') && !siblings.some(rendersText)) {
         view.edits.push(child.expression.span);
       }
     });
