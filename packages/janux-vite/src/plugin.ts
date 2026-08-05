@@ -205,7 +205,7 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       const { clientEntry } = app;
 
       serverDir = app.serverDir;
-      bindingMaps = app.compiler?.bindingMaps ?? false;
+      bindingMaps = app.compiler?.bindingMaps ?? true;
 
       return {
         appType: 'custom',
