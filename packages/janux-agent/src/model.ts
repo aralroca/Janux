@@ -23,7 +23,10 @@ const DEFAULT_MODELS: Record<ResolvedModel['provider'], string> = {
   anthropic: 'claude-sonnet-5',
   openai: 'gpt-5.2',
   google: 'gemini-3-pro',
-  openrouter: 'anthropic/claude-sonnet-5',
+  // OpenRouter is what people reach for to spend less, so an unnamed model
+  // lands on a cheap fast one rather than the priciest thing on the menu.
+  // `JANUX_MODEL="openrouter/anthropic/claude-sonnet-5"` still overrides it.
+  openrouter: 'deepseek/deepseek-v4-flash',
 };
 
 function fromIdentifier(identifier: string, env: ModelEnv, source: string): ResolvedModel | undefined {

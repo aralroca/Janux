@@ -673,6 +673,16 @@
         "janux": "workspace:*",
       },
     },
+    "examples/with-channels": {
+      "name": "janux-example-with-channels",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/with-content": {
       "name": "janux-example-with-content",
       "version": "0.2.1",
@@ -2320,6 +2330,8 @@
     "janux-example-shop": ["janux-example-shop@workspace:examples/shop"],
 
     "janux-example-with-advanced-routing": ["janux-example-with-advanced-routing@workspace:examples/with-advanced-routing"],
+
+    "janux-example-with-channels": ["janux-example-with-channels@workspace:examples/with-channels"],
 
     "janux-example-with-content": ["janux-example-with-content@workspace:examples/with-content"],
 

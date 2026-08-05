@@ -12,6 +12,7 @@ import { resolveModel, setupCard, type ModelEnv, type ResolvedModel } from './mo
 import { tracedAgentTurn, tracedRound, turnUsageAttributes, type ModelCost } from './tracing';
 import { allowsTool, type ToolFilter } from './tool-filter';
 import { loadSkillBody, loadSkillTools, skillsSection, LOAD_SKILL } from './skills';
+import { channelNote, serverAnswered, unavailableOnChannel } from './channels/surface';
 import type { ManifestSkill } from 'janux/manifest';
 import { DELEGATE_PREFIX, delegationTools, runDelegation, validateSubagents, type SubagentConfig } from './subagents';
 import { combineBills, turnBill, type TurnBill } from './usage';
@@ -76,6 +77,12 @@ interface AgentRequestBody {
   threadId?: string;
   /** After a handoff: keep talking to this target agent. */
   agent?: string;
+  /**
+   * The channel this turn arrived on, when it did not arrive from a browser.
+   * Set by `handleChannel`; it only ever *removes* surface, so a client that
+   * declares one is asking for less, never for more.
+   */
+  channel?: string;
 }
 
 const SYSTEM_PREAMBLE = [
@@ -104,10 +111,12 @@ function manifestTools(manifest: any, filter: ToolFilter | undefined): AgentTool
     }));
 }
 
-function systemPrompt(config: AgentConfig, manifest: any): string {
+function systemPrompt(config: AgentConfig, manifest: any, channel?: string): string {
   const resources = JSON.stringify(manifest.resources ?? []);
   const routes = (manifest.routes ?? []) as string[];
-  const routeMap = routes.length
+  // The route map exists to be walked with `ui_navigate`. On a channel that
+  // tool is not there, so the list would only advertise a door that is shut.
+  const routeMap = channel === undefined && routes.length
     ? `App routes (use ui_navigate to reach any of them; fill [params] with known values): ${routes.join(', ')}`
     : undefined;
 
@@ -233,17 +242,30 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       const manifest: any = await deps.manifestFor(body.path ?? '/');
       const remoteTools = toolbox ? await toolbox.tools() : [];
       const skills = manifestSkills(manifest);
+      // A turn that arrived over a channel has no browser to execute the client
+      // half of the surface — see `channels/surface.ts`.
+      const channel = body.channel || undefined;
+      const answeredHere = (name: string) => serverAnswered(name, (tool) => toolbox?.owns(tool) ?? false);
       // The composition tools (delegate/handoff) belong to the root agent
       // only: a handoff target answers on its own surface, it does not chain.
-      const toolsFor = (filter: ToolFilter | undefined, root: boolean): AgentTool[] => [
+      const wholeSurface = (filter: ToolFilter | undefined, root: boolean): AgentTool[] => [
         ...manifestTools(manifest, filter),
         ...CLIENT_TOOL_SPECS.map((spec) => ({ name: spec.name, description: spec.description, input: spec.parameters })),
         ...remoteTools.map(({ name, description, input }) => ({ name, description, input })),
         ...(root ? [...delegationTools(config.subagents), ...handoffTools(config.handoffs)] : []),
         ...loadSkillTools(skills),
       ];
-      const systemFor = (target: HandoffConfig | undefined) =>
-        target ? systemPrompt({ ...config, instructions: target.instructions }, manifest) : systemPrompt(config, manifest);
+      const toolsFor = (filter: ToolFilter | undefined, root: boolean): AgentTool[] =>
+        channel ? wholeSurface(filter, root).filter((tool) => answeredHere(tool.name)) : wholeSurface(filter, root);
+      const withheldFrom = (filter: ToolFilter | undefined, root: boolean): string[] =>
+        wholeSurface(filter, root)
+          .filter((tool) => !answeredHere(tool.name))
+          .map((tool) => tool.name);
+      const systemFor = (target: HandoffConfig | undefined) => {
+        const base = systemPrompt(target ? { ...config, instructions: target.instructions } : config, manifest, channel);
+
+        return channel ? `${base}\n\n${channelNote(channel, withheldFrom(target ? target.tools : config.tools, !target))}` : base;
+      };
 
       // The turn's acting agent: the root, or — sticky across turns, or mid-
       // turn after a transfer — one of the declared handoff targets.
@@ -395,7 +417,14 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
             ...(await toolResults(handoffCalls, async (call) => ({ error: `unknown_agent: ${call.name.slice(HANDOFF_PREFIX.length)}` }))),
           );
           if (uiCalls.length > 0) {
-            return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId, ...(active && { agent: active.name }), ...billed() });
+            // On a channel there is no client to execute them, so they come back
+            // as results the model can answer around — a turn that ends in
+            // `ui_calls` nobody will run is a conversation left hanging.
+            if (!channel) {
+              return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId, ...(active && { agent: active.name }), ...billed() });
+            }
+
+            messages.push(...(await toolResults(uiCalls, async (call) => unavailableOnChannel(call.name, channel))));
           }
         }
 

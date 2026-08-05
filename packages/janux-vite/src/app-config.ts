@@ -27,6 +27,7 @@ export { registerInstrumentation, type InstrumentationModule } from './instrumen
 export { builtFontAssets } from './fonts';
 export { builtServiceWorker, SERVICE_WORKER_FILE } from './service-worker';
 export { scheduleFiles, scheduleName, scheduleConfigFile, scheduleServerOptions } from './schedules';
+export { channelFiles, channelName, channelServerOptions } from './channels';
 
 export type JanuxPluginOptions = JanuxConfig;
 
@@ -52,6 +53,8 @@ export interface JanuxAppConfig {
   websocketModule?: string;
   /** `src/schedules/`, when the app has one — each file is a schedule (see `schedules.ts`). */
   schedulesDir?: string;
+  /** `src/channels/`, when the app has one — each file is an inbound surface (see `channels.ts`). */
+  channelsDir?: string;
   /**
    * `src/skills/**`, parsed. Data rather than a directory, so a bundled
    * deployment carries the procedures inside its config instead of hoping the
@@ -167,6 +170,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
     websocketModule: options.websocket ? resolve(root, options.websocket) : optional(resolve(root, 'src/ws.ts')),
     schedulesDir: optional(resolve(root, 'src/schedules')),
+    channelsDir: optional(resolve(root, 'src/channels')),
     skills: discoverSkills(resolve(root, 'src/skills')),
     feedModule: optional(resolve(root, 'src/feed.ts')),
     instrumentationModule: optional(resolve(root, 'src/instrumentation.ts')),
