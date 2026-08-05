@@ -29,7 +29,7 @@ Identity at runtime, like `defineSchedule` — it exists to type the object. A c
 
 `ChannelMessage` is `{ text, threadId?, path? }` — `threadId` keys [harness memory](/docs/reference/agent-memory), `path` chooses the page whose manifest frames the turn (default `/`).
 
-`ChannelReply` is `{ text, threadId?, error? }`. `error` is set when the turn ended in a guardrail refusal, a provider failure or missing model setup, so a transport can style it differently.
+`ChannelReply` is `{ text, threadId?, error?, detail? }`. `error` is set when the turn ended in a guardrail refusal, a provider failure or missing model setup, so a transport can style it differently. `detail` carries the provider's own words when there are any — it travels so an operator can diagnose without reading server logs, and it is separate from `text` precisely so a chat transport can show the sentence and not the stack: `slackChannel` and `discordChannel` render `text` alone.
 
 ## `webhookChannel`
 

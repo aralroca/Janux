@@ -39,6 +39,13 @@ export interface ChannelReply {
   threadId?: string;
   /** Set when the turn ended in a refusal, a provider failure or missing setup. */
   error?: string;
+  /**
+   * What went wrong underneath — a provider's own message, usually. It travels
+   * so an operator can diagnose without reading server logs, and it is separate
+   * from `text` so a chat transport can show the sentence and not the stack:
+   * `slackChannel` and `discordChannel` render `text` alone.
+   */
+  detail?: string;
 }
 
 export interface ChannelDef {
@@ -92,7 +99,12 @@ function replyOf(envelope: Record<string, any>, message: ChannelMessage): Channe
   const error = envelope.type === 'text' ? undefined : (envelope.error ?? envelope.type ?? 'agent_error');
   const text = typeof envelope.text === 'string' && envelope.text !== '' ? envelope.text : envelope.message;
 
-  return { text: typeof text === 'string' ? text : FAILED, ...(threadId !== undefined && { threadId }), ...(error && { error }) };
+  return {
+    text: typeof text === 'string' ? text : FAILED,
+    ...(threadId !== undefined && { threadId }),
+    ...(error && { error }),
+    ...(typeof envelope.detail === 'string' && { detail: envelope.detail }),
+  };
 }
 
 /**

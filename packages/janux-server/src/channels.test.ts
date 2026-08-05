@@ -107,7 +107,16 @@ describe('channels on the server', () => {
     [{ type: 'text', text: 'four are pending' }, { text: 'four are pending' }],
     [{ type: 'refusal', reason: 'jailbreak', message: "I can't help with that." }, { text: "I can't help with that.", error: 'refusal' }],
     [{ type: 'setup', message: 'No model configured.' }, { text: 'No model configured.', error: 'setup' }],
-    [{ type: 'error', error: 'provider_error' }, { text: 'The agent could not answer that right now.', error: 'provider_error' }],
+    [
+      // Why it failed survives the crossing: a caller told only "could not
+      // answer" has nothing to act on, and the detail is the whole diagnosis.
+      { type: 'error', error: 'provider_error', detail: 'Error: OpenRouter API error 402: insufficient credits' },
+      {
+        text: 'The agent could not answer that right now.',
+        error: 'provider_error',
+        detail: 'Error: OpenRouter API error 402: insufficient credits',
+      },
+    ],
     [undefined, { text: 'The agent could not answer that right now.', error: 'agent_error' }],
   ])('renders %o for the transport', async (envelope, expected) => {
     const agent: AgentMount = { handle: async () => (envelope ? Response.json(envelope) : new Response('not json at all')) };
