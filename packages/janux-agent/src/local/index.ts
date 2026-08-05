@@ -22,6 +22,7 @@ export {
   type StreamingLlm,
   type UIMessageChunk,
 } from './llm';
+export type { ResumeOptions, ResumeStorage } from './resume';
 export { defineTool, registry } from '@aralroca/gui-agent';
 export type {
   AgentStep,

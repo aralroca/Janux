@@ -47,6 +47,13 @@ export {
   type CounterStore,
 } from './rate-limit';
 export {
+  createResumableStreams,
+  type ResumableStreams,
+  type ResumableStreamsConfig,
+  type ResumeFailure,
+  type StreamFrame,
+} from './resumable';
+export {
   connectMcp,
   createMcpPool,
   type McpClientOptions,

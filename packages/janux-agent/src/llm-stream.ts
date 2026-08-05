@@ -1,5 +1,6 @@
 import type { ProviderReply } from './providers';
 import type { ProviderStreamEvent } from './provider-stream';
+import type { StreamFrame } from './harness/resumable';
 import { sseFrame } from './sse';
 
 /**
@@ -87,34 +88,55 @@ export async function* turnChunks(turn: Turn): AsyncGenerator<unknown> {
   yield { type: 'finish' };
 }
 
+/**
+ * Where a turn is retained so it can be replayed. Present only when the app
+ * opted into resumable streams; its absence is what keeps the default cheap.
+ */
+export interface StreamSink {
+  append(frame: StreamFrame): void;
+  close(): void;
+}
+
+/** Numbers the chunks once, so the live wire and the retained log agree on ids. */
+async function* numbered(chunks: AsyncGenerator<unknown>): AsyncGenerator<StreamFrame> {
+  let id = 0;
+
+  for await (const chunk of chunks) yield { id: id++, chunk };
+}
+
 async function pump(
-  chunks: AsyncGenerator<unknown>,
+  frames: AsyncGenerator<StreamFrame>,
   controller: ReadableStreamDefaultController<Uint8Array>,
   gone: () => boolean,
+  sink: StreamSink | undefined,
 ): Promise<void> {
   const encoder = new TextEncoder();
-  let id = 0;
   // Enqueueing to a cancelled stream throws, and the tail below still has to run
   // for the live case — so writes are attempts, not assumptions.
-  const write = (chunk: unknown): void => {
+  const write = (frame: StreamFrame): void => {
+    sink?.append(frame);
     try {
-      controller.enqueue(encoder.encode(sseFrame(chunk, id++)));
+      if (!gone()) controller.enqueue(encoder.encode(sseFrame(frame.chunk, frame.id)));
     } catch {
       // The reader is gone; nothing left to say.
     }
   };
+  let last = -1;
 
   try {
-    for await (const chunk of chunks) {
-      // `break` (not `return`) so the for-await closes the generator on the way
-      // out, which is what reaches the provider.
-      if (gone()) break;
-      write(chunk);
+    for await (const frame of frames) {
+      // Without a sink a departed reader ends the turn — nobody is left to bill
+      // it for. With one, the turn is exactly what a resume comes back for, so
+      // it runs to the end and the log, not the socket, is the destination.
+      if (gone() && !sink) break;
+      write(frame);
+      last = frame.id;
     }
   } catch (error) {
     // A provider that dies mid-turn still owes the client a terminated stream.
-    write({ type: 'error', errorText: String(error) });
+    write({ id: last + 1, chunk: { type: 'error', errorText: String(error) } });
   }
+  sink?.close();
   if (gone()) return;
   try {
     controller.enqueue(encoder.encode(DONE));
@@ -125,22 +147,39 @@ async function pump(
 }
 
 /**
- * Every event carries an incremental `id:`, and the response its stream id.
- * Nothing replays them yet — that needs a durable buffer the app has to own —
- * but a resumable transport can be added behind this shape without moving the
- * wire, which is why the ids are here from the start.
+ * Every event carries an incremental `id:`, and the response its stream id —
+ * which is the whole cursor protocol: a reader that comes back names the last
+ * id it saw and {@link replayResponse} owes it the remainder. With no `sink`
+ * the ids are still emitted and nothing is retained, exactly as before.
  */
-export function streamingResponse(chunks: AsyncGenerator<unknown>, streamId: string): Response {
+export function streamingResponse(chunks: AsyncGenerator<unknown>, streamId: string, sink?: StreamSink): Response {
+  const frames = numbered(chunks);
   let gone = false;
   const body = new ReadableStream<Uint8Array>({
-    start: (controller) => pump(chunks, controller, () => gone),
+    start: (controller) => pump(frames, controller, () => gone, sink),
     // A disconnected reader has to reach the provider, or the turn keeps
-    // generating (and billing) for nobody.
+    // generating (and billing) for nobody — unless it is being retained, in
+    // which case finishing it is the point.
     cancel() {
       gone = true;
 
-      return chunks.return(undefined).then(() => undefined);
+      return sink ? undefined : frames.return(undefined).then(() => undefined);
     },
+  });
+
+  return new Response(body, { headers: { ...HEADERS, 'x-janux-stream-id': streamId } });
+}
+
+/** The same wire, re-emitted from the log: original ids, so a reader cannot double-count. */
+export function replayResponse(frames: AsyncGenerator<StreamFrame>, streamId: string): Response {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      for await (const frame of frames) controller.enqueue(encoder.encode(sseFrame(frame.chunk, frame.id)));
+      controller.enqueue(encoder.encode(DONE));
+      controller.close();
+    },
+    cancel: () => frames.return(undefined).then(() => undefined),
   });
 
   return new Response(body, { headers: { ...HEADERS, 'x-janux-stream-id': streamId } });

@@ -6,6 +6,7 @@ import { filterHandoffHistory, handoffCost, handoffNote, handoffTools, HANDOFF_P
 import { CLIENT_TOOL_SPECS } from 'janux';
 import { runProcessors } from './harness/processors';
 import { createRateLimiter, type RateLimitConfig, type RateLimiter } from './harness/rate-limit';
+import { createResumableStreams, type ResumableStreams, type ResumableStreamsConfig } from './harness/resumable';
 import { createLlmHandler } from './llm-endpoint';
 import { createRemoteToolbox, type McpAgentConnection, type RemoteToolbox } from './mcp-tools';
 import { resolveModel, setupCard, type ModelEnv, type ResolvedModel } from './model';
@@ -24,6 +25,16 @@ export interface HarnessConfig {
   /** Guardrail pipeline run before every turn (abort → typed refusal). */
   processors?: InputProcessor[];
   rateLimit?: RateLimitConfig;
+  /**
+   * Retain streamed turns so a reader that goes away — a reload, a dropped
+   * network, a second tab — can resume from the last event it received. `true`
+   * takes the defaults (60s TTL, 256 KiB per turn); an object tunes them.
+   *
+   * Off by default, because a retained turn runs to completion even when nobody
+   * is reading it: that is what makes resuming possible, and it is a cost the
+   * app has to choose.
+   */
+  resumableStreams?: boolean | ResumableStreamsConfig;
   /** Resolves the caller identity (rate-limit key + thread ownership). Default: 'anonymous'. */
   identityFor?: (req: Request) => string | undefined | Promise<string | undefined>;
   /** Human-readable reply on a guardrail refusal — a string or a per-reason factory. */
@@ -156,6 +167,13 @@ function createGate(config: AgentConfig, limiter: RateLimiter | undefined) {
   };
 }
 
+/** `true` means "with the defaults"; an object tunes them; anything else keeps retention off. */
+function resumableStreamsFor(option: boolean | ResumableStreamsConfig | undefined): ResumableStreams | undefined {
+  if (!option) return undefined;
+
+  return createResumableStreams(option === true ? {} : option);
+}
+
 async function toolResults(calls: ToolCall[], run: (call: ToolCall) => Promise<unknown>): Promise<ChatMessage[]> {
   const results: ChatMessage[] = [];
 
@@ -219,10 +237,11 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
     ? createRateLimiter(config.harness.rateLimit)
     : undefined;
   const gate = createGate(config, limiter);
+  const streams: ResumableStreams | undefined = resumableStreamsFor(config.harness?.resumableStreams);
   const toolbox: RemoteToolbox | undefined = createRemoteToolbox(config.mcp, fetchImpl);
 
   return {
-    handleLlm: createLlmHandler(config, env, fetchImpl, gate),
+    handleLlm: createLlmHandler(config, env, fetchImpl, gate, streams),
     async handle(req: Request, deps: AgentDeps): Promise<Response> {
       // The gate runs first, always: a missing model is a configuration state,
       // not a reason to answer an unauthorized caller or to stop counting.

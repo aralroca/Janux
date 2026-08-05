@@ -1,7 +1,15 @@
 import { createAiSdkLlm, createRemoteLlm } from '@aralroca/gui-agent/ai-sdk';
 import type { Llm, LlmRequest, LlmResponse } from '@aralroca/gui-agent';
 import type { UIMessageChunk } from 'ai';
-import { sseData } from '../sse';
+import { sseEvents } from '../sse';
+import {
+  createResumeSession,
+  forgetInterrupted,
+  interruptedStream,
+  resumeRequest,
+  type ResumeOptions,
+  type ResumeSession,
+} from './resume';
 
 /** Apache-2.0, ~500 MB in q4f16 and the strongest tool-caller of its size class. */
 export const DEFAULT_LOCAL_MODEL = 'onnx-community/Qwen3-0.6B-ONNX';
@@ -166,6 +174,13 @@ export interface ServerLlmOptions {
    * to a UI, and the resolved {@link LlmResponse} is identical either way.
    */
   stream?: boolean;
+  /**
+   * Survive losing the connection mid-turn. A dropped network reconnects and
+   * continues; a reload or a second tab picks the turn up through
+   * {@link StreamingLlm.resumeInterrupted}. Requires `harness.resumableStreams`
+   * on the agent — without it the mount has nothing to replay.
+   */
+  resume?: boolean | ResumeOptions;
 }
 
 /** The protocol's own chunk type, so a Janux stream lines up structurally with any AI SDK renderer. */
@@ -176,30 +191,87 @@ export type ChunkListener = (chunk: UIMessageChunk) => void;
 export interface StreamingLlm extends Llm {
   /** Listen to the chunks of every turn this Llm runs. Returns an unsubscribe. */
   subscribe(listener: ChunkListener): () => void;
+  /**
+   * The turn a reload (or another tab) interrupted, replayed from the start
+   * through `subscribe` and resolved when it ends. `undefined` when there is
+   * nothing in flight — which is the answer on almost every page load.
+   */
+  resumeInterrupted(): Promise<LlmResponse | undefined>;
 }
 
-function accumulate(chunk: UIMessageChunk, text: string[], toolCalls: any[]): void {
-  if (chunk.type === 'text-delta') text.push(chunk.delta ?? '');
-  if (chunk.type === 'error') throw new Error(chunk.errorText ?? 'llm stream error');
+/** One turn being assembled, across however many transports it takes. */
+interface Turn {
+  text: string[];
+  toolCalls: any[];
+  /** The turn reached its own end — as opposed to the connection reaching one. */
+  finished: boolean;
+}
+
+const newTurn = (): Turn => ({ text: [], toolCalls: [], finished: false });
+
+const replyOf = (turn: Turn): LlmResponse => ({ text: turn.text.join(''), toolCalls: turn.toolCalls });
+
+function accumulate(chunk: UIMessageChunk, turn: Turn): void {
+  if (chunk.type === 'text-delta') turn.text.push(chunk.delta ?? '');
+  if (chunk.type === 'finish') turn.finished = true;
+  if (chunk.type === 'error') {
+    // The turn's own failure, not a transport hiccup: reconnecting would only
+    // fetch the same error again.
+    turn.finished = true;
+    throw new Error(chunk.errorText ?? 'llm stream error');
+  }
   if (chunk.type === 'tool-input-available') {
-    toolCalls.push({ id: chunk.toolCallId, name: chunk.toolName, arguments: chunk.input ?? {} });
+    turn.toolCalls.push({ id: chunk.toolCallId, name: chunk.toolName, arguments: chunk.input ?? {} });
+  }
+}
+
+async function readInto(
+  body: ReadableStream<Uint8Array>,
+  emit: ChunkListener,
+  turn: Turn,
+  session?: ResumeSession,
+): Promise<void> {
+  for await (const event of sseEvents(body)) {
+    const chunk = JSON.parse(event.data) as UIMessageChunk;
+
+    if (session && !session.accepts(event.id)) continue;
+    // `accumulate` throws on an error chunk, and the thrown turn is what the
+    // run reports — forwarding it as well would surface the same failure twice.
+    accumulate(chunk, turn);
+    emit(chunk);
+    session?.advance(event.id);
   }
 }
 
 async function readTurn(body: ReadableStream<Uint8Array>, emit: ChunkListener): Promise<LlmResponse> {
-  const text: string[] = [];
-  const toolCalls: any[] = [];
+  const turn = newTurn();
 
-  for await (const payload of sseData(body)) {
-    const chunk = JSON.parse(payload) as UIMessageChunk;
+  await readInto(body, emit, turn);
 
-    // `accumulate` throws on an error chunk, and the thrown turn is what the
-    // run reports — forwarding it as well would surface the same failure twice.
-    accumulate(chunk, text, toolCalls);
-    emit(chunk);
+  return replyOf(turn);
+}
+
+/**
+ * Reads a turn across transports: when the connection ends before the turn does,
+ * the same turn is picked back up where it stopped. A body that simply *stops*
+ * is the common case (a dropped network is not an exception on this side), which
+ * is why completion is judged by the protocol's own `finish` and never by the
+ * socket closing.
+ */
+async function readResumable(first: Response, emit: ChunkListener, session: ResumeSession): Promise<LlmResponse> {
+  const turn = newTurn();
+  let response: Response | undefined = first;
+  let failure: unknown;
+
+  session.begin(first.headers.get('x-janux-stream-id'));
+  while (response && !turn.finished) {
+    failure = await readInto(response.body!, emit, turn, session).then(() => undefined, (error) => error);
+    response = turn.finished ? undefined : await session.reconnect();
   }
+  session.finish();
+  if (failure) throw failure;
 
-  return { text: text.join(''), toolCalls };
+  return replyOf(turn);
 }
 
 /**
@@ -222,12 +294,18 @@ async function fetchOrFailure(input: RequestInfo | URL, init?: RequestInit): Pro
   return response;
 }
 
+const endpointOf = (options: ServerLlmOptions): string => options.endpoint ?? '/_janux/llm';
+
+const resumeOptions = (options: ServerLlmOptions): ResumeOptions | undefined =>
+  options.resume ? (options.resume === true ? {} : options.resume) : undefined;
+
 async function streamedTurn(
   options: ServerLlmOptions,
   request: LlmRequest,
   emit: ChunkListener,
 ): Promise<LlmResponse> {
-  const response = await fetch(options.endpoint ?? '/_janux/llm', {
+  const resuming = resumeOptions(options);
+  const response = await fetch(endpointOf(options), {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'text/event-stream', ...options.headers },
     body: JSON.stringify({ messages: request.messages, tools: request.tools, stream: true }),
@@ -235,8 +313,32 @@ async function streamedTurn(
   });
 
   if (!response.ok || !response.body) throw await failure(response);
+  if (!resuming) return readTurn(response.body, emit);
 
-  return readTurn(response.body, emit);
+  return readResumable(response, emit, createResumeSession(endpointOf(options), options.headers, resuming));
+}
+
+/**
+ * Picks up a turn a previous page load left in flight, replayed from the very
+ * beginning — after a reload there is no text on the screen to continue from,
+ * so continuing means repainting the whole answer.
+ */
+async function resumeInterruptedTurn(options: ServerLlmOptions, emit: ChunkListener): Promise<LlmResponse | undefined> {
+  const resuming = resumeOptions(options);
+  const streamId = resuming && interruptedStream(resuming);
+
+  if (!resuming || !streamId) return undefined;
+  const response = await resumeRequest(endpointOf(options), streamId, -1, options.headers).catch(() => undefined);
+
+  // Expired, finished long ago or never ours: nothing to show, and nothing to
+  // keep offering to the next page load either.
+  if (!response?.ok || !response.body) {
+    forgetInterrupted(resuming);
+
+    return undefined;
+  }
+
+  return readResumable(response, emit, createResumeSession(endpointOf(options), options.headers, resuming));
 }
 
 /**
@@ -266,6 +368,7 @@ export function serverLlm(options: ServerLlmOptions = {}): StreamingLlm {
 
     return () => listeners.delete(listener);
   };
+  llm.resumeInterrupted = () => resumeInterruptedTurn(options, emit);
 
   return llm;
 }

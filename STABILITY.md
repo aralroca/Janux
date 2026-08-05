@@ -89,7 +89,7 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `@janux/agent`
 
-- **Stable** — `AttachmentError`, `acceptAttachments`, `allowsTool`, `approxTokens`, `callProvider`, `createMemory`, `createMemoryCounterStore`, `createMemoryStorage`, `createPgStorage`, `createRateLimiter`, `createRedisCounterStore`, `createScheduler`, `createStep`, `createWorkflow`, `createWorkflowRunner`, `defineAgent`, `defineChannel`, `defineSchedule`, `defineScheduleConfig`, `discordChannel`, `historyTokenBudget`, `injectionGuard`, `isValidCron`, `nextOccurrence`, `piiFilter`, `resolveModel`, `runProcessors`, `setupCard`, `slackChannel`, `unicodeNormalizer`, `webhookChannel`
+- **Stable** — `AttachmentError`, `acceptAttachments`, `allowsTool`, `approxTokens`, `callProvider`, `createMemory`, `createMemoryCounterStore`, `createMemoryStorage`, `createPgStorage`, `createRateLimiter`, `createRedisCounterStore`, `createResumableStreams`, `createScheduler`, `createStep`, `createWorkflow`, `createWorkflowRunner`, `defineAgent`, `defineChannel`, `defineSchedule`, `defineScheduleConfig`, `discordChannel`, `historyTokenBudget`, `injectionGuard`, `isValidCron`, `nextOccurrence`, `piiFilter`, `resolveModel`, `runProcessors`, `setupCard`, `slackChannel`, `unicodeNormalizer`, `webhookChannel`
 - **Experimental** — `connectMcp`, `createMcpPool`
 - **Internal** — _none_
 

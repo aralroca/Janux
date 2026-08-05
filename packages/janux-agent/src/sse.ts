@@ -31,14 +31,33 @@ async function* lines(body: ReadableStream<Uint8Array>): AsyncGenerator<string> 
   }
 }
 
-/** The `data:` payloads of an SSE body, in order, stopping at the `[DONE]` sentinel. */
-export async function* sseData(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+export interface SseEvent {
+  /** The `id:` that preceded this payload, or `-1` when the producer sent none. */
+  id: number;
+  data: string;
+}
+
+/**
+ * The events of an SSE body, in order, stopping at the `[DONE]` sentinel.
+ *
+ * The `id:` is carried rather than dropped because it is the resume cursor: a
+ * reader that comes back names the last one it saw and is owed only what follows.
+ */
+export async function* sseEvents(body: ReadableStream<Uint8Array>): AsyncGenerator<SseEvent> {
+  let id = -1;
+
   for await (const line of lines(body)) {
     const payload = line.startsWith('data:') ? line.slice(5).trim() : '';
 
+    if (line.startsWith('id:')) id = Number(line.slice(3).trim());
     if (payload === '[DONE]') return;
-    if (payload) yield payload;
+    if (payload) yield { id, data: payload };
   }
+}
+
+/** The `data:` payloads of an SSE body, in order, stopping at the `[DONE]` sentinel. */
+export async function* sseData(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+  for await (const event of sseEvents(body)) yield event.data;
 }
 
 /** SSE frame for one already-serialized chunk. */
