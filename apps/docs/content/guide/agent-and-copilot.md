@@ -15,7 +15,7 @@ Resolution order (first match wins):
 
 1. `defineAgent({ model: 'anthropic/claude-fable-5' })`
 2. `JANUX_MODEL=provider/model` environment variable
-3. Provider-key sniffing: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or `GOOGLE_GENERATIVE_AI_API_KEY` present → that provider's default model
+3. Provider-key sniffing: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY` or `OPENROUTER_API_KEY` present → that provider's default model (`claude-sonnet-5`, `gpt-5.2`, `gemini-3-pro`, and `deepseek/deepseek-v4-flash` on OpenRouter — the aggregator is what you reach for to spend less, so an unnamed model lands on a cheap fast one)
 4. Nothing found → the endpoint answers with a **setup card** naming the exact variable to set. The app never crashes over a missing key.
 
 ```ts title="src/agent.ts"

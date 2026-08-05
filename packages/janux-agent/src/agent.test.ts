@@ -26,6 +26,20 @@ describe('model resolution (RFC §8.1)', () => {
     expect(model.source).toContain('OPENAI_API_KEY');
   });
 
+  /**
+   * OpenRouter is the aggregator people reach for to spend less, so the model
+   * it lands on when they name none should not be the most expensive one on
+   * the menu. Naming a model explicitly still wins over this.
+   */
+  it('defaults an OpenRouter key to a cheap, fast model', () => {
+    const model = resolveModel(undefined, { OPENROUTER_API_KEY: 'sk-or-x' })!;
+
+    expect(model).toMatchObject({ provider: 'openrouter', model: 'deepseek/deepseek-v4-flash' });
+    expect(resolveModel('openrouter/anthropic/claude-sonnet-5', { OPENROUTER_API_KEY: 'sk-or-x' })!.model).toBe(
+      'anthropic/claude-sonnet-5',
+    );
+  });
+
   it('returns undefined with no keys (setup card path)', () => {
     expect(resolveModel(undefined, {})).toBeUndefined();
   });

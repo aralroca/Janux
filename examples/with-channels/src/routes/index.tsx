@@ -45,10 +45,16 @@ export default function Home() {
         <p class="hint">
           The secret is yours to pick; it only has to match the <code>authorization: Bearer</code> header. The
           provider key can be any one of <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>,{' '}
-          <code>GOOGLE_GENERATIVE_AI_API_KEY</code> or <code>OPENROUTER_API_KEY</code>. So each refusal tells you
-          which half is missing: <code>503 channel_unconfigured</code> is the secret never reaching the server,{' '}
-          <code>401</code> is a bearer that does not match, and <code>{'{"error":"setup"}'}</code> is no provider
-          key — the turn still ran end to end, which is the transport proving itself.
+          <code>GOOGLE_GENERATIVE_AI_API_KEY</code> or <code>OPENROUTER_API_KEY</code> — each picks that provider's
+          default model (OpenRouter lands on <code>deepseek/deepseek-v4-flash</code>), and{' '}
+          <code>JANUX_MODEL="provider/model"</code> overrides it.
+        </p>
+        <p class="hint">
+          So each refusal tells you which half is missing: <code>503 channel_unconfigured</code> is the secret never
+          reaching the server, <code>401</code> is a bearer that does not match, and{' '}
+          <code>{'{"error":"setup"}'}</code> is no provider key — the turn still ran end to end, which is the
+          transport proving itself. Anything else comes back with a <code>detail</code> carrying the provider's own
+          words.
         </p>
       </header>
       <IncidentBoard />

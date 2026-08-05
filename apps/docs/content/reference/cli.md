@@ -431,7 +431,7 @@ const server = createJanuxServer(await prodServerOptions(process.cwd()));
 | Variable | Purpose |
 |---|---|
 | `JANUX_MODEL` | `provider/model` for the copilot |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` | Provider auth (also drives model sniffing) |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` / `OPENROUTER_API_KEY` | Provider auth (also drives model sniffing) |
 | `PORT` | Server port |
 
 > **Note:** `janux start` runs your TSX directly on Bun — there is no server build step. `janux build` only bundles client assets.

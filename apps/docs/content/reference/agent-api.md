@@ -44,7 +44,16 @@ The request the framework builds always wins: `modelOptions` can add `reasoning`
 
 1. `defineAgent({ model })` — `'provider/model'` string.
 2. `JANUX_MODEL` env var.
-3. Provider key sniffing: `ANTHROPIC_API_KEY` → Anthropic default, `OPENAI_API_KEY` → OpenAI default, `GOOGLE_GENERATIVE_AI_API_KEY` → Google default.
+3. Provider key sniffing, to that provider's default model:
+
+   | Key | Default model |
+   | --- | --- |
+   | `ANTHROPIC_API_KEY` | `claude-sonnet-5` |
+   | `OPENAI_API_KEY` | `gpt-5.2` |
+   | `GOOGLE_GENERATIVE_AI_API_KEY` | `gemini-3-pro` |
+   | `OPENROUTER_API_KEY` | `deepseek/deepseek-v4-flash` |
+
+   A default has to be a model that provider actually serves, which is why only OpenRouter's is a DeepSeek one — and why it is: the aggregator is what you reach for to spend less, so an unnamed model should not land on the priciest thing on the menu. Name one to override: `JANUX_MODEL="openrouter/anthropic/claude-sonnet-5"`.
 4. Nothing found → the endpoint answers `{ type: 'setup', message }` naming the exact variable. The app never crashes over a missing key.
 
 ## The turn protocol
