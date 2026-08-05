@@ -1,0 +1,17 @@
+{
+  "name": "janux-example-with-channels",
+  "private": true,
+  "version": "0.2.1",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev --port 4344",
+    "build": "janux build",
+    "start": "janux start --port 4344"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*"
+  }
+}
