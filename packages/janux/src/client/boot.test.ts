@@ -264,6 +264,22 @@ describe('client boot (resume without hydration)', () => {
     await approvePending;
   });
 
+  it('boot({ cursor: true }) walks the simulated cursor to the operated control', async () => {
+    const client = await serveAndBoot({ cursor: { duration: 10 } });
+    const incButton = document.querySelector('[data-jxa="counter#default:inc"]')!;
+
+    incButton.getBoundingClientRect = () =>
+      ({ left: 100, top: 200, width: 40, height: 20, right: 140, bottom: 220, x: 100, y: 200 }) as DOMRect;
+    expect(document.getElementById('janux-cursor-styles')).not.toBeNull();
+    const pending = client.call('counter.inc');
+    const cursor = document.getElementById('janux-agent-cursor')!;
+
+    // The wiring is what this proves: the call reached the cursor layer and parked it on +1.
+    expect(cursor.classList.contains('on')).toBe(true);
+    expect(cursor.style.transform).toBe('translate(120px, 210px)');
+    await pending;
+  });
+
   it('boot({ glow: true }) injects styles and glows the operated island', async () => {
     const { html, snapshots } = await renderToString(jsx(counter as any, {}), {
       initialState: { 'ui://counter#default': { n: 1, history: [] } },

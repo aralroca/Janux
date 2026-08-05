@@ -16,6 +16,13 @@ export {
   type GlowOptions,
   type ToolTargetDetail,
 } from './glow';
+export {
+  enableAgentCursor,
+  injectCursorStyles,
+  moveCursorTo,
+  CURSOR_ID,
+  type CursorOptions,
+} from './cursor';
 export { performNavigation, mountEagerIslands, KEEP_ATTRIBUTE } from './navigate';
 export { prefetch, prefetchOnHover } from './prefetch';
 export {

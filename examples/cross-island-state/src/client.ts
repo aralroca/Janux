@@ -6,4 +6,4 @@ import { ProductGrid } from './components/ProductGrid';
 import { Toasts } from './components/Toasts';
 import { cart } from './stores';
 
-boot({ defs: [cart, CartBadge, CartPanel, Inventory, ProductGrid, Toasts], glow: true });
+boot({ defs: [cart, CartBadge, CartPanel, Inventory, ProductGrid, Toasts], glow: true, cursor: true });

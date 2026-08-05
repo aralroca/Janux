@@ -188,11 +188,13 @@ boot({ defs: [Cart], glow: true });          // or { glow: { duration: 1200 } }
 
 Every `window.janux.call(...)` (your copilot, an external client, the playground) makes the target island glow from `start` until shortly after the call resolves. Humans always see *where* the agent is acting — proposals stop being abstract.
 
+When an intent declares a [`glowTarget`](/docs/reference/core-api) for DOM its run creates — a React Flow node, a row it appended — both built-in layers wait out the tick that DOM needs to mount and point at that exact element instead of the island.
+
 Styling is yours via CSS custom properties:
 
 ```css
 janux-island {
-  --janux-glow-ring: rgba(124, 58, 237, 0.55);   /* inner ring */
+  --janux-glow-ring: rgba(37, 99, 235, 0.55);    /* inner ring */
   --janux-glow-halo: rgba(34, 211, 238, 0.35);   /* outer halo */
   --janux-glow-spread: 34px;
   --janux-glow-radius: 18px;
@@ -200,6 +202,49 @@ janux-island {
 ```
 
 Lower-level pieces are exported from `janux/client` if you want custom behavior: `enableAgentGlow(options)` (returns a disposer), `glowElement(el, duration)`, `glowTargetFor(tool)`, `injectGlowStyles()` and the `GLOW_CLASS` constant.
+
+Glow alone — the ring tours every element the agent touches:
+
+<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-glow-poster.jpg" aria-label="A request typed into the assistant chat, with only the glow enabled: after sending, a blue ring highlights each control as the matching tool call runs">
+  <source src="/agent-feedback-glow.webm" type="video/webm" />
+  <source src="/agent-feedback-glow.mp4" type="video/mp4" />
+</video>
+
+### The simulated cursor
+
+`cursor: true` (or `{ duration }`) adds a second layer: a simulated cursor that travels the screen element to element as the agent acts, starting from the center of the viewport on its first move. Glow and cursor consume the same events and combine freely — both, either, or neither:
+
+```ts title="src/client.ts"
+boot({ defs: [Cart], glow: true, cursor: true });
+```
+
+Like the glow, its look is yours via CSS custom properties (the overlay is `#janux-agent-cursor`):
+
+```css
+:root {
+  --janux-cursor-fill: #fff;                      /* arrow fill */
+  --janux-cursor-ring: rgba(37, 99, 235, 0.9);    /* arrow outline */
+  --janux-cursor-halo: rgba(34, 211, 238, 0.65);  /* glow around the arrow */
+  --janux-cursor-size: 26px;
+  --janux-cursor-travel: 0.6s;                    /* travel time between elements */
+}
+```
+
+Lower-level: `enableAgentCursor(options)` (returns a disposer), `moveCursorTo(el, duration)`, `injectCursorStyles()` and the `CURSOR_ID` constant.
+
+Cursor alone — the arrow travels element to element as the agent acts:
+
+<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-cursor-poster.jpg" aria-label="A request typed into the assistant chat, with only the simulated cursor enabled: after sending, an arrow travels the screen to each control as the matching tool call runs">
+  <source src="/agent-feedback-cursor.webm" type="video/webm" />
+  <source src="/agent-feedback-cursor.mp4" type="video/mp4" />
+</video>
+
+And the default pairing — glow and cursor together:
+
+<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-glow-cursor-poster.jpg" aria-label="A request typed into the assistant chat, with glow and simulated cursor enabled together: after sending, the arrow travels to each control while the blue ring highlights it">
+  <source src="/agent-feedback-glow-cursor.webm" type="video/webm" />
+  <source src="/agent-feedback-glow-cursor.mp4" type="video/mp4" />
+</video>
 
 ### One seam, any feedback layer
 
@@ -212,4 +257,4 @@ Two DOM events carry everything a visualization needs, and the runtime never har
 
 The built-in glow is simply the default consumer of both. Anything richer — status chips, an animated ring, a backdrop veil — listens to the same two events instead of replacing them, which is what [`createCopilot({ visualize })`](/docs/recipes/local-model-copilot) does.
 
-> **Tip:** try it in the [Playground](/playground) — the agent panel has a "✨ Glow" checkbox; call any tool and watch the preview.
+> **Tip:** try it in the [Playground](/playground) — the agent panel has "✨ Glow" and "🖱️ cursor" checkboxes (both on by default); call any tool and watch the preview.

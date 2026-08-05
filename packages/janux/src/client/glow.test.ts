@@ -1,6 +1,6 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { glowTargetFor } from './glow';
+import { enableAgentGlow, glowTargetFor } from './glow';
 
 beforeAll(() => GlobalRegistrator.register());
 afterAll(() => GlobalRegistrator.unregister());
@@ -64,5 +64,31 @@ describe('glowTargetFor', () => {
 
     expect(glowTargetFor('gallery.open')!.id).toBe('shot');
     expect(glowTargetFor('gallery.zoom')!.id).toBe('pad');
+  });
+});
+
+describe('enableAgentGlow with a declared glowTarget', () => {
+  it('lights the declared element on ok — even mounting a tick late — instead of the island', async () => {
+    document.body.innerHTML = ISLAND;
+    const dispose = enableAgentGlow({ duration: 500 });
+    const node = document.createElement('div');
+
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-call', { detail: { tool: 'users.clear', phase: 'start', glowTargetPending: true } }),
+    );
+    // No island guess: the declared target is coming with `ok`.
+    expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(0);
+
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-call', { detail: { tool: 'users.clear', phase: 'ok', glowTarget: '#late-node' } }),
+    );
+    node.id = 'late-node';
+    // The node mounts a tick after `ok`, like a React Flow node would.
+    setTimeout(() => document.body.appendChild(node), 40);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(node.classList.contains('janux-agent-glow')).toBe(true);
+    expect(document.querySelectorAll('.janux-agent-glow')).toHaveLength(1);
+    dispose();
   });
 });
