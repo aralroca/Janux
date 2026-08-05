@@ -24,6 +24,7 @@ import {
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { scheduleServerOptions } from './schedules';
 import { channelServerOptions } from './channels';
+import { compileClientModule } from './binding-sites';
 import { collectIslands, islandCatalogFromDir } from './islands';
 import { attachDevWebSocket } from './dev-websocket';
 import { DEV_ROUTE_PATH, devRouteHandler } from './dev-route-info';
@@ -191,6 +192,8 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
   /** Island defs met while bundling the client graph — the build's catalog, see islands.ts. */
   const islandCatalog: Record<string, string> = {};
   let bundling = false;
+  /** The compiler evolution's switches, resolved with the app config. */
+  let bindingMaps = false;
 
   return {
     name: 'janux',
@@ -202,6 +205,7 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       const { clientEntry } = app;
 
       serverDir = app.serverDir;
+      bindingMaps = app.compiler?.bindingMaps ?? false;
 
       return {
         appType: 'custom',
@@ -235,10 +239,18 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
      */
     transform(code, id, transformOptions) {
       if (bundling && !transformOptions?.ssr) collectIslands(islandCatalog, id, code);
-      if (!serverDir || !isApiModule(serverDir, id)) return undefined;
-      if (transformOptions?.ssr) return undefined;
+      if (serverDir && isApiModule(serverDir, id)) {
+        return transformOptions?.ssr ? undefined : { code: apiStubModule(id, code), map: null };
+      }
+      // After the api stubs on purpose: a server module never reaches this,
+      // so the compiler cannot interfere with "server code stays server-side".
+      if (bindingMaps && !transformOptions?.ssr) {
+        const compiled = compileClientModule(id, code);
 
-      return { code: apiStubModule(id, code), map: null };
+        if (compiled) return { code: compiled, map: null };
+      }
+
+      return undefined;
     },
 
     /** The island catalog, read back by `prodServerOptions` as `islandModules`. */

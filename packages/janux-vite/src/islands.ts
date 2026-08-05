@@ -11,7 +11,7 @@ import { parseSync } from '@swc/core';
  */
 
 const DEF_FACTORIES = new Set(['component', 'foreign']);
-const MODULE_PATH = /\.[jt]sx?$/;
+export const MODULE_PATH = /\.[jt]sx?$/;
 
 /**
  * Nodes that wrap the call without changing it. `as const` is its own node type
@@ -28,7 +28,7 @@ const WRAPPERS = new Set([
 ]);
 
 /** Looks through every wrapper, however many were written. */
-function unwrap(node: any): any {
+export function unwrap(node: any): any {
   return WRAPPERS.has(node?.type) ? unwrap(node.expression) : node;
 }
 

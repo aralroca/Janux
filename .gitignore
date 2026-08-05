@@ -28,3 +28,7 @@ packages/janux-vercel/src/__fixtures__/app/node_modules/
 .tsconfig.build.json
 # What @janux/node writes: a self-contained deployment directory.
 build/
+
+# Session-local: agent worktrees and machine-local benchmark baselines
+/.claude/
+/benchmarks/baselines/pre-compiler/

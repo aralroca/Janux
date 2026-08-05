@@ -261,6 +261,17 @@ export interface JanuxConfig {
   cache?: CacheConfig;
   /** What to do about registering the worker `src/sw.ts` builds into. */
   serviceWorker?: ServiceWorkerConfig;
+  /** The compiler evolution's switches (see the roadmap's Rendering entry). */
+  compiler?: CompilerConfig;
+}
+
+export interface CompilerConfig {
+  /**
+   * Rewrite provable static state reads in views into reactive binding
+   * thunks, so a write re-runs one DOM write instead of one island render.
+   * The escape hatch for a rewrite the analysis got wrong is `false`.
+   */
+  bindingMaps?: boolean;
 }
 
 /** Identity helper for `janux.config.ts`: type-checks and autocompletes the config. */

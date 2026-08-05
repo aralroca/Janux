@@ -38,6 +38,8 @@ export interface JanuxAppConfig {
   routesDir: string;
   serverDir: string;
   clientEntry: string;
+  /** Compiler evolution switches, as configured (defaults applied where they are read). */
+  compiler?: JanuxConfig['compiler'];
   agentModule?: string;
   storesModule?: string;
   i18nModule?: string;
@@ -199,6 +201,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     csp: options.csp,
     cache: options.cache,
     serviceWorker: options.serviceWorker,
+    compiler: options.compiler,
   };
 }
 
