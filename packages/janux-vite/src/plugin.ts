@@ -22,6 +22,7 @@ import {
 } from './app-config';
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { scheduleServerOptions } from './schedules';
+import { channelServerOptions } from './channels';
 import { collectIslands, islandCatalogFromDir } from './islands';
 import { attachDevWebSocket } from './dev-websocket';
 import { DEV_ROUTE_PATH, devRouteHandler } from './dev-route-info';
@@ -82,6 +83,7 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     websocket: websocketModule?.default as ServerOptions['websocket'],
     // Dev is a persistent process, so schedules tick in-process, like prod on Bun.
     schedules: await scheduleServerOptions(app, (file) => vite.ssrLoadModule(file) as any),
+    channels: await channelServerOptions(app, (file) => vite.ssrLoadModule(file) as any),
     skills: app.skills,
     mcpAuth: mcpAuthOptions(app.mcpAuth),
     agents: app.agents,
