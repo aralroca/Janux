@@ -188,6 +188,8 @@ boot({ defs: [Cart], glow: true });          // or { glow: { duration: 1200 } }
 
 Every `window.janux.call(...)` (your copilot, an external client, the playground) makes the target island glow from `start` until shortly after the call resolves. Humans always see *where* the agent is acting — proposals stop being abstract.
 
+When an intent declares a [`glowTarget`](/docs/reference/core-api) for DOM its run creates — a React Flow node, a row it appended — both built-in layers wait out the tick that DOM needs to mount and point at that exact element instead of the island.
+
 Styling is yours via CSS custom properties:
 
 ```css

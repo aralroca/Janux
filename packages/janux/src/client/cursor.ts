@@ -1,4 +1,4 @@
-import { feedbackSuspended, glowTargetFor, type ToolTargetDetail } from './glow';
+import { feedbackSuspended, glowTargetFor, withDeclaredTarget, type ToolTargetDetail } from './glow';
 import { KEEP_ATTRIBUTE } from './navigate';
 import { applyNonce } from './nonce';
 
@@ -43,7 +43,11 @@ const CURSOR_CSS = `
 const ARROW_SVG =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5 L5 19.5 L9.4 15.6 L12.3 21.9 L15.2 20.5 L12.4 14.3 L18.3 13.8 Z"/></svg>';
 
+/** Past the default --janux-cursor-travel, so the correction measures a settled layout. */
+const SETTLE_MS = 700;
+
 let hideTimer: ReturnType<typeof setTimeout> | undefined;
+let settleTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** Idempotently installs the cursor styles. Override via the --janux-cursor-* CSS vars. */
 export function injectCursorStyles(doc: Document = document): void {
@@ -76,14 +80,24 @@ function cursorOverlay(): HTMLElement {
   return (document.getElementById(CURSOR_ID) as HTMLElement | null) ?? createCursor();
 }
 
+function placeAt(cursor: HTMLElement, el: Element): void {
+  const { left, top, width, height } = el.getBoundingClientRect();
+
+  cursor.style.transform = `translate(${left + width / 2}px, ${top + height / 2}px)`;
+}
+
 /** Travels the cursor to `el`'s center now, fading out `duration` ms after the last move. */
 export function moveCursorTo(el: Element, duration = CURSOR_LINGER_MS): void {
   const cursor = cursorOverlay();
-  const { left, top, width, height } = el.getBoundingClientRect();
 
   cursor.classList.add('on');
-  cursor.style.transform = `translate(${left + width / 2}px, ${top + height / 2}px)`;
+  placeAt(cursor, el);
   clearTimeout(hideTimer);
+  clearTimeout(settleTimer);
+  // The page can keep laying out under a travelling cursor (React Flow re-fits
+  // its canvas after a node mounts): re-measure once the travel settles, so the
+  // arrow follows the element instead of parking where it used to be.
+  settleTimer = setTimeout(() => el.isConnected && placeAt(cursor, el), SETTLE_MS);
   hideTimer = setTimeout(() => cursor.classList.remove('on'), duration);
 }
 
@@ -104,11 +118,14 @@ export function enableAgentCursor(options: CursorOptions = {}): () => void {
     if (element) moveCursorTo(element, duration);
   };
   const onToolCall = (event: Event): void => {
-    const { tool, input, phase, guard, approval } = (event as CustomEvent).detail ?? {};
+    const { tool, input, phase, guard, approval, glowTarget, glowTargetPending } = (event as CustomEvent).detail ?? {};
 
     // Mirrors the glow: confirm-guarded calls only propose — the cursor moves on approval.
     if (guard === 'confirm' && !approval) return;
-    if (phase !== 'start' || !tool || feedbackSuspended()) return;
+    if (feedbackSuspended()) return;
+    // The DOM a declared `glowTarget` names mounts after the run: travel to it on `ok`.
+    if (phase === 'ok' && glowTarget) return withDeclaredTarget(glowTarget, (el) => moveCursorTo(el, duration));
+    if (phase !== 'start' || !tool || glowTargetPending) return;
     const target = glowTargetFor(tool, input);
 
     if (target) moveCursorTo(target, duration);
@@ -122,6 +139,7 @@ export function enableAgentCursor(options: CursorOptions = {}): () => void {
     document.removeEventListener('janux:tool-call', onToolCall);
     document.removeEventListener('janux:tool-target', onToolTarget);
     clearTimeout(hideTimer);
+    clearTimeout(settleTimer);
     document.getElementById(CURSOR_ID)?.remove();
   };
 }

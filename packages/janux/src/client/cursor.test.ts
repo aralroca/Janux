@@ -47,6 +47,19 @@ describe('agent cursor', () => {
     expect(cursorEl().hasAttribute('data-janux-keep')).toBe(true);
   });
 
+  it('re-measures once the travel settles, following an element the layout shifted', async () => {
+    document.body.innerHTML = '<button>hi</button>';
+    const button = document.querySelector('button')!;
+
+    button.getBoundingClientRect = rectAt(100, 200, 40, 20);
+    moveCursorTo(button);
+    // The canvas re-fits underneath (React Flow): the element ends up elsewhere.
+    button.getBoundingClientRect = rectAt(100, 120, 40, 20);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    expect(cursorEl().style.transform).toBe('translate(120px, 130px)');
+  });
+
   it('fades out after the linger duration', async () => {
     document.body.innerHTML = '<button>hi</button>';
 
@@ -106,6 +119,29 @@ describe('agent cursor', () => {
 
     document.dispatchEvent(new CustomEvent('janux:tool-call', { detail: { tool: 'users.clear', phase: 'start' } }));
     expect(document.getElementById(CURSOR_ID)).not.toBeNull();
+    dispose();
+  });
+
+  it('waits for a declared glowTarget that mounts after the run, and skips the island guess', async () => {
+    document.body.innerHTML = ISLAND;
+    const dispose = enableAgentCursor();
+    const node = document.createElement('div');
+
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-call', { detail: { tool: 'flow.addStep', phase: 'start', glowTargetPending: true } }),
+    );
+    expect(document.getElementById(CURSOR_ID)).toBeNull();
+
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-call', { detail: { tool: 'flow.addStep', phase: 'ok', glowTarget: '#node-2' } }),
+    );
+    node.id = 'node-2';
+    node.getBoundingClientRect = rectAt(300, 400, 100, 40);
+    // The node mounts a tick after `ok`, like a React Flow node would.
+    setTimeout(() => document.body.appendChild(node), 40);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(cursorEl().style.transform).toBe('translate(350px, 420px)');
     dispose();
   });
 
