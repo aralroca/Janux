@@ -108,6 +108,28 @@ describe('/_janux/llm resumable streaming', () => {
     expect(rest.at(-1)!.chunk.type).toBe('finish');
   });
 
+  /**
+   * `Number('')` is 0 and `Number('nonsense')` is NaN, and a NaN cursor compares
+   * false against every frame id — so a junk header would replay an empty
+   * stream and look like a working resume that lost the whole answer.
+   */
+  it('treats an unparseable cursor as “from the start”, not as “nothing to send”', async () => {
+    const provider = scriptedProvider();
+    const mount = resumableAgent(provider.fetchImpl);
+    const response = await mount.handleLlm!(post());
+
+    provider.say('Hello');
+    provider.finish();
+    await readAll(response);
+    const streamId = response.headers.get('x-janux-stream-id')!;
+    const junk = new Request(`http://localhost/_janux/llm?stream=${streamId}`, {
+      method: 'POST',
+      headers: { 'last-event-id': 'not-a-number' },
+    });
+
+    expect(deltas(await readAll(await mount.handleLlm!(junk)))).toBe('Hello');
+  });
+
   it('lets a second tab follow the same stream from the very beginning', async () => {
     const provider = scriptedProvider();
     const mount = resumableAgent(provider.fetchImpl);

@@ -49,7 +49,9 @@ export async function* sseEvents(body: ReadableStream<Uint8Array>): AsyncGenerat
   for await (const line of lines(body)) {
     const payload = line.startsWith('data:') ? line.slice(5).trim() : '';
 
-    if (line.startsWith('id:')) id = Number(line.slice(3).trim());
+    // An unparseable id is "no id", not `NaN`: a cursor comparison against NaN
+    // is false in both directions, which silently discards the frame.
+    if (line.startsWith('id:')) id = Number.parseInt(line.slice(3).trim(), 10) || -1;
     if (payload === '[DONE]') return;
     if (payload) yield { id, data: payload };
   }

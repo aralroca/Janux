@@ -75,11 +75,15 @@ function toWireCalls(toolCalls: ToolCall[]): WireToolCall[] {
   }));
 }
 
-/** The cursor a returning reader names: the last `id:` it actually received. */
+/**
+ * The cursor a returning reader names: the last `id:` it actually received.
+ * Absent or unparseable means "from the start" — a `NaN` here would compare
+ * false against every frame id and replay an empty stream.
+ */
 function cursorOf(req: Request): number {
-  const header = req.headers.get('last-event-id');
+  const header = Number.parseInt(req.headers.get('last-event-id') ?? '', 10);
 
-  return header === null ? -1 : Number(header);
+  return Number.isFinite(header) ? header : -1;
 }
 
 /**

@@ -122,6 +122,30 @@ describe('serverLlm({ resume }) across a dropped connection', () => {
     expect(headers).toEqual([null, '1', '1']);
   });
 
+  it('still delivers frames whose id is unparseable, instead of silently dropping them', async () => {
+    const storage = fakeStorage();
+    // `Number('x')` is NaN, and NaN compares false against the cursor in both
+    // directions — the dedup check would discard every one of these.
+    const body = [
+      'id: x',
+      `data: ${JSON.stringify(delta('kept'))}`,
+      '',
+      'id: y',
+      `data: ${JSON.stringify(FINISH)}`,
+      '',
+      'data: [DONE]',
+      '',
+      '',
+    ].join('\n');
+
+    globalThis.fetch = (async () =>
+      new Response(body, {
+        headers: { 'content-type': 'text/event-stream', 'x-janux-stream-id': 'stream-1' },
+      })) as any;
+
+    expect((await serverLlm({ stream: true, resume: { storage } })(request())).text).toBe('kept');
+  });
+
   it('does not reconnect after an error chunk — that is the turn failing, not the wire', async () => {
     const storage = fakeStorage();
     let calls = 0;
