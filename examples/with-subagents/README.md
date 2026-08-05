@@ -26,9 +26,20 @@ bun install
 ANTHROPIC_API_KEY=sk-... bun dev   # or any provider key / JANUX_MODEL
 ```
 
-Then ask the copilot:
+There is no chat widget in this example — the agent is the `POST /_janux/agent`
+endpoint the app serves, and the home page explains the demo and shows the data
+each agent sees. Talk to it from a terminal:
 
-- “what is an island?” → the front desk delegates to `research`.
-- “refund order A-1002” → the conversation hands off to `billing`.
+```bash
+# Delegation: the front desk hands this to the research subagent.
+curl -X POST localhost:4343/_janux/agent \
+  -H 'content-type: application/json' -H 'sec-fetch-site: same-origin' \
+  -d '{"messages":[{"role":"user","content":"what is an island?"}]}'
+
+# Handoff: the reply carries "agent":"billing" — echo it back to keep talking to billing.
+curl -X POST localhost:4343/_janux/agent \
+  -H 'content-type: application/json' -H 'sec-fetch-site: same-origin' \
+  -d '{"messages":[{"role":"user","content":"refund order A-1002"}]}'
+```
 
 Docs: [Subagents & handoffs](https://janux.build/docs/reference/agent-subagents).
