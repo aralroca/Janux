@@ -253,6 +253,7 @@ Not built yet: fetching keys from a signature-agent directory (SSRF story needed
 | `apiManifestTools(tools, ctx)` | `→ ManifestTool[]` | Projects api() tools into the manifest (non-`forbidden` only, with JSON Schema input). |
 | `isApi(value)` | `→ value is ApiDef` | Type guard for an `api()` result. |
 | `createFsRouter(dir)` | `→ { routes, match(pathname) }` | The file-system router. `match` returns `{ filePath, pattern, params }`, static routes preferred over dynamic. |
+| `parsePattern(pattern)` | `'/blog/[slug]' → Segment[]` | The router's URL grammar, parsed — `[param]`, `[param=matcher]`, `[...rest]`, `[[...rest]]`. What `redirects`/`rewrites` are matched with, and what an adapter expressing them in a host's own format compiles from, so the framework has exactly one answer to what a pattern means. |
 | `discoverSkills(dir)` | `→ Skill[]` | Reads a `src/skills/**` directory: flat `*.md` files and `<name>/SKILL.md` packages, sorted by name, frontmatter validated. A missing directory is simply no skills. See the [skills guide](/docs/guide/skills). |
 | `parseSkill(source, id, file?)` | `→ Skill` | One skill file: `{ name, description, when?, tools, body, file }`. Throws on missing frontmatter or a missing `description`. |
 | `skillIndex(skills)` | `→ SkillSummary[]` | Drops every body, leaving what the manifest and MCP's resource list carry. |

@@ -8,6 +8,7 @@ A mini knowledge base whose whole point is its URL space: every pattern the file
 - **Optional catch-all `[[...filters]]`** — `/search` works with zero rest segments, `/search/kind/article` with two.
 - **Nested layouts `_layout.tsx`** — a root shell on every page, plus a wiki sub-shell (article sidebar) that wraps only `/wiki/**`.
 - **Route groups `(marketing)`** — `/about` and `/pricing` share the group's banner layout without the directory ever appearing in the URL.
+- **Declared `redirects` / `rewrites`** — `janux.config.ts` answers the URLs that have no file behind them, in the same segment grammar as the route files: `/kb/getting-started` is a 308 to `/wiki/getting-started`, `/legacy-docs/**` carries its whole tail to `/docs/**`, `/plans` is a 301 to `/pricing`, and `/handbook/**` is *rewritten* to `docs/[...path].tsx` — same page, and the address bar keeps `/handbook/…`.
 - **SPA navigation** — plain anchors, intercepted and diffed; the `NavCounter` island is rendered `persist` from the shell, so its live instance is grafted onto every incoming page and the count survives navigations.
 - **Request context `src/ctx.ts`** — whatever it returns reaches every page and layout as `ctx`. Here it is the current pathname, which is how the header can mark the active section (`aria-current="page"`) and how the `(marketing)` sub-shell highlights its own link — including after a SPA navigation, since the incoming HTML is what the diff applies.
 

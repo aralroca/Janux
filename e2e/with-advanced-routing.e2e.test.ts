@@ -106,6 +106,36 @@ describe('examples/with-advanced-routing end to end', () => {
     expect((await app.fetch('/wiki/too/deep')).status).toBe(404);
   });
 
+  /**
+   * The URLs with no file behind them (janux.config.ts). A redirect is a status
+   * and a `Location` — checked on the header, because that is the whole contract
+   * with a crawler — and a rewrite is a page served from somewhere else with the
+   * visitor never told.
+   */
+  it('answers a legacy URL with a 308 and the Location its config declared', async () => {
+    const moved = await app.fetch('/kb/getting-started');
+
+    expect(moved.status).toBe(308);
+    expect(moved.headers.get('location')).toBe('/wiki/getting-started');
+    // The whole tail travels, and an explicit status is honoured.
+    expect((await app.fetch('/legacy-docs/guides/deploy')).headers.get('location')).toBe('/docs/guides/deploy');
+    expect((await app.fetch('/plans')).status).toBe(301);
+    expect((await app.fetch('/plans')).headers.get('location')).toBe('/pricing');
+    // The query the visitor arrived with is not dropped on the way.
+    expect((await app.fetch('/kb/routing?ref=email')).headers.get('location')).toBe('/wiki/routing?ref=email');
+  });
+
+  it('serves a rewritten URL from the internal route, with no redirect at all', async () => {
+    const response = await app.fetch('/handbook/guides/deploy');
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+    // Rendered by docs/[...path].tsx, with the tail it captured.
+    expect(html).toContain('<title>Docs: guides/deploy — Janux KB</title>');
+    expect(html).toContain('Docs / guides / deploy');
+  });
+
   it('answers a page that throws with _500, alone — no shell around it', async () => {
     const response = await app.fetch('/boom');
     const html = await response.text();
@@ -128,6 +158,26 @@ beforeAll(async () => {
 
 afterAll(async () => {
   stop?.();
+});
+
+describe.skipIf(!BUILT)('examples/with-advanced-routing declared URLs in the browser', () => {
+  it('follows a legacy URL to its new address, and leaves a rewritten one where it is', async () => {
+    const { page, errors } = await openPage(browser!);
+
+    await page.goto(`${base}/kb/getting-started`);
+    await page.waitForSelector('[data-shell="wiki"]');
+    // The browser followed the 308: the article is the one that moved, and the
+    // address bar says where it moved to.
+    expect(new URL(page.url()).pathname).toBe('/wiki/getting-started');
+
+    await page.goto(`${base}/handbook/guides/deploy`);
+    await page.waitForSelector('.crumbs');
+    // The rewrite served docs/[...path].tsx and told the browser nothing.
+    expect(new URL(page.url()).pathname).toBe('/handbook/guides/deploy');
+    expect(await page.textContent('.crumbs')).toContain('deploy');
+    expect(errors).toEqual([]);
+    await page.close();
+  }, TIMEOUT);
 });
 
 describe.skipIf(!BUILT)('examples/with-advanced-routing SPA navigation in the browser', () => {

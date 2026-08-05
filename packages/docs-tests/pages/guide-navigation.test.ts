@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { component, defineConfig, jsx } from 'janux';
 import { createJanuxServer } from '@janux/server';
+import { docExample } from '../doc-example';
 
 /**
  * guide/navigation.md's navigation config, run against the real server: the
@@ -55,6 +56,61 @@ describe('guide/navigation.md', () => {
 
   it('speculationRules: false leaves the document without the script', async () => {
     expect(await serve({ speculationRules: false })).not.toContain('speculationrules');
+  });
+});
+
+/**
+ * § Redirects & rewrites, run rather than read: the config block on the page is
+ * imported as written and handed to a real server, so the URLs the guide claims
+ * are answered are the URLs this asserts.
+ */
+describe('guide/navigation.md — redirects & rewrites', () => {
+  const served = async () => {
+    const config = (await docExample('apps/docs/content/guide/navigation.md', 5)).default;
+    const server = createJanuxServer({
+      routes: {
+        '/wiki/routing': () => jsx('main', { children: 'Wiki article' }),
+        '/docs/deploy': () => jsx('main', { children: 'Docs page' }),
+        '/pricing': () => jsx('main', { children: 'Pricing' }),
+      },
+      redirects: config.redirects,
+      rewrites: config.rewrites,
+    });
+
+    return (path: string) => server.fetch(new Request(`http://test${path}`));
+  };
+
+  it('answers the documented legacy URLs with the documented statuses', async () => {
+    const get = await served();
+    const moved = await get('/kb/routing');
+
+    expect(moved.status).toBe(308);
+    expect(moved.headers.get('location')).toBe('/wiki/routing');
+    // The catch-all carries its whole tail, and an explicit status is honoured.
+    expect((await get('/legacy-docs/deploy')).headers.get('location')).toBe('/docs/deploy');
+    expect((await get('/plans')).status).toBe(301);
+    expect((await get('/plans')).headers.get('location')).toBe('/pricing');
+  });
+
+  it('serves the documented rewrite without telling the browser', async () => {
+    const get = await served();
+    const response = await get('/handbook/deploy');
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+    expect(await response.text()).toContain('Docs page');
+  });
+
+  /** The precedence line the page prints, for the one pair that actually competes. */
+  it('resolves a declared redirect before the locale redirect', async () => {
+    const config = (await docExample('apps/docs/content/guide/navigation.md', 5)).default;
+    const server = createJanuxServer({
+      routes: { '/wiki/routing': () => jsx('main', { children: 'Wiki article' }) },
+      i18n: { locales: ['en', 'es'], defaultLocale: 'en', messages: { en: {}, es: {} } },
+      redirects: config.redirects,
+    });
+
+    expect((await server.fetch(new Request('http://test/kb/routing'))).headers.get('location')).toBe('/wiki/routing');
   });
 });
 

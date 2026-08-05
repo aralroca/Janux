@@ -69,7 +69,7 @@ describe('recipes/adapters.md — the worked Deno adapter is a valid JanuxAdapte
 describe('recipes/deploying.md — the matrix matches what the adapters declare', () => {
   /** A row that flatters a target is worse than no row: it is a promise production breaks. */
   it('says Node supports WebSockets, because @janux/node declares it', () => {
-    expect(nodeCapabilities).toEqual({ websocket: true, streaming: true, filesystem: true, schedules: 'process' });
+    expect(nodeCapabilities).toEqual({ websocket: true, streaming: true, filesystem: true, schedules: 'process', redirects: false });
     expect(DEPLOYING).toMatch(/\*\*Node 24\+\*\*.*`@janux\/node`.*✅.*✅.*✅/);
   });
 
