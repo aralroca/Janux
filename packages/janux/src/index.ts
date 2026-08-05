@@ -71,6 +71,7 @@ export {
   type McpAuthConfig,
   type CspConfig,
   type NavigationConfig,
+  type ServiceWorkerConfig,
   type SpeculationRulesConfig,
 } from './config';
 export { Image, type ImageProps } from './image/image';

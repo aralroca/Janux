@@ -1,0 +1,11 @@
+{
+  "name": "Basecamp — an offline trail companion",
+  "short_name": "Basecamp",
+  "description": "A prerendered guide that keeps working with no network.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f8f6",
+  "theme_color": "#2f6b4f",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

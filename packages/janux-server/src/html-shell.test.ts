@@ -3,6 +3,7 @@ import {
   htmlDocument,
   queryPayloadScript,
   shellEpilogue,
+  shellEpilogueRest,
   shellInterlude,
   shellParts,
   shellPrelude,
@@ -302,5 +303,77 @@ describe('font head', () => {
   it('leaves the head alone for an app with no fonts', () => {
     expect(htmlDocument(base)).not.toContain('jx-font');
     expect(htmlDocument(base)).not.toContain('jx-fonts');
+  });
+});
+
+/**
+ * The service worker is opt-in end to end: no `serviceWorkerUrl`, no script,
+ * and the shell is byte-identical to what it emitted before the feature
+ * existed. When an app does opt in, the registration has to reach pages that
+ * ship no runtime at all — an offline-capable static site is the archetype —
+ * so it is emitted beside the navigation scripts rather than with the island
+ * runtime.
+ */
+describe('htmlDocument service worker registration', () => {
+  it('emits nothing at all for an app without a service worker', () => {
+    expect(htmlDocument(base)).not.toContain('jx-sw');
+    expect(htmlDocument(base)).not.toContain('serviceWorker');
+  });
+
+  it('registers the worker on a page with no islands and no runtime', () => {
+    const html = htmlDocument({ ...base, serviceWorkerUrl: '/sw.js' });
+
+    expect(html).toContain('key="jx-sw"');
+    expect(html).toContain('"/sw.js"');
+  });
+
+  it('nonces the registration script like every other inline script', () => {
+    const html = htmlDocument({ ...base, serviceWorkerUrl: '/sw.js', nonce: 'n0nce' });
+
+    expect(html).toContain('<script key="jx-sw" nonce="n0nce">');
+  });
+
+  it('registers exactly once on a streaming page, in the interlude', () => {
+    const options = { ...base, serviceWorkerUrl: '/sw.js', islandNames: ['cart'], runtimeUrl: '/client.js' };
+    const streamed = shellInterlude(options) + shellEpilogueRest(options, new Set());
+
+    expect(streamed.split('key="jx-sw"')).toHaveLength(2);
+  });
+});
+
+/**
+ * The other half of "PWA": a worker makes an app work offline, a web app
+ * manifest is what makes it installable. Same opt-in shape as the favicon —
+ * the file existing in `public/` is the whole configuration — and the link is
+ * keyed like every other head resource so an SPA navigation keeps it in place.
+ */
+describe('htmlDocument web app manifest', () => {
+  it('links the manifest when the app ships one', () => {
+    const html = htmlDocument({ ...base, webManifestUrl: '/manifest.webmanifest' });
+
+    expect(html).toContain('<link rel="manifest" id="jx-webmanifest" href="/manifest.webmanifest">');
+  });
+
+  it('says nothing for an app without one', () => {
+    expect(htmlDocument(base)).not.toContain('rel="manifest"');
+  });
+
+  it('does not collide with the agent manifest link, which is a different thing', () => {
+    const html = htmlDocument({ ...base, webManifestUrl: '/manifest.webmanifest', manifestUrl: '/_janux/manifest' });
+
+    expect(html).toContain('id="jx-webmanifest"');
+    expect(html).toContain('id="jx-manifest"');
+    expect(html).toContain('rel="janux-manifest"');
+  });
+});
+
+describe('htmlDocument reclaiming a stale worker in dev', () => {
+  it('emits the reclaim script when the server asks for it', () => {
+    expect(htmlDocument({ ...base, reclaimServiceWorker: true })).toContain('key="jx-sw-reclaim"');
+  });
+
+  it('says nothing in production, where a worker on this origin is the app’s own', () => {
+    expect(htmlDocument(base)).not.toContain('jx-sw-reclaim');
+    expect(htmlDocument({ ...base, serviceWorkerUrl: '/sw.js' })).not.toContain('jx-sw-reclaim');
   });
 });

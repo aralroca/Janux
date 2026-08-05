@@ -85,6 +85,18 @@ The build-time half of the [font pipeline](/docs/guide/fonts). Everything is cac
 | `builtFontAssets(outDir)` | Reads those back for `janux start` and `output: 'static'` — neither resolves anything |
 | `fontResponse(root, path)` | Serves one file out of the cache under `janux dev`, where there is no build output yet |
 
+## The service worker build
+
+The build-time half of [service workers](/docs/guide/service-workers). A worker cannot read its own build, so the build reads it for them.
+
+| Function | Does |
+|---|---|
+| `serviceWorkerAssets(outDir)` | Every file of the built client worth precaching, as URL paths. Documents, sourcemaps, `.md` projections, `islands.json` and the worker itself are excluded |
+| `serviceWorkerVersion(outDir, assets)` | A hash of those files' names and bytes — the cache name, and the reason a deploy starts from a clean cache |
+| `builtServiceWorker(outDir, config)` | The URL `janux start` registers, or `undefined` when there is no build, no `src/sw.ts`, or `register: false` |
+| `retireServiceWorker(outDir)` | Deletes a worker the app no longer has a source for, so removing `src/sw.ts` is enough to be rid of one |
+| `SERVICE_WORKER_FILE` | `'sw.js'` — the name, at the root of the output so the worker's scope is the whole site |
+
 ## packageDir(specifier, from)
 
 `packageDir(specifier: string, from: string): string | undefined` — where a package is installed, resolved the way Node does it: the nearest `node_modules` up the *real* path, symlinks followed. `Bun.resolveSync` answers from Bun's global install cache too, which reports packages the app never installed; this does not.

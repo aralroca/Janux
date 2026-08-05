@@ -51,6 +51,7 @@
     "dev:mcp-client": "bun run --cwd examples/with-mcp-client dev",
     "dev:local-llm": "bun run --cwd examples/with-local-llm dev",
     "dev:agent-evals": "bun run --cwd examples/agent-evals dev",
+    "dev:offline": "bun run --cwd examples/with-offline dev",
     "build:packages": "bun scripts/build.ts",
     "pack:packages": "bun scripts/pack.ts",
     "smoke:node": "bun scripts/smoke-node.ts",

@@ -19,6 +19,7 @@ export const UNDOCUMENTED: Record<string, string[]> = {
   'janux/query': [],
   'janux/observability': [],
   'janux/worker': [],
+  'janux/service-worker': [],
   '@janux/server': [],
   '@janux/content': [],
   '@janux/agent': [],

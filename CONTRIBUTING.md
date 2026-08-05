@@ -98,6 +98,8 @@ Every folder under `examples/` is a claim about the framework, and the suite hol
    - `locator.click()` also waits for "scheduled navigations to finish", and under WebKit a navigation the page cancels is reported as scheduled and never as cleared — so clicking a link the router cancels never returns. Use `page.mouse.click()` there too.
 
    Both were measured against framework-free pages: real WebKit accepts input on a streaming document and cancels navigations correctly. Reach for `page.mouse.click()` when one of those two shapes applies, not by default.
+
+   A third case, and the only one where a suite legitimately runs on one engine: **service workers**. Playwright's WebKit build ships no service worker support at all, and its Firefox does not honour `context.setOffline` for worker-mediated fetches — again the automation build rather than the engine. `e2e/with-offline.e2e.test.ts` therefore gates its browser cases on Chromium and asserts the engine-independent half (the registration script is emitted, the precache manifest is right) from the build output, which every lane reads.
 5. Add a `dev:<name>` script to the root `package.json`.
 
 ## Pull requests

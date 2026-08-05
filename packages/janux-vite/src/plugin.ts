@@ -69,6 +69,10 @@ async function loadServerOptions(vite: ViteDevServer, options: JanuxPluginOption
     // Dev bundles nothing, so the build's islands.json is derived from source:
     // without it a suspense-only page ships no runtime under `janux dev`.
     islandModules: islandCatalogFromDir(join(vite.config.root, 'src')),
+    // Dev registers no worker, but the origin may already carry one from a
+    // `janux start` on this port: it would answer Vite's URLs out of a cache
+    // belonging to a build that no longer exists. Reclaim it.
+    reclaimServiceWorker: true,
     ...shellOptions(app, devStylesheets(vite.config.root, app.stylesheet), {
       fontFaces: fontFaceCss(fonts) || undefined,
       fontPreloads: fontPreloadHrefs(fonts),

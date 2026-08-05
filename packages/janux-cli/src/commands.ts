@@ -2,7 +2,17 @@ import { cpSync, existsSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { createJanuxServer } from '@janux/server';
-import { janux, publishAppRoot, resolveAppConfig, writeFontAssets, writeImageVariants } from '@janux/vite';
+import {
+  janux,
+  publishAppRoot,
+  resolveAppConfig,
+  retireServiceWorker,
+  serviceWorkerAssets,
+  serviceWorkerVersion,
+  SERVICE_WORKER_FILE,
+  writeFontAssets,
+  writeImageVariants,
+} from '@janux/vite';
 import { prodServerOptions } from './prod';
 import { staticResponse } from './static-assets';
 import type { FontConfig } from 'janux';
@@ -124,13 +134,65 @@ async function bundleClient(root: string, input: Record<string, string>, stylesh
   });
 }
 
-export async function build({ root }: CliCommand): Promise<void> {
+/**
+ * The rollup half of the service-worker build, kept beside the client's.
+ *
+ * `iife`, not ESM: a worker registered without `{ type: 'module' }` is a
+ * classic script, and a classic script cannot `import`. `inlineDynamicImports`
+ * makes that true of the whole graph rather than just the entry.
+ *
+ * `emptyOutDir: false` is load-bearing — this build runs into a directory that
+ * already holds the client bundle, and Vite's default is to clear it first.
+ */
+function serviceWorkerOutput(entry: string, build: object, manifest: object) {
+  return {
+    define: { __JANUX_SW_BUILD__: JSON.stringify(manifest) },
+    build: {
+      ...build,
+      outDir: 'dist/client',
+      emptyOutDir: false,
+      rollupOptions: {
+        input: entry,
+        output: { format: 'iife' as const, entryFileNames: SERVICE_WORKER_FILE, inlineDynamicImports: true },
+      },
+    },
+  };
+}
+
+/**
+ * Bundles `src/sw.ts` to `dist/client/sw.js`, with the asset manifest of *this*
+ * build substituted in.
+ *
+ * After the client bundle and the copied assets, because the list it precaches
+ * is a reading of the output directory — but BEFORE the prerender, because a
+ * prerendered page is a finished file and the registration script has to be
+ * inside it. `output: "static"` has no server left to add it afterwards, and a
+ * static site is the archetype this whole feature is worth most to. Nothing is
+ * lost by the earlier position: prerendered documents are deliberately not
+ * precached (they are answered network-first, see `service-worker.ts`).
+ */
+async function bundleServiceWorker(root: string, entry: string): Promise<void> {
+  const { build: viteBuild } = await import('vite');
+  const options = await viteOptions(root, 'build');
+  const outDir = join(root, 'dist/client');
+  const assets = serviceWorkerAssets(outDir);
+  const version = serviceWorkerVersion(outDir, assets);
+
+  await viteBuild({ ...options, ...serviceWorkerOutput(entry, options.build as object, { assets, version }) });
+  console.log(`janux build: service worker (${assets.length} assets precached, build ${version}).`);
+}
+
+export async function build({ root }: Pick<CliCommand, 'root'>): Promise<void> {
   const app = await resolveAppConfig(root);
   const input = bundleInputs(app);
 
   if (Object.keys(input).length > 0) await bundleClient(root, input, app.stylesheet);
   else console.log('janux build: nothing to bundle — fully static app (0 KB JS).');
   await emitAssets(root, app);
+  if (app.serviceWorkerEntry) await bundleServiceWorker(root, app.serviceWorkerEntry);
+  else if (retireServiceWorker(join(root, 'dist/client'))) {
+    console.log('janux build: removed sw.js — the app has no src/sw.ts.');
+  }
   if (app.output === 'static') await prerenderStatic(root);
 }
 

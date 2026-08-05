@@ -21,6 +21,7 @@
     "./server": "./src/render/server.ts",
     "./client": "./src/client/index.ts",
     "./worker": "./src/worker/index.ts",
+    "./service-worker": "./src/service-worker/index.ts",
     "./manifest": "./src/manifest/index.ts",
     "./interop": "./src/interop/index.ts",
     "./query": "./src/query/index.ts",
@@ -97,6 +98,10 @@
       "./worker": {
         "types": "./dist/src/worker/index.d.ts",
         "default": "./dist/src/worker/index.js"
+      },
+      "./service-worker": {
+        "types": "./dist/src/service-worker/index.d.ts",
+        "default": "./dist/src/service-worker/index.js"
       },
       "./manifest": {
         "types": "./dist/src/manifest/index.d.ts",

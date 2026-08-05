@@ -16,6 +16,7 @@ import * as interop from 'janux/interop';
 import * as query from 'janux/query';
 import * as observability from 'janux/observability';
 import * as workerEntry from 'janux/worker';
+import * as serviceWorker from 'janux/service-worker';
 import * as januxServer from '@janux/server';
 import * as agent from '@janux/agent';
 import * as content from '@janux/content';
@@ -35,6 +36,7 @@ export const ENTRIES: Record<string, Record<string, unknown>> = {
   'janux/query': query,
   'janux/observability': observability,
   'janux/worker': workerEntry,
+  'janux/service-worker': serviceWorker,
   '@janux/server': januxServer,
   '@janux/agent': agent,
   '@janux/content': content,

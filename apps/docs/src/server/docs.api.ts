@@ -92,7 +92,7 @@ export const SECTIONS: SectionDef[] = [
       { label: 'Content', slugs: ['content-collections'] },
       { label: 'Rendering & navigation', slugs: ['ssr-and-resumability', 'navigation', 'images', 'fonts', 'i18n'] },
       { label: 'Server & agents', slugs: ['api-rpc', 'http-handlers', 'agent-and-copilot', 'skills'] },
-      { label: 'Shipping', slugs: ['cli-and-deployment', 'architecture-and-roadmap'] },
+      { label: 'Shipping', slugs: ['cli-and-deployment', 'service-workers', 'architecture-and-roadmap'] },
     ],
   },
   {
@@ -126,7 +126,7 @@ export const SECTIONS: SectionDef[] = [
         ],
       },
       { label: 'Reactivity', slugs: ['signal', 'computed', 'watch', 'batch', 'untrack', 'owners', 'for'] },
-      { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus', 'i18n-api', 'worker'] },
+      { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus', 'i18n-api', 'worker', 'service-worker'] },
       { label: 'Client & CLI', slugs: ['client-api', 'client-state', 'data-cache-api', 'foreign', 'client-runtime', 'client-tools', 'cli', 'codemods', 'build-internals'] },
     ],
   },

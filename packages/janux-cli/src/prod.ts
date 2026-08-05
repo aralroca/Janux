@@ -9,6 +9,7 @@ import {
   apiFiles,
   apiModuleName,
   builtFontAssets,
+  builtServiceWorker,
   mcpAuthOptions,
   registerInstrumentation,
   resolveAppConfig,
@@ -145,6 +146,7 @@ export async function prodServerOptions(
     agent: agentModule?.default ?? defineAgent(),
     storeDefs: storesModule ?? {},
     runtimeUrl: existsSync(join(root, 'dist/client/client.js')) ? '/client.js' : undefined,
+    serviceWorkerUrl: builtServiceWorker(join(root, 'dist/client'), app.serviceWorker),
     islandModules: await builtIslandModules(root),
     // Read back from the build, never resolved here: a production server (and a
     // static export, which has none) must not depend on the network to answer.

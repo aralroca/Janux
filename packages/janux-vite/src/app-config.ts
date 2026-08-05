@@ -12,6 +12,7 @@ import type {
   JanuxOutput,
   McpAuthConfig,
   NavigationConfig,
+  ServiceWorkerConfig,
 } from 'janux';
 
 export type { JanuxOutput } from 'janux';
@@ -24,6 +25,7 @@ export { registerInstrumentation, type InstrumentationModule } from './instrumen
  * native binding does not exist.
  */
 export { builtFontAssets } from './fonts';
+export { builtServiceWorker, SERVICE_WORKER_FILE } from './service-worker';
 export { scheduleFiles, scheduleName, scheduleConfigFile, scheduleServerOptions } from './schedules';
 
 export type JanuxPluginOptions = JanuxConfig;
@@ -40,6 +42,12 @@ export interface JanuxAppConfig {
   ctxModule?: string;
   /** `src/session.ts`, whose default export is the app's `SessionStore`. */
   sessionModule?: string;
+  /**
+   * `src/sw.ts`, the app's service worker. Its presence is the opt-in: without
+   * the file nothing is built, nothing is registered, and the shell is byte
+   * for byte what it was before the feature existed.
+   */
+  serviceWorkerEntry?: string;
   matchersModule?: string;
   websocketModule?: string;
   /** `src/schedules/`, when the app has one — each file is a schedule (see `schedules.ts`). */
@@ -59,6 +67,8 @@ export interface JanuxAppConfig {
   httpHandlersDir?: string;
   stylesheet?: string;
   favicon?: string;
+  /** `/manifest.webmanifest` when `public/` holds one: what makes the app installable. */
+  webManifest?: string;
   title?: string;
   lang?: string;
   siteUrl?: string;
@@ -70,6 +80,7 @@ export interface JanuxAppConfig {
   navigation?: NavigationConfig;
   csp?: boolean | CspConfig;
   cache?: CacheConfig;
+  serviceWorker?: ServiceWorkerConfig;
 }
 
 const CONFIG_FILES = ['janux.config.ts', 'janux.config.js'];
@@ -152,6 +163,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     middlewareModule: optional(resolve(root, 'src/middleware.ts')),
     ctxModule: optional(resolve(root, 'src/ctx.ts')),
     sessionModule: optional(resolve(root, 'src/session.ts')),
+    serviceWorkerEntry: optional(resolve(root, 'src/sw.ts')),
     matchersModule: optional(resolve(root, 'src/matchers.ts')),
     websocketModule: options.websocket ? resolve(root, options.websocket) : optional(resolve(root, 'src/ws.ts')),
     schedulesDir: optional(resolve(root, 'src/schedules')),
@@ -163,6 +175,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     httpHandlersDir: optional(resolve(root, 'src/api')),
     stylesheet: stylesheet(root),
     favicon: optional(resolve(root, 'public/favicon.svg')) ? '/favicon.svg' : undefined,
+    webManifest: optional(resolve(root, 'public/manifest.webmanifest')) ? '/manifest.webmanifest' : undefined,
     title: options.title,
     lang: options.lang,
     siteUrl: options.siteUrl,
@@ -173,6 +186,7 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     navigation: options.navigation,
     csp: options.csp,
     cache: options.cache,
+    serviceWorker: options.serviceWorker,
   };
 }
 
@@ -194,6 +208,7 @@ export function shellOptions(
   | 'lang'
   | 'siteUrl'
   | 'favicon'
+  | 'webManifestUrl'
   | 'stylesheets'
   | 'navigation'
   | 'csp'
@@ -206,6 +221,7 @@ export function shellOptions(
     lang: app.lang,
     siteUrl: app.siteUrl,
     favicon: app.favicon,
+    webManifestUrl: app.webManifest,
     stylesheets,
     navigation: app.navigation,
     csp: app.csp,
