@@ -50,9 +50,14 @@ export function elicitsByUrl(params: unknown): boolean {
   return capabilities?.elicitation?.url !== undefined;
 }
 
-/** The `input_required` answer: where to send the human, and the state to come back with. */
-export function inputRequired(proposal: ParkedProposal, origin: string): Record<string, unknown> {
-  const url = `${origin}/_janux/elicit?token=${encodeURIComponent(proposal.id)}`;
+/**
+ * The `input_required` answer: where to send the human, and the state to come
+ * back with. Built the same way for the first attempt and for a retry that
+ * arrived before the human did — the question has not changed, so neither has
+ * the answer.
+ */
+export function inputRequired(token: string, tool: string, origin: string): Record<string, unknown> {
+  const url = `${origin}/_janux/elicit?token=${encodeURIComponent(token)}`;
 
   return {
     resultType: 'input_required',
@@ -61,12 +66,12 @@ export function inputRequired(proposal: ParkedProposal, origin: string): Record<
         method: 'elicitation/create',
         params: {
           mode: 'url',
-          message: `"${proposal.tool}" is guarded by guard: 'confirm'. Nothing has run. Open this page to approve or reject it.`,
+          message: `"${tool}" is guarded by guard: 'confirm'. Nothing has run. Open this page to approve or reject it.`,
           url,
         },
       },
     },
-    requestState: proposal.id,
+    requestState: token,
   };
 }
 
@@ -87,9 +92,10 @@ export type Retry =
  */
 export function resolveRetry(params: unknown, vault: ElicitationVault): Retry | undefined {
   const state = (params as { requestState?: unknown })?.requestState;
+  const action = actionOf(params);
 
   if (typeof state !== 'string' || state === '') return undefined;
-  if (actionOf(params) === 'decline' || actionOf(params) === 'cancel') {
+  if (action === 'decline' || action === 'cancel') {
     vault.reject(state);
 
     return { kind: 'refused', reason: 'the user declined the elicitation' };
@@ -106,9 +112,4 @@ function outcomeOf(state: string, vault: ElicitationVault): Retry {
   if (vault.pending(state)) return { kind: 'waiting', state };
 
   return { kind: 'refused', reason: 'unknown or expired proposal' };
-}
-
-/** The `input_required` answer again, for a retry that arrived before the human did. */
-export function stillWaiting(state: string, tool: string, origin: string): Record<string, unknown> {
-  return inputRequired({ status: 'proposal', id: state, tool, input: undefined }, origin);
 }

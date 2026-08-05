@@ -28,7 +28,7 @@ import { QueryClient } from 'janux/query';
 import { isTracing, reportError, withSpan, type JanuxSpan } from 'janux/observability';
 import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from './cache';
 import { createResponseCache, onInvalidated } from './response-cache';
-import { createHttpHandlers, readBodyWithin, type HandlerModule } from './http-handlers';
+import { createHttpHandlers, formDataWithin, readBodyWithin, type HandlerModule } from './http-handlers';
 import { createMcpEndpoint, type McpAuth } from './mcp';
 import { A2A_PATH, createA2aEndpoint } from './a2a';
 import { AGENT_CARD_PATHS } from './a2a-card';
@@ -929,9 +929,15 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const refused = refuseAgentSettlement(req);
 
     if (refused) return refused;
-    const form = await req.formData().catch(() => undefined);
-    const token = String(form?.get('token') ?? '');
-    const decision = form?.get('decision') === 'approve' ? 'approve' : 'reject';
+    // Bounded like every other invocation body: a token and a verb are small by
+    // construction, so an unbounded read would let a visitor pick the ceiling.
+    const form = await formDataWithin(req, INVOCATION_BODY_BYTES);
+
+    if (form instanceof Response) return form;
+    const token = String(form.get('token') ?? '');
+    // Anything that is not an explicit approval runs nothing — a garbled or
+    // absent decision must fail closed.
+    const decision = form.get('decision') === 'approve' ? 'approve' : 'reject';
     const settled = await settleElicitation(token, decision);
 
     if ('error' in settled) return html(elicitGonePage(), 404);

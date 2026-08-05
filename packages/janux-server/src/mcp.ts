@@ -5,15 +5,7 @@ import { mcpLandingPage } from './mcp-landing';
 import type { Skill } from './skills';
 import { decorateResult, discoverResult, isModern, modernGate } from './mcp-modern';
 import { listenStream, type SubscriptionDeps } from './mcp-subscriptions';
-import {
-  elicitsByUrl,
-  inputRequired,
-  isParkedProposal,
-  resolveRetry,
-  stillWaiting,
-  type ElicitationVault,
-  type Retry,
-} from './mcp-elicitation';
+import { elicitsByUrl, inputRequired, isParkedProposal, resolveRetry, type ElicitationVault, type Retry } from './mcp-elicitation';
 
 /**
  * Hosted MCP endpoint (RFC 0002 §13.2): `/_janux/mcp` speaks MCP over
@@ -105,7 +97,7 @@ function retryReply(retry: Retry, tool: string, origin: string): Record<string, 
   if (retry.kind === 'result') return { content: [{ type: 'text', text: JSON.stringify(retry.result) }] };
   if (retry.kind === 'refused') return { content: [{ type: 'text', text: retry.reason }], isError: true };
 
-  return stillWaiting(retry.state, tool, origin);
+  return inputRequired(retry.state, tool, origin);
 }
 
 async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx, origin: string): Promise<Record<string, unknown> | undefined> {
@@ -139,7 +131,7 @@ async function handleMethod(rpc: RpcRequest, deps: McpDeps, ctx: Ctx, origin: st
         // A parked `confirm` call is the protocol's `input_required`, for a
         // client that told us it can send its user to a page.
         if (isParkedProposal(result) && deps.elicitation && elicitsByUrl(params)) {
-          return rpcResult(id, inputRequired(result, origin));
+          return rpcResult(id, inputRequired(result.id, result.tool, origin));
         }
 
         return rpcResult(id, { content: [{ type: 'text', text: JSON.stringify(result) }] });

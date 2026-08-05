@@ -76,8 +76,22 @@ async function modern(method: string, params: Record<string, unknown>, id = 1): 
   return (await res.json()).result;
 }
 
-const resolveIncident = (extra: Record<string, unknown> = {}) =>
-  modern('tools/call', { name: 'incidents.resolve', arguments: { id: 1 }, ...extra });
+/**
+ * Its own incident, never a seeded one: the board is module state shared by
+ * every e2e file in this process, and a test that resolves what another test
+ * asserts is open would fail whichever ran second.
+ */
+async function freshIncident(): Promise<number> {
+  const reported = await modern('tools/call', {
+    name: 'incidents.report',
+    arguments: { title: 'Elicitation e2e probe', severity: 'low' },
+  });
+
+  return JSON.parse(reported.content[0].text).id;
+}
+
+const resolveIncident = (id: number, extra: Record<string, unknown> = {}) =>
+  modern('tools/call', { name: 'incidents.resolve', arguments: { id }, ...extra });
 
 describe.skipIf(!BUILT)('examples/with-mcp-url — the older era, driven by the official SDK', () => {
   const connect = async () => {
@@ -131,14 +145,15 @@ describe.skipIf(!BUILT)('examples/with-mcp-url — the older era, driven by the 
 
 describe.skipIf(!BUILT)('examples/with-mcp-url — elicitation, with a human in a real browser', () => {
   it('parks, waits for a person, and hands the result to the retry', async () => {
-    const parked = await resolveIncident();
+    const id = await freshIncident();
+    const parked = await resolveIncident(id);
     const request = Object.values(parked.inputRequests)[0] as any;
 
     expect(parked.resultType).toBe('input_required');
     expect(request.params.mode).toBe('url');
 
     // Still waiting: the same question, the same state.
-    const again = await resolveIncident({
+    const again = await resolveIncident(id, {
       requestState: parked.requestState,
       inputResponses: { approval: { action: 'accept' } },
     });
@@ -156,7 +171,7 @@ describe.skipIf(!BUILT)('examples/with-mcp-url — elicitation, with a human in 
     await page.waitForSelector('h1');
     expect(await page.textContent('h1')).toContain('Approved');
 
-    const collected = await resolveIncident({
+    const collected = await resolveIncident(id, {
       requestState: parked.requestState,
       inputResponses: { approval: { action: 'accept' } },
     });
