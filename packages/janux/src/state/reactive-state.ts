@@ -28,6 +28,41 @@ export interface ReactiveState<T extends object = Record<string, unknown>> {
 /** Writes between prune sweeps: keeps the sweep cost amortized O(1) per write. */
 const PRUNE_EVERY = 256;
 
+/**
+ * The paths the thunk currently evaluating under `withLeafTracking` read,
+ * across every reactive state it touched. Shared module state on purpose: a
+ * binding can read several islands' states in one thunk.
+ */
+let leafFrame: Map<string, Sig<number>> | null = null;
+
+/**
+ * Runs a binding thunk so only the MAXIMAL paths it read subscribe (the
+ * structural fix for regression #22: a read of `values[3]` traverses
+ * `values`, and subscribing the container re-runs every sibling binding on
+ * any write). Dropping the prefixes loses nothing — `touch` bumps a written
+ * path's descendants, so a container write always reaches the leaf signal.
+ * Frames nest by restoration, and the subscribing reads happen HERE, inside
+ * whatever effect is currently tracking.
+ */
+export function withLeafTracking<T>(read: () => T): T {
+  const previous = leafFrame;
+  const frame = new Map<string, Sig<number>>();
+
+  leafFrame = frame;
+  try {
+    return read();
+  } finally {
+    leafFrame = previous;
+    const paths = [...frame.keys()];
+
+    paths.forEach((path) => {
+      if (!paths.some((other) => other.length > path.length && other.startsWith(`${path}.`))) {
+        void frame.get(path)!.value;
+      }
+    });
+  }
+}
+
 export function createReactiveState<T extends object>(
   initial: T,
   gate: MutationGate = createGate(),
@@ -179,7 +214,10 @@ export function createReactiveState<T extends object>(
     // version signal, so skipping it for untracked reads would stop a write from
     // minting a new identity for the changed subtree — the contract `foreign()`
     // hands React. (Measured as a ~15% win on list writes, and reverted for it.)
-    versionOf(target).value;
+    // A leaf frame defers the subscription: the signal must still exist (bump
+    // only bumps existing signals), but only the maximal paths get read.
+    if (leafFrame) leafFrame.set(target, versionOf(target));
+    else versionOf(target).value;
 
     return isPlainContainer(value) ? proxyFor(value, target) : value;
   };

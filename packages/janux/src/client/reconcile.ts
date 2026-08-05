@@ -3,6 +3,7 @@ import { attrEntries, bindingAttr, isBinding, propToAttr } from '../render/html'
 import { isForeignDef } from '../interop';
 import { isFor, readEach, type ForProps } from '../for';
 import { toRaw } from '../state/raw';
+import { withLeafTracking } from '../state/reactive-state';
 import { effect as watch, onCleanup, runWithOwner, signal, untrack, type Owner, type Sig } from '../signals';
 import { scheduleRender } from '../runtime/render-queue';
 import { elementShell, isComponentDef, svgChildren, toDomNodes, type RenderPass } from './dom';
@@ -104,7 +105,7 @@ function textBindingTarget(thunk: TextBinding, live: Node | undefined): Node {
   textBindings.set(node, sig);
   onCleanup(
     watch(() => {
-      const text = textOf(sig.value());
+      const text = textOf(withLeafTracking(() => sig.value()));
 
       if (node.textContent !== text) node.textContent = text;
     }, scheduleRender),
@@ -293,7 +294,7 @@ function bindProps(el: Element, props: Record<string, unknown>): void {
     const binding: Binding = { thunk: sig, last: UNWRITTEN };
 
     map.set(name, binding);
-    onCleanup(watch(() => applyBinding(el, name, sig.value(), binding), scheduleRender));
+    onCleanup(watch(() => applyBinding(el, name, withLeafTracking(() => sig.value()), binding), scheduleRender));
   }
 }
 

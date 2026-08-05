@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from 'bun:test';
 
 GlobalRegistrator.register({ url: 'https://app.test/' });
 
-const { component, intent, schema, int, str, obj } = await import('../index');
+const { component, intent, schema, int, str, obj, list } = await import('../index');
 const { createInstance } = await import('../runtime/instance');
 const { reconcile } = await import('./reconcile');
 const { flushRenders } = await import('../runtime/render-queue');
@@ -70,6 +70,42 @@ describe('a compiled view over instance state', () => {
     await instance.intents.bump!({});
     flushRenders();
     expect(root.textContent).toBe('2');
+    expect(loop.renders()).toBe(1);
+    loop.stop();
+  });
+
+  /** Regression #22, through the render loop: sibling bindings must not fan out. */
+  it('one field write re-runs one binding, not every sibling', async () => {
+    const listDef = component({
+      name: 'compiled-form',
+      state: schema({ values: list(str()) }),
+      intents: {
+        set: intent({ input: schema({ at: int(), to: str() }), run: ({ state, input }: any) => void (state.values[input.at] = input.to) }),
+      },
+      view: () => null,
+    });
+    const root = document.createElement('div');
+    const instance = createInstance(listDef, { initial: { values: Array.from({ length: 40 }, () => '') } });
+    const calls = Array.from({ length: 40 }, () => 0);
+    const loop = island(root, () =>
+      jsx('form', {
+        children: calls.map((_, index) =>
+          jsx('output', {
+            children: () => {
+              calls[index]! += 1;
+
+              return (instance.bag as any).state.values[index];
+            },
+          }),
+        ),
+      }),
+    );
+    const before = calls.reduce((sum, n) => sum + n, 0);
+
+    await instance.intents.set!({ at: 3, to: 'x' });
+    flushRenders();
+    expect(root.querySelectorAll('output')[3]!.textContent).toBe('x');
+    expect(calls.reduce((sum, n) => sum + n, 0)).toBe(before + 1);
     expect(loop.renders()).toBe(1);
     loop.stop();
   });
