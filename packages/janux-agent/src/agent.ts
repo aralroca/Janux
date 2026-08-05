@@ -11,7 +11,8 @@ import { tracedAgentTurn, tracedRound, turnUsageAttributes, type ModelCost } fro
 import { allowsTool, type ToolFilter } from './tool-filter';
 import { loadSkillBody, loadSkillTools, skillsSection, LOAD_SKILL } from './skills';
 import type { ManifestSkill } from 'janux/manifest';
-import { turnBill } from './usage';
+import { DELEGATE_PREFIX, delegationTools, runDelegation, validateSubagents, type SubagentConfig } from './subagents';
+import { combineBills, turnBill, type TurnBill } from './usage';
 import { callProvider, type AgentTool, type ChatMessage, type FetchLike, type TokenUsage, type ToolCall } from './providers';
 
 export interface HarnessConfig {
@@ -46,6 +47,12 @@ export interface AgentConfig {
   tools?: ToolFilter;
   /** Remote MCP server(s) whose tools join the agent's tool list. */
   mcp?: McpAgentConnection | McpAgentConnection[];
+  /**
+   * Named delegates the model can hand a focused subtask to via
+   * `delegate.<name>`. Each runs its own server-side loop under a MANDATORY
+   * budget, on a tool surface that never exceeds this agent's own.
+   */
+  subagents?: Record<string, SubagentConfig>;
   harness?: HarnessConfig;
 }
 
@@ -180,6 +187,7 @@ async function turnMessages(
 }
 
 export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides = {}): AgentMount {
+  validateSubagents(config.subagents);
   const env = overrides.env ?? (process.env as ModelEnv);
   const fetchImpl = overrides.fetchImpl ?? ((url, init) => fetch(url, init));
   const maxTurns = config.maxTurns ?? 6;
@@ -211,6 +219,7 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
         ...manifestTools(manifest, config.tools),
         ...CLIENT_TOOL_SPECS.map((spec) => ({ name: spec.name, description: spec.description, input: spec.parameters })),
         ...remoteTools.map(({ name, description, input }) => ({ name, description, input })),
+        ...delegationTools(config.subagents),
         ...loadSkillTools(skills),
       ];
       const system = systemPrompt(config, manifest);
@@ -244,12 +253,38 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       }
       const messages = guarded.messages.filter((message) => message.role !== 'system') as ChatMessage[];
       const rounds: (TokenUsage | undefined)[] = [];
+      const delegated: TurnBill[] = [];
       // Turn accounting in the envelope itself, so callers (the eval runner
-      // included) can bill a turn without a tracer anywhere.
+      // included) can bill a turn without a tracer anywhere. Delegations are
+      // part of what the turn cost the caller, so their bills join the total.
       const billed = () => {
-        const bill = turnBill(rounds, config.cost);
+        const bill = combineBills([turnBill(rounds, config.cost), ...delegated]);
 
         return bill ? { usage: bill } : {};
+      };
+      const delegate = async (call: ToolCall) => {
+        const name = call.name.slice(DELEGATE_PREFIX.length);
+        const sub = config.subagents?.[name];
+
+        if (!sub) return { error: `unknown_subagent: ${name}` };
+        const outcome = await runDelegation(name, sub, String((call.input as { task?: unknown })?.task ?? ''), {
+          deps,
+          manifest,
+          env,
+          fetchImpl,
+          parentModel: model,
+          parentTools: config.tools,
+          remoteTools: remoteTools.map(({ name: toolName, description, input }) => ({ name: toolName, description, input })),
+          callRemote: toolbox ? (toolName, input) => toolbox.call(toolName, input) : undefined,
+          ownsRemote: (toolName) => toolbox?.owns(toolName) ?? false,
+          processors: config.harness?.processors ?? [],
+          limiter,
+          identity,
+        });
+
+        if (outcome.bill) delegated.push(outcome.bill);
+
+        return outcome.report;
       };
 
       const runLoop = async (): Promise<Response> => {
@@ -285,12 +320,14 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
           // Loading a skill is a read the server already holds the answer to: it
           // never travels to the browser as a ui call, and never runs a tool.
           const skillCalls = reply.toolCalls.filter((call) => call.name === LOAD_SKILL);
-          const handled = [...serverCalls, ...remoteCalls, ...skillCalls];
+          const delegateCalls = reply.toolCalls.filter((call) => call.name.startsWith(DELEGATE_PREFIX));
+          const handled = [...serverCalls, ...remoteCalls, ...skillCalls, ...delegateCalls];
           const uiCalls = reply.toolCalls.filter((call) => !handled.includes(call));
 
           messages.push(...(await toolResults(serverCalls, (call) => deps.invoke(call.name, call.input))));
           messages.push(...(await toolResults(remoteCalls, (call) => toolbox!.call(call.name, call.input))));
           messages.push(...(await toolResults(skillCalls, async (call) => loadSkillBody(call.input, skills, deps))));
+          messages.push(...(await toolResults(delegateCalls, delegate)));
           if (uiCalls.length > 0) return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId, ...billed() });
         }
 

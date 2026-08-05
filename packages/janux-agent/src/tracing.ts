@@ -63,6 +63,16 @@ export function tracedAgentTurn<T>(model: ResolvedModel, run: (span: JanuxSpan) 
 }
 
 /**
+ * One delegated sub-turn, nested under the parent's `invoke_agent` span. Named
+ * per the same GenAI convention, so a delegating turn reads as agents inside
+ * an agent — and each `invoke_agent` span totals only ITS loop, keeping
+ * `sum(janux.turn.*)` over a trace the grand total with nothing counted twice.
+ */
+export function tracedSubagentTurn<T>(name: string, model: ResolvedModel, run: (span: JanuxSpan) => Promise<T>): Promise<T> {
+  return withSpan(`invoke_agent ${name}`, () => ({ ...baseAttributes(model, 'invoke_agent'), 'gen_ai.agent.name': name }), run);
+}
+
+/**
  * Turn-level totals for the `invoke_agent` span, under `janux.turn.*` and
  * deliberately NOT under the semconv keys the rounds already carry. A turn's
  * totals ARE the sum of its `chat` children, so repeating `gen_ai.usage.*` on
