@@ -83,11 +83,14 @@ function cursorOf(req: Request): number {
 }
 
 /**
- * A resume is a read of an existing turn, never the purchase of a new one — so
- * it is the one GET this mount answers, and only when it names a stream.
+ * A resume reads an existing turn instead of buying a new one, so GET would
+ * describe it better — but `/_janux/llm` is an invocation path, and those are
+ * POST-only precisely so no `<img>`, `<script>` or `EventSource` on another
+ * origin can reach them with the visitor's ambient cookies. An answer being
+ * written for someone is exactly the kind of thing that must not be readable
+ * that way, so the resume goes through the same door as everything else.
  */
-function resumeStream(req: Request, streams: ResumableStreams, identity: string): Response {
-  const streamId = new URL(req.url).searchParams.get('stream')!;
+function resumeStream(streamId: string, req: Request, streams: ResumableStreams, identity: string): Response {
   const resumed = streams.resume(streamId, identity, cursorOf(req));
 
   // A stream that expired, never existed, or belongs to someone else answers
@@ -123,11 +126,9 @@ export function createLlmHandler(
   streams?: ResumableStreams,
 ) {
   return async (req: Request): Promise<Response> => {
-    const resuming = req.method === 'GET' && streams && new URL(req.url).searchParams.has('stream');
-
-    // POST-only otherwise: an EventSource (or a crawler) issuing GET would
-    // buy a billed provider turn for an empty transcript.
-    if (req.method !== 'POST' && !resuming) return json({ type: 'error', error: 'method_not_allowed' }, 405);
+    // POST-only: an EventSource (or a crawler) issuing GET would otherwise buy a
+    // billed provider turn for an empty transcript.
+    if (req.method !== 'POST') return json({ type: 'error', error: 'method_not_allowed' }, 405);
     // Gate first, same as /_janux/agent: an unconfigured model must not open
     // the door to unauthorized or unmetered callers. Resuming runs it too —
     // replaying is cheaper than generating, but it must not be the cheap door
@@ -135,7 +136,9 @@ export function createLlmHandler(
     const gated = await gate?.(req);
 
     if (gated instanceof Response) return gated;
-    if (resuming) return resumeStream(req, streams, gated ?? 'anonymous');
+    const streamId = new URL(req.url).searchParams.get('stream');
+
+    if (streams && streamId) return resumeStream(streamId, req, streams, gated ?? 'anonymous');
     const resolved = resolveModel(config.model, env, config.modelOptions);
 
     if (!resolved) return json(setupCard(), 503);

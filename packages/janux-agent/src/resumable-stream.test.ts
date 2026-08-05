@@ -78,6 +78,7 @@ const post = (body: unknown = QUESTION) =>
 
 const resume = (streamId: string, lastEventId?: number) =>
   new Request(`http://localhost/_janux/llm?stream=${streamId}`, {
+    method: 'POST',
     headers: lastEventId === undefined ? {} : { 'last-event-id': String(lastEventId) },
   });
 
@@ -184,11 +185,19 @@ describe('/_janux/llm resumable streaming', () => {
     expect(((await late.json()) as any).error).toBe('stream_not_resumable');
   });
 
-  it('keeps answering 405 to a GET that names no stream', async () => {
+  /**
+   * `/_janux/llm` is an invocation path, which the framework keeps closed to
+   * cross-origin GETs (`csrf.ts` answers SAFE methods there with a 405). An
+   * answer being written for a signed-in visitor is precisely what must not be
+   * readable by an `EventSource` on someone else's page, so resuming stays a
+   * POST rather than carving an exception into that rule.
+   */
+  it('keeps answering 405 to a GET, stream id or not', async () => {
     const provider = scriptedProvider();
     const mount = resumableAgent(provider.fetchImpl);
-    const response = await mount.handleLlm!(new Request('http://localhost/_janux/llm'));
+    const bare = await mount.handleLlm!(new Request('http://localhost/_janux/llm'));
+    const named = await mount.handleLlm!(new Request('http://localhost/_janux/llm?stream=whatever'));
 
-    expect(response.status).toBe(405);
+    expect([bare.status, named.status]).toEqual([405, 405]);
   });
 });

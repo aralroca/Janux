@@ -149,7 +149,15 @@ export function Layout({ children, current, sidebar = true }: { children: unknow
         structural, not a convention each new route remembers. Touring the menu
         through /playground with the panel open is exactly how that was learned.
       */}
-      <DocsCopilot persist />
+      {/*
+        `eager` because the panel now has something to do before anyone touches
+        it: an answer this visitor was mid-way through reading, on a server that
+        kept writing it after the page went away. A lazily-resumed island cannot
+        notice that — its effects do not run until the first interaction, which
+        is precisely the interaction the reload interrupted. The check itself is
+        one localStorage read; the agent runtime stays behind its dynamic import.
+      */}
+      <DocsCopilot persist eager />
     </div>
   );
 }

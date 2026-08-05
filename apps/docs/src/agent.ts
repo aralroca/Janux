@@ -13,5 +13,14 @@ export default defineAgent({
   model: 'openrouter/deepseek/deepseek-v4-flash',
   modelOptions: { reasoning: { enabled: false }, provider: { sort: 'throughput' } },
   // Ask AI is open to the internet with our key behind it.
-  harness: { rateLimit: { limit: 20, windowMs: 60_000, globalLimit: 600 } },
+  harness: {
+    rateLimit: { limit: 20, windowMs: 60_000, globalLimit: 600 },
+    /*
+     * Answers are read on a docs site, where following a link mid-answer is the
+     * normal thing to do — losing the answer to a navigation is the anomaly. A
+     * turn here is a few KiB of markdown and seconds long, so the default 60s /
+     * 256 KiB retention covers it with room to spare.
+     */
+    resumableStreams: true,
+  },
 });

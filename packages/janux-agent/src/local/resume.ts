@@ -67,7 +67,10 @@ export function resumeRequest(
   cursor: number,
   headers?: Record<string, string>,
 ): Promise<Response> {
+  // POST, though it reads rather than writes: `/_janux/llm` is an invocation
+  // path, and the framework keeps those closed to cross-origin GETs.
   return fetch(`${endpoint}?stream=${encodeURIComponent(streamId)}`, {
+    method: 'POST',
     headers: {
       accept: 'text/event-stream',
       // The SSE cursor header, spelled the way the platform spells it.

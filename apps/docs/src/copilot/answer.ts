@@ -98,3 +98,27 @@ export async function askStream(
 
   return { text, html: renderMarkdown(text), outcome: streamed.outcome };
 }
+
+/** The reader a resumed turn needs: chunks to paint, and the turn to wait on. */
+export interface Resumable {
+  subscribe(listener: (chunk: UIMessageChunk) => void): () => void;
+  resumeInterrupted(): Promise<{ text?: string } | undefined>;
+}
+
+/**
+ * An answer a reload cut in half, painted as the server replays it. Undefined
+ * when there was nothing in flight, which is the case on almost every load.
+ */
+export async function resumedAnswer(llm: Resumable, progress: Progress): Promise<Answer | undefined> {
+  let text = '';
+  const stop = llm.subscribe((chunk) => {
+    if (chunk.type === 'text-delta') progress.onText(stripThink((text += chunk.delta ?? '')));
+    if (chunk.type === 'tool-input-available') progress.onTool(String(chunk.toolName));
+  });
+  const reply = await llm.resumeInterrupted().finally(stop).catch(() => undefined);
+
+  if (!reply) return undefined;
+  const answer = messageFor({ text: stripThink(reply.text ?? ''), outcome: 'answered' });
+
+  return { text: answer, html: renderMarkdown(answer), outcome: 'answered' };
+}

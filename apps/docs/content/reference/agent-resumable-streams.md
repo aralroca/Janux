@@ -66,12 +66,14 @@ Only *progress* buys back an attempt: a mount that keeps replaying the same pref
 
 ## What the wire looks like
 
-Every streamed frame already carries an incremental `id:`, and the response carries `x-janux-stream-id`. Resuming is one GET — the only GET the mount answers, because it reads an existing turn instead of buying a new one:
+Every streamed frame already carries an incremental `id:`, and the response carries `x-janux-stream-id`. Resuming names that id and the last event received:
 
 ```
-GET /_janux/llm?stream=<id>
+POST /_janux/llm?stream=<id>
 Last-Event-ID: 41
 ```
+
+`POST`, even though it reads rather than writes. `/_janux/llm` is an invocation path, and Janux keeps those closed to cross-origin `GET`s on purpose — an answer being written for a signed-in visitor is exactly what must not be readable by an `<img>`, a `<script>` or an `EventSource` on somebody else's page. Resuming goes through the same door as every other call rather than carving an exception into that rule.
 
 | Answer | When |
 |---|---|
