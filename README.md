@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-11598%20passing-brightgreen" alt="11598 tests passing" />
+  <img src="https://img.shields.io/badge/tests-11657%20passing-brightgreen" alt="11657 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -231,7 +231,7 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 107 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 109 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -322,6 +322,7 @@ Full gallery with screenshots: **[janux.build/docs/more/templates](https://janux
 | [`with-local-llm`](examples/with-local-llm) | The copilot's model runs in the browser over WebGPU (`localLlm()`), with `supportsLocalLlm()` detection, a `serverLlm()` fallback and a live local↔cloud swap. |
 | [`agent-evals`](examples/agent-evals) | `janux eval` as a CI gate: scripted, model-free agent tasks replayed over the real webMCP surface, including a human approval step — plus a broken eval that proves the gate can fail. |
 | [`with-skills`](examples/with-skills) | Skills: a multi-step returns procedure shipped as markdown the model loads on demand, projected to MCP — and `janux verify` failing on a skill that names a tool the app does not have. |
+| [`with-channels`](examples/with-channels) | Channels: the same on-call agent answering in the browser and over an HTTP webhook — same `confirm` guard on both doors, and a browser-only intent the model is told it does not have. |
 
 ### Components & state
 

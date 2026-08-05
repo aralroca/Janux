@@ -83,13 +83,13 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `@janux/server`
 
-- **Stable** — `NAVIGATION_HEADER`, `NONCE_HEADER`, `api`, `apiManifestTools`, `buildLlmsTxt`, `collectApis`, `createFsRouter`, `createJanuxServer`, `createResponseCache`, `createSessionStore`, `discoverSkills`, `htmlDocument`, `invokeApi`, `isApi`, `mockApi`, `parseSkill`, `resetApiMocks`, `revalidatePath`, `revalidateTag`, `skillIndex`, `strictPolicy`
+- **Stable** — `CHANNELS_PREFIX`, `NAVIGATION_HEADER`, `NONCE_HEADER`, `api`, `apiManifestTools`, `buildLlmsTxt`, `channelOf`, `collectApis`, `createFsRouter`, `createJanuxServer`, `createResponseCache`, `createSessionStore`, `discoverSkills`, `handleChannel`, `htmlDocument`, `invokeApi`, `isApi`, `mockApi`, `parseSkill`, `resetApiMocks`, `revalidatePath`, `revalidateTag`, `skillIndex`, `strictPolicy`
 - **Experimental** — `createAgentAuth`
 - **Internal** — `acceptsType`, `createHttpHandlers`, `formDataWithin`, `matchesType`, `readBodyWithin`, `rejectOversized`, `sniffContentType`, `spoolMultipart`
 
 ### `@janux/agent`
 
-- **Stable** — `AttachmentError`, `acceptAttachments`, `allowsTool`, `approxTokens`, `callProvider`, `createMemory`, `createMemoryCounterStore`, `createMemoryStorage`, `createPgStorage`, `createRateLimiter`, `createRedisCounterStore`, `createScheduler`, `createStep`, `createWorkflow`, `createWorkflowRunner`, `defineAgent`, `defineSchedule`, `defineScheduleConfig`, `historyTokenBudget`, `injectionGuard`, `isValidCron`, `nextOccurrence`, `piiFilter`, `resolveModel`, `runProcessors`, `setupCard`, `unicodeNormalizer`
+- **Stable** — `AttachmentError`, `acceptAttachments`, `allowsTool`, `approxTokens`, `callProvider`, `createMemory`, `createMemoryCounterStore`, `createMemoryStorage`, `createPgStorage`, `createRateLimiter`, `createRedisCounterStore`, `createScheduler`, `createStep`, `createWorkflow`, `createWorkflowRunner`, `defineAgent`, `defineChannel`, `defineSchedule`, `defineScheduleConfig`, `discordChannel`, `historyTokenBudget`, `injectionGuard`, `isValidCron`, `nextOccurrence`, `piiFilter`, `resolveModel`, `runProcessors`, `setupCard`, `slackChannel`, `unicodeNormalizer`, `webhookChannel`
 - **Experimental** — `connectMcp`, `createMcpPool`
 - **Internal** — _none_
 

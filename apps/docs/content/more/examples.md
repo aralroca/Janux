@@ -58,6 +58,7 @@ Or run them in place inside the monorepo: `git clone https://github.com/aralroca
 | [`with-local-llm`](https://github.com/aralroca/Janux/tree/main/examples/with-local-llm) | The copilot's model runs in the browser over WebGPU ([`localLlm()`](/docs/recipes/local-model-copilot)): consent-gated download with live progress, `serverLlm()` fallback, and a runtime local↔cloud swap. |
 | [`agent-evals`](https://github.com/aralroca/Janux/tree/main/examples/agent-evals) | [`janux eval`](/docs/recipes/agent-evals-in-ci) as a CI gate: scripted, model-free agent tasks replayed over the real webMCP surface — including a human approval step and a deliberately broken eval that proves the gate can fail. |
 | [`with-skills`](https://github.com/aralroca/Janux/tree/main/examples/with-skills) | [Skills](/docs/guide/skills): a returns desk whose multi-step procedure ships as markdown the model loads on demand — index always in context, body only when asked for — projected to MCP, with `janux verify` refusing a skill that names a tool the app does not have. |
+| [`with-channels`](https://github.com/aralroca/Janux/tree/main/examples/with-channels) | [Channels](/docs/guide/channels): an on-call desk answering both in the browser and over an HTTP webhook — one agent, one pipeline, the same `confirm` guard on both doors, and a browser-only intent the model is told by name that it does not have here. |
 
 Each folder has a README with the details. The [Playground](/playground) runs smaller, self-contained snippets directly in the browser.
 
