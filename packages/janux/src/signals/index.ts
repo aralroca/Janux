@@ -165,8 +165,17 @@ export function signal<T>(initial: T): Sig<T> {
   };
 }
 
+/**
+ * A tracking boundary the state layer installs (see `withLeafTracking`):
+ * entering a fresh runner suspends any leaf frame, or a reactive scope
+ * created inside a binding thunk would leak its reads into the frame and
+ * come out with no subscriptions of its own.
+ */
+export const trackingBoundary: { suspend?: () => unknown; resume?: (token: unknown) => void } = {};
+
 function runTracked(runner: Runner, fn: () => Cleanup): Cleanup {
   const previous = active;
+  const token = trackingBoundary.suspend?.();
 
   detach(runner);
   active = runner;
@@ -174,6 +183,7 @@ function runTracked(runner: Runner, fn: () => Cleanup): Cleanup {
     return fn();
   } finally {
     active = previous;
+    trackingBoundary.resume?.(token);
   }
 }
 

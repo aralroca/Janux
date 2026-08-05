@@ -1,4 +1,4 @@
-import { batch, signal, untrack, type Sig } from '../signals';
+import { batch, signal, trackingBoundary, untrack, type Sig } from '../signals';
 import { assertMutable, createGate, type MutationGate } from './mutation-gate';
 import { ancestorsOf, childPath, parentOf } from './path';
 import { isPlainContainer, plainify } from './plainify';
@@ -40,14 +40,31 @@ const PRUNE_EVERY = 256;
  */
 let leafFrame: Map<object, Map<string, Sig<number> | null>> | null = null;
 
+// A scope created inside a thunk (a userland computed/watch) tracks for
+// itself: its runner suspends the frame for the duration of its own run.
+trackingBoundary.suspend = () => {
+  const frame = leafFrame;
+
+  leafFrame = null;
+
+  return frame;
+};
+trackingBoundary.resume = (token) => {
+  leafFrame = token as typeof leafFrame;
+};
+
 /**
  * Runs a binding thunk so only the MAXIMAL paths it read subscribe (the
  * structural fix for regression #22: a read of `values[3]` traverses
  * `values`, and subscribing the container re-runs every sibling binding on
- * any write). Dropping the prefixes loses nothing — `touch` bumps a written
- * path's descendants, so a container write always reaches the leaf signal.
- * Frames nest by restoration, and the subscribing reads happen HERE, inside
- * whatever effect is currently tracking.
+ * any write). Dropping the prefixes loses nothing for VALUE writes —
+ * `touch` bumps a written path's descendants, so a container write always
+ * reaches the leaf signal — and `writeTrap`/`deleteTrap` notify the
+ * container itself for KEY-SET changes, so enumerating thunks stay live
+ * too. Frames nest by restoration, and the subscribing reads happen HERE,
+ * inside whatever effect is currently tracking. Known boundary: a thunk
+ * that reads a leaf AND hands out the container itself keeps only the leaf
+ * subscription — return leaves from thunks, not containers.
  */
 export function withLeafTracking<T>(read: () => T): T {
   const previous = leafFrame;
@@ -238,8 +255,14 @@ export function createReactiveState<T extends object>(
     const target = childPath(path, key);
 
     assertMutable(gate, target);
+    // A write that changes the container's KEY SET (a new key, array growth
+    // by index, a length truncation) is a write TO the container — notify it
+    // the way push/splice already do, or a binding that dropped the container
+    // subscription for its leaves never hears the shape changed.
+    const structural = !Object.prototype.hasOwnProperty.call(raw, key) || (Array.isArray(raw) && key === 'length');
+
     Reflect.set(raw, key, plainify(value, target, undefined, true));
-    touch(target);
+    touch(structural ? path : target);
 
     return true;
   };
@@ -250,7 +273,8 @@ export function createReactiveState<T extends object>(
 
     assertMutable(gate, target);
     Reflect.deleteProperty(raw, key);
-    touch(target);
+    // Removing a key is always structural: the container is what changed.
+    touch(path);
 
     return true;
   };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { effect } from '../signals';
+import { computed, effect } from '../signals';
 import { createGate, withGate } from './mutation-gate';
 import { createReactiveState, withLeafTracking } from './reactive-state';
 
@@ -97,6 +97,80 @@ describe('withLeafTracking', () => {
     });
     withGate(gate, () => (state.proxy.user.email = 'b@x'));
     expect(runs).toBe(2);
+  });
+
+  /**
+   * Dropping a container subscription is only sound while the container's
+   * KEY SET is stable: a write that adds a key (or extends an array by
+   * index, or deletes) is a write TO the container, and must notify like
+   * one — exactly as push/splice already do.
+   */
+  it('a new key re-runs a binding that enumerates the container', () => {
+    const gate = createGate();
+    const state = createReactiveState<any>({ form: { a: 1 } }, gate);
+    let seen = '';
+
+    effect(() => {
+      seen = withLeafTracking(() => JSON.stringify({ ...state.proxy.form }));
+    });
+    expect(seen).toBe('{"a":1}');
+    withGate(gate, () => (state.proxy.form.b = 2));
+    expect(seen).toBe('{"a":1,"b":2}');
+    withGate(gate, () => delete state.proxy.form.a);
+    expect(seen).toBe('{"b":2}');
+  });
+
+  it('an index append re-runs length and iteration bindings', () => {
+    const gate = createGate();
+    const state = createReactiveState<any>({ items: ['a', 'b'] }, gate);
+    let length = 0;
+    let joined = '';
+
+    effect(() => {
+      length = withLeafTracking(() => state.proxy.items.length);
+    });
+    effect(() => {
+      joined = withLeafTracking(() => state.proxy.items.join('-'));
+    });
+    withGate(gate, () => {
+      const items = state.proxy.items;
+
+      items[items.length] = 'c';
+    });
+    expect([length, joined]).toEqual([3, 'a-b-c']);
+    withGate(gate, () => (state.proxy.items.length = 1));
+    expect([length, joined]).toEqual([1, 'a']);
+  });
+
+  /** A reactive scope created INSIDE a thunk must track for itself, not leak into the frame. */
+  it('an effect or computed created inside a frame keeps its own subscriptions', () => {
+    const gate = createGate();
+    const state = createReactiveState({ a: 1, b: 1, n: 10 }, gate);
+    let outer = 0;
+    let inner = 0;
+    let innerSeen = 0;
+    let derived: { value: number } | undefined;
+
+    effect(() => {
+      outer += 1;
+      withLeafTracking(() => {
+        void state.proxy.a;
+        if (outer === 1) {
+          effect(() => {
+            inner += 1;
+            innerSeen = state.proxy.b;
+          });
+          derived = computed(() => state.proxy.n * 5);
+          void derived.value;
+        }
+
+        return 0;
+      });
+    });
+    withGate(gate, () => (state.proxy.b = 2));
+    expect([outer, inner, innerSeen]).toEqual([1, 2, 2]);
+    withGate(gate, () => (state.proxy.n = 20));
+    expect(derived!.value).toBe(100);
   });
 
   it('restores the previous frame on exit, exceptions included', () => {
