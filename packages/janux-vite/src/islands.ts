@@ -45,8 +45,21 @@ function declaredName(init: any): string | undefined {
   return name?.value?.type === 'StringLiteral' ? name.value.value : undefined;
 }
 
+/**
+ * The path of a client module the compiler transforms may look at —
+ * dependencies and virtual modules are not the app's islands. One gate for
+ * the island catalog and both compiler passes, so the rules cannot drift.
+ */
+export function clientModulePath(id: string): string | undefined {
+  const path = id.split('?')[0] ?? id;
+
+  if (id.startsWith('\0') || id.includes('node_modules') || !MODULE_PATH.test(path)) return undefined;
+
+  return path;
+}
+
 /** Defs are declared at module top level: `export const X = component({...})` (or a default export). */
-function topLevelDeclarations(node: any): any[] {
+export function topLevelDeclarations(node: any): any[] {
   if (node.type === 'ExportDefaultExpression') return [{ init: node.expression }];
   const declaration = node.type === 'ExportDeclaration' ? node.declaration : node;
 
@@ -94,12 +107,11 @@ export function islandCatalogFromDir(dir: string): Record<string, string> {
   return catalog;
 }
 
-/** Folds one bundled module into the catalog; dependencies and virtual modules are not the app's islands. */
+/** Folds one bundled module into the catalog. */
 export function collectIslands(catalog: Record<string, string>, id: string, code: string): void {
-  const path = id.split('?')[0] ?? id;
+  const path = clientModulePath(id);
 
-  if (id.startsWith('\0') || id.includes('node_modules') || !MODULE_PATH.test(path)) return;
-  if (!code.includes('component(') && !code.includes('foreign(')) return;
+  if (!path || (!code.includes('component(') && !code.includes('foreign('))) return;
   islandNamesIn(code, path.endsWith('x')).forEach((name) => {
     catalog[name] = '';
   });

@@ -61,6 +61,30 @@ describe('withLeafTracking', () => {
     expect(runs[3]).toBe(2);
   });
 
+  /**
+   * The frame is module-global because one thunk can read several states —
+   * so entries must be keyed per instance: two states sharing the same path
+   * STRING both subscribe, and neither suppresses the other's maximality.
+   */
+  it('tracks two states reading the same path string independently', () => {
+    const gateA = createGate();
+    const gateB = createGate();
+    const a = createReactiveState({ user: { name: 'ada' } }, gateA);
+    const b = createReactiveState({ user: { name: 'bee' } }, gateB);
+    let runs = 0;
+    let seen = '';
+
+    effect(() => {
+      runs += 1;
+      seen = withLeafTracking(() => `${a.proxy.user.name}/${b.proxy.user.name}`);
+    });
+    expect(seen).toBe('ada/bee');
+    withGate(gateA, () => (a.proxy.user.name = 'grace'));
+    expect([runs, seen]).toEqual([2, 'grace/bee']);
+    withGate(gateB, () => (b.proxy.user.name = 'hopper'));
+    expect([runs, seen]).toEqual([3, 'grace/hopper']);
+  });
+
   /** Without the frame, nothing changes: a plain tracked read keeps its container subscriptions. */
   it('reads outside the frame keep today’s behavior', () => {
     const gate = createGate();

@@ -40,14 +40,20 @@ export function parseWithSpanBase(code: string, tsx: boolean): SpannedModule | u
   }
 }
 
-/** Right to left, so an earlier splice never moves a later span. */
+/** One pass over ascending edits: O(source + edits), and the caller's array is left alone. */
 export function splice(source: Buffer, edits: Edit[]): Buffer {
-  return edits
-    .sort((a, b) => b.start - a.start)
-    .reduce(
-      (bytes, { start, end, text }) => Buffer.concat([bytes.subarray(0, start), Buffer.from(text), bytes.subarray(end)]),
-      source,
-    );
+  const parts: Buffer[] = [];
+  let cursor = 0;
+
+  [...edits]
+    .sort((a, b) => a.start - b.start)
+    .forEach(({ start, end, text }) => {
+      parts.push(source.subarray(cursor, start), Buffer.from(text));
+      cursor = end;
+    });
+  parts.push(source.subarray(cursor));
+
+  return Buffer.concat(parts);
 }
 
 /** The original bytes a span covers. */

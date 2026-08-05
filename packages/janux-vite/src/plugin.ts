@@ -241,20 +241,16 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
      * `languages.register is not a function`.
      */
     transform(code, id, transformOptions) {
-      if (bundling && !transformOptions?.ssr) collectIslands(islandCatalog, id, code);
-      if (serverDir && isApiModule(serverDir, id)) {
-        return transformOptions?.ssr ? undefined : { code: apiStubModule(id, code), map: null };
-      }
-      // After the api stubs on purpose: a server module never reaches this,
-      // so the compiler cannot interfere with "server code stays server-side".
-      if (!transformOptions?.ssr) {
-        const bound = bindingMaps ? compileClientModule(id, code) : undefined;
-        const split = splitIntents ? splitClientModule(id, bound ?? code) : undefined;
+      if (transformOptions?.ssr) return undefined;
+      if (bundling) collectIslands(islandCatalog, id, code);
+      // Before the compiler on purpose: a server module never reaches it, so
+      // the compiler cannot interfere with "server code stays server-side".
+      if (serverDir && isApiModule(serverDir, id)) return { code: apiStubModule(id, code), map: null };
+      const bound = bindingMaps ? compileClientModule(id, code) : undefined;
+      const split = splitIntents ? splitClientModule(id, bound ?? code) : undefined;
+      const compiled = split ?? bound;
 
-        if (bound || split) return { code: split ?? bound!, map: null };
-      }
-
-      return undefined;
+      return compiled ? { code: compiled, map: null } : undefined;
     },
 
     /** The intent chunks' scheme, and relative imports made from inside them. */

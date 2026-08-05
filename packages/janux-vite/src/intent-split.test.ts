@@ -111,7 +111,7 @@ describe('janux build with splitIntents', () => {
       .filter((file) => file.endsWith('.js'))
       .map((file) => [file, readFileSync(join(assets, file), 'utf8')] as const);
     const withRun = chunks.filter(([, code]) => code.includes('saved:'));
-    const entry = chunks.find(([, code]) => code.includes("description: 'Persist the note'") || code.includes('Persist the note'));
+    const entry = chunks.find(([, code]) => code.includes('Persist the note'));
 
     expect(withRun.length).toBe(1);
     expect(entry).toBeDefined();

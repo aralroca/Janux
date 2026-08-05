@@ -20,7 +20,7 @@ const SKIP_DIRS = /^(node_modules|dist|results|baselines)$/;
 
 // Written from scratch for Janux: no upstream counterpart exists, so claiming
 // Octane provenance on these would be a false attribution, not a safe one.
-const JANUX_ORIGINAL = ['report.mjs', 'report.test.mjs'];
+const JANUX_ORIGINAL = ['report.mjs', 'report.test.mjs', 'lib/janux-compiler.mjs'];
 
 const read = (file: string): string => readFileSync(file, 'utf8');
 

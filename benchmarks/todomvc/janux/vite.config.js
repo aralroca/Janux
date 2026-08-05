@@ -1,8 +1,5 @@
 import { defineConfig } from 'vite';
-// Relative on purpose: the harnesses load this config under Node, and the
-// workspace @janux/vite ships TS sources Node cannot resolve — Vite's config
-// loader bundles relative imports (TS included), leaving @swc/core external.
-import { januxCompiler } from '../../../packages/janux-vite/src/compiler-plugin';
+import { januxCompiler } from '../../lib/janux-compiler.mjs';
 
 // Production-mode build like the sibling fixtures. esbuild compiles the TSX
 // through tsconfig.json's jsxImportSource ("janux"); januxCompiler() is the

@@ -101,11 +101,13 @@ function textBindingTarget(thunk: TextBinding, live: Node | undefined): Node {
   }
   const node = reusable ? live! : document.createTextNode('');
   const sig = signal(thunk);
+  // Hoisted: the effect re-runs once per state write, the closure need not.
+  const read = () => sig.value();
 
   textBindings.set(node, sig);
   onCleanup(
     watch(() => {
-      const text = textOf(withLeafTracking(() => sig.value()));
+      const text = textOf(withLeafTracking(read));
 
       if (node.textContent !== text) node.textContent = text;
     }, scheduleRender),
@@ -294,7 +296,9 @@ function bindProps(el: Element, props: Record<string, unknown>): void {
     const binding: Binding = { thunk: sig, last: UNWRITTEN };
 
     map.set(name, binding);
-    onCleanup(watch(() => applyBinding(el, name, withLeafTracking(() => sig.value()), binding), scheduleRender));
+    const read = () => sig.value();
+
+    onCleanup(watch(() => applyBinding(el, name, withLeafTracking(read), binding), scheduleRender));
   }
 }
 

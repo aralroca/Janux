@@ -1,5 +1,5 @@
-import { MODULE_PATH, unwrap } from './islands';
-import { parseWithSpanBase, splice, type Span } from './spans';
+import { clientModulePath, topLevelDeclarations, unwrap } from './islands';
+import { parseWithSpanBase, sliceSpan, splice, type Span } from './spans';
 
 /**
  * Compile-time binding maps (the roadmap's compiler evolution, first half).
@@ -105,14 +105,14 @@ function typeOf(node: any, trusted: Map<string, string>): PathType {
   if ((exported === 'obj' || exported === 'schema') && !unsafe) {
     const props = shapeOf(base.arguments?.[0]?.expression, trusted);
 
-    return props ? { text: false, attr: false, props } : OPAQUE;
+    return props ? { ...OPAQUE, props } : OPAQUE;
   }
   if (exported === 'list' && !unsafe) {
     // `list(str())` or `list({ shape })` — the latter is an implicit obj().
     const arg = unwrap(base.arguments?.[0]?.expression);
     const item = arg?.type === 'ObjectExpression' ? shapeOf(arg, trusted) : undefined;
 
-    return { text: false, attr: false, item: item ? { text: false, attr: false, props: item } : typeOf(arg, trusted) };
+    return { ...OPAQUE, item: item ? { ...OPAQUE, props: item } : typeOf(arg, trusted) };
   }
 
   return OPAQUE;
@@ -184,7 +184,7 @@ function statePath(expr: any): StatePath | undefined {
 
 /** Whether the schema proves this path equivalent when thunked at this position. */
 function pathIsSafe(path: StatePath, shape: Map<string, PathType>, position: 'text' | 'attr'): boolean {
-  let type: PathType | undefined = { text: false, attr: false, props: shape };
+  let type: PathType | undefined = { ...OPAQUE, props: shape };
 
   for (const segment of path.segments) {
     type = segment.index ? type.item : type.props?.get(segment.name);
@@ -219,46 +219,58 @@ function taintedNames(node: any, out: Set<string>): Set<string> {
   return out;
 }
 
-/** Whether this pattern binds the name (so the view's `state` is shadowed past it). */
-function patternBinds(pattern: any, name: string): boolean {
-  if (!pattern || typeof pattern !== 'object') return false;
+/** Every name a pattern binds. */
+export function patternNames(pattern: any, out: Set<string>): Set<string> {
+  if (!pattern || typeof pattern !== 'object') return out;
   switch (pattern.type) {
     case 'Identifier':
-      return pattern.value === name;
+      out.add(pattern.value);
+      break;
     case 'ObjectPattern':
-      return (pattern.properties ?? []).some((prop: any) =>
-        prop.type === 'AssignmentPatternProperty'
-          ? prop.key?.value === name
-          : prop.type === 'KeyValuePatternProperty'
-            ? patternBinds(prop.value, name)
-            : patternBinds(prop.argument, name),
-      );
+      (pattern.properties ?? []).forEach((prop: any) => {
+        if (prop.type === 'AssignmentPatternProperty') out.add(prop.key?.value);
+        else if (prop.type === 'KeyValuePatternProperty') patternNames(prop.value, out);
+        else patternNames(prop.argument, out);
+      });
+      break;
     case 'ArrayPattern':
-      return (pattern.elements ?? []).some((el: any) => patternBinds(el, name));
+      (pattern.elements ?? []).forEach((el: any) => patternNames(el, out));
+      break;
     case 'AssignmentPattern':
-      return patternBinds(pattern.left, name);
+      patternNames(pattern.left, out);
+      break;
     case 'RestElement':
-      return patternBinds(pattern.argument, name);
-    default:
-      return false;
+      patternNames(pattern.argument, out);
+      break;
   }
+
+  return out;
+}
+
+/** Every name bound anywhere inside the subtree: params, declarations, catches — nested included. */
+export function boundNames(node: any, out: Set<string>): Set<string> {
+  if (!node || typeof node !== 'object') return out;
+  if (Array.isArray(node)) {
+    node.forEach((child) => boundNames(child, out));
+
+    return out;
+  }
+  if (node.type === 'VariableDeclarator') patternNames(node.id, out);
+  if (node.type === 'CatchClause') patternNames(node.param, out);
+  if (node.type === 'ArrowFunctionExpression') (node.params ?? []).forEach((p: any) => patternNames(p, out));
+  if (node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration') {
+    if (node.identifier) out.add(node.identifier.value);
+    (node.params ?? []).forEach((p: any) => patternNames(p.pat, out));
+  }
+  if (node.type === 'ClassDeclaration' && node.identifier) out.add(node.identifier.value);
+  Object.values(node).forEach((value) => boundNames(value, out));
+
+  return out;
 }
 
 /** Any binding of `state` anywhere under the view makes every read ambiguous — bail. */
 function shadowsState(node: any): boolean {
-  if (!node || typeof node !== 'object') return false;
-  if (Array.isArray(node)) return node.some((child) => shadowsState(child));
-  if (node.type === 'VariableDeclarator' && patternBinds(node.id, 'state')) return true;
-  if (node.type === 'CatchClause' && patternBinds(node.param, 'state')) return true;
-  if (node.type === 'ArrowFunctionExpression' && (node.params ?? []).some((p: any) => patternBinds(p, 'state'))) return true;
-  if (
-    (node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration') &&
-    (node.params ?? []).some((p: any) => patternBinds(p.pat, 'state'))
-  ) {
-    return true;
-  }
-
-  return Object.values(node).some((value) => shadowsState(value));
+  return boundNames(node, new Set<string>()).has('state');
 }
 
 /**
@@ -327,12 +339,16 @@ function collectSites(node: any, view: ViewAnalysis): void {
   Object.values(node).forEach((value) => collectSites(value, view));
 }
 
+/** One statically-written property of a config object literal. */
+export function configProp(config: any, key: string): any {
+  return (config.properties ?? []).find((prop: any) => prop.type === 'KeyValueProperty' && prop.key?.value === key)
+    ?.value;
+}
+
 /** The `view` arrow of one component def, when its bag destructures a plain `state`. */
 function viewArrow(config: any): any {
-  const view = (config.properties ?? []).find(
-    (prop: any) => prop.type === 'KeyValueProperty' && prop.key?.value === 'view',
-  );
-  const arrow = view ? unwrap(view.value) : undefined;
+  const view = configProp(config, 'view');
+  const arrow = view ? unwrap(view) : undefined;
 
   if (arrow?.type !== 'ArrowFunctionExpression') return undefined;
   const bag = arrow.params?.[0];
@@ -345,10 +361,8 @@ function viewArrow(config: any): any {
 
 /** The resolved state schema shape of one component def, when statically written. */
 function stateShape(config: any, trusted: Map<string, string>): Map<string, PathType> | undefined {
-  const state = (config.properties ?? []).find(
-    (prop: any) => prop.type === 'KeyValueProperty' && prop.key?.value === 'state',
-  );
-  const call = state ? unwrap(state.value) : undefined;
+  const state = configProp(config, 'state');
+  const call = state ? unwrap(state) : undefined;
 
   return calleeExport(call, trusted) === 'schema' ? shapeOf(call.arguments?.[0]?.expression, trusted) : undefined;
 }
@@ -357,20 +371,11 @@ function stateShape(config: any, trusted: Map<string, string>): Map<string, Path
 export function componentConfigs(body: any[], trusted: Map<string, string>): any[] {
   if (trusted.get('component') !== 'component') return [];
 
-  return body.flatMap((node) => {
-    const decls =
-      node.type === 'ExportDefaultExpression'
-        ? [node.expression]
-        : ((node.type === 'ExportDeclaration' ? node.declaration : node)?.type === 'VariableDeclaration'
-            ? (node.type === 'ExportDeclaration' ? node.declaration : node).declarations.map((d: any) => d.init)
-            : []);
+  return body.flatMap(topLevelDeclarations).flatMap((decl: any) => {
+    const call = unwrap(decl.init);
+    const config = calleeExport(call, trusted) === 'component' ? call.arguments?.[0]?.expression : undefined;
 
-    return decls.flatMap((init: any) => {
-      const call = unwrap(init);
-      const config = calleeExport(call, trusted) === 'component' ? call.arguments?.[0]?.expression : undefined;
-
-      return config?.type === 'ObjectExpression' ? [config] : [];
-    });
+    return config?.type === 'ObjectExpression' ? [config] : [];
   });
 }
 
@@ -400,10 +405,9 @@ function moduleSites(body: any[]): Span[] {
  * would change nothing but the surface for surprises.
  */
 export function compileClientModule(id: string, code: string): string | undefined {
-  const path = id.split('?')[0] ?? id;
+  const path = clientModulePath(id);
 
-  if (id.startsWith('\0') || id.includes('node_modules') || !MODULE_PATH.test(path)) return undefined;
-  if (!code.includes('component(')) return undefined;
+  if (!path || !code.includes('component(')) return undefined;
 
   return compileBindingSites(code, path.endsWith('x'));
 }
@@ -423,15 +427,17 @@ export function compileBindingSites(code: string, tsx: boolean): string | undefi
   if (sites.length === 0) return undefined;
   const bytes = Buffer.from(code);
   const { offset } = parsed;
-  const edits = sites.map(({ start, end }) => {
-    const original = bytes.subarray(start - offset, end - offset).toString();
+  const originals = sites.map((span) => sliceSpan(bytes, span, offset));
 
-    return { start: start - offset, end: end - offset, text: `() => (${original})` };
-  });
-
-  // Every site is a `state…` read by construction; a slice that says otherwise
-  // means the span base moved, and the only safe transform is none at all.
-  if (edits.some(({ text }) => !text.startsWith('() => (state'))) return undefined;
+  // Every site is a `state…` read by construction (behind at most wrapper
+  // parens); a slice that says otherwise means the span base moved, and the
+  // only safe transform is none at all.
+  if (originals.some((original) => !/^[(\s]*state\b/.test(original))) return undefined;
+  const edits = sites.map(({ start, end }, index) => ({
+    start: start - offset,
+    end: end - offset,
+    text: `() => (${originals[index]})`,
+  }));
 
   return splice(bytes, edits).toString();
 }

@@ -29,11 +29,16 @@ export interface ReactiveState<T extends object = Record<string, unknown>> {
 const PRUNE_EVERY = 256;
 
 /**
- * The paths the thunk currently evaluating under `withLeafTracking` read,
- * across every reactive state it touched. Shared module state on purpose: a
- * binding can read several islands' states in one thunk.
+ * The paths the thunk currently evaluating under `withLeafTracking` read.
+ * Module-global on purpose — a binding can read several islands' states in
+ * one thunk — which is exactly why entries are keyed PER INSTANCE (by the
+ * state's own `versions` map): two states sharing a path string must both
+ * subscribe, and neither may suppress the other's maximality. Within an
+ * instance, `null` marks a path a deeper read traversed — `readTrap` fires
+ * for every step of a member chain, so marking the parent at read time IS
+ * the maximality predicate, with no scan afterwards.
  */
-let leafFrame: Map<string, Sig<number>> | null = null;
+let leafFrame: Map<object, Map<string, Sig<number> | null>> | null = null;
 
 /**
  * Runs a binding thunk so only the MAXIMAL paths it read subscribe (the
@@ -46,20 +51,17 @@ let leafFrame: Map<string, Sig<number>> | null = null;
  */
 export function withLeafTracking<T>(read: () => T): T {
   const previous = leafFrame;
-  const frame = new Map<string, Sig<number>>();
+  const frame: NonNullable<typeof leafFrame> = (leafFrame = new Map());
 
-  leafFrame = frame;
   try {
     return read();
   } finally {
     leafFrame = previous;
-    const paths = [...frame.keys()];
-
-    paths.forEach((path) => {
-      if (!paths.some((other) => other.length > path.length && other.startsWith(`${path}.`))) {
-        void frame.get(path)!.value;
-      }
-    });
+    frame.forEach((paths) =>
+      paths.forEach((sig) => {
+        if (sig) void sig.value;
+      }),
+    );
   }
 }
 
@@ -214,10 +216,19 @@ export function createReactiveState<T extends object>(
     // version signal, so skipping it for untracked reads would stop a write from
     // minting a new identity for the changed subtree — the contract `foreign()`
     // hands React. (Measured as a ~15% win on list writes, and reverted for it.)
+    const version = versionOf(target);
+
     // A leaf frame defers the subscription: the signal must still exist (bump
-    // only bumps existing signals), but only the maximal paths get read.
-    if (leafFrame) leafFrame.set(target, versionOf(target));
-    else versionOf(target).value;
+    // only bumps existing signals), but only the maximal paths get read. The
+    // `has` guard keeps a re-read from resurrecting a parent a deeper read
+    // already marked.
+    if (leafFrame) {
+      let paths = leafFrame.get(versions);
+
+      if (!paths) leafFrame.set(versions, (paths = new Map()));
+      paths.set(path, null);
+      if (!paths.has(target)) paths.set(target, version);
+    } else void version.value;
 
     return isPlainContainer(value) ? proxyFor(value, target) : value;
   };

@@ -1,6 +1,6 @@
 import { transformSync } from '@swc/core';
-import { calleeExport, componentConfigs, januxImports } from './binding-sites';
-import { MODULE_PATH, unwrap } from './islands';
+import { boundNames, calleeExport, componentConfigs, configProp, januxImports, patternNames } from './binding-sites';
+import { clientModulePath, unwrap } from './islands';
 import { parseWithSpanBase, sliceSpan, splice, type Edit, type Span } from './spans';
 
 /**
@@ -67,60 +67,6 @@ function referencedIdents(node: any, out: Set<string>): Set<string> {
   return out;
 }
 
-/** Every name a pattern binds. */
-function patternNames(pattern: any, out: Set<string>): void {
-  if (!pattern || typeof pattern !== 'object') return;
-  switch (pattern.type) {
-    case 'Identifier':
-      out.add(pattern.value);
-
-      return;
-    case 'ObjectPattern':
-      (pattern.properties ?? []).forEach((prop: any) => {
-        if (prop.type === 'AssignmentPatternProperty') out.add(prop.key?.value);
-        else if (prop.type === 'KeyValuePatternProperty') patternNames(prop.value, out);
-        else patternNames(prop.argument, out);
-      });
-
-      return;
-    case 'ArrayPattern':
-      (pattern.elements ?? []).forEach((el: any) => patternNames(el, out));
-
-      return;
-    case 'AssignmentPattern':
-      patternNames(pattern.left, out);
-
-      return;
-    case 'RestElement':
-      patternNames(pattern.argument, out);
-
-      return;
-    default:
-      return;
-  }
-}
-
-/** Every name bound anywhere inside the function: params, declarations, catches — nested included. */
-function boundNames(node: any, out: Set<string>): Set<string> {
-  if (!node || typeof node !== 'object') return out;
-  if (Array.isArray(node)) {
-    node.forEach((child) => boundNames(child, out));
-
-    return out;
-  }
-  if (node.type === 'VariableDeclarator') patternNames(node.id, out);
-  if (node.type === 'CatchClause') patternNames(node.param, out);
-  if (node.type === 'ArrowFunctionExpression') (node.params ?? []).forEach((p: any) => patternNames(p, out));
-  if (node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration') {
-    if (node.identifier) out.add(node.identifier.value);
-    (node.params ?? []).forEach((p: any) => patternNames(p.pat, out));
-  }
-  if (node.type === 'ClassDeclaration' && node.identifier) out.add(node.identifier.value);
-  Object.values(node).forEach((value) => boundNames(value, out));
-
-  return out;
-}
-
 /** Names any top-level statement binds (imports and declarations alike). */
 function moduleScopeNames(body: any[]): Set<string> {
   const names = new Set<string>();
@@ -169,10 +115,7 @@ interface SplitRun {
 
 /** The literal `name` property of a config object. */
 function nameOf(config: any): string | undefined {
-  const name = (config.properties ?? []).find(
-    (prop: any) => prop.type === 'KeyValueProperty' && prop.key?.value === 'name',
-  );
-  const value = name ? unwrap(name.value) : undefined;
+  const value = unwrap(configProp(config, 'name'));
 
   return value?.type === 'StringLiteral' ? value.value : undefined;
 }
@@ -189,10 +132,7 @@ function splitRuns(body: any[]): SplitRun[] {
 
   componentConfigs(body, trusted).forEach((config) => {
     const island = nameOf(config);
-    const intents = (config.properties ?? []).find(
-      (prop: any) => prop.type === 'KeyValueProperty' && prop.key?.value === 'intents',
-    );
-    const object = intents ? unwrap(intents.value) : undefined;
+    const object = unwrap(configProp(config, 'intents'));
 
     if (!island || object?.type !== 'ObjectExpression') return;
     (object.properties ?? []).forEach((prop: any) => {
@@ -204,8 +144,7 @@ function splitRuns(body: any[]): SplitRun[] {
       const def = call.arguments?.[0]?.expression;
 
       if (def?.type !== 'ObjectExpression') return;
-      const runProp = (def.properties ?? []).find((p: any) => p.type === 'KeyValueProperty' && p.key?.value === 'run');
-      const run = runProp ? unwrap(runProp.value) : undefined;
+      const run = unwrap(configProp(def, 'run'));
 
       if (run?.type !== 'ArrowFunctionExpression' && run?.type !== 'FunctionExpression') return;
       const bound = boundNames(run, new Set<string>());
@@ -229,7 +168,9 @@ function splitRuns(body: any[]): SplitRun[] {
 
 /**
  * The import specifier the stub asks for. Encoded so paths survive the
- * scheme; suffixed `.js` because the virtual module is served as plain JS
+ * scheme; suffixed `.js` and served pre-compiled because a `.tsx`-suffixed
+ * scheme id was measured NOT to reach the CLI build's type-stripping — the
+ * bundler parsed the virtual module as JS and choked on the annotations
  * (intent names cannot contain `.`, so the suffix is unambiguous).
  */
 export function intentVirtualId(module: string, island: string, intent: string): string {
@@ -288,8 +229,10 @@ export function extractIntentRun(code: string, tsx: boolean, island: string, int
   const imports = run.importSpans.map((span) => sliceSpan(bytes, span, parsed.offset)).join('\n');
   const source = `${imports}${imports ? '\n' : ''}export const run = ${sliceSpan(bytes, run.runSpan, parsed.offset)};\n`;
 
-  // Emitted as plain JS: a percent-encoded scheme id gives the bundler no
-  // reliable extension to infer a loader from, so nothing is left to infer.
+  // Pre-compiled here (see intentVirtualId for why the bundler cannot be
+  // trusted to): the one divergence from the app's own pipeline is that an
+  // extracted run bypasses other plugins' transforms — acceptable while the
+  // flag is opt-in, and the reason to revisit if it ever defaults on.
   return transformSync(source, {
     jsc: {
       parser: { syntax: 'typescript', tsx },
@@ -299,12 +242,11 @@ export function extractIntentRun(code: string, tsx: boolean, island: string, int
   }).code;
 }
 
-/** The transform-hook gate, mirroring the binding-sites one. */
+/** The transform-hook gate. */
 export function splitClientModule(id: string, code: string): string | undefined {
-  const path = id.split('?')[0] ?? id;
+  const path = clientModulePath(id);
 
-  if (id.startsWith('\0') || id.includes('node_modules') || !MODULE_PATH.test(path)) return undefined;
-  if (!code.includes('intent(')) return undefined;
+  if (!path || !code.includes('intent(')) return undefined;
 
   return splitIntentsTransform(code, path.endsWith('x'), path);
 }
