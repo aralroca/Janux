@@ -41,7 +41,19 @@ const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
  * instead of an ambient cookie. Nothing there is forgeable, and a sweep would
  * only have to carve them back out one by one.
  */
-const INVOCATION_PATHS = ['/_janux/api/', '/_janux/approve', '/_janux/reject', '/_janux/agent', '/_janux/llm'];
+const INVOCATION_PATHS = [
+  '/_janux/api/',
+  '/_janux/approve',
+  '/_janux/reject',
+  // The subtree, not the page: `GET /_janux/elicit` renders what is parked and
+  // changes nothing, while `/_janux/elicit/settle` runs the call.
+  '/_janux/elicit/',
+  '/_janux/agent',
+  '/_janux/llm',
+];
+
+/** Where the elicitation page posts a human's decision — an invocation, hence the subtree above. */
+export const SETTLE_ELICITATION_PATH = '/_janux/elicit/settle';
 
 export interface CsrfPolicy {
   /** Origins allowed besides the app's own. Empty ⇒ same-origin only. */

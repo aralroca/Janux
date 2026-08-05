@@ -403,10 +403,18 @@ export const MCP_PROTOCOL_CASES: ScenarioCase[] = [
     expected: ['2026-07-28,2025-06-18'],
   },
   {
-    id: 'mcp-discover-repeats-the-capabilities',
+    // `subscribe` is `subscriptions/listen`, which only the modern era has. The
+    // legacy handshake must not be told about a method it cannot ask for.
+    id: 'mcp-discover-advertises-subscribe-to-the-modern-era-only',
     src: 'janux',
-    run: async (log) => void log.push(JSON.stringify((await resultOf('server/discover')).capabilities)),
-    expected: ['{"tools":{},"resources":{}}'],
+    run: async (log) => {
+      const discovered = await resultOf('server/discover');
+      const handshake = await resultOf('initialize');
+
+      log.push(JSON.stringify(discovered.capabilities));
+      log.push(JSON.stringify(handshake.capabilities));
+    },
+    expected: ['{"tools":{},"resources":{"subscribe":true}}', '{"tools":{},"resources":{}}'],
   },
   {
     id: 'mcp-discover-needs-no-handshake-and-no-version-header',

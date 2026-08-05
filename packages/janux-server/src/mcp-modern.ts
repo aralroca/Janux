@@ -62,8 +62,21 @@ function decodeSentinel(value: string | null): string | null {
   }
 }
 
+/** Whether this request is speaking the modern era at all — the gate has already agreed it is consistent. */
+export function isModern(rpc: RpcShape, headers: Headers): boolean {
+  const requested = headers.get('mcp-protocol-version') ?? rpc.params?._meta?.[`${META}protocolVersion`];
+
+  return typeof requested === 'string' && requested >= MODERN_FLOOR;
+}
+
+/**
+ * `subscribe` is advertised here and nowhere else: `subscriptions/listen` is a
+ * 2026-07-28 method, and the legacy `initialize` next door must keep answering
+ * with the capabilities that era can actually use — it never had this one, and
+ * `resources/subscribe` is not implemented.
+ */
 export function discoverResult(): Record<string, unknown> {
-  return { supportedVersions: SUPPORTED_VERSIONS, capabilities: { tools: {}, resources: {} } };
+  return { supportedVersions: SUPPORTED_VERSIONS, capabilities: { tools: {}, resources: { subscribe: true } } };
 }
 
 /** serverInfo on every result (SHOULD) + the mandatory CacheableResult fields. */
@@ -80,7 +93,9 @@ export function decorateResult(
   return {
     ...result,
     ...cacheable,
-    resultType: 'complete',
+    // `complete` unless the handler already said otherwise: an `input_required`
+    // answer overwritten here would tell the client the call was done.
+    resultType: result.resultType ?? 'complete',
     _meta: { [`${META}serverInfo`]: { name: serverName, version: '1' } },
   };
 }

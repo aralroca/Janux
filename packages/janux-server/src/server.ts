@@ -27,8 +27,8 @@ import { pathToFileURL } from 'node:url';
 import { QueryClient } from 'janux/query';
 import { isTracing, reportError, withSpan, type JanuxSpan } from 'janux/observability';
 import { cacheHeadersFor, policyOf, type CacheConfig, type CacheDecision } from './cache';
-import { createResponseCache } from './response-cache';
-import { createHttpHandlers, readBodyWithin, type HandlerModule } from './http-handlers';
+import { createResponseCache, onInvalidated } from './response-cache';
+import { createHttpHandlers, formDataWithin, readBodyWithin, type HandlerModule } from './http-handlers';
 import { createMcpEndpoint, type McpAuth } from './mcp';
 import { A2A_PATH, createA2aEndpoint } from './a2a';
 import { AGENT_CARD_PATHS } from './a2a-card';
@@ -57,7 +57,8 @@ import { nonceAttr, safeJson } from './html-escape';
 import { buildLlmsTxt, expandPattern, type LlmsTxtConfig, type LlmsTxtTool } from './llms-txt';
 import { buildRobotsTxt, buildSitemap, validSiteUrl } from './sitemap';
 import { buildRssFeed, feedTitle } from './feed';
-import { refuseCrossSite } from './csrf';
+import { refuseCrossSite, SETTLE_ELICITATION_PATH } from './csrf';
+import { elicitGonePage, elicitPage, elicitSettledPage } from './elicit-page';
 import { NONCE_HEADER, resolveCsp } from './csp';
 
 /**
@@ -133,6 +134,12 @@ export interface WebSocketUpgrader {
  * guard's parked `Proposal` is handed to.
  */
 export type InstanceHooks = Pick<InstanceOptions, 'onAudit' | 'onProposal' | 'proposalDiff'>;
+
+/** What an agent-side caller says about the call, beyond its input. */
+interface ToolCallBag {
+  tainted?: boolean;
+  settle?: 'session' | 'token';
+}
 
 export interface ServerOptions {
   routesDir?: string;
@@ -732,7 +739,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
   };
 
   /** Agent + `confirm`: register a pending proposal for a human instead of running the tool. */
-  const registerProposal = (tool: ApiTool, input: unknown, ctx: Ctx, id: string, caller: Caller) => {
+  const registerProposal = (tool: ApiTool, input: unknown, ctx: Ctx, id: string, caller: Caller, settle?: 'session' | 'token') => {
     const parsed = tool.input ? assertValidInput(tool, input) : input;
     // The approved call still CAME through the agent surface — a human only
     // authorized it. Executing as 'agent' keeps run()/guards/audit consistent
@@ -742,7 +749,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
     const execute = () => invokeApi(tool, parsed, ctx, caller, options.onAudit, { span: 'janux.api.execute', proposal: id });
     // The signed token goes only to the proposer; spans and audit entries carry
     // the bare id, which on its own can no longer settle anything.
-    const token = proposals.park({ id, tool: tool.name, input: parsed, execute, session: proposalSessionOf(ctx) });
+    const token = proposals.park({ id, tool: tool.name, input: parsed, execute, session: proposalSessionOf(ctx), settle });
 
     // `proposed`, not `ok` — nothing ran yet, and an audit trail that records an
     // unapproved proposal as a success is worse than no trail at all.
@@ -756,13 +763,13 @@ export function createJanuxServer(options: ServerOptions = {}) {
    * the event a reviewer wants to see, and the approval — if it ever comes —
    * arrives in a different request, on a different trace, linked by this id.
    */
-  const proposeApi = (tool: ApiTool, input: unknown, ctx: Ctx, caller: Caller = { origin: 'agent' }) => {
+  const proposeApi = (tool: ApiTool, input: unknown, ctx: Ctx, caller: Caller = { origin: 'agent' }, settle?: 'session' | 'token') => {
     const id = proposalId('api');
 
     return withSpan(
       'janux.api',
       () => apiAttributes(tool, 'confirm', 'agent', id, caller.tainted),
-      async () => registerProposal(tool, input, ctx, id, caller),
+      async () => registerProposal(tool, input, ctx, id, caller, settle),
     );
   };
 
@@ -770,13 +777,18 @@ export function createJanuxServer(options: ServerOptions = {}) {
    * The seam every agent-side caller shares: the copilot loop and the hosted MCP
    * endpoint. Origin is always `agent` here, so `confirm` must gate — the HTTP
    * path is not the only door a model knocks on.
+   *
+   * `settle` is how the door says who will approve. The copilot's proposals are
+   * settled by the browser that made them; an external MCP client has no browser,
+   * so its proposals are settled out of band by a human on another session.
    */
-  const invokeTool = async (name: string, input: unknown, ctx: Ctx, tainted?: boolean): Promise<unknown> => {
+  const invokeTool = async (name: string, input: unknown, ctx: Ctx, bag: ToolCallBag = {}): Promise<unknown> => {
+    const { tainted, settle } = bag;
     const tool = apiTools.find((candidate) => `api.${candidate.name}` === name || candidate.name === name);
     const caller: Caller = { origin: 'agent', tainted };
 
     if (!tool) throw Object.assign(new Error(`Unknown api tool "${name}"`), { code: 'invalid_input' });
-    if (resolveApiGuard(tool, ctx, caller) === 'confirm') return proposeApi(tool, input, ctx, caller);
+    if (resolveApiGuard(tool, ctx, caller) === 'confirm') return proposeApi(tool, input, ctx, caller, settle);
 
     return invokeApi(tool, input, ctx, caller, options.onAudit);
   };
@@ -791,7 +803,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
     return {
       tools: apiTools,
-      invoke: (tool, input, opts) => invokeTool(tool, input, ctx, opts?.tainted),
+      invoke: (tool, input, opts) => invokeTool(tool, input, ctx, { tainted: opts?.tainted }),
       manifestFor: (path) => manifestFor(path, ctx),
       loadSkill: (name) => skills.find((skill) => skill.name === name)?.body,
     };
@@ -848,17 +860,15 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return json({ ok: false, error: 'unknown proposal' }, 404);
   };
 
-  const handleApprove = async (req: Request): Promise<Response> => {
-    const refused = refuseAgentSettlement(req);
+  /**
+   * Approval, once, whichever door the human came through: the in-page POST, or
+   * the page an MCP elicitation sent them to. Both run the call the same way and
+   * report the outcome to everyone who might be waiting on it.
+   */
+  const approveToken = async (token: string, session: string): Promise<{ result: unknown } | { error: SettleError }> => {
+    const settled = proposals.approve(token, session);
 
-    if (refused) return refused;
-    const body = await jsonBodyWithin(req);
-
-    if (body instanceof Response) return body;
-    const { id } = body as { id?: unknown };
-    const settled = proposals.approve(typeof id === 'string' ? id : '', sessionOf(req));
-
-    if ('error' in settled) return settleRefusal(settled.error);
+    if ('error' in settled) return settled;
     const { record } = settled;
     // The approval is the human act this whole feature exists to make visible:
     // its own span, `origin: human`, wrapping the agent-origin execution.
@@ -868,11 +878,86 @@ export function createJanuxServer(options: ServerOptions = {}) {
       () => record.execute(),
     );
 
-    // A remote agent may be waiting on the A2A task that mirrors this proposal.
-    // Its outcome is this one — reported, never re-executed.
+    // A remote agent may be waiting on the A2A task that mirrors this proposal,
+    // or on the MCP call that elicited it. The outcome is this one — reported,
+    // never re-executed.
     a2aEndpoint.settled(record.id, { ok: true, result });
+    proposals.settled(record.id, { ok: true, result });
 
-    return json({ ok: true, result });
+    return { result };
+  };
+
+  /** The same, for the decision that runs nothing. */
+  const rejectToken = (token: string, session: string): { ok: true } | { error: Exclude<SettleError, 'expired'> } => {
+    const settled = proposals.reject(token, session);
+
+    if ('error' in settled) return settled;
+    const id = token.split('.')[0]!;
+
+    a2aEndpoint.settled(id, { ok: false });
+    proposals.settled(id, { ok: false });
+
+    return { ok: true };
+  };
+
+  /**
+   * The out-of-band settlement an MCP elicitation ends in. The session is not
+   * what authorizes it — a human sent to a page by an agent has their own — so
+   * the token is, which is exactly what `settle: 'token'` parked it as.
+   */
+  const settleElicitation = (token: string, decision: 'approve' | 'reject') =>
+    decision === 'approve' ? approveToken(token, '') : rejectToken(token, '');
+
+  const html = (body: string, status = 200): Response =>
+    new Response(body, { status, headers: { 'content-type': 'text/html;charset=utf-8' } });
+
+  /** The page a URL-mode elicitation points at: what is parked, for the human who will settle it. */
+  const handleElicitPage = (req: Request): Response => {
+    const token = new URL(req.url).searchParams.get('token') ?? '';
+    const proposal = proposals.pending(token);
+
+    if (!proposal) return html(elicitGonePage(), 404);
+
+    return html(elicitPage(options.title ?? 'this app', token, proposal));
+  };
+
+  /**
+   * The human's decision, as a form post. `refuseAgentSettlement` still applies:
+   * the agent that proposed the call may not be the one that settles it.
+   */
+  const handleElicitSettle = async (req: Request): Promise<Response> => {
+    const refused = refuseAgentSettlement(req);
+
+    if (refused) return refused;
+    // Bounded like every other invocation body: a token and a verb are small by
+    // construction, so an unbounded read would let a visitor pick the ceiling.
+    const form = await formDataWithin(req, INVOCATION_BODY_BYTES);
+
+    if (form instanceof Response) return form;
+    const token = String(form.get('token') ?? '');
+    // Anything that is not an explicit approval runs nothing — a garbled or
+    // absent decision must fail closed.
+    const decision = form.get('decision') === 'approve' ? 'approve' : 'reject';
+    const settled = await settleElicitation(token, decision);
+
+    if ('error' in settled) return html(elicitGonePage(), 404);
+
+    return html(elicitSettledPage(decision));
+  };
+
+  const handleApprove = async (req: Request): Promise<Response> => {
+    const refused = refuseAgentSettlement(req);
+
+    if (refused) return refused;
+    const body = await jsonBodyWithin(req);
+
+    if (body instanceof Response) return body;
+    const { id } = body as { id?: unknown };
+    const settled = await approveToken(typeof id === 'string' ? id : '', sessionOf(req));
+
+    if ('error' in settled) return settleRefusal(settled.error);
+
+    return json({ ok: true, result: settled.result });
   };
 
   /**
@@ -930,11 +1015,17 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const mcpEndpoint = createMcpEndpoint({
     serverName: options.title ?? 'janux-app',
     tools: apiTools,
-    invoke: (tool, input, ctx) => invokeTool(tool, input, ctx),
+    invoke: (tool, input, ctx) => invokeTool(tool, input, ctx, { settle: 'token' }),
     listPages,
     readPage: readPageMarkdown,
     skills,
     auth: options.mcpAuth,
+    elicitation: {
+      pending: (token) => proposals.pending(token),
+      outcome: (token) => proposals.outcome(token),
+      reject: (token) => settleElicitation(token, 'reject'),
+    },
+    subscriptions: { watch: onInvalidated },
   });
 
   /**
@@ -1143,6 +1234,8 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return cached(req, async () => httpHandlers.dispatch(req, await ctxWithAgent(req)));
     }
     if (pathname.startsWith('/_janux/api/')) return handleApi(req, pathname.slice('/_janux/api/'.length));
+    if (pathname === '/_janux/elicit') return handleElicitPage(req);
+    if (pathname === SETTLE_ELICITATION_PATH) return handleElicitSettle(req);
     if (pathname === '/_janux/approve') return handleApprove(req);
     if (pathname === '/_janux/reject') {
       const refused = refuseAgentSettlement(req);
@@ -1153,12 +1246,11 @@ export function createJanuxServer(options: ServerOptions = {}) {
       if (body instanceof Response) return body;
       const { id } = body as { id?: unknown };
       const token = typeof id === 'string' ? id : '';
-      const settled = proposals.reject(token, sessionOf(req));
+      const settled = rejectToken(token, sessionOf(req));
 
       // A foreign session must not cancel the owner's pending decision; an
       // unknown token stays the quiet `ok: false` the client mirror expects.
       if ('error' in settled) return settled.error === 'invalid' ? settleRefusal('invalid') : json({ ok: false });
-      a2aEndpoint.settled(token.split('.')[0]!, { ok: false });
 
       return json({ ok: true });
     }

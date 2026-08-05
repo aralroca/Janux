@@ -66,6 +66,69 @@ curl -s -X POST .../_janux/approve -d '{"id":"prop_api_7"}'
 # → executes exactly once; replaying the id 404s
 ```
 
+## Asking a human: elicitation
+
+A `confirm`-guarded tool has always parked a proposal for a human. Since **2026-07-28** the protocol has a word for that, and the endpoint speaks it.
+
+The spec's mechanism is [multi round-trip](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr): the server answers `input_required` instead of a result, and the client retries the same call once it has what was asked for. Nothing is pushed at the client, so a stateless server can do it:
+
+```jsonc
+// 1. tools/call shop.pay → nothing runs
+{ "resultType": "input_required",
+  "inputRequests": {
+    "approval": { "method": "elicitation/create",
+      "params": { "mode": "url", "message": "…needs a human first…",
+                  "url": "https://your.app/_janux/elicit?token=prop_api_…" } } },
+  "requestState": "prop_api_….<signature>" }
+
+// 2. A human opens that URL and approves. The call runs, once, with origin: 'human'.
+
+// 3. The client retries the same tools/call with requestState + inputResponses
+{ "resultType": "complete", "content": [{ "type": "text", "text": "…" }] }
+```
+
+Three things are worth knowing about how this is wired:
+
+- **`url` mode, never `form`.** Form mode would have the MCP client collect the approval, which is the one decision that must not happen there. The URL points at a page on your own origin that shows the tool and the exact input, and the approval lands in the audit trail as `origin: 'human'` — the same entry the in-page flow writes, because it is the same code path.
+- **`requestState` is the proposal token.** It is HMAC-signed over the proposal id, the payload hash and the session, so a client that edits it gets a refusal rather than someone else's proposal. That is what lets the retry be authenticated without the server remembering the connection.
+- **A client that does not declare `elicitation.url` is not elicited from.** It gets the answer it always got — the `status: "proposal"` payload above — so nothing that works today stops working.
+
+The retry is honest about all three outcomes: still waiting (another `input_required`), approved (the result), rejected or expired (an `isError` result). A client that reports `action: "decline"` drops the proposal immediately.
+
+## Being told when something changed: subscriptions
+
+`subscriptions/listen` (which replaced `resources/subscribe` and the GET stream) opens an SSE stream for the life of that one POST — again, no session, no affinity:
+
+```jsonc
+{ "method": "subscriptions/listen",
+  "params": { "notifications": { "resourceSubscriptions": ["janux://page/orders"] } } }
+```
+
+The server acknowledges first with the subset it agreed to honor, then sends `notifications/resources/updated` when a watched page's cached response is invalidated — `revalidatePath('/orders')` is exactly the event "the projection of that page changed". Closing the stream releases the watch.
+
+Be aware of what this does **not** watch: island state lives in a browser, not on the server, so a stateless endpoint cannot notify you that a user's island changed. Tag invalidations (`revalidateTag`) name no single resource and notify nothing.
+
+## Spec coverage, honestly
+
+What `/_janux/mcp` implements of [the 2026-07-28 spec](https://modelcontextprotocol.io/specification/), and what it does not. The endpoint is dual-era: a client asking for an older version keeps the `initialize` handshake and the behaviour it had.
+
+| Feature | Status |
+|---|---|
+| `initialize` (legacy) / `server/discover` (modern) | ✅ both eras |
+| Version gate (`-32022`), mirrored `Mcp-*` headers (`-32020`) | ✅ |
+| `tools/list`, `tools/call` | ✅ from `api()`, filtered by the same guards |
+| `resources/list`, `resources/read` | ✅ pages + skills |
+| `ttlMs` / `cacheScope` / `resultType` | ✅ |
+| Elicitation — `url` mode, via multi round-trip | ✅ mapped onto proposals |
+| Elicitation — `form` mode | ❌ deliberate: the client must not collect an approval |
+| `subscriptions/listen` + `notifications/resources/updated` | ✅ driven by revalidation |
+| `toolsListChanged`, `promptsListChanged`, `resourcesListChanged` | ❌ the sets are fixed at boot; not advertised, so never promised |
+| Sampling (`sampling/createMessage`) | ❌ no use case — a Janux app brings its own models (`@janux/agent`) rather than borrowing the client's |
+| Roots (`roots/list`) | ❌ no use case — a web app has nothing to do with the client's filesystem |
+| Prompts, completion, logging, pagination (`nextCursor`) | ❌ not implemented |
+
+One practical note: no shipping third-party client speaks `2026-07-28` yet — the official SDK is at `2025-11-25` — so today real clients connect on the legacy path and elicitation is reachable by clients that opt into the modern era. The legacy path is tested against the official SDK for exactly that reason.
+
 ## UI tools need a page
 
 Tools without the `api.` prefix operate live islands — they execute in a browser through `window.janux.call(...)`. Headless flows should stick to `api.*` tools; that's what they're for. (If you need headless UI-state automation, run the page under Playwright and drive `window.janux` — `settled()` makes it deterministic.)

@@ -90,3 +90,122 @@ describe('proposal vault', () => {
     expect(vault.approve(token, 'sid=alice')).toEqual({ error: 'unknown' });
   });
 });
+
+/**
+ * What MCP elicitation needs on top: a call parked by a remote agent is settled
+ * by a human who is NOT that agent — a different browser, with its own cookies.
+ * Binding the signature to the approver's session is exactly right for the
+ * in-page flow and exactly wrong here, so the mode is a property of the parked
+ * proposal rather than a global loosening.
+ */
+describe('proposal vault: settled out of band', () => {
+  const parkForHuman = (vault: ReturnType<typeof createProposalVault>, input: unknown) => {
+    const id = `prop_api_${crypto.randomUUID()}`;
+
+    return vault.park({ id, tool: 'shop.refund', input, execute: async () => 'refunded', session: '', settle: 'token' });
+  };
+
+  it('lets a human on another session approve what a cookieless agent parked', () => {
+    const vault = createProposalVault();
+    const token = parkForHuman(vault, { amount: 5 });
+
+    expect('record' in vault.approve(token, 'sid=the-human')).toBe(true);
+  });
+
+  it('still refuses a forged signature when the approver may be anyone', () => {
+    const vault = createProposalVault();
+    const [id] = parkForHuman(vault, { amount: 5 }).split('.');
+
+    expect(vault.approve(`${id}.not-the-signature`, 'sid=the-human')).toEqual({ error: 'invalid' });
+  });
+
+  it('still refuses a payload swapped after the token was minted', () => {
+    const vault = createProposalVault();
+    const input = { amount: 5 };
+    const token = parkForHuman(vault, input);
+
+    input.amount = 5_000_000;
+    expect(vault.approve(token, 'sid=the-human')).toEqual({ error: 'invalid' });
+  });
+
+  it('remembers what happened, so the agent that parked it can collect the outcome', () => {
+    const vault = createProposalVault();
+    const token = parkForHuman(vault, { amount: 5 });
+
+    expect(vault.outcome(token)).toBeUndefined();
+    vault.approve(token, 'sid=the-human');
+    vault.settled(token.split('.')[0]!, { ok: true, result: 'refunded' });
+
+    expect(vault.outcome(token)).toEqual({ ok: true, result: 'refunded' });
+  });
+
+  it('remembers a rejection as a rejection, not as an absence', () => {
+    const vault = createProposalVault();
+    const token = parkForHuman(vault, { amount: 5 });
+
+    vault.reject(token, 'sid=the-human');
+    vault.settled(token.split('.')[0]!, { ok: false });
+
+    expect(vault.outcome(token)).toEqual({ ok: false });
+  });
+
+  it('hands the outcome only to a token that verifies — the bare id collects nothing', () => {
+    const vault = createProposalVault();
+    const token = parkForHuman(vault, { amount: 5 });
+    const [id] = token.split('.');
+
+    vault.approve(token, 'sid=the-human');
+    vault.settled(id!, { ok: true, result: 'refunded' });
+
+    expect(vault.outcome(`${id}.not-the-signature`)).toBeUndefined();
+    expect(vault.outcome(id!)).toBeUndefined();
+  });
+
+  it('shows a holder of the token what is waiting, so a human can read it before settling', () => {
+    const vault = createProposalVault();
+    const token = parkForHuman(vault, { amount: 5 });
+    const [id] = token.split('.');
+
+    expect(vault.pending(token)).toEqual({ tool: 'shop.refund', input: { amount: 5 } });
+    expect(vault.pending(`${id}.not-the-signature`)).toBeUndefined();
+    vault.approve(token, 'sid=the-human');
+    expect(vault.pending(token)).toBeUndefined();
+  });
+
+  it('does not show an in-page proposal through the out-of-band door', () => {
+    const vault = createProposalVault();
+    const token = park(vault, { amount: 5 });
+
+    expect(vault.pending(token)).toBeUndefined();
+  });
+
+  it('does not let uncollected outcomes grow without a ceiling', () => {
+    const vault = createProposalVault();
+    // Settled one at a time: parking 120 first would evict the early ones as
+    // *pending*, and they would never reach the tape this test is about.
+    const tokens = Array.from({ length: 120 }, () => {
+      const token = parkForHuman(vault, { amount: 5 });
+
+      vault.approve(token, 'sid=the-human');
+      vault.settled(token.split('.')[0]!, { ok: true, result: 'x'.repeat(1000) });
+
+      return token;
+    });
+
+    // The oldest are dropped, the newest are still collectable.
+    expect(vault.outcome(tokens[0]!)).toBeUndefined();
+    expect(vault.outcome(tokens.at(-1)!)).toEqual({ ok: true, result: 'x'.repeat(1000) });
+  });
+
+  it('forgets an outcome nobody collected once the proposal would have expired', () => {
+    let now = 1_000;
+    const vault = createProposalVault({ ttlMs: 50, now: () => now });
+    const token = parkForHuman(vault, { amount: 5 });
+
+    vault.approve(token, 'sid=the-human');
+    vault.settled(token.split('.')[0]!, { ok: true, result: 'refunded' });
+    now += 51;
+
+    expect(vault.outcome(token)).toBeUndefined();
+  });
+});
