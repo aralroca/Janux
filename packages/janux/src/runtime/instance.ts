@@ -7,9 +7,10 @@ import { createBus, type EventBus } from './bus';
 import { createPendingTracker } from './settled';
 import { createSources } from './sources';
 import { startEffects } from './effects';
-import { invokeIntent, type AuditEntry, type IntentHooks, type Proposal } from './intents';
+import { invokeIntent, type AuditEntry, type Caller, type IntentHooks, type Proposal } from './intents';
 import { traceDef } from '../dev/trace';
 import { applyPatch, resolveInitial } from './state-intake';
+import { untrustedFields } from '../taint/fields';
 
 export interface InstanceOptions {
   key?: string;
@@ -26,7 +27,7 @@ export interface InstanceOptions {
 
 /** An instance-level intent ref: the public `IntentRef` plus the internal origin channel. */
 export interface IntentInvoke extends IntentRef {
-  (input?: unknown, opts?: { origin?: Origin }): Promise<unknown>;
+  (input?: unknown, opts?: Partial<Caller>): Promise<unknown>;
   with(input: Record<string, unknown>): IntentInvoke;
 }
 
@@ -41,7 +42,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 function bindIntent(
-  invoke: (input?: unknown, opts?: { origin?: Origin }) => Promise<unknown>,
+  invoke: (input?: unknown, opts?: Partial<Caller>) => Promise<unknown>,
   meta: IntentMeta,
   bound?: Record<string, unknown>,
 ): IntentInvoke {
@@ -54,7 +55,7 @@ function bindIntent(
 
     return isPlainObject(input) ? { ...bound, ...input } : input;
   };
-  const call = (input?: unknown, opts?: { origin?: Origin }) => invoke(merged(input), opts);
+  const call = (input?: unknown, opts?: Partial<Caller>) => invoke(merged(input), opts);
 
   return Object.assign(call, {
     $intent: meta,
@@ -164,8 +165,8 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
   if (import.meta.env?.DEV) hooks.devUri = uri;
 
   Object.entries(def.intents ?? {}).forEach(([name, intentDef]) => {
-    const invoke = (input?: unknown, opts?: { origin?: Origin }) =>
-      invokeIntent(def.name, name, intentDef, bag, input, opts?.origin ?? 'human', hooks);
+    const invoke = (input?: unknown, opts?: Partial<Caller>) =>
+      invokeIntent(def.name, name, intentDef, bag, input, { ...opts, origin: opts?.origin ?? 'human' }, hooks);
 
     intents[name] = bindIntent(invoke, { component: def.name, key: options.key, name });
   });
@@ -207,6 +208,8 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
     },
     settled: () => tracker.settled(),
     resource() {
+      const untrusted = untrustedFields(def.state);
+
       return {
         uri,
         description: def.description,
@@ -214,6 +217,7 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
         state: state.snapshot(),
         derived: evaluateDerived(derived),
         sync: tracker.count > 0 ? 'pending' : 'idle',
+        ...(untrusted.length > 0 && { untrusted }),
       };
     },
     async attach() {

@@ -14,6 +14,8 @@ export interface JxFlags {
   defaultValue?: unknown;
   min?: number;
   max?: number;
+  /** Fed by input the app did not author — see `janux/taint`. */
+  untrusted?: boolean;
 }
 
 /**
@@ -104,6 +106,16 @@ export class JxType<out T = unknown> {
    */
   default(value: unknown): JxType<T> {
     return this.with({ defaultValue: value });
+  }
+
+  /**
+   * Declares that this field carries content the app did not author — a
+   * visitor's comment, a scraped bio, an imported description. Validation is
+   * unchanged; what changes is what a chain that read it may do, and that the
+   * agent surface says so where the value is projected (see `janux/taint`).
+   */
+  untrusted(): JxType<T> {
+    return this.with({ untrusted: true });
   }
 
   min(value: number): JxType<T> {

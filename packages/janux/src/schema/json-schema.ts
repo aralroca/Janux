@@ -60,6 +60,9 @@ export function toJsonSchema(type: JxType): Record<string, unknown> {
   applyBounds(type, base);
   if (type.flags.defaultValue !== undefined) base.default = type.flags.defaultValue;
   if (type.kind === 'money') base.format = 'money-minor-units';
+  // Provenance is part of the description of the value, so it travels with it
+  // to every client that reads the schema instead of only to Janux's own.
+  if (type.flags.untrusted) base['x-janux-untrusted'] = true;
 
   return base;
 }

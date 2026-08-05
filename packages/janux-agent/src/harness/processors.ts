@@ -7,8 +7,17 @@ import type { ChatMessage } from '../providers';
  * history token budget, PII scrub, plus a pluggable injection classifier.
  */
 
-/** Pipeline messages include the system prompt (providers carry it separately). */
-export type TurnMessage = (Omit<ChatMessage, 'role'> & { role: ChatMessage['role'] | 'system' }) | ChatMessage;
+/**
+ * Pipeline messages include the system prompt (providers carry it separately).
+ *
+ * `untrusted` marks a message that wears the `user` role for provider
+ * compatibility but is machine output — executed tool results travelling back
+ * into the same turn. It is the message-layer half of the taint rules: what a
+ * tool produced never counts as what the person asked (see `janux/taint`).
+ */
+export type TurnMessage = ((Omit<ChatMessage, 'role'> & { role: ChatMessage['role'] | 'system' }) | ChatMessage) & {
+  untrusted?: boolean;
+};
 
 export interface TurnContext {
   messages: TurnMessage[];
@@ -128,7 +137,7 @@ export function injectionGuard(
   return {
     name: 'injection-guard',
     async run(turn) {
-      const latest = [...turn.messages].reverse().find((message) => message.role === 'user');
+      const latest = [...turn.messages].reverse().find((message) => message.role === 'user' && !message.untrusted);
       const text = typeof latest?.content === 'string' ? latest.content : '';
 
       if (!text) return turn;
