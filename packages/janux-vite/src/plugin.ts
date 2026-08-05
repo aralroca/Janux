@@ -274,12 +274,8 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       // Re-derived from disk on every load (and watched): a dev edit to the
       // original module can never serve a stale run.
       this.addWatchFile(virtual.module);
-      const code = extractIntentRun(
-        readFileSync(virtual.module, 'utf8'),
-        virtual.module.split('?')[0]!.endsWith('x'),
-        virtual.island,
-        virtual.intent,
-      );
+      const tsx = virtual.module.split('?')[0]!.endsWith('x');
+      const code = extractIntentRun(readFileSync(virtual.module, 'utf8'), tsx, virtual.island, virtual.intent);
 
       return code ? { code, map: null } : undefined;
     },

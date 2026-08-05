@@ -1,3 +1,4 @@
+import { transformSync } from '@swc/core';
 import { calleeExport, componentConfigs, januxImports } from './binding-sites';
 import { MODULE_PATH, unwrap } from './islands';
 import { parseWithSpanBase, sliceSpan, splice, type Edit, type Span } from './spans';
@@ -228,14 +229,11 @@ function splitRuns(body: any[]): SplitRun[] {
 
 /**
  * The import specifier the stub asks for. Encoded so paths survive the
- * scheme; suffixed with the original module's TS flavor so the bundler
- * parses the virtual module the way it parses the source it came from
+ * scheme; suffixed `.js` because the virtual module is served as plain JS
  * (intent names cannot contain `.`, so the suffix is unambiguous).
  */
 export function intentVirtualId(module: string, island: string, intent: string): string {
-  const ext = module.split('?')[0]!.endsWith('x') ? '.tsx' : '.ts';
-
-  return `janux-intent:${encodeURIComponent(module)}:${encodeURIComponent(island)}:${encodeURIComponent(intent)}${ext}`;
+  return `janux-intent:${encodeURIComponent(module)}:${encodeURIComponent(island)}:${encodeURIComponent(intent)}.js`;
 }
 
 /** The parts of a resolved (`\0`-prefixed) virtual id — undefined for anything else. */
@@ -248,7 +246,7 @@ export function parseIntentVirtualId(id: string): { module: string; island: stri
   return {
     module: decodeURIComponent(parts[0]!),
     island: decodeURIComponent(parts[1]!),
-    intent: decodeURIComponent(parts[2]!.replace(/\.tsx?$/, '')),
+    intent: decodeURIComponent(parts[2]!.replace(/\.js$/, '')),
   };
 }
 
@@ -288,8 +286,17 @@ export function extractIntentRun(code: string, tsx: boolean, island: string, int
   if (!run) return undefined;
   const bytes = Buffer.from(code);
   const imports = run.importSpans.map((span) => sliceSpan(bytes, span, parsed.offset)).join('\n');
+  const source = `${imports}${imports ? '\n' : ''}export const run = ${sliceSpan(bytes, run.runSpan, parsed.offset)};\n`;
 
-  return `${imports}${imports ? '\n' : ''}export const run = ${sliceSpan(bytes, run.runSpan, parsed.offset)};\n`;
+  // Emitted as plain JS: a percent-encoded scheme id gives the bundler no
+  // reliable extension to infer a loader from, so nothing is left to infer.
+  return transformSync(source, {
+    jsc: {
+      parser: { syntax: 'typescript', tsx },
+      target: 'esnext',
+      transform: { react: { runtime: 'automatic', importSource: 'janux' } },
+    },
+  }).code;
 }
 
 /** The transform-hook gate, mirroring the binding-sites one. */
