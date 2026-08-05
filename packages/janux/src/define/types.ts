@@ -38,6 +38,13 @@ export type Ctx = {
   agent?: AgentGrant;
 } & Record<string, unknown>;
 export type Origin = 'human' | 'agent';
+/**
+ * What running this leaves behind that an undo cannot take back — money moved,
+ * a message sent, a record deleted. Declaring it is what lets the pipeline
+ * refuse to run it unattended off untrusted content (see `janux/taint`); it
+ * changes nothing for an ordinary human or agent call.
+ */
+export type Effect = 'irreversible';
 export type Cleanup = (() => void) | undefined;
 
 /** What the runtime stamps on a bound intent: enough to write its delegation marker. */
@@ -120,6 +127,12 @@ export interface IntentDef {
    */
   coerce?: 'form';
   guard?: Guard;
+  /**
+   * `'irreversible'` when running this cannot be undone. The guard still
+   * decides for ordinary callers; this is what a chain fed by untrusted
+   * content is measured against, and there `auto` becomes `confirm`.
+   */
+  effect?: Effect;
   /**
    * Scopes the caller's credential must carry, all of them. Unlike a guard —
    * which asks whether *this origin* may proceed — a scope asks whether this

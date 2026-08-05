@@ -1,7 +1,7 @@
-import { JxType, validate, toJsonSchema, JanuxIntentError, allowsScopes } from 'janux';
+import { JxType, validate, toJsonSchema, JanuxIntentError, allowsScopes, guardUnderTaint, originUnderTaint } from 'janux';
 import { apiRunFor } from './api-mocks';
 import { isTracing, reportError, withSpan, type SpanAttributes } from 'janux/observability';
-import type { AuditEntry, Ctx, Guard, GuardValue, Origin } from 'janux';
+import type { AuditEntry, Caller, Ctx, Effect, Guard, GuardValue, Origin } from 'janux';
 
 export interface ApiDef {
   description?: string;
@@ -15,7 +15,24 @@ export interface ApiDef {
    * invisible tool is not a protected tool.
    */
   scopes?: string[];
+  /**
+   * `'irreversible'` when running this cannot be undone — the `api()` half of
+   * `IntentDef.effect`. It is what a chain fed by untrusted content is
+   * measured against, and nothing else reads it.
+   */
+  effect?: Effect;
   run: (bag: { input: any; ctx: Ctx; origin: Origin }) => unknown;
+}
+
+/**
+ * Who is calling, as the api pipeline takes it. A bare `Origin` is the ordinary
+ * case and stays spelled that way; the object form carries the taint a chain
+ * that came through untrusted content is stuck with (see `janux/taint`).
+ */
+export type ApiCaller = Origin | Caller;
+
+function callerOf(caller: ApiCaller): Caller {
+  return typeof caller === 'string' ? { origin: caller } : caller;
 }
 
 export interface ApiTool extends ApiDef {
@@ -80,14 +97,19 @@ function normalizeGuard(tool: ApiTool, value: unknown): GuardValue {
   return 'forbidden';
 }
 
-export function resolveApiGuard(tool: ApiTool, ctx: Ctx, origin: Origin): GuardValue {
+export function resolveApiGuard(tool: ApiTool, ctx: Ctx, caller: ApiCaller): GuardValue {
+  const { origin, tainted } = callerOf(caller);
   const guard = tool.guard ?? 'auto';
 
   // Mirrors `resolveGuard`: out of scope reads as forbidden, so `apiManifestTools`,
   // the MCP listing and the landing page all drop it without knowing about scopes.
   if (!allowsScopes(ctx, tool.scopes)) return 'forbidden';
+  const decided = typeof guard === 'function' ? evaluateGuard(tool, guard, ctx, origin) : normalizeGuard(tool, guard);
 
-  if (typeof guard !== 'function') return normalizeGuard(tool, guard);
+  return guardUnderTaint(decided, tool.effect, tainted);
+}
+
+function evaluateGuard(tool: ApiTool, guard: (bag: { ctx: Ctx; origin: Origin }) => unknown, ctx: Ctx, origin: Origin): GuardValue {
   try {
     return normalizeGuard(tool, guard({ ctx, origin }));
   } catch {
@@ -134,7 +156,7 @@ export function apiAuditEntry(
   origin: Origin,
   guard: GuardValue,
   ctx: Ctx,
-  extra: { input: unknown; ok: boolean; error?: string; proposed?: boolean },
+  extra: { input: unknown; ok: boolean; error?: string; proposed?: boolean; tainted?: boolean },
 ): AuditEntry {
   return { tool: `api.${tool.name}`, origin, guard, at: Date.now(), agent: agentKeyId(ctx), ...extra };
 }
@@ -144,8 +166,20 @@ export function apiAuditEntry(
  * spans both halves of the agent surface: `api.` tools and mounted intents
  * share the audit trail's `tool` naming, and now its trace naming too.
  */
-export function apiAttributes(tool: ApiTool, guard: GuardValue, origin: Origin, proposal?: string): SpanAttributes {
-  return { 'janux.intent': `api.${tool.name}`, 'janux.guard': guard, 'janux.origin': origin, 'janux.proposal.id': proposal };
+export function apiAttributes(
+  tool: ApiTool,
+  guard: GuardValue,
+  origin: Origin,
+  proposal?: string,
+  tainted?: boolean,
+): SpanAttributes {
+  return {
+    'janux.intent': `api.${tool.name}`,
+    'janux.guard': guard,
+    'janux.origin': origin,
+    'janux.tainted': tainted,
+    'janux.proposal.id': proposal,
+  };
 }
 
 /** How a traced api call names itself: the approved run of a proposal is a different span from the request that proposed it. */
@@ -169,11 +203,11 @@ async function runApi(
   guard: GuardValue,
   input: unknown,
   ctx: Ctx,
-  origin: Origin,
+  { origin, tainted }: Caller,
   onAudit?: ApiAudit,
 ): Promise<unknown> {
   const audit = (extra: { input: unknown; ok: boolean; error?: string }) =>
-    onAudit?.(apiAuditEntry(tool, origin, guard, ctx, extra));
+    onAudit?.(apiAuditEntry(tool, origin, guard, ctx, { ...extra, tainted }));
 
   try {
     /*
@@ -203,19 +237,24 @@ export function invokeApi(
   tool: ApiTool,
   input: unknown,
   ctx: Ctx,
-  origin: Origin,
+  caller: ApiCaller,
   onAudit?: ApiAudit,
   trace: ApiTrace = {},
 ): Promise<unknown> {
-  const guard = resolveApiGuard(tool, ctx, origin);
+  // Taint before anything reads either value, exactly as `invokeIntent` does:
+  // a chain that came through untrusted content is an agent, and an
+  // irreversible effect it reaches for lands on a human first.
+  const { origin, tainted } = callerOf(caller);
+  const acting: Caller = { origin: originUnderTaint(origin, tainted), tainted };
+  const guard = resolveApiGuard(tool, ctx, acting);
 
   // See renderIsland: reaching `withSpan` at all costs the closures below.
-  if (!isTracing()) return runApi(tool, guard, input, ctx, origin, onAudit);
+  if (!isTracing()) return runApi(tool, guard, input, ctx, acting, onAudit);
 
   return withSpan(
     trace.span ?? 'janux.api',
-    () => apiAttributes(tool, guard, origin, trace.proposal),
-    () => runApi(tool, guard, input, ctx, origin, onAudit),
+    () => apiAttributes(tool, guard, acting.origin, trace.proposal, tainted),
+    () => runApi(tool, guard, input, ctx, acting, onAudit),
   );
 }
 

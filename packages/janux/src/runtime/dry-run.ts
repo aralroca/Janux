@@ -14,7 +14,11 @@ export interface StateDiff {
  * shadow) fall back to showing the input alone.
  */
 export function dryRunDiff(def: IntentDef, bag: RunBag, input: unknown): StateDiff | undefined {
-  if (def.server) return undefined;
+  // A shadow run only shadows *state*: anything else the body reaches for
+  // happens for real. That is a fair trade for an ordinary `confirm` intent
+  // and never for one whose author said it cannot be undone — a preview is not
+  // worth being the reason the money moved before anyone approved it.
+  if (def.server || def.effect === 'irreversible') return undefined;
   try {
     const before = JSON.parse(JSON.stringify(bag.state)) as Record<string, unknown>;
     const gate = createGate();

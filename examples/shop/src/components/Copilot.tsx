@@ -19,10 +19,12 @@ async function postAgent(messages: unknown[], path: string): Promise<any> {
   return response.json();
 }
 
-async function runUiCalls(calls: any[], state: any): Promise<void> {
+async function runUiCalls(calls: any[], state: any, tainted?: boolean): Promise<void> {
   for (const call of calls) {
+    // The turn tells us whether it came through content the app did not author;
+    // the bridge passes it to the pipeline, which decides what may run.
     const result = await (window as any).janux
-      .call(call.name, call.input)
+      .call(call.name, call.input, { tainted })
       .catch((error: unknown) => ({ error: String(error) }));
 
     if (result?.status === 'proposal') state.proposal = { id: result.id, tool: call.name };
@@ -35,7 +37,7 @@ async function converse(state: any, path: string): Promise<void> {
 
   while (reply.type === 'ui_calls') {
     wire = reply.messages;
-    await runUiCalls(reply.calls, state);
+    await runUiCalls(reply.calls, state, reply.tainted);
     reply = await postAgent(wire, path);
   }
   wire = reply.messages ?? wire;
