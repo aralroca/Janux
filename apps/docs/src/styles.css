@@ -763,6 +763,14 @@ article img {
   height: auto;
 }
 
+/* Same containment for inline demo videos, plus the home demo's frame. */
+article video {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
 /* ── Tables ─────────────────────────────────────────────────────── */
 /* Block + overflow keeps wide tables scrollable instead of clipped. */
 table {

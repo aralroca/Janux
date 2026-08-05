@@ -201,6 +201,13 @@ janux-island {
 
 Lower-level pieces are exported from `janux/client` if you want custom behavior: `enableAgentGlow(options)` (returns a disposer), `glowElement(el, duration)`, `glowTargetFor(tool)`, `injectGlowStyles()` and the `GLOW_CLASS` constant.
 
+Glow alone — the ring tours every element the agent touches:
+
+<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-glow-poster.jpg" aria-label="The console operated by an agent with only the glow enabled: a ring highlights each control as the matching tool call runs">
+  <source src="/agent-feedback-glow.webm" type="video/webm" />
+  <source src="/agent-feedback-glow.mp4" type="video/mp4" />
+</video>
+
 ### The simulated cursor
 
 `cursor: true` (or `{ duration }`) adds a second layer: a simulated cursor that travels the screen element to element as the agent acts, starting from the center of the viewport on its first move. Glow and cursor consume the same events and combine freely — both, either, or neither:
@@ -222,6 +229,20 @@ Like the glow, its look is yours via CSS custom properties (the overlay is `#jan
 ```
 
 Lower-level: `enableAgentCursor(options)` (returns a disposer), `moveCursorTo(el, duration)`, `injectCursorStyles()` and the `CURSOR_ID` constant.
+
+Cursor alone — the arrow travels element to element as the agent acts:
+
+<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-cursor-poster.jpg" aria-label="The console operated by an agent with only the simulated cursor enabled: an arrow travels the screen to each control as the matching tool call runs">
+  <source src="/agent-feedback-cursor.webm" type="video/webm" />
+  <source src="/agent-feedback-cursor.mp4" type="video/mp4" />
+</video>
+
+And the default pairing — glow and cursor together:
+
+<video autoplay muted loop playsinline controls preload="metadata" poster="/agent-feedback-glow-cursor-poster.jpg" aria-label="The console operated by an agent with glow and simulated cursor enabled together: the arrow travels to each control while the ring highlights it">
+  <source src="/agent-feedback-glow-cursor.webm" type="video/webm" />
+  <source src="/agent-feedback-glow-cursor.mp4" type="video/mp4" />
+</video>
 
 ### One seam, any feedback layer
 
