@@ -4,7 +4,7 @@ import { cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveAppConfig } from '@janux/vite/config';
-import { writeVercelOutput } from './output';
+import { routes, writeVercelOutput } from './output';
 
 const PACKAGE = join(import.meta.dirname, '..');
 const APP = join(import.meta.dirname, '__fixtures__/app');
@@ -84,6 +84,48 @@ describe('a static export', () => {
     expect(config).toEqual({ version: 3, routes: [{ handle: 'filesystem' }] });
     expect(await Bun.file(join(root, '.vercel/output/static/index.html')).exists()).toBe(true);
     expect(existsSync(join(root, '.vercel/output/functions'))).toBe(false);
+  });
+
+  /**
+   * The one thing a static export cannot do for itself. With no server left to
+   * apply them, the app's declared `redirects`/`rewrites` have to reach the CDN
+   * as routing table entries — expressed in Vercel's own vocabulary, compiled
+   * from the same patterns the router reads, and placed before `filesystem` so
+   * the old URL never resolves to a file.
+   */
+  it('carries the declared redirects and rewrites into the routing table', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'janux-static-out-'));
+
+    mkdirSync(join(root, 'dist/client'), { recursive: true });
+    await Bun.write(
+      join(root, 'janux.config.ts'),
+      `export default {
+        output: 'static',
+        redirects: [{ from: '/blog/[slug]', to: '/posts/[slug]' }, { from: '/old', to: '/', status: 301 }],
+        rewrites: [{ from: '/help/[...path]', to: '/docs/[...path]' }],
+      };\n`,
+    );
+
+    await writeVercelOutput(root, await resolveAppConfig(root));
+    const { routes } = await Bun.file(join(root, '.vercel/output/config.json')).json();
+
+    expect(routes).toEqual([
+      { src: '^/blog/(?<slug>[^/]+)$', headers: { Location: '/posts/$slug' }, status: 308 },
+      { src: '^/old$', headers: { Location: '/' }, status: 301 },
+      { src: '^/help/(?<path>.+)$', dest: '/docs/$path' },
+      { handle: 'filesystem' },
+    ]);
+  });
+
+  /**
+   * A server deployment has a Janux server in front of every request, and that
+   * server is the one implementation of these rules. Restating them in the
+   * platform's table would be a second one, free to disagree.
+   */
+  it('leaves them to the server when there is a server', async () => {
+    const app = { ...(await resolveAppConfig(APP)), redirects: [{ from: '/old', to: '/' }] };
+
+    expect(routes(true, app)).toEqual([{ handle: 'filesystem' }, { src: '/(.*)', dest: '/index' }]);
   });
 
   /**

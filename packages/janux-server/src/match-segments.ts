@@ -1,6 +1,13 @@
 import type { Matcher, Route } from './router';
 
 /**
+ * All the matcher reads: a route matches by its segments alone. Declared
+ * structurally so a `redirects`/`rewrites` pattern — which has no file behind
+ * it — is matched by this code and not by a copy of it.
+ */
+type Pattern = Pick<Route, 'segments'>;
+
+/**
  * A malformed percent-escape cannot be a valid param value, so the segment
  * simply does not match. `decodeURIComponent` throws on `/%`, `/%zz` and any
  * truncated multi-byte escape — reachable by any client, so letting it escape
@@ -21,7 +28,7 @@ function decodeSegment(raw: string): string | undefined {
  * escape elsewhere in the path cannot fail a static route that never looked at it.
  */
 function fixedParams(
-  route: Route,
+  route: Pattern,
   pathSegments: string[],
   fixed: number,
   matchers: Record<string, Matcher>,
@@ -56,7 +63,7 @@ function restParam(pathSegments: string[], fixed: number): string | undefined {
 }
 
 export function matchRoute(
-  route: Route,
+  route: Pattern,
   pathSegments: string[],
   matchers: Record<string, Matcher>,
 ): Record<string, string> | undefined {

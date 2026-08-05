@@ -15,6 +15,7 @@ import {
   registerInstrumentation,
   resolveAppConfig,
   scheduleServerOptions,
+  routingOptions,
   shellOptions,
   type JanuxAppConfig,
 } from '@janux/vite/config';
@@ -153,6 +154,7 @@ export async function prodServerOptions(
     // static export, which has none) must not depend on the network to answer.
     ...shellOptions(app, app.stylesheet && !inlineStyles ? ['/styles.css'] : [], builtFontAssets(join(root, 'dist/client'))),
     inlineStyles,
+    ...routingOptions(app),
     llmsTxt: app.llmsTxt,
     feed: feedModule?.default,
     i18n: i18nModule?.default,

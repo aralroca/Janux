@@ -11,6 +11,7 @@ import {
   emitAssets,
   localeRedirectStub,
   prerenderPages,
+  staticRoutingNotice,
   viteOptions,
 } from './commands';
 import { prodServerOptions } from './prod';
@@ -72,6 +73,31 @@ describe('cssAssetName', () => {
     expect(cssAssetName(ROOT, undefined)({ names: ['styles.css'], originalFileNames: ['src/styles.css'] })).toBe(
       'assets/[name]-[hash][extname]',
     );
+  });
+});
+
+/**
+ * `janux build --output static` walks away leaving no server, so a declared
+ * migration map only survives if the host applies it. A build that said nothing
+ * would ship an app whose redirects quietly stopped existing — so the build
+ * says it, and says what to do instead.
+ */
+describe('staticRoutingNotice', () => {
+  const app = (extra: object) => ({ output: 'static', ...extra }) as Parameters<typeof staticRoutingNotice>[0];
+
+  it('says nothing when there is nothing to say', () => {
+    expect(staticRoutingNotice(app({}))).toBeUndefined();
+    expect(staticRoutingNotice(app({ redirects: [] }))).toBeUndefined();
+    // A server applies them itself — nothing to warn about.
+    expect(staticRoutingNotice({ ...app({ redirects: [{ from: '/a', to: '/b' }] }), output: 'bun' })).toBeUndefined();
+  });
+
+  it('counts what was declared and points at the adapter that can express it', () => {
+    const notice = staticRoutingNotice(app({ redirects: [{ from: '/a', to: '/b' }], rewrites: [{ from: '/c', to: '/d' }] }))!;
+
+    expect(notice).toContain('2');
+    expect(notice).toContain('output: "static"');
+    expect(notice).toContain('adapter');
   });
 });
 

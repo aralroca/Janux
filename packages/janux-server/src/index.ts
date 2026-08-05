@@ -12,7 +12,7 @@ export {
   type WebSocketConfig,
   type WebSocketUpgrader,
 } from './server';
-export { createFsRouter, type Matcher, type RouteMatch } from './router';
+export { createFsRouter, parsePattern, type Matcher, type RouteMatch, type Segment } from './router';
 export { discoverSkills, parseSkill, skillIndex, type Skill, type SkillSummary } from './skills';
 export type { SchedulesMount, SchedulesConfig } from './schedules';
 export { channelOf, handleChannel, CHANNELS_PREFIX, type ChannelDef, type ChannelMessage, type ChannelReply } from './channels';

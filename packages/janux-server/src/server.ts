@@ -19,7 +19,9 @@ import {
   type JanuxInstance,
   type NavigationConfig,
   type PageMeta,
+  type RedirectRule,
   type RenderResult,
+  type RewriteRule,
 } from 'janux';
 import { pathToFileURL } from 'node:url';
 import { QueryClient } from 'janux/query';
@@ -35,6 +37,7 @@ import { handleScheduleTick, type SchedulesConfig } from './schedules';
 import { channelOf, handleChannel, type ChannelDef } from './channels';
 import { pageMarkdown, type UntrustedIsland } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
+import { createRoutingRules } from './routing-rules';
 import type { ShellI18n } from './html-shell';
 import { assertValidInput, errorStatus, json } from './http';
 import { createProposalVault, proposalId, proposalSessionOf, sessionOf, withProposalSession, type SettleError } from './proposals';
@@ -197,6 +200,10 @@ export interface ServerOptions {
   matchers?: Record<string, (value: string) => boolean>;
   /** Runs before routing; returning a Response short-circuits the request. */
   middleware?: (req: Request) => Response | undefined | Promise<Response | undefined>;
+  /** Legacy URLs answered with a 3xx before the route is resolved (janux.config.ts). */
+  redirects?: RedirectRule[];
+  /** URLs served by another route of this app, without the address bar changing (janux.config.ts). */
+  rewrites?: RewriteRule[];
   /** Arbitrary HTTP handlers: a `src/api/**` tree mounted (by default) at `/api`. */
   httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
   /** Bearer verification for the hosted MCP endpoint (`/_janux/mcp`). Absent → open. */
@@ -414,6 +421,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const apiTools = collectApis(options.apis ?? {});
   const skills = options.skills ?? [];
   const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
+  // Compiled once, and `undefined` for the app that declared none — which is
+  // what keeps this feature free for everybody who is not migrating anything.
+  const routingRules = createRoutingRules({ redirects: options.redirects, rewrites: options.rewrites, matchers: options.matchers });
   const httpHandlers = options.httpHandlers
     ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers, cache: options.cache })
     : undefined;
@@ -1097,10 +1107,25 @@ export function createJanuxServer(options: ServerOptions = {}) {
 
   const handleRequest = async (req: Request, span: JanuxSpan): Promise<Response> => {
     const url = new URL(req.url);
-    const { pathname } = url;
     const intercepted = await options.middleware?.(req);
 
     if (intercepted) return intercepted;
+    /*
+     * The declared `redirects`/`rewrites`, at the one point every URL passes
+     * through and before anything has resolved a route — so a legacy URL is
+     * answered as itself rather than as its localized form (the i18n redirect
+     * lives further in, in `renderDocument`). Precedence is therefore
+     * middleware → redirects → rewrites → locale → route, which is what
+     * `routing-wiring.test.ts` pins down.
+     *
+     * A rewrite changes the path everything below resolves against and nothing
+     * the browser sees; it cannot name `/_janux/*`, so no endpoint below is
+     * reachable through one and no guard is skipped.
+     */
+    const redirected = routingRules?.redirect(url);
+
+    if (redirected) return redirected;
+    const pathname = routingRules?.rewrite(url.pathname) ?? url.pathname;
     /*
      * Before routing, and once for every invocation endpoint below: api calls,
      * proposal settlement and the agent loop all reach app code carrying whatever

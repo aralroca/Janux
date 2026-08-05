@@ -14,6 +14,8 @@ describe('what a target cannot serve', () =>
     const config = {
       websocketModule: row.websocketModule ? '/app/src/ws.ts' : undefined,
       schedulesDir: row.schedulesDir ? '/app/src/schedules' : undefined,
+      output: row.output ?? 'bun',
+      redirects: Array.from({ length: row.routingRules ?? 0 }, () => ({ from: '/old', to: '/new' })),
     };
     const gaps = unsupportedFeatures(config as never, row.capabilities);
 

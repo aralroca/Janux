@@ -52,6 +52,15 @@ function parseSegment(raw: string): Segment {
   return matcher ? { raw, kind: 'typed', name, matcher } : { raw, kind: 'dynamic', name };
 }
 
+/**
+ * A URL pattern as segments — the same parse the route tree gets, for the other
+ * things that match URLs (`redirects`/`rewrites`, see `routing-rules.ts`).
+ * Exported so there is exactly one answer to what `[[...rest]]` means.
+ */
+export function parsePattern(pattern: string): Segment[] {
+  return pattern.split('/').filter(Boolean).map(parseSegment);
+}
+
 /** `_layout`, `_404`, `_500`: the underscore files, in the extension order the router accepts. */
 function moduleIn(dir: string, base: string): string | undefined {
   return ['.tsx', '.jsx', '.ts', '.js'].map((extension) => join(dir, `${base}${extension}`)).find(existsSync);
