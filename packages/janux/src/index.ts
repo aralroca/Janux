@@ -71,6 +71,8 @@ export {
   type McpAuthConfig,
   type CspConfig,
   type NavigationConfig,
+  type RedirectRule,
+  type RewriteRule,
   type ServiceWorkerConfig,
   type SpeculationRulesConfig,
 } from './config';

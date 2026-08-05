@@ -175,6 +175,49 @@ export interface ServiceWorkerConfig {
   register?: boolean;
 }
 
+/**
+ * A URL this app used to answer at, and where it goes now.
+ *
+ * `from` is written in the file router's own segment grammar — `[param]`,
+ * `[param=matcher]`, `[...rest]`, `[[...rest]]` — because a framework with two
+ * pattern languages is a framework where the answer to "does this match?"
+ * depends on who is asking. Whatever `from` captured can be spent in `to`, by
+ * name; a `to` that names another origin is an ordinary off-site redirect.
+ *
+ * Rules resolve in declaration order and the first match wins. That is the one
+ * place this differs from the route tree, which sorts by specificity: a
+ * migration map is a list its author has ordered on purpose.
+ */
+export interface RedirectRule {
+  /** The old URL, e.g. `/blog/[slug]`. Root-relative. */
+  from: string;
+  /** Where it lives now, e.g. `/posts/[slug]` — or an absolute URL. */
+  to: string;
+  /**
+   * Default `308`: permanent, and the one redirect status that may not turn a
+   * POST into a GET. Use `307` for a temporary move, `301`/`302` when a client
+   * you do not control expects the older pair.
+   */
+  status?: 301 | 302 | 307 | 308;
+}
+
+/**
+ * A URL served by a different route of this app, with the browser none the
+ * wiser: the address bar keeps what the visitor asked for.
+ *
+ * Same grammar and same ordering as {@link RedirectRule}. `to` must be a route
+ * of this app: `/_janux/*` is refused (that is where the invocation pipeline
+ * enforces guards, and a rewrite pointing at it would be a way around them),
+ * and so is another origin — proxying somebody else's server is a job for
+ * `src/middleware.ts`, which can stream, forward headers and time out.
+ */
+export interface RewriteRule {
+  /** The URL the visitor asks for, e.g. `/help/[...path]`. */
+  from: string;
+  /** The route that answers it, e.g. `/docs/[...path]`. */
+  to: string;
+}
+
 export interface JanuxConfig {
   routesDir?: string;
   serverDir?: string;
@@ -206,6 +249,10 @@ export interface JanuxConfig {
   output?: JanuxOutput;
   /** Fonts to self-host, subset, preload and give an adjusted fallback. */
   fonts?: FontConfig[];
+  /** Legacy URLs, answered with a 3xx before the route is resolved. */
+  redirects?: RedirectRule[];
+  /** URLs served by another route of this app, without the address bar changing. */
+  rewrites?: RewriteRule[];
   /** SPA navigation, prefetching and speculation rules. */
   navigation?: NavigationConfig;
   /** Strict CSP: nonce every inline tag, and (with `true`) send the header. */
