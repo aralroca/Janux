@@ -29,6 +29,7 @@ import { A2A_PATH, createA2aEndpoint } from './a2a';
 import { AGENT_CARD_PATHS } from './a2a-card';
 import { skillIndex, type Skill } from './skills';
 import { handleScheduleTick, type SchedulesConfig } from './schedules';
+import { channelOf, handleChannel, type ChannelDef } from './channels';
 import { pageMarkdown } from './md-projection';
 import { detectLocale, localeDir, splitLocale } from './i18n-routing';
 import type { ShellI18n } from './html-shell';
@@ -130,6 +131,11 @@ export interface ServerOptions {
   apis?: Record<string, Record<string, unknown>>;
   storeDefs?: Record<string, ComponentDef>;
   agent?: AgentMount;
+  /**
+   * Inbound surfaces for the same agent, by name: `/_janux/channels/<name>`.
+   * Built by `@janux/vite/config` from `src/channels/` — see `channels.ts`.
+   */
+  channels?: Record<string, ChannelDef>;
   /** Scheduled jobs and how this deployment fires them — see `schedules.ts`. */
   schedules?: SchedulesConfig;
   /**
@@ -744,6 +750,22 @@ export function createJanuxServer(options: ServerOptions = {}) {
     return invokeApi(tool, input, ctx, 'agent', options.onAudit);
   };
 
+  /**
+   * What the agent mount runs on, whichever door the turn came through. One
+   * builder, so a channel cannot end up with a laxer `invoke` than the browser's
+   * — the guards are the pipeline's, and every caller gets the same pipeline.
+   */
+  const agentDeps = async (req: Request): Promise<AgentDeps> => {
+    const ctx = await ctxWithAgent(req);
+
+    return {
+      tools: apiTools,
+      invoke: (tool, input) => invokeTool(tool, input, ctx),
+      manifestFor: (path) => manifestFor(path, ctx),
+      loadSkill: (name) => skills.find((skill) => skill.name === name)?.body,
+    };
+  };
+
   const handleApi = async (req: Request, name: string): Promise<Response> => {
     const tool = apiTools.find((candidate) => candidate.name === name);
 
@@ -1151,14 +1173,16 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return options.agent.handleLlm(req);
     }
     if (pathname === '/_janux/agent' && options.agent) {
-      const ctx = await ctxWithAgent(req);
+      return options.agent.handle(req, await agentDeps(req));
+    }
+    // A channel reaches the same mount with the same deps: the transport
+    // changes, the pipeline that decides what may run does not. Own-property
+    // lookup only — `/_janux/channels/constructor` must be a 404, not a hit.
+    const channelName = channelOf(pathname) ?? '';
+    const channel = options.channels && Object.hasOwn(options.channels, channelName) ? options.channels[channelName] : undefined;
 
-      return options.agent.handle(req, {
-        tools: apiTools,
-        invoke: (tool, input) => invokeTool(tool, input, ctx),
-        manifestFor: (path) => manifestFor(path, ctx),
-        loadSkill: (name) => skills.find((skill) => skill.name === name)?.body,
-      });
+    if (channel && options.agent) {
+      return handleChannel(req, channelName, channel, options.agent, await agentDeps(req));
     }
 
     return cached(req, () => handlePage(req, pathname, undefined, span));
