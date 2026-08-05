@@ -14,7 +14,11 @@ const QUESTION = { messages: [{ role: 'user', content: 'hi' }], tools: [], strea
 function scriptedProvider() {
   const encoder = new TextEncoder();
   let controller: ReadableStreamDefaultController<Uint8Array>;
-  const body = new ReadableStream<Uint8Array>({ start: (c) => void (controller = c) });
+  const body = new ReadableStream<Uint8Array>({
+    start(c) {
+      controller = c;
+    },
+  });
   const send = (payload: unknown) => controller!.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
 
   return {

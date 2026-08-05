@@ -83,6 +83,8 @@ Last-Event-ID: 41
 
 A stream belonging to another identity answers exactly like one that never existed. The id is a guess either way, and only one of those two answers is safe to confirm.
 
+Worth being precise about what "another identity" means: without [`identityFor`](/docs/reference/agent-guardrails) every caller is `anonymous`, so ownership rests entirely on the stream id being an unguessable UUID. That is the right trade for a public docs copilot and the wrong one for anything a user signs in to — if answers are private, resolve an identity, and the ownership check becomes a real one.
+
 ## Resuming is not a way around the limits
 
 A resume runs the same gate as every other request to the mount: `identityFor` resolves the caller, and [`rateLimit`](/docs/reference/agent-rate-limit) counts it. Replaying is cheaper than generating, but a door that skipped the limiter would simply become the door everyone uses.

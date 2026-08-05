@@ -34,8 +34,12 @@ function fakeStorage(seed: Record<string, string> = {}) {
 
   return {
     getItem: (key: string) => items.get(key) ?? null,
-    setItem: (key: string, value: string) => void items.set(key, value),
-    removeItem: (key: string) => void items.delete(key),
+    setItem(key: string, value: string) {
+      items.set(key, value);
+    },
+    removeItem(key: string) {
+      items.delete(key);
+    },
     get size() {
       return items.size;
     },
