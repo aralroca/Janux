@@ -36,7 +36,9 @@ function walk(dir: string): string[] {
   });
 }
 
-const benchFiles = walk(BENCH).map((file) => relative(BENCH, file));
+// Forward-slash on every OS: the allowlist below names paths that way, and
+// Windows' `relative()` answers with backslashes.
+const benchFiles = walk(BENCH).map((file) => relative(BENCH, file).replaceAll('\\', '/'));
 const harnessFiles = benchFiles.filter(
   (file) => /(\.mjs|shared\.js)$/.test(file) && !JANUX_ORIGINAL.includes(file),
 );
