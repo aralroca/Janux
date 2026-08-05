@@ -42,6 +42,7 @@ interface PathType {
   text: boolean;
   attr: boolean;
   props?: Map<string, PathType>;
+  item?: PathType;
 }
 
 const OPAQUE: PathType = { text: false, attr: false };
@@ -56,11 +57,13 @@ const LEAF_BUILDERS = new Set([...TEXT_SAFE_BUILDERS, 'bool']);
 const UNSAFE_MODIFIERS = new Set(['optional', 'nullable']);
 
 /**
- * Attributes a binding must not own: `value`/`checked` are live control
- * properties with focus-aware semantics, events delegate to named intents,
- * and the rest are the props `propToAttr` treats specially.
+ * Attributes a binding must not own: events delegate to named intents, and
+ * the rest are the props `propToAttr` treats specially. `value`/`checked`
+ * are NOT here — a bound control property and a static one share the same
+ * write path and the same skip-while-focused rule (`writeControlProp` /
+ * `syncControl`).
  */
-const BLOCKED_ATTRS = new Set(['value', 'checked', 'key', 'children', 'dangerHTML', 'reset', 'on', 'intent', 'data-input']);
+const BLOCKED_ATTRS = new Set(['key', 'children', 'dangerHTML', 'reset', 'on', 'intent', 'data-input']);
 const EVENT_PROP = /^on[A-Z]/;
 
 /** See scripts/packaging/specifiers.ts: the span base is read off a sentinel, not searched for. */
@@ -119,6 +122,13 @@ function typeOf(node: any, trusted: Map<string, string>): PathType {
 
     return props ? { text: false, attr: false, props } : OPAQUE;
   }
+  if (exported === 'list' && !unsafe) {
+    // `list(str())` or `list({ shape })` — the latter is an implicit obj().
+    const arg = unwrap(base.arguments?.[0]?.expression);
+    const item = arg?.type === 'ObjectExpression' ? shapeOf(arg, trusted) : undefined;
+
+    return { text: false, attr: false, item: item ? { text: false, attr: false, props: item } : typeOf(arg, trusted) };
+  }
 
   return OPAQUE;
 }
@@ -142,36 +152,86 @@ function shapeOf(node: any, trusted: Map<string, string>): Map<string, PathType>
   return props;
 }
 
-/** The `state.a.b` segments of a pure static member chain, root excluded — or undefined. */
-function statePath(expr: any): string[] | undefined {
-  const segments: string[] = [];
+/**
+ * One step of a member chain. A `prop` resolves through an `obj()` shape, an
+ * `index` (numeric literal or computed identifier) through a `list()` item.
+ * A computed identifier defers to effect time, so its name must be provably
+ * stable — the site is dropped if anything in the module reassigns it.
+ */
+interface Segment {
+  name: string;
+  index: boolean;
+}
+
+interface StatePath {
+  segments: Segment[];
+  /** Identifier names the site evaluation was deferred over. */
+  idents: string[];
+}
+
+/** The `state.a.b[i]` chain of a pure static member expression, root excluded — or undefined. */
+function statePath(expr: any): StatePath | undefined {
+  const segments: Segment[] = [];
+  const idents: string[] = [];
   let current = unwrap(expr);
 
   while (current?.type === 'MemberExpression') {
     const prop = current.property;
 
-    if (prop?.type === 'Identifier') segments.unshift(prop.value);
-    else if (prop?.type === 'Computed' && (prop.expression?.type === 'StringLiteral' || prop.expression?.type === 'NumericLiteral')) {
-      segments.unshift(String(prop.expression.value));
+    if (prop?.type === 'Identifier') segments.unshift({ name: prop.value, index: false });
+    else if (prop?.type === 'Computed') {
+      const key = unwrap(prop.expression);
+
+      if (key?.type === 'StringLiteral') segments.unshift({ name: key.value, index: false });
+      else if (key?.type === 'NumericLiteral') segments.unshift({ name: String(key.value), index: true });
+      else if (key?.type === 'Identifier') {
+        segments.unshift({ name: key.value, index: true });
+        idents.push(key.value);
+      } else return undefined;
     } else return undefined;
     current = unwrap(current.object);
   }
 
-  return current?.type === 'Identifier' && current.value === 'state' && segments.length > 0 ? segments : undefined;
+  return current?.type === 'Identifier' && current.value === 'state' && segments.length > 0
+    ? { segments, idents }
+    : undefined;
 }
 
 /** Whether the schema proves this path equivalent when thunked at this position. */
-function pathIsSafe(segments: string[], shape: Map<string, PathType>, position: 'text' | 'attr'): boolean {
-  let props: Map<string, PathType> | undefined = shape;
-  let type: PathType | undefined;
+function pathIsSafe(path: StatePath, shape: Map<string, PathType>, position: 'text' | 'attr'): boolean {
+  let type: PathType | undefined = { text: false, attr: false, props: shape };
 
-  for (const segment of segments) {
-    type = props?.get(segment);
+  for (const segment of path.segments) {
+    type = segment.index ? type.item : type.props?.get(segment.name);
     if (type === undefined) return false;
-    props = type.props;
   }
 
-  return type?.[position] === true;
+  return type[position];
+}
+
+/**
+ * Names the module gives no stable meaning: reassigned, ++/--'d, or
+ * `var`-declared (one binding across loop iterations — the classic capture
+ * bug a deferred read would inherit). Parameters and const/let bindings that
+ * are never written again are what remains.
+ */
+function taintedNames(node: any, out: Set<string>): Set<string> {
+  if (!node || typeof node !== 'object') return out;
+  if (Array.isArray(node)) {
+    node.forEach((child) => taintedNames(child, out));
+
+    return out;
+  }
+  if (node.type === 'AssignmentExpression' && node.left?.type === 'Identifier') out.add(node.left.value);
+  if (node.type === 'UpdateExpression' && node.argument?.type === 'Identifier') out.add(node.argument.value);
+  if (node.type === 'VariableDeclaration' && node.kind === 'var') {
+    node.declarations?.forEach((decl: any) => {
+      if (decl.id?.type === 'Identifier') out.add(decl.id.value);
+    });
+  }
+  Object.values(node).forEach((value) => taintedNames(value, out));
+
+  return out;
 }
 
 /** Whether this pattern binds the name (so the view's `state` is shadowed past it). */
@@ -228,12 +288,21 @@ function rendersText(child: any): boolean {
   return child.type === 'JSXFragment';
 }
 
-interface ViewAnalysis {
-  shape: Map<string, PathType>;
-  edits: Span[];
+interface Site {
+  span: Span;
+  idents: string[];
 }
 
-/** Walks the view's JSX collecting provable sites. Nested functions and component subtrees are out of scope. */
+interface ViewAnalysis {
+  shape: Map<string, PathType>;
+  sites: Site[];
+}
+
+/**
+ * Walks the view's JSX collecting provable sites, map callbacks included (a
+ * thunk in a map body closes over that iteration's bindings, exactly like a
+ * manual one). A component's children are its data, so its subtree is out.
+ */
 function collectSites(node: any, view: ViewAnalysis): void {
   if (!node || typeof node !== 'object') return;
   if (Array.isArray(node)) {
@@ -241,8 +310,6 @@ function collectSites(node: any, view: ViewAnalysis): void {
 
     return;
   }
-  // Another closure is another lifetime; a component's children are its data.
-  if (node.type === 'ArrowFunctionExpression' || node.type === 'FunctionExpression') return;
   if (node.type === 'JSXElement') {
     const name = node.opening?.name;
     const native = name?.type === 'Identifier' && /^[a-z]/.test(name.value);
@@ -252,17 +319,21 @@ function collectSites(node: any, view: ViewAnalysis): void {
       if (attr.type !== 'JSXAttribute' || attr.name?.type !== 'Identifier') return;
       if (EVENT_PROP.test(attr.name.value) || BLOCKED_ATTRS.has(attr.name.value)) return;
       if (attr.value?.type !== 'JSXExpressionContainer') return;
-      const segments = statePath(attr.value.expression);
+      const path = statePath(attr.value.expression);
 
-      if (segments && pathIsSafe(segments, view.shape, 'attr')) view.edits.push(attr.value.expression.span);
+      if (path && pathIsSafe(path, view.shape, 'attr')) {
+        view.sites.push({ span: attr.value.expression.span, idents: path.idents });
+      }
     });
     node.children?.forEach((child: any) => {
       if (child.type !== 'JSXExpressionContainer') return collectSites(child, view);
-      const segments = statePath(child.expression);
+      const path = statePath(child.expression);
       const siblings = node.children.filter((other: any) => other !== child);
 
-      if (segments && pathIsSafe(segments, view.shape, 'text') && !siblings.some(rendersText)) {
-        view.edits.push(child.expression.span);
+      if (path && pathIsSafe(path, view.shape, 'text') && !siblings.some(rendersText)) {
+        view.sites.push({ span: child.expression.span, idents: path.idents });
+      } else {
+        collectSites(child.expression, view);
       }
     });
 
@@ -300,9 +371,9 @@ function stateShape(config: any, trusted: Map<string, string>): Map<string, Path
 /** Every provable binding-site span in the module, in source order. */
 function moduleSites(body: any[]): Span[] {
   const trusted = januxImports(body);
-  const edits: Span[] = [];
+  const sites: Site[] = [];
 
-  if (trusted.get('component') !== 'component') return edits;
+  if (trusted.get('component') !== 'component') return [];
   body.forEach((node) => {
     const decls =
       node.type === 'ExportDefaultExpression'
@@ -322,11 +393,13 @@ function moduleSites(body: any[]): Span[] {
       const arrow = viewArrow(config);
 
       if (!shape || !arrow || shadowsState(arrow.body)) return;
-      collectSites(arrow.body, { shape, edits });
+      collectSites(arrow.body, { shape, sites });
     });
   });
+  if (sites.length === 0) return [];
+  const tainted = taintedNames(body, new Set<string>());
 
-  return edits;
+  return sites.filter((site) => site.idents.every((name) => !tainted.has(name))).map((site) => site.span);
 }
 
 /** Right to left, so an earlier splice never moves a later span. */

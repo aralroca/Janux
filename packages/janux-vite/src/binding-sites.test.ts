@@ -113,19 +113,16 @@ export const Card = component({
     expect(compileBindingSites(code, true)).toBeUndefined();
   });
 
-  it('does not touch events or value/checked', () => {
+  it('does not touch event props, and binds value like the runtime already can', () => {
     const events = island(`state: schema({ label: str() }),
   intents: { go: intent({ run: () => {} }) },
   view: ({ state, intents }: any) => <button onClick={intents.go}>{state.label}</button>,`);
     const value = island(`state: schema({ text: str() }),
   view: ({ state }: any) => <input value={state.text} />,`);
-    const checked = island(`state: schema({ on: bool() }),
-  view: ({ state }: any) => <input type="checkbox" checked={state.on} />,`);
 
     expect(compileBindingSites(events, true)).toContain('{() => (state.label)}');
     expect(compileBindingSites(events, true)).toContain('onClick={intents.go}');
-    expect(compileBindingSites(value, true)).toBeUndefined();
-    expect(compileBindingSites(checked, true)).toBeUndefined();
+    expect(compileBindingSites(value, true)).toContain('value={() => (state.text)}');
   });
 
   /**
@@ -150,20 +147,77 @@ export const Card = component({
     expect(compileBindingSites(objAttr, true)).toBeUndefined();
   });
 
-  it('does not touch dynamic or non-path expressions', () => {
+  it('does not touch calls or any other non-path expression', () => {
     const call = island(`state: schema({ label: str() }),
   view: ({ state }: any) => <span>{state.label.trim()}</span>,`);
-    const index = island(`state: schema({ items: list(str()) }),
+    const literal = island(`state: schema({ items: list(str()) }),
   view: ({ state }: any) => <span>{state.items[0]}</span>,`);
 
     expect(compileBindingSites(call, true)).toBeUndefined();
-    expect(compileBindingSites(index, true)).toBeUndefined();
+    // A literal index over a list() resolves through the item type.
+    expect(compileBindingSites(literal, true)).toContain('<span>{() => (state.items[0])}</span>');
   });
 
-  /** Anything inside a nested function is another closure and another lifetime — out of scope for now. */
-  it('does not touch sites inside nested functions', () => {
-    const code = island(`state: schema({ label: str() }),
-  view: ({ state }: any) => <ul>{['a'].map((x) => <li>{state.label}</li>)}</ul>,`);
+  /**
+   * The controlled-form shape (regression #22): the hot sites live inside
+   * the `.map()` callback and index a `list()` by the callback's parameter.
+   * The wrap only DEFERS evaluation, so the index must be provably stable —
+   * a parameter or const nothing in the module ever reassigns.
+   */
+  it('rewrites list sites indexed by a stable identifier inside a map callback', () => {
+    const code = `${HEADER}const FIELDS = [0, 1, 2];
+export const Card = component({
+  name: 'card',
+  state: schema({ values: list(str()) }),
+  view: ({ state }: any) => (
+    <form>
+      {FIELDS.map((index: number) => (
+        <label>
+          <input value={state.values[index]} />
+          <output>{state.values[index]}</output>
+        </label>
+      ))}
+    </form>
+  ),
+});\n`;
+    const out = compileBindingSites(code, true);
+
+    expect(out).toContain('value={() => (state.values[index])}');
+    expect(out).toContain('<output>{() => (state.values[index])}</output>');
+  });
+
+  it('descends into list item shapes and rewrites checked for a bool leaf', () => {
+    const rows = island(`state: schema({ rows: list(obj({ label: str() })) }),
+  view: ({ state }: any) => <ul>{[0].map((i: number) => <li>{state.rows[i].label}</li>)}</ul>,`);
+    const checked = island(`state: schema({ on: bool() }),
+  view: ({ state }: any) => <input type="checkbox" checked={state.on} />,`);
+
+    expect(compileBindingSites(rows, true)).toContain('<li>{() => (state.rows[i].label)}</li>');
+    expect(compileBindingSites(checked, true)).toContain('checked={() => (state.on)}');
+  });
+
+  it('does not defer an index anything in the module reassigns, or a var', () => {
+    const reassigned = island(`state: schema({ values: list(str()) }),
+  view: ({ state }: any) => { let i = 0; i += 1; return <output>{state.values[i]}</output>; },`);
+    const varred = island(`state: schema({ values: list(str()) }),
+  view: ({ state }: any) => { var i = 0; return <output>{state.values[i]}</output>; },`);
+    const updated = `${HEADER}let cursor = 0;
+export function advance() { cursor++; }
+export const Card = component({
+  name: 'card',
+  state: schema({ values: list(str()) }),
+  view: ({ state }: any) => <output>{state.values[cursor]}</output>,
+});\n`;
+
+    expect(compileBindingSites(reassigned, true)).toBeUndefined();
+    expect(compileBindingSites(varred, true)).toBeUndefined();
+    expect(compileBindingSites(updated, true)).toBeUndefined();
+  });
+
+  /** A computed key over an obj() shape proves nothing about the leaf. */
+  it('does not touch computed keys over object shapes', () => {
+    const code = island(`state: schema({ user: obj({ name: str() }) }),
+  view: ({ state }: any) => <output>{state.user[key]}</output>,`);
 
     expect(compileBindingSites(code, true)).toBeUndefined();
   });
