@@ -1,4 +1,7 @@
 import type { Exchange, Progress } from './controller';
+import { forgetQuestion, interruptedQuestion, rememberQuestion, wasInterrupted } from './interrupted';
+
+export { rememberQuestion, wasInterrupted };
 
 /**
  * The agent runtime (gui-agent, the markdown renderer) loads only when the
@@ -73,6 +76,51 @@ export async function converse(state: any, text: string, signal: AbortSignal): P
   message.text = reply.text;
   message.html = reply.html || renderMarkdown(reply.text);
   scrollToLatest();
+}
+
+/**
+ * Picks an answer back up after a reload: the panel opens on the question that
+ * was asked before the page went away, and the server replays the turn into the
+ * bubble it was already writing.
+ *
+ * The two bubbles are pushed before the runtime is imported, so the reader sees
+ * the conversation restored immediately rather than after a chunk of JavaScript.
+ */
+/** The conversation as it stood when the page went away: question asked, answer pending. */
+function restoreExchange(state: any): void {
+  state.open = true;
+  state.messages.push({ role: 'user', text: interruptedQuestion(), html: '' });
+  state.messages.push({ role: 'assistant', text: '', html: '' });
+  state.busy = true;
+  state.status = 'Picking the answer back up…';
+}
+
+async function paintResumed(state: any, message: any): Promise<void> {
+  const { resume, renderMarkdown } = await controller();
+  const answer = await resume(progressFor(state, message, renderMarkdown));
+
+  // Nothing to resume after all — expired, or finished while the page was gone.
+  // An empty pair of bubbles is worse than no bubbles.
+  if (!answer) return state.messages.splice(-2, 2);
+  message.text = answer.text;
+  message.html = answer.html;
+}
+
+export async function resumeAfterReload(state: any): Promise<void> {
+  restoreExchange(state);
+  const message = state.messages.at(-1);
+
+  await paintResumed(state, message).catch(() => state.messages.splice(-2, 2));
+  forgetQuestion();
+  state.busy = false;
+  state.status = '';
+  scrollToLatest();
+  // Only now, and inside the effect's own chain so the write is legal: the
+  // copilot itself is what the next question needs, not this answer.
+  const { setup } = await controller();
+
+  await setup();
+  state.ready = true;
 }
 
 /** Chat UX: the field empties the moment the question is sent (uncontrolled input). */

@@ -1,6 +1,7 @@
-import { createCopilot, serverLlm, type Copilot } from '@janux/agent/local';
-import { askStream, type Answer, type Progress } from './answer';
+import { createCopilot, serverLlm, type Copilot, type StreamingLlm } from '@janux/agent/local';
+import { askStream, resumedAnswer, type Answer, type Progress } from './answer';
 import { docsMap, readPage, registerDocsTools, searchMatches } from './docs-tools';
+import { STREAM_KEY } from './interrupted';
 import { renderMarkdown } from './markdown';
 
 export { renderMarkdown };
@@ -34,6 +35,12 @@ const PRE_READ_CHARS = 6000;
 
 let ready: Promise<Copilot> | undefined;
 
+/**
+ * Held apart from the copilot because resuming is not a run: the turn is
+ * already being generated on the server, and all this page needs is the reader.
+ */
+const brain: StreamingLlm = serverLlm({ stream: true, resume: { key: STREAM_KEY } });
+
 /** Opt-in step tracing: `localStorage.setItem('copilot-debug', '1')`. */
 function onStep(step: unknown): void {
   if (localStorage.getItem('copilot-debug')) {
@@ -53,7 +60,7 @@ async function build(): Promise<Copilot> {
   const map = await docsMap().catch(() => '');
 
   return createCopilot({
-    llm: serverLlm({ stream: true }),
+    llm: brain,
     instructions: `${INSTRUCTIONS}\n\nPages and sections:\n${map}`,
     // `copilot.*` too: the panel's own intents are not tools for the model —
     // closing the panel it is answering into is not a feature.
@@ -104,4 +111,13 @@ export async function ask(
   const goal = await withGrounding(withHistory(question, history), question);
 
   return askStream(running, progress, goal, signal);
+}
+
+/**
+ * The answer a reload interrupted, replayed into the panel. No search, no
+ * grounding and no model call: the turn is already running on the server, and
+ * this only re-attaches a reader to it.
+ */
+export function resume(progress: Progress): Promise<Answer | undefined> {
+  return resumedAnswer(brain, progress);
 }

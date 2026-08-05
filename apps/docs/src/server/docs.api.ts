@@ -123,6 +123,7 @@ export const SECTIONS: SectionDef[] = [
           'agent-schedules',
           'agent-channels',
           'agent-rate-limit',
+          'agent-resumable-streams',
           'agent-mcp-client',
           'agent-attachments',
           'taint-api',

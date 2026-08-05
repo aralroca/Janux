@@ -1,5 +1,13 @@
-import { component, intent, schema, str, bool, enums, list } from 'janux';
-import { clearInput, controller, converse, scrollToLatest } from '../copilot/panel';
+import { component, effect, intent, schema, str, bool, enums, list } from 'janux';
+import {
+  clearInput,
+  controller,
+  converse,
+  rememberQuestion,
+  resumeAfterReload,
+  scrollToLatest,
+  wasInterrupted,
+} from '../copilot/panel';
 
 /**
  * Outside the schema on purpose: an AbortController is not state, it is a handle.
@@ -20,6 +28,15 @@ export const DocsCopilot = component({
     ready: bool(),
     status: str(),
   }),
+
+  effects: {
+    resumeAnswer: effect({
+      description: 'Picks up an answer a reload interrupted, from where it got to',
+      // `wasInterrupted()` is a bare key read: the page must not pay for the
+      // agent runtime just to discover it has nothing to resume.
+      run: ({ state }: any) => (wasInterrupted() ? resumeAfterReload(state) : undefined),
+    }),
+  },
 
   intents: {
     toggle: intent({
@@ -58,6 +75,9 @@ export const DocsCopilot = component({
         state.busy = true;
         state.status = 'Reading the docs…';
         run = new AbortController();
+        // Remembered before the turn starts: a reload one keystroke later still
+        // knows which question the answer coming back belongs to.
+        rememberQuestion(input.text);
         clearInput();
         scrollToLatest();
         await converse(state, input.text, run.signal).finally(() => {
