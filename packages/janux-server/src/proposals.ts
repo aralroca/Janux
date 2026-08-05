@@ -115,12 +115,23 @@ export function createProposalVault({ ttlMs = DEFAULT_PROPOSAL_TTL_MS, now = Dat
   const matches = (sig: string, record: PendingApiProposal, session: string): boolean =>
     signatureIs(sig, record.id, record.settle === 'token' ? record.session : session, hashPayload(record.input));
 
+  /** Drops the oldest entry of a map that has reached its ceiling — insertion order is age. */
+  const capped = (entries: Map<string, unknown>, max: number): void => {
+    const oldest = entries.keys().next().value;
+
+    if (entries.size >= max && oldest) entries.delete(oldest);
+  };
+
+  /**
+   * A settlement holds the call's *result* until someone collects it, so the
+   * tape needs the same ceiling the pending side has: expiry alone bounds how
+   * long an uncollected outcome lives, not how many pile up before then.
+   */
   const evict = (): void => {
     proposals.forEach((record, id) => now() > record.expiresAt && proposals.delete(id));
     settlements.forEach((entry, id) => now() > entry.expiresAt && settlements.delete(id));
-    const oldest = proposals.keys().next().value;
-
-    if (proposals.size >= MAX_PENDING_PROPOSALS && oldest) proposals.delete(oldest);
+    capped(proposals, MAX_PENDING_PROPOSALS);
+    capped(settlements, MAX_PENDING_PROPOSALS);
   };
 
   const park = (proposal: Parked): string => {

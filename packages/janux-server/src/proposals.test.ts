@@ -179,6 +179,24 @@ describe('proposal vault: settled out of band', () => {
     expect(vault.pending(token)).toBeUndefined();
   });
 
+  it('does not let uncollected outcomes grow without a ceiling', () => {
+    const vault = createProposalVault();
+    // Settled one at a time: parking 120 first would evict the early ones as
+    // *pending*, and they would never reach the tape this test is about.
+    const tokens = Array.from({ length: 120 }, () => {
+      const token = parkForHuman(vault, { amount: 5 });
+
+      vault.approve(token, 'sid=the-human');
+      vault.settled(token.split('.')[0]!, { ok: true, result: 'x'.repeat(1000) });
+
+      return token;
+    });
+
+    // The oldest are dropped, the newest are still collectable.
+    expect(vault.outcome(tokens[0]!)).toBeUndefined();
+    expect(vault.outcome(tokens.at(-1)!)).toEqual({ ok: true, result: 'x'.repeat(1000) });
+  });
+
   it('forgets an outcome nobody collected once the proposal would have expired', () => {
     let now = 1_000;
     const vault = createProposalVault({ ttlMs: 50, now: () => now });
