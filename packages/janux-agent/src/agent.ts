@@ -1,17 +1,20 @@
 import type { AgentDeps, AgentMount } from '@janux/server';
+import type { JanuxSpan } from 'janux/observability';
 import type { HarnessMemory } from './harness/memory';
 import type { InputProcessor } from './harness/processors';
+import { filterHandoffHistory, handoffCost, handoffNote, handoffTools, HANDOFF_PREFIX, type HandoffConfig } from './handoff';
 import { CLIENT_TOOL_SPECS } from 'janux';
 import { runProcessors } from './harness/processors';
 import { createRateLimiter, type RateLimitConfig, type RateLimiter } from './harness/rate-limit';
 import { createLlmHandler } from './llm-endpoint';
 import { createRemoteToolbox, type McpAgentConnection, type RemoteToolbox } from './mcp-tools';
-import { resolveModel, setupCard, type ModelEnv } from './model';
+import { resolveModel, setupCard, type ModelEnv, type ResolvedModel } from './model';
 import { tracedAgentTurn, tracedRound, turnUsageAttributes, type ModelCost } from './tracing';
 import { allowsTool, type ToolFilter } from './tool-filter';
 import { loadSkillBody, loadSkillTools, skillsSection, LOAD_SKILL } from './skills';
 import type { ManifestSkill } from 'janux/manifest';
-import { turnBill } from './usage';
+import { DELEGATE_PREFIX, delegationTools, runDelegation, validateSubagents, type SubagentConfig } from './subagents';
+import { combineBills, turnBill, type TurnBill } from './usage';
 import { callProvider, type AgentTool, type ChatMessage, type FetchLike, type TokenUsage, type ToolCall } from './providers';
 
 export interface HarnessConfig {
@@ -46,6 +49,18 @@ export interface AgentConfig {
   tools?: ToolFilter;
   /** Remote MCP server(s) whose tools join the agent's tool list. */
   mcp?: McpAgentConnection | McpAgentConnection[];
+  /**
+   * Named delegates the model can hand a focused subtask to via
+   * `delegate.<name>`. Each runs its own server-side loop under a MANDATORY
+   * budget, on a tool surface that never exceeds this agent's own.
+   */
+  subagents?: Record<string, SubagentConfig>;
+  /**
+   * Named peer agents the model can transfer the conversation to via
+   * `handoff.<name>`. The target answers the user from then on; the envelope
+   * carries `agent: <name>` and the client echoes it back like `threadId`.
+   */
+  handoffs?: Record<string, HandoffConfig>;
   harness?: HarnessConfig;
 }
 
@@ -59,6 +74,8 @@ interface AgentRequestBody {
   path?: string;
   /** Thread-aware turns (harness.memory): resume this conversation. */
   threadId?: string;
+  /** After a handoff: keep talking to this target agent. */
+  agent?: string;
 }
 
 const SYSTEM_PREAMBLE = [
@@ -70,6 +87,11 @@ const SYSTEM_PREAMBLE = [
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+}
+
+/** Own-property lookup only: model- and caller-supplied names must never resolve down the prototype chain. */
+function declared<T>(map: Record<string, T> | undefined, name: string): T | undefined {
+  return map && Object.hasOwn(map, name) ? map[name] : undefined;
 }
 
 function manifestTools(manifest: any, filter: ToolFilter | undefined): AgentTool[] {
@@ -180,6 +202,7 @@ async function turnMessages(
 }
 
 export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides = {}): AgentMount {
+  validateSubagents(config.subagents);
   const env = overrides.env ?? (process.env as ModelEnv);
   const fetchImpl = overrides.fetchImpl ?? ((url, init) => fetch(url, init));
   const maxTurns = config.maxTurns ?? 6;
@@ -204,16 +227,33 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
         continuation?: boolean;
         toolResults?: { name: string; output: unknown }[];
       };
+      if (body.agent && !declared(config.handoffs, body.agent)) {
+        return json({ type: 'error', error: 'unknown_agent', message: `No agent "${body.agent}" is declared for handoff.` }, 400);
+      }
       const manifest: any = await deps.manifestFor(body.path ?? '/');
       const remoteTools = toolbox ? await toolbox.tools() : [];
       const skills = manifestSkills(manifest);
-      const tools = [
-        ...manifestTools(manifest, config.tools),
+      // The composition tools (delegate/handoff) belong to the root agent
+      // only: a handoff target answers on its own surface, it does not chain.
+      const toolsFor = (filter: ToolFilter | undefined, root: boolean): AgentTool[] => [
+        ...manifestTools(manifest, filter),
         ...CLIENT_TOOL_SPECS.map((spec) => ({ name: spec.name, description: spec.description, input: spec.parameters })),
         ...remoteTools.map(({ name, description, input }) => ({ name, description, input })),
+        ...(root ? [...delegationTools(config.subagents), ...handoffTools(config.handoffs)] : []),
         ...loadSkillTools(skills),
       ];
-      const system = systemPrompt(config, manifest);
+      const systemFor = (target: HandoffConfig | undefined) =>
+        target ? systemPrompt({ ...config, instructions: target.instructions }, manifest) : systemPrompt(config, manifest);
+
+      // The turn's acting agent: the root, or — sticky across turns, or mid-
+      // turn after a transfer — one of the declared handoff targets.
+      let active = body.agent ? { name: body.agent, target: declared(config.handoffs, body.agent)! } : undefined;
+      const resolvedActive = active?.target.model ? resolveModel(active.target.model, env, active.target.modelOptions) : model;
+
+      if (!resolvedActive) return json({ type: 'error', error: 'handoff_model_unavailable' }, 502);
+      let activeModel: ResolvedModel = resolvedActive;
+      let tools = toolsFor(active ? active.target.tools : config.tools, !active);
+      let system = systemFor(active?.target);
       const turn = await turnMessages(body, config.harness, identity).catch((error) => {
         if (String(error).includes('thread_forbidden')) return undefined;
         throw error;
@@ -243,19 +283,52 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
         return json({ type: 'refusal', reason, message: refusalText(config.harness, reason), threadId: turn.threadId }, 200);
       }
       const messages = guarded.messages.filter((message) => message.role !== 'system') as ChatMessage[];
-      const rounds: (TokenUsage | undefined)[] = [];
+      // One segment of rounds per acting agent: a handoff starts a new one so
+      // each side of the transfer is priced by its own model's cost.
+      const segments: { rounds: (TokenUsage | undefined)[]; cost?: ModelCost }[] = [
+        { rounds: [], cost: active ? handoffCost(active.target, config.cost) : config.cost },
+      ];
+      const delegated: TurnBill[] = [];
       // Turn accounting in the envelope itself, so callers (the eval runner
-      // included) can bill a turn without a tracer anywhere.
+      // included) can bill a turn without a tracer anywhere. Delegations are
+      // part of what the turn cost the caller, so their bills join the total.
+      const turnTotal = () => combineBills(segments.map((segment) => turnBill(segment.rounds, segment.cost)));
       const billed = () => {
-        const bill = turnBill(rounds, config.cost);
+        const bill = combineBills([turnTotal(), ...delegated]);
 
         return bill ? { usage: bill } : {};
       };
+      const delegate = async (call: ToolCall) => {
+        const name = call.name.slice(DELEGATE_PREFIX.length);
+        const sub = declared(config.subagents, name);
 
-      const runLoop = async (): Promise<Response> => {
+        // Subagents belong to the root agent: a handoff target that asks for
+        // one is out of its surface, the same as any other undeclared tool.
+        if (active || !sub) return { error: `unknown_subagent: ${name}` };
+        const outcome = await runDelegation(name, sub, String((call.input as { task?: unknown })?.task ?? ''), {
+          deps,
+          manifest,
+          env,
+          fetchImpl,
+          parentModel: model,
+          parentTools: config.tools,
+          remoteTools: remoteTools.map(({ name: toolName, description, input }) => ({ name: toolName, description, input })),
+          callRemote: toolbox ? (toolName, input) => toolbox.call(toolName, input) : undefined,
+          ownsRemote: (toolName) => toolbox?.owns(toolName) ?? false,
+          processors: config.harness?.processors ?? [],
+          limiter,
+          identity,
+        });
+
+        if (outcome.bill) delegated.push(outcome.bill);
+
+        return outcome.report;
+      };
+
+      const runLoop = async (span: JanuxSpan): Promise<Response> => {
         for (let round = 0; round < maxTurns; round += 1) {
-          const reply = await tracedRound(model, config.cost, () =>
-            callProvider(model, system, messages, tools, fetchImpl).catch((error) => ({
+          const reply = await tracedRound(activeModel, segments.at(-1)!.cost, () =>
+            callProvider(activeModel, system, messages, tools, fetchImpl).catch((error) => ({
               text: '',
               toolCalls: [],
               providerError: String(error),
@@ -266,7 +339,7 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
             return json({ type: 'error', error: 'provider_error', detail: reply.providerError, threadId: turn.threadId, ...billed() }, 502);
           }
 
-          rounds.push(reply.usage);
+          segments.at(-1)!.rounds.push(reply.usage);
           messages.push({ role: 'assistant', content: reply.text, toolCalls: reply.toolCalls });
           if (reply.toolCalls.length === 0) {
             await turn.rememberReply?.(reply.text);
@@ -276,22 +349,54 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
               text: reply.text,
               messages,
               threadId: turn.threadId,
-              model: `${model.provider}/${model.model}`,
+              model: `${activeModel.provider}/${activeModel.model}`,
+              ...(active && { agent: active.name }),
               ...billed(),
             });
+          }
+          // A transfer preempts the round: the target takes the conversation
+          // — dialogue kept, tool noise dropped — and answers from here on.
+          const transferCall = active
+            ? undefined
+            : reply.toolCalls.find((call) => call.name.startsWith(HANDOFF_PREFIX) && declared(config.handoffs, call.name.slice(HANDOFF_PREFIX.length)));
+
+          if (transferCall) {
+            const name = transferCall.name.slice(HANDOFF_PREFIX.length);
+            const target = declared(config.handoffs, name)!;
+            const nextModel = target.model ? resolveModel(target.model, env, target.modelOptions) : model;
+
+            if (!nextModel) return json({ type: 'error', error: 'handoff_model_unavailable', threadId: turn.threadId, ...billed() }, 502);
+            active = { name, target };
+            activeModel = nextModel;
+            segments.push({ rounds: [], cost: handoffCost(target, config.cost) });
+            messages.splice(0, messages.length, ...filterHandoffHistory(messages));
+            system = systemFor(target) + handoffNote(name, String((transferCall.input as { reason?: unknown })?.reason ?? ''));
+            tools = toolsFor(target.tools, false);
+            span.setAttributes({ 'janux.handoff.to': name, 'gen_ai.agent.name': name });
+            continue;
           }
           const serverCalls = reply.toolCalls.filter((call) => call.name.startsWith('api.'));
           const remoteCalls = reply.toolCalls.filter((call) => toolbox?.owns(call.name));
           // Loading a skill is a read the server already holds the answer to: it
           // never travels to the browser as a ui call, and never runs a tool.
           const skillCalls = reply.toolCalls.filter((call) => call.name === LOAD_SKILL);
-          const handled = [...serverCalls, ...remoteCalls, ...skillCalls];
+          const delegateCalls = reply.toolCalls.filter((call) => call.name.startsWith(DELEGATE_PREFIX));
+          // A handoff call that did not transfer (invented name, or a target
+          // trying to chain) is refused like any other undeclared tool.
+          const handoffCalls = reply.toolCalls.filter((call) => call.name.startsWith(HANDOFF_PREFIX));
+          const handled = [...serverCalls, ...remoteCalls, ...skillCalls, ...delegateCalls, ...handoffCalls];
           const uiCalls = reply.toolCalls.filter((call) => !handled.includes(call));
 
           messages.push(...(await toolResults(serverCalls, (call) => deps.invoke(call.name, call.input))));
           messages.push(...(await toolResults(remoteCalls, (call) => toolbox!.call(call.name, call.input))));
           messages.push(...(await toolResults(skillCalls, async (call) => loadSkillBody(call.input, skills, deps))));
-          if (uiCalls.length > 0) return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId, ...billed() });
+          messages.push(...(await toolResults(delegateCalls, delegate)));
+          messages.push(
+            ...(await toolResults(handoffCalls, async (call) => ({ error: `unknown_agent: ${call.name.slice(HANDOFF_PREFIX.length)}` }))),
+          );
+          if (uiCalls.length > 0) {
+            return json({ type: 'ui_calls', calls: uiCalls, messages, threadId: turn.threadId, ...(active && { agent: active.name }), ...billed() });
+          }
         }
 
         // `stopReason` because giving up wears the same `type: 'text'` as a real
@@ -302,6 +407,7 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
           stopReason: 'max_turns',
           messages,
           threadId: turn.threadId,
+          ...(active && { agent: active.name }),
           ...billed(),
         });
       };
@@ -310,8 +416,9 @@ export function defineAgent(config: AgentConfig = {}, overrides: AgentOverrides 
       // reached for hangs off it, so a trace reads as one conversation —
       // with the turn's total tokens and price on the span that frames it.
       return tracedAgentTurn(model, async (span) => {
-        const response = await runLoop();
-        const bill = turnBill(rounds, config.cost);
+        if (active) span.setAttributes({ 'gen_ai.agent.name': active.name });
+        const response = await runLoop(span);
+        const bill = turnTotal();
 
         if (bill) span.setAttributes(turnUsageAttributes(bill));
 

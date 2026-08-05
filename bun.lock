@@ -817,6 +817,16 @@
         "janux": "workspace:*",
       },
     },
+    "examples/with-subagents": {
+      "name": "janux-example-with-subagents",
+      "version": "0.1.0",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/with-suspense": {
       "name": "janux-example-with-suspense",
       "version": "0.1.0",
@@ -2336,6 +2346,8 @@
     "janux-example-with-skills": ["janux-example-with-skills@workspace:examples/with-skills"],
 
     "janux-example-with-sqlite": ["janux-example-with-sqlite@workspace:examples/with-sqlite"],
+
+    "janux-example-with-subagents": ["janux-example-with-subagents@workspace:examples/with-subagents"],
 
     "janux-example-with-suspense": ["janux-example-with-suspense@workspace:examples/with-suspense"],
 

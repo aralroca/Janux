@@ -118,6 +118,7 @@ export const SECTIONS: SectionDef[] = [
         slugs: [
           'agent-memory',
           'agent-guardrails',
+          'agent-subagents',
           'agent-workflows',
           'agent-schedules',
           'agent-rate-limit',
