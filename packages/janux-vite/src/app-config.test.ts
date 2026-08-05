@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig, toPosix } from './app-config';
+import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig, routingOptions, toPosix } from './app-config';
 
 function app(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), 'janux-app-'));
@@ -180,6 +180,40 @@ describe('resolveAppConfig mcpAuth and agents', () => {
 
     expect(config.mcpAuth).toEqual({ token: 'demo', resourceMetadataUrl: 'https://x/meta' });
     expect(config.agents).toEqual({ webBotAuth: { keys: [] }, policy: 'require' });
+  });
+});
+
+/**
+ * The migration map has to reach the server the same way in dev and in prod —
+ * `routingOptions` is the one mapping both sides call, for the same reason
+ * `shellOptions` exists: the field wired in one and forgotten in the other.
+ */
+describe('resolveAppConfig redirects and rewrites', () => {
+  it('passes both through from the config file', async () => {
+    const root = app({
+      'janux.config.ts': `export default {
+        redirects: [{ from: '/blog/[slug]', to: '/posts/[slug]', status: 301 }],
+        rewrites: [{ from: '/help/[...path]', to: '/docs/[...path]' }],
+      };`,
+    });
+    const config = await resolveAppConfig(root);
+
+    expect(config.redirects).toEqual([{ from: '/blog/[slug]', to: '/posts/[slug]', status: 301 }]);
+    expect(config.rewrites).toEqual([{ from: '/help/[...path]', to: '/docs/[...path]' }]);
+  });
+
+  it('leaves them undefined for an app that declares none', async () => {
+    const config = await resolveAppConfig(app({ 'janux.config.ts': `export default {};` }));
+
+    expect(config.redirects).toBeUndefined();
+    expect(config.rewrites).toBeUndefined();
+    expect(routingOptions(config)).toEqual({ redirects: undefined, rewrites: undefined });
+  });
+
+  it('routingOptions carries exactly what the server takes', async () => {
+    const root = app({ 'janux.config.ts': `export default { redirects: [{ from: '/a', to: '/b' }] };` });
+
+    expect(routingOptions(await resolveAppConfig(root))).toEqual({ redirects: [{ from: '/a', to: '/b' }], rewrites: undefined });
   });
 });
 
