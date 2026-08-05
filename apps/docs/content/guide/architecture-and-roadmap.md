@@ -47,7 +47,7 @@ Everything the two core app archetypes (a content site and a full console) need 
 
 ## Roadmap
 
-- **Rendering:** views still re-render per island + DOM morph; compile-time binding maps (path-level DOM writes, per-intent code splitting) are the planned compiler evolution — the public contract does not change.
+- **Rendering:** the compiler evolution shipped without changing the public contract — provable static state reads in views compile to path-level DOM bindings (`@janux/vite`, on by default; `compiler.bindingMaps: false` is the escape hatch), binding thunks subscribe to leaf paths instead of their containers, and a self-contained intent `run()` can split into a chunk downloaded on first invocation (`compiler.splitIntents`, opt-in — it pays when a run carries real weight). What the analysis cannot prove keeps the island re-render + morph path; a fine-grained list primitive for the krausest micro-ops is the piece still open.
 - **Routing:** parallel routes (`@slot`) and intercepting routes (`(.)`) — URL-addressable modals are covered today by query-string state.
 - **Interop:** Vue/other runtimes and reverse interop (Janux inside a foreign tree).
 
