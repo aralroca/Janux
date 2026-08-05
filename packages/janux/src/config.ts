@@ -272,6 +272,12 @@ export interface CompilerConfig {
    * The escape hatch for a rewrite the analysis got wrong is `false`.
    */
   bindingMaps?: boolean;
+  /**
+   * Move provably self-contained intent `run()` bodies into their own
+   * chunks, downloaded on first invocation. Client graph only — the server
+   * keeps the full defs, so guards, schemas and the manifest never change.
+   */
+  splitIntents?: boolean;
 }
 
 /** Identity helper for `janux.config.ts`: type-checks and autocompletes the config. */

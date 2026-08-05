@@ -1,5 +1,5 @@
-import { parseSync } from '@swc/core';
 import { MODULE_PATH, unwrap } from './islands';
+import { parseWithSpanBase, splice, type Span } from './spans';
 
 /**
  * Compile-time binding maps (the roadmap's compiler evolution, first half).
@@ -17,17 +17,6 @@ import { MODULE_PATH, unwrap } from './islands';
  * (unparseable module, spans that stopped lining up) fails open to "no
  * transform" rather than open the build to a miscompile.
  */
-
-interface Span {
-  start: number;
-  end: number;
-}
-
-interface Edit {
-  start: number;
-  end: number;
-  text: string;
-}
 
 /**
  * What the schema proves about one path. Text position is the strict case:
@@ -66,12 +55,8 @@ const UNSAFE_MODIFIERS = new Set(['optional', 'nullable']);
 const BLOCKED_ATTRS = new Set(['key', 'children', 'dangerHTML', 'reset', 'on', 'intent', 'data-input']);
 const EVENT_PROP = /^on[A-Z]/;
 
-/** See scripts/packaging/specifiers.ts: the span base is read off a sentinel, not searched for. */
-const SENTINEL = 'import "\0janux-span-base";\n';
-const SENTINEL_AT = SENTINEL.indexOf('"');
-
 /** Local names this module imported from 'janux', mapped to their exported names. */
-function januxImports(body: any[]): Map<string, string> {
+export function januxImports(body: any[]): Map<string, string> {
   const names = new Map<string, string>();
 
   body
@@ -86,7 +71,7 @@ function januxImports(body: any[]): Map<string, string> {
 }
 
 /** The trusted janux export a call invokes, if the callee is one at all. */
-function calleeExport(node: any, trusted: Map<string, string>): string | undefined {
+export function calleeExport(node: any, trusted: Map<string, string>): string | undefined {
   return node?.type === 'CallExpression' && node.callee?.type === 'Identifier'
     ? trusted.get(node.callee.value)
     : undefined;
@@ -368,13 +353,11 @@ function stateShape(config: any, trusted: Map<string, string>): Map<string, Path
   return calleeExport(call, trusted) === 'schema' ? shapeOf(call.arguments?.[0]?.expression, trusted) : undefined;
 }
 
-/** Every provable binding-site span in the module, in source order. */
-function moduleSites(body: any[]): Span[] {
-  const trusted = januxImports(body);
-  const sites: Site[] = [];
-
+/** Every `component({...})` config object a module declares at top level. */
+export function componentConfigs(body: any[], trusted: Map<string, string>): any[] {
   if (trusted.get('component') !== 'component') return [];
-  body.forEach((node) => {
+
+  return body.flatMap((node) => {
     const decls =
       node.type === 'ExportDefaultExpression'
         ? [node.expression]
@@ -382,34 +365,31 @@ function moduleSites(body: any[]): Span[] {
             ? (node.type === 'ExportDeclaration' ? node.declaration : node).declarations.map((d: any) => d.init)
             : []);
 
-    decls.forEach((init: any) => {
+    return decls.flatMap((init: any) => {
       const call = unwrap(init);
+      const config = calleeExport(call, trusted) === 'component' ? call.arguments?.[0]?.expression : undefined;
 
-      if (calleeExport(call, trusted) !== 'component') return;
-      const config = call.arguments?.[0]?.expression;
-
-      if (config?.type !== 'ObjectExpression') return;
-      const shape = stateShape(config, trusted);
-      const arrow = viewArrow(config);
-
-      if (!shape || !arrow || shadowsState(arrow.body)) return;
-      collectSites(arrow.body, { shape, sites });
+      return config?.type === 'ObjectExpression' ? [config] : [];
     });
+  });
+}
+
+/** Every provable binding-site span in the module, in source order. */
+function moduleSites(body: any[]): Span[] {
+  const trusted = januxImports(body);
+  const sites: Site[] = [];
+
+  componentConfigs(body, trusted).forEach((config) => {
+    const shape = stateShape(config, trusted);
+    const arrow = viewArrow(config);
+
+    if (!shape || !arrow || shadowsState(arrow.body)) return;
+    collectSites(arrow.body, { shape, sites });
   });
   if (sites.length === 0) return [];
   const tainted = taintedNames(body, new Set<string>());
 
   return sites.filter((site) => site.idents.every((name) => !tainted.has(name))).map((site) => site.span);
-}
-
-/** Right to left, so an earlier splice never moves a later span. */
-function splice(source: Buffer, edits: Edit[]): Buffer {
-  return edits
-    .sort((a, b) => b.start - a.start)
-    .reduce(
-      (bytes, { start, end, text }) => Buffer.concat([bytes.subarray(0, start), Buffer.from(text), bytes.subarray(end)]),
-      source,
-    );
 }
 
 /**
@@ -435,20 +415,14 @@ export function compileClientModule(id: string, code: string): string | undefine
  * code as written either way).
  */
 export function compileBindingSites(code: string, tsx: boolean): string | undefined {
-  let sites: Span[];
-  let sentinelStart: number;
+  const parsed = parseWithSpanBase(code, tsx);
 
-  try {
-    const program = parseSync(SENTINEL + code, { syntax: 'typescript', tsx });
+  if (!parsed) return undefined;
+  const sites = moduleSites(parsed.body);
 
-    sentinelStart = (program.body[0] as any)?.source?.span.start;
-    sites = moduleSites(program.body as any[]);
-  } catch {
-    return undefined;
-  }
-  if (sites.length === 0 || typeof sentinelStart !== 'number') return undefined;
+  if (sites.length === 0) return undefined;
   const bytes = Buffer.from(code);
-  const offset = sentinelStart - SENTINEL_AT + SENTINEL.length;
+  const { offset } = parsed;
   const edits = sites.map(({ start, end }) => {
     const original = bytes.subarray(start - offset, end - offset).toString();
 
