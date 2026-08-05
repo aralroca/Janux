@@ -6,7 +6,8 @@ loop over the same invocation pipeline.
 Put your own key in place of `sk-or-…` and run it from this folder:
 
 ```bash
-pkill -f "janux dev"; OPENROUTER_API_KEY=sk-or-… JANUX_WEBHOOK_SECRET=dev-secret bun dev
+export JANUX_WEBHOOK_SECRET=dev-secret OPENROUTER_API_KEY=sk-or-…
+bun dev
 ```
 
 Then ask it something from outside the browser — no third-party account, no
@@ -18,17 +19,21 @@ curl -X POST localhost:4344/_janux/channels/webhook \
   -d '{"text":"what is on the board?"}'
 ```
 
-The `pkill` is not decoration: a `janux dev` left running on this port keeps
-answering with the environment *it* was started with, while the new one prints
-the same banner without ever owning the port — so a key you just added looks
-like it was ignored.
+`export` rather than the `VAR=… bun dev` prefix on purpose: the prefix form only
+holds when the whole thing is a single line, and a key long enough to wrap
+usually is not — the variables stay in your shell and the server comes up
+without them. Either way they go *before* `bun dev`, because they are read when
+the modules load.
 
-Both variables go *before* the command, because they are read when the modules
-load. The secret is yours to pick and only has to match the `authorization:
-Bearer` header (unset ⇒ `503`, wrong ⇒ `401`). The provider key can be any of
-`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY` or
-`OPENROUTER_API_KEY`; without one the turn still runs end to end and answers
-`{"error":"setup"}`.
+The secret is yours to pick and only has to match the `authorization: Bearer`
+header. The provider key can be any of `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+`GOOGLE_GENERATIVE_AI_API_KEY` or `OPENROUTER_API_KEY`. So each refusal names
+the missing half: `503 channel_unconfigured` is the secret never reaching the
+server, `401` is a bearer that does not match, and `{"error":"setup"}` is no
+provider key — the turn still ran end to end.
+
+One more, if a key you just set still reads as missing: another `janux dev` may
+already own the port and be answering with its own environment.
 
 ## What the example shows
 

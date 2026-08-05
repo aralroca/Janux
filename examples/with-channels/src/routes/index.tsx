@@ -21,10 +21,13 @@ export default function Home() {
         </p>
         <h2>Try it</h2>
         <p class="hint">
-          Start it with your own key in place of <code>sk-or-…</code> — one command, run from this folder:
+          Put your own key in place of <code>sk-or-…</code> and run it from this folder:
         </p>
         <pre class="try">
-          <code>pkill -f "janux dev"; OPENROUTER_API_KEY=sk-or-… JANUX_WEBHOOK_SECRET=dev-secret bun dev</code>
+          <code>
+            export JANUX_WEBHOOK_SECRET=dev-secret OPENROUTER_API_KEY=sk-or-…{'\n'}
+            bun dev
+          </code>
         </pre>
         <pre class="try">
           <code>
@@ -34,17 +37,18 @@ export default function Home() {
           </code>
         </pre>
         <p class="hint">
-          The <code>pkill</code> is not decoration: a <code>janux dev</code> left running on this port keeps answering
-          with the environment <em>it</em> was started with, while the new one prints the same banner without ever
-          owning the port — so a key you just added looks like it was ignored.
+          <code>export</code>, rather than the <code>VAR=… bun dev</code> prefix, on purpose: the prefix form only
+          holds when the whole thing is a single line, and a key long enough to wrap usually is not — the variables
+          stay in your shell and the server comes up without them. Either way they go <em>before</em>{' '}
+          <code>bun dev</code>, because they are read when the modules load.
         </p>
         <p class="hint">
-          Both variables go <em>before</em> the command, because they are read when the modules load. The secret is
-          yours to pick; it only has to match the <code>authorization: Bearer</code> header — unset gives every caller{' '}
-          <code>503</code>, wrong gives <code>401</code>. The provider key can be any one of{' '}
-          <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>GOOGLE_GENERATIVE_AI_API_KEY</code> or{' '}
-          <code>OPENROUTER_API_KEY</code>; without one the turn still runs end to end and answers{' '}
-          <code>{'{"error":"setup"}'}</code>, which is the transport proving itself.
+          The secret is yours to pick; it only has to match the <code>authorization: Bearer</code> header. The
+          provider key can be any one of <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>,{' '}
+          <code>GOOGLE_GENERATIVE_AI_API_KEY</code> or <code>OPENROUTER_API_KEY</code>. So each refusal tells you
+          which half is missing: <code>503 channel_unconfigured</code> is the secret never reaching the server,{' '}
+          <code>401</code> is a bearer that does not match, and <code>{'{"error":"setup"}'}</code> is no provider
+          key — the turn still ran end to end, which is the transport proving itself.
         </p>
       </header>
       <IncidentBoard />
