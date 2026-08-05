@@ -1,0 +1,17 @@
+{
+  "name": "janux-example-with-subagents",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "janux dev --port 4343",
+    "build": "janux build",
+    "start": "janux start --port 4343"
+  },
+  "dependencies": {
+    "janux": "workspace:*",
+    "@janux/server": "workspace:*",
+    "@janux/agent": "workspace:*",
+    "@janux/cli": "workspace:*"
+  }
+}
