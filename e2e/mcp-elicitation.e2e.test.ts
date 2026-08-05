@@ -41,9 +41,10 @@ beforeAll(async () => {
   stop = server.stop;
 }, TIMEOUT);
 
-afterAll(async () => {
+// The browser `launchBrowser()` hands out is shared by every e2e file in the
+// process, so it is not this file's to close — only the pages it opened are.
+afterAll(() => {
   stop?.();
-  await browser?.close();
 });
 
 /** One modern-era JSON-RPC POST, with the mirrored headers the gate insists on. */
