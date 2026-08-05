@@ -3,9 +3,10 @@
 One agent, two doors: the browser copilot and an HTTP webhook, running the same
 loop over the same invocation pipeline.
 
+Put your own key in place of `sk-or-…` and run it from this folder:
+
 ```bash
-bun install
-JANUX_WEBHOOK_SECRET=dev-secret bun --filter janux-example-with-channels dev
+pkill -f "janux dev"; OPENROUTER_API_KEY=sk-or-… JANUX_WEBHOOK_SECRET=dev-secret bun dev
 ```
 
 Then ask it something from outside the browser — no third-party account, no
@@ -16,6 +17,18 @@ curl -X POST localhost:4344/_janux/channels/webhook \
   -H "authorization: Bearer dev-secret" \
   -d '{"text":"what is on the board?"}'
 ```
+
+The `pkill` is not decoration: a `janux dev` left running on this port keeps
+answering with the environment *it* was started with, while the new one prints
+the same banner without ever owning the port — so a key you just added looks
+like it was ignored.
+
+Both variables go *before* the command, because they are read when the modules
+load. The secret is yours to pick and only has to match the `authorization:
+Bearer` header (unset ⇒ `503`, wrong ⇒ `401`). The provider key can be any of
+`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY` or
+`OPENROUTER_API_KEY`; without one the turn still runs end to end and answers
+`{"error":"setup"}`.
 
 ## What the example shows
 
