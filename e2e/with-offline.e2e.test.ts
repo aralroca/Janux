@@ -29,6 +29,13 @@ const BUILT = isBuilt(ROOT);
 const CHROMIUM = !process.env.JANUX_E2E_BROWSER || process.env.JANUX_E2E_BROWSER === 'chromium';
 const DRIVES = BUILT && CHROMIUM;
 
+/**
+ * Registered only where the automation build can drive a service worker (see
+ * the header). Registration, not `skipIf`: a skipped row would count
+ * Playwright's gaps against Janux's suite on every non-chromium lane.
+ */
+const drivingIt = (DRIVES ? it : () => {}) as typeof it;
+
 let BASE = '';
 let stop: (() => void) | undefined;
 let browser: Browser | undefined;
@@ -128,7 +135,7 @@ describe('examples/with-offline build output', () => {
 });
 
 describe('examples/with-offline with the network switched off', () => {
-  it.skipIf(!DRIVES)(
+  drivingIt(
     'opens a page it has already seen',
     async () => {
       const { page, errors } = await visitAndInstall(`${BASE}/`);
@@ -145,7 +152,7 @@ describe('examples/with-offline with the network switched off', () => {
     TIMEOUT,
   );
 
-  it.skipIf(!DRIVES)(
+  drivingIt(
     'is usable and not merely visible: the island boots from the cache too',
     async () => {
       const { page } = await visitAndInstall(`${BASE}/`);
@@ -164,7 +171,7 @@ describe('examples/with-offline with the network switched off', () => {
     TIMEOUT,
   );
 
-  it.skipIf(!DRIVES)(
+  drivingIt(
     'answers a page it never saw with the offline notice, not a browser error',
     async () => {
       const { page } = await visitAndInstall(`${BASE}/`);
@@ -181,7 +188,7 @@ describe('examples/with-offline with the network switched off', () => {
 });
 
 describe('examples/with-offline across a deploy', () => {
-  it.skipIf(!DRIVES)(
+  drivingIt(
     'moves an open page to the new build and drops the previous one',
     async () => {
       const { page } = await visitAndInstall(`${BASE}/`);
@@ -203,7 +210,7 @@ describe('examples/with-offline across a deploy', () => {
     TIMEOUT * 3,
   );
 
-  it.skipIf(!DRIVES)(
+  drivingIt(
     'still works offline once the new build has taken over',
     async () => {
       await deploy();
