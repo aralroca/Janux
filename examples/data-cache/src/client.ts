@@ -1,5 +1,5 @@
-import { boot } from 'janux/client';
+import { boot, agentGlow, agentCursor } from 'janux/client';
 import { AgentPanel } from './components/AgentPanel';
 import { Catalog } from './components/Catalog';
 
-boot({ defs: [AgentPanel, Catalog], glow: true, cursor: true });
+boot({ defs: [AgentPanel, Catalog], glow: agentGlow(), cursor: agentCursor() });

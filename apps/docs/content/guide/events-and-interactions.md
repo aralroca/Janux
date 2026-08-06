@@ -180,10 +180,12 @@ Approving a proposal executes it **with the agent origin** — the call came thr
 
 ## Visualizing agent activity: the glow
 
-Janux ships the gui-agent-style highlight: while an agent operates an island, it glows.
+Janux ships the gui-agent-style highlight: while an agent operates an island, it glows. It's a boot feature you import — an app that doesn't pass it ships zero bytes of it:
 
 ```ts title="src/client.ts"
-boot({ defs: [Cart], glow: true });          // or { glow: { duration: 1200 } }
+import { boot, agentGlow } from 'janux/client';
+
+boot({ defs: [Cart], glow: agentGlow() });   // or agentGlow({ duration: 1200 })
 ```
 
 Every `window.janux.call(...)` (your copilot, an external client, the playground) makes the target island glow from `start` until shortly after the call resolves. Humans always see *where* the agent is acting — proposals stop being abstract.
@@ -212,10 +214,12 @@ Glow alone — the ring tours every element the agent touches:
 
 ### The simulated cursor
 
-`cursor: true` (or `{ duration }`) adds a second layer: a simulated cursor that travels the screen element to element as the agent acts, starting from the center of the viewport on its first move. Glow and cursor consume the same events and combine freely — both, either, or neither:
+`cursor: agentCursor()` (or `agentCursor({ duration })`) adds a second layer: a simulated cursor that travels the screen element to element as the agent acts, starting from the center of the viewport on its first move. Glow and cursor consume the same events and combine freely — both, either, or neither:
 
 ```ts title="src/client.ts"
-boot({ defs: [Cart], glow: true, cursor: true });
+import { boot, agentGlow, agentCursor } from 'janux/client';
+
+boot({ defs: [Cart], glow: agentGlow(), cursor: agentCursor() });
 ```
 
 Like the glow, its look is yours via CSS custom properties (the overlay is `#janux-agent-cursor`):

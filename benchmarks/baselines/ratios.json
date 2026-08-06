@@ -173,7 +173,7 @@
 		"target": "janux",
 		"reference": "react",
 		"maxRatio": 0.5,
-		"note": "deterministic bytes — janux ships 40% of react's js_gzip (×1.1 headroom)"
+		"note": "deterministic bytes — recorded 0.498 (2026-08-06, after boot features became imports). Thin headroom on purpose: any new always-on client code breaches this; ship optional layers as boot features instead"
 	},
 	{
 		"suite": "bundle-size",
@@ -181,6 +181,6 @@
 		"target": "janux",
 		"reference": "react",
 		"maxRatio": 0.5,
-		"note": "deterministic bytes — janux ships 38% of react's fw_gzip (×1.1 headroom)"
+		"note": "deterministic bytes — recorded 0.482 (2026-08-06, after boot features became imports)"
 	}
 ]

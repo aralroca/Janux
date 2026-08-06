@@ -7,6 +7,8 @@ description: A view is a pure function of the bag it receives ({ state, derived,
 
 A `view` is a pure function of the bag it receives (`{ state, derived, intents, use, ctx, children }`) returning JSX. It runs on the server for the initial HTML and again on the client when the island re-renders. This page is the complete prop surface — what JSX accepts and exactly what it becomes in HTML.
 
+In practice most updates never re-run the view. The compiler (on by default) rewrites provable static state reads — `{state.count}` in text, `class={state.tone}` in an attribute — into binding thunks, so a write to that field updates one DOM site directly. Expressions the analysis cannot prove keep the re-render + morph path, and the semantics are identical either way: the view stays what you wrote, a pure function of the bag. The escape hatch is `compiler: { bindingMaps: false }` in `janux.config.ts`; what the analysis can and cannot prove is documented in [Build internals](/docs/reference/build-internals).
+
 ```tsx
 view: ({ state, intents }) => (
   <section class="cart">

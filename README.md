@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/v/janux" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/janux"><img src="https://img.shields.io/npm/dm/janux" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-11953%20passing-brightgreen" alt="11953 tests passing" />
+  <img src="https://img.shields.io/badge/tests-11954%20passing-brightgreen" alt="11954 tests passing" />
   <img src="https://img.shields.io/badge/runtime-Bun-14151a?logo=bun&logoColor=white" alt="Bun" />
   <img src="https://img.shields.io/badge/compiler-Vite%20%2B%20SWC-646cff?logo=vite&logoColor=white" alt="Vite + SWC" />
   <img src="https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -169,7 +169,7 @@ Guards are a language feature, not a convention. Every `intent` and every `api()
 - **`confirm`** — a human click runs it; an *agent* call parks as a **Proposal** that a person approves or rejects on the real UI, executing exactly once.
 - **`forbidden`** — never exposed as a tool. The agent falls back to the DOM, under the same permissions as a user.
 
-Every invocation records its **origin** (`human` / `agent`) in an audit trail, and `janux verify` fails the build if an agent-reachable tool ships without a description. See [`examples/human-in-the-loop`](examples/human-in-the-loop).
+Every invocation records its **origin** (`human` / `agent`) in an audit trail, and `janux verify` fails the build if an agent-reachable tool ships without a description. See `examples/human-in-the-loop` in the table below.
 
 ## Highlights
 
@@ -224,14 +224,14 @@ The documentation site is built with Janux ([apps/docs](apps/docs)) and scores 1
 | [`janux`](packages/janux) | Core: schema, signals, reactive state, component runtime, SSR islands, manifest, client resume + bridge, foreign interop, data cache, built-in client tools, glow, simulated agent cursor |
 | [`@janux/server`](packages/janux-server) | api() RPC, file-system router (layouts, groups, matchers, middleware), HTTP handlers + uploads, HTML shell, `/_janux/*` endpoints incl. the hosted MCP + `.md` projections, llms.txt, Web Bot Auth |
 | [`@janux/agent`](packages/janux-agent) | Model resolution, providers, the tool loop with turn continuation, and the embedded harness: memory (in-memory/Postgres), durable workflows, guardrail processors, rate limiting (in-memory/Redis), attachments, outbound MCP client |
-| [`@janux/vite`](packages/janux-vite) | Vite plugin (SWC api stubs, SSR bridge) |
+| [`@janux/vite`](packages/janux-vite) | Vite plugin (SWC api stubs, SSR bridge, compile-time binding maps + opt-in per-intent code splitting) |
 | [`@janux/cli`](packages/janux-cli) | `janux dev / build / start / verify / eval`, plus the adapter API third-party deploy targets are written against |
 | [`@janux/node`](packages/janux-node) · [`@janux/vercel`](packages/janux-vercel) | Deployment adapters: a self-contained `build/` for any Node 24+ host, and a Build Output API directory for Vercel |
 | [`create-janux`](packages/create-janux) | Scaffolder |
 
 ## Documentation
 
-**[janux.build](https://janux.build)** — 112 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
+**[janux.build](https://janux.build)** — 114 pages, ⌘K search, dark mode, and a copilot that answers from the docs themselves.
 
 | Section | Start here |
 |---|---|
@@ -258,15 +258,16 @@ Dominic Gannaway; `js-framework` fixtures derive from
 | Category | Where Janux stands |
 |---|---|
 | Resume vs hydration | **0.14× react** — 0.39ms to make the news page interactive (react 2.86); 10.70ms vs 57.62 at 6× throttle |
-| Shipped JS | 32.5KB gzip total vs react 60.7 (preact 9.8 · solid 13.7 · svelte 17.9 · vue-vapor 23.5); islands-free pages ship 0KB |
+| Shipped JS | 30.9KB gzip total vs react 62.1 (preact 10.0 · solid 14.1 · svelte 18.4 · vue-vapor 24.1); optional layers (glow, cursor, i18n, query cache) are imports that ship only when used; islands-free pages ship 0KB |
 | Fine-grained updates | `<For>` + `class={() => …}`: swap 1.10ms vs react 3.98; reverse 1.95 vs 2.24; rotate 0.51 vs 1.51 |
-| Mass DOM work | 10k rows: 68.94ms vs react 136.86; clear 38.40 vs 41.74; 512-field reset 14.74 vs 38.64; 512-field typing 16.84 vs 45.58 |
+| Mass DOM work | 10k rows: 68.94ms vs react 136.86; clear 38.40 vs 41.74; 512-field reset 14.74 vs 38.64; 512-field update pass 16.84 vs 45.58 |
 | Whole-app suites | parity: lifecycle cycle 49.35ms vs 49.56, store integrations within ±1.4×, suspense recovery within 1.14× |
 | Building rows in bulk | behind: create-1000 6.56ms vs react 4.88 (solid 1.90) — a row carries an Owner, a signal and an effect |
 | SSR throughput | behind: buffered 0.26ms vs react 0.07; streaming end-to-end at parity (50.86 vs 51.06) |
 
 Across the 19 suites, 88 of 156 janux/react cells are ahead of react and 68 are
-behind — the full signed table is in
+behind (2026-08-02 pass; bytes above are the 2026-08-06 measurement) — the full
+signed table is in
 [`benchmarks/BASELINE-2026-07.md`](benchmarks/BASELINE-2026-07.md).
 
 Full tables, methodology and machine specs:
@@ -298,7 +299,7 @@ Full gallery with screenshots: **[janux.build/docs/more/templates](https://janux
 
 ## Examples
 
-34 runnable apps, each a real Janux project — `bun run --cwd examples/<name> dev`.
+43 runnable apps, each a real Janux project — `bun run --cwd examples/<name> dev`.
 
 ### Start here
 

@@ -1,9 +1,9 @@
 ---
-title: Getting started
+title: Guide overview
 description: "Janux is a fullstack UI framework with two first-class audiences: humans and AI agents."
 ---
 
-# Getting started
+# Guide overview
 
 Janux is a fullstack UI framework with **two first-class audiences**: humans and AI agents. A single component definition projects a view (for people), a typed resource (for agents) and a set of tools (for both) — so your UI and your agent surface can never drift apart.
 

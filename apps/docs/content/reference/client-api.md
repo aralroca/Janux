@@ -10,15 +10,21 @@ Everything importable from `janux/client`, plus the browser conventions.
 ## boot(options)
 
 ```ts
-import { boot } from 'janux/client';
+import { boot, agentGlow, agentCursor, i18n } from 'janux/client';
 import { Cart } from './components/Cart';
 
-const client = boot({ defs: [Cart], ctx: {}, glow: true });
+const client = boot({ defs: [Cart], ctx: {}, glow: agentGlow(), cursor: agentCursor(), i18n: i18n() });
 ```
 
-`glow: true | { duration }` enables the built-in agent-activity highlight (see [Events and interactions](/docs/guide/events-and-interactions)); style it with the `--janux-glow-*` CSS variables. Lower-level: `enableAgentGlow`, `glowElement`, `glowTargetFor`, `injectGlowStyles`, `emitToolTarget`, `GLOW_CLASS`.
+The optional layers — glow, cursor, i18n — are **imports, not flags**: a layer you don't pass ships zero bytes, because only the entry's imports reach the bundle. Passing a boolean is a type error, and dev builds warn: `boot({ glow: true }) no longer ships the feedback layer`.
 
-`cursor: true | { duration }` adds the simulated agent cursor: an overlay arrow that travels the screen element to element as the agent acts, starting from the center of the viewport on its first move. It consumes the same events as the glow, so the two layers combine freely — both, either, or neither. Style it with the `--janux-cursor-*` CSS variables on the overlay (`#janux-agent-cursor`). Lower-level: `enableAgentCursor` (returns a disposer), `moveCursorTo(el, duration)`, `injectCursorStyles()` and the `CURSOR_ID` constant.
+`glow: agentGlow(options?)` enables the built-in agent-activity highlight (see [Events and interactions](/docs/guide/events-and-interactions)); options: `{ duration }`. Style it with the `--janux-glow-*` CSS variables. Lower-level: `enableAgentGlow`, `glowElement`, `glowTargetFor`, `injectGlowStyles`, `emitToolTarget`, `GLOW_CLASS`.
+
+`cursor: agentCursor(options?)` adds the simulated agent cursor: an overlay arrow that travels the screen element to element as the agent acts, starting from the center of the viewport on its first move. Options: `{ duration }`. It consumes the same events as the glow, so the two layers combine freely — both, either, or neither. Style it with the `--janux-cursor-*` CSS variables on the overlay (`#janux-agent-cursor`). Lower-level: `enableAgentCursor` (returns a disposer), `moveCursorTo(el, duration)`, `injectCursorStyles()` and the `CURSOR_ID` constant.
+
+`i18n: i18n()` enables client-side translations: it reads the page's embedded dictionary (the `application/janux+i18n` payload) into the island context and re-reads it after every SPA navigation, so a locale switch translates the next render. An app with translations must pass it — see [Internationalization](/docs/guide/i18n).
+
+Each of the three is a `BootFeature` — `{ install(ctx) }`, where `install` runs during `boot()` with the shared island context and may return a refresher that re-runs after every SPA navigation (that is how `i18n()` picks up the new page's dictionary). Any object of that shape plugs in the same way, so a custom feature can seed `ctx` or wire page-level listeners without patching `boot()`.
 
 `suspendAgentGlow()` hands the painting over to a richer feedback layer (the copilot's [visualizer](/docs/recipes/local-model-copilot)): the events keep flowing, the built-in layers — glow and simulated cursor — stop painting, and the returned function resumes them. `glowTargetFor(tool, input?)` resolves the element that carries an intent's delegation marker — the exact control the agent "pressed", whether it is bound through `on`, `<form intent>` or a rich event like `onInput`. Pass the call's `input` and it picks between controls that share one intent by the `data-input` each declares (a tab bar, a table row), instead of always the first. It falls back to the whole island, and to nothing when the target isn't painted (a ring around a box with no geometry would land in the page corner). `emitToolTarget({ element, action, selector })` announces the live element a DOM-fallback tool is about to operate as a `janux:tool-target` event (`ToolTargetDetail`); the built-in client tools use it and never paint by themselves, so whichever feedback layer is enabled owns what the user sees.
 

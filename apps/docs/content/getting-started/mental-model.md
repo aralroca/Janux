@@ -40,6 +40,8 @@ A page is server-rendered HTML. Components with state become **islands**: their 
 
 Mark an island `eager` when it must be live on arrival (an editor, an event listener), and `persist` when its live instance must survive navigation.
 
+When state changes after resume, the model is that the island re-renders its view. In practice the compiler (on by default) turns simple reads like `{state.count}` into direct bindings, so most updates write one DOM site without re-running anything — but that is an optimization, not a different model. The re-render is still what the code *means*, and still what happens whenever an expression is too dynamic to compile ([Build internals](/docs/reference/build-internals)).
+
 ## 4. Guards are the contract with agents
 
 Each intent (and each `api()`) declares who may run it and whether a human must approve:

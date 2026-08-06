@@ -70,6 +70,26 @@ import {
 
 Both are wired automatically when the copilot is enabled; import them when you build your own agent surface. See [the agent and your copilot](/docs/guide/agent-and-copilot).
 
+## Agent feedback
+
+The visible layers are boot features — `boot({ glow: agentGlow(), cursor: agentCursor() })` — but the seam underneath always ships, so a richer visualizer can replace the pixels without replacing the events:
+
+| Export | Does |
+|---|---|
+| `emitToolTarget(detail)` | Announces the live element a DOM-fallback tool is about to operate, as a `janux:tool-target` event (`ToolTargetDetail`: `{ element, action, selector }`) |
+| `suspendAgentGlow()` | Hands painting to a richer layer — built-in layers stop, events keep flowing; returns a resume function |
+| `glowElement(el, duration?)` | Glows one element now, fading after `duration` ms |
+| `injectGlowStyles(doc?)` | Idempotently installs the default glow CSS (`--janux-glow-*` variables override it) |
+| `GLOW_CLASS` | The class the glow toggles on the target element |
+| `glowTargetFor(tool, input?, scope?)` | Resolves the element carrying an intent's delegation marker — what both layers point at |
+| `enableAgentGlow(options?)` | Wires the glow layer by hand (what `agentGlow()` installs); returns a disposer |
+| `enableAgentCursor(options?)` | Wires the cursor layer by hand (what `agentCursor()` installs); returns a disposer |
+| `moveCursorTo(el, duration?)` | Sends the simulated cursor to an element |
+| `injectCursorStyles(doc?)` | Idempotently installs the cursor overlay CSS (`--janux-cursor-*` variables) |
+| `CURSOR_ID` | The id of the cursor overlay element (`#janux-agent-cursor`) |
+
+`agentGlow(options?)`, `agentCursor(options?)` and `i18n()` each return a `BootFeature`: `{ install(ctx) }`, run during `boot()` with the shared island context; a returned callback re-runs after every SPA navigation. Features are imported code, not flags — a layer no entry imports ships zero bytes. See [`boot()`](/docs/reference/client-api).
+
 ## Rendering primitives
 
 `toDomNodes(node, pass?): Node[]` turns JSX into real DOM nodes (strings and numbers become text; `null`, `undefined` and booleans render nothing). `morph(root, nextChildren)` reconciles `root`'s children toward `nextChildren` in place — keyed nodes are moved rather than recreated, which is how an island re-render preserves focus, scroll and DOM state. See [keys and lists](/docs/guide/keys-and-lists).

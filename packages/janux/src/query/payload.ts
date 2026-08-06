@@ -1,5 +1,4 @@
-import { getQueryClient } from '../query';
-import type { QueryClient } from '../query/cache';
+import type { QueryClient } from './cache';
 
 /** One chunk of the SSR query payload: what resolved, and what is still coming. */
 export interface QueryPayload {
@@ -39,8 +38,12 @@ function releaseOnDocumentEnd(client: QueryClient): void {
   window.addEventListener('load', () => client.releaseExpected(), { once: true });
 }
 
-/** Drains the payload chunks already queued and applies every later one as it lands. */
-export function hydrateQueries(client: QueryClient = getQueryClient()): void {
+/**
+ * Drains the payload chunks already queued and applies every later one as it
+ * lands. `getQueryClient()` runs this on the first browser client, so hydration
+ * ships with the query module — an app with no queries carries none of it.
+ */
+export function hydrateQueries(client: QueryClient): void {
   const queued: QueryPayload[] = (window as any).__JANUX_QUERY__ ?? [];
   const sink = [] as unknown as PayloadSink;
 

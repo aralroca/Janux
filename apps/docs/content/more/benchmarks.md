@@ -17,10 +17,13 @@ mount got its cleanup.
 Everything here is reproducible from
 [`benchmarks/`](https://github.com/aralroca/Janux/tree/main/benchmarks) in the
 repo: `bun run bench` runs the suites, `node benchmarks/report.mjs` renders the
-full position report. Numbers below are from a full run on 2026-08-02 — Apple
-M4 Pro, 24 GB, macOS 26.5, Node 26, Bun 1.3, Chromium 151 headless. Absolute
-milliseconds are a property of that machine; the ratios are the claim, and CI
-re-checks a committed set of ratio guards weekly.
+full position report. Timing numbers below are from a full run on 2026-08-02
+(with the 2026-08-05 compiler-pass deltas where noted) — Apple M4 Pro, 24 GB,
+macOS 26.5, Node 26, Bun 1.3, Chromium 151 headless. Shipped-bytes numbers are
+deterministic and current as of 2026-08-06, after boot features became
+imports. Absolute milliseconds are a property of that machine; the ratios are
+the claim, and CI re-checks a committed set of ratio guards weekly — a
+2026-08-06 verification run kept all 23 green.
 
 ## Where Janux wins
 
@@ -49,22 +52,25 @@ rather than one whole-island render ([keys and lists](/docs/guide/keys-and-lists
 | reverse | **1.95ms** | 2.24ms | 2.08ms | 1.10ms | 16.04ms | 1.43ms |
 | rotate last to front | **0.51ms** | 1.51ms | 0.17ms | 0.09ms | 0.13ms | 0.67ms |
 
-**Shipped bytes vs the React baseline.** The full Janux client runtime —
-signals, reconciler, delegated events, resume, the agent bridge — is 30.6KB
-gzip; the same krausest app ships 32.5KB total against react's 60.7KB. Pages
-with no islands ship no JavaScript at all, which no suite here can even
-express.
+**Shipped bytes vs the React baseline.** The always-on Janux client runtime —
+signals, reconciler, delegated events, resume, the agent bridge and the WebMCP
+surface — is 29.0KB gzip; the same krausest app ships 30.9KB total against
+react's 62.1KB. The optional layers (agent glow, the simulated cursor, i18n,
+the query cache) are [boot features you import](/docs/reference/client-api), so
+an app that doesn't use one ships none of it. Pages with no islands ship no
+JavaScript at all, which no suite here can even express.
 
 | js_gzip, krausest app | preact | solid | svelte | vue-vapor | **janux** | react |
 |---|---|---|---|---|---|---|
-| total | 9.8KB | 13.7KB | 17.9KB | 23.5KB | **32.5KB** | 60.7KB |
+| total | 10.0KB | 14.1KB | 18.4KB | 24.1KB | **30.9KB** | 62.1KB |
 
 **Whole-app parity and wins.** Resetting a 512-field form: 14.74ms against
-react's 38.64 (preact 40.84, solid 36.02). Typing into 512 controlled fields:
-16.84ms vs react's 45.58. A burst of 128 delegated events: 10.72ms vs react's
-18.12. Mount/update/unmount lifecycle cycles land at react's number with exact
-cleanup accounting (49.35ms vs 49.56), and a 512-subscriber selector store runs
-**zero selector calls** across 20 unrelated parent re-renders.
+react's 38.64 (preact 40.84, solid 36.02). One update pass across 512 bound
+fields (scaling-curves `update_512`): 16.84ms vs react's 45.58. A burst of 128
+delegated events: 10.72ms vs react's 18.12. Mount/update/unmount lifecycle
+cycles land at react's number with exact cleanup accounting (49.35ms vs 49.56),
+and a 512-subscriber selector store runs **zero selector calls** across 20
+unrelated parent re-renders.
 
 ## Where Janux does not win (yet)
 
@@ -85,6 +91,10 @@ is in
 - **Selecting one row among 1,000** costs 0.82ms where react-with-memo pays
   0.30 and solid 0.04. The binding rewrites exactly one attribute per row now;
   what remains is a thousand effect invocations.
+- **Typing into 512 controlled fields** (controlled-form `typing`) is behind:
+  83.2ms against react's 49.1. Leaf-path subscriptions took it from 87.5 and
+  removed the sibling-binding blowup, but the per-keystroke path still does
+  more work than react's memoized inputs.
 - **SSR throughput.** Rendering the 50-card news page takes 0.26ms against
   react's 0.07. Streaming end-to-end is at parity (50.86ms vs 51.06 on the
   staggered schedule, out-of-order boundary swaps included) because data

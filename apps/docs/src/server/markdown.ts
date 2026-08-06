@@ -167,7 +167,7 @@ export function summarize(markdown: string): string | undefined {
  * when the site is rebuilt, so the second visitor to a page should not pay to
  * highlight it again — and on a server that renders every request, the home page
  * was paying for its five snippets every time (Lighthouse: 96, not 99). Bounded
- * by the corpus: 75 pages and a handful of inline samples.
+ * by the corpus: 114 pages and a handful of inline samples.
  */
 const rendered = new Map<string, Promise<RenderedDoc>>();
 

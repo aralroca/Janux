@@ -1,5 +1,5 @@
 import { CLIENT_TOOL_NAMES } from '../client-tools/specs';
-import { emitToolTarget } from './glow';
+import { emitToolTarget } from './feedback';
 import { islandIdsInDocument } from './mount';
 import { collectPageLinks, createNavigateTool } from './navigate-tool';
 

@@ -41,9 +41,9 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `janux/client`
 
-- **Stable** — `CURSOR_ID`, `GLOW_CLASS`, `KEEP_ATTRIBUTE`, `QueryClient`, `boot`, `clientApi`, `createModelContextPolyfill`, `dropzone`, `emitToolTarget`, `enableAgentCursor`, `enableAgentGlow`, `getQueryClient`, `glowElement`, `glowTargetFor`, `hashKey`, `injectCursorStyles`, `injectGlowStyles`, `installWebMCP`, `moveCursorTo`, `mutation`, `persistStore`, `query`, `suspendAgentGlow`, `urlState`, `useQuery`
+- **Stable** — `CURSOR_ID`, `GLOW_CLASS`, `KEEP_ATTRIBUTE`, `QueryClient`, `agentCursor`, `agentGlow`, `boot`, `clientApi`, `createModelContextPolyfill`, `dropzone`, `emitToolTarget`, `enableAgentCursor`, `enableAgentGlow`, `getQueryClient`, `glowElement`, `glowTargetFor`, `hashKey`, `i18n`, `injectCursorStyles`, `injectGlowStyles`, `installWebMCP`, `moveCursorTo`, `mutation`, `persistStore`, `prefetch`, `query`, `suspendAgentGlow`, `urlState`, `useQuery`
 - **Experimental** — _none_
-- **Internal** — `appTools`, `collectPageLinks`, `createBridge`, `createClientRegistry`, `createNavigateTool`, `morph`, `mountEagerIslands`, `mountIsland`, `performNavigation`, `prefetch`, `prefetchOnHover`, `registerDef`, `toDomNodes`
+- **Internal** — `appTools`, `collectPageLinks`, `createBridge`, `createClientRegistry`, `createNavigateTool`, `morph`, `mountEagerIslands`, `mountIsland`, `performNavigation`, `prefetchOnHover`, `registerDef`, `toDomNodes`
 
 ### `janux/manifest`
 

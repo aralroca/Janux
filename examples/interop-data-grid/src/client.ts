@@ -1,5 +1,5 @@
-import { boot } from 'janux/client';
+import { boot, agentGlow, agentCursor } from 'janux/client';
 import { AgentPanel } from './components/AgentPanel';
 import { DataGridShell } from './components/DataGridShell';
 
-boot({ defs: [AgentPanel, DataGridShell], glow: true, cursor: true });
+boot({ defs: [AgentPanel, DataGridShell], glow: agentGlow(), cursor: agentCursor() });

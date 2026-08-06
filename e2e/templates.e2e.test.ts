@@ -169,6 +169,9 @@ describe.skipIf(!isBuilt(appRoot('templates/back-office')))('templates/back-offi
       await page.click('.proposal-card button.approve');
       await page.waitForFunction((total) => document.querySelectorAll('.desk tbody tr').length === total - 1, rows, { timeout: 10_000 });
 
+      // The audit island renders on its own tick after the approval lands —
+      // wait for it the same way the row removal is waited for above.
+      await page.waitForSelector('.audit .entry', { timeout: 10_000 });
       expect(await page.locator('.audit .entry').count()).toBeGreaterThan(0);
       expect(errors).toEqual([]);
       await page.close();

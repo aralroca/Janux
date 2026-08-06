@@ -1,4 +1,4 @@
-import { boot } from 'janux/client';
+import { boot, agentGlow, agentCursor } from 'janux/client';
 import { ThemeLab } from './components/ThemeLab';
 
-boot({ defs: [ThemeLab], glow: true, cursor: true });
+boot({ defs: [ThemeLab], glow: agentGlow(), cursor: agentCursor() });

@@ -22,7 +22,7 @@ One framework per row, split into two matrices so neither hides a column. The pa
 | Nuxt | hydration | props | hydration bundle |
 | SolidStart | hydration (fine-grained) | props | hydration bundle |
 | CopilotKit / assistant-ui | React + SDK | — | — |
-| **Janux** | **resume from JSON snapshots** | **state only (schema-enforced)** | **0 KB** |
+| **Janux** | **resume from JSON snapshots + compile-time binding maps** | **state only (schema-enforced)** | **0 KB** |
 
 ### Agent surface & server
 
@@ -46,7 +46,7 @@ One framework per row, split into two matrices so neither hides a column. The pa
 - **vs Astro** — Astro perfected content sites with islands; its islands are opaque by design. Janux islands carry a second face (every island is also a resource + tools), and `output: "static"` ships to the same static hosts.
 - **vs HTMX** — shared spirit (server-first, HTML over the wire, minimal JS) — plus typed contracts, guards and an agent surface HTMX has no vocabulary for.
 - **vs Brisa** — the closest sibling in spirit: server-rendered JSX with zero JS by default, signal-driven islands (as native Web Components) and browser events handled on the server over a tiny RPC. Brisa optimizes for the **web platform** — Web Components, built-in i18n and routing. Janux optimizes for the **agent**: the island that renders is also a typed resource with tools, guards and an audit trail. If you want your UI to *be* the platform, Brisa; if you want it to *be* the API an agent drives, Janux.
-- **vs SvelteKit** — a compiler-first reactivity model with an excellent router, form actions and even JS-free routes (`export const csr = false`). Everything an agent needs — a manifest, typed tools, approval flows — is yours to invent on top; in Janux it's the component definition.
+- **vs SvelteKit** — a compiler-first reactivity model with an excellent router, form actions and even JS-free routes (`export const csr = false`). Janux compiles too these days — provable view reads become DOM bindings at build time — on a runtime-resumable base. Everything an agent needs — a manifest, typed tools, approval flows — is yours to invent on top; in Janux it's the component definition.
 - **vs Nuxt** — Vue's batteries-included meta-framework: Nitro server routes, data fetching, a module for everything. Same story as SvelteKit for agents, and hydration remains the default cost model rather than resumability.
 - **vs SolidStart** — the reactivity closest to Janux's own signals, plus `"use server"` functions. The difference isn't the reactive model: it's that Janux **constrains** state to schema-typed JSON and behavior to named intents, which is what makes a page resumable *and* legible to a model.
 - **vs CopilotKit / assistant-ui** — those add a copilot *next to* your app and you hand-write the tools. In Janux the copilot's tools **are** your components; there is no second artifact to keep in sync.

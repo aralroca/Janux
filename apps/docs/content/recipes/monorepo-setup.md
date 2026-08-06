@@ -76,11 +76,11 @@ An island — anything built with `component({ state, intents })` — also needs
 
 ```ts
 // apps/web/src/client.ts
-import { boot } from 'janux/client';
+import { boot, agentGlow } from 'janux/client';
 import { Toggle } from '@acme/ui';
 import { Counter } from './components/Counter';
 
-boot({ defs: [Counter, Toggle], glow: true });
+boot({ defs: [Counter, Toggle], glow: agentGlow() });
 ```
 
 Forget that line and the island server-renders, shows its markup, and never wakes up on interaction — the runtime has no def to mount.

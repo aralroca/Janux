@@ -1,9 +1,9 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
-import { QueryClient } from '../query/cache';
-import { query } from '../query';
+import { QueryClient } from './cache';
+import { query } from './index';
 import { createRoot } from '../signals';
-import { hydrateQueries } from './query-payload';
+import { hydrateQueries } from './payload';
 
 beforeAll(() => GlobalRegistrator.register());
 afterAll(() => GlobalRegistrator.unregister());

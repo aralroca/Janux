@@ -1,5 +1,6 @@
 import { translateCore } from '../i18n/translate-core';
 import type { I18n, I18nDictionary } from '../i18n/types';
+import type { BootFeature } from './features';
 
 interface I18nPayload {
   locale: string;
@@ -36,4 +37,20 @@ export function installI18n(ctx: Record<string, unknown>): void {
   } catch {
     document.dispatchEvent(new CustomEvent('janux:error', { detail: 'invalid i18n payload' }));
   }
+}
+
+/**
+ * Client-side translations as a boot feature: `boot({ i18n: i18n() })` reads
+ * the page's embedded dictionary into the island context and re-reads it after
+ * every SPA navigation (a locale switch ships a new payload). Importing it is
+ * what ships it — apps without translations carry zero bytes of this module.
+ */
+export function i18n(): BootFeature {
+  return {
+    install: (ctx) => {
+      installI18n(ctx);
+
+      return () => installI18n(ctx);
+    },
+  };
 }

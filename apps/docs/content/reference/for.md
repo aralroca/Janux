@@ -18,7 +18,10 @@ the island's one render effect, so touching one row re-runs the whole view and
 reconciles the whole subtree — a cost that does not depend on how much changed.
 `For` gives every row its own reactive scope: the list level matches rows by key
 and moves nodes, and a row's body re-runs only when that row's own data changes,
-or when a signal only that row reads changes.
+or when a signal only that row reads changes. Note that for provable static
+reads — including sites inside `map()` callbacks — the compiler already writes
+the equivalent binding thunks itself ([Build internals](/docs/reference/build-internals));
+`<For>` remains the primitive for everything the analysis cannot prove.
 
 ## Props
 

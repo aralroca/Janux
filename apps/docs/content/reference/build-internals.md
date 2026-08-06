@@ -63,6 +63,28 @@ A `*.api.ts` module runs on the server; the client gets a tiny typed stub instea
 
 The parse-don't-execute step is the important one: server-only imports (a database driver, secrets) never reach the client graph, because the plugin never runs the module to learn its exports.
 
+## The binding-maps pass
+
+`compileClientModule(id, code)` (from `binding-sites.ts`) is the client-graph transform behind `compiler.bindingMaps` — on by default, off with `compiler: { bindingMaps: false }`. It parses each component module, finds the schema-declared state fields, and rewrites **provable static reads** in the view into binding thunks — `{state.count}` becomes `{() => (state.count)}` — so a write to that field updates one DOM site without re-running the view.
+
+What counts as provable is deliberately narrow, and asymmetric by position:
+
+| Position | Rule |
+|---|---|
+| Text (`{state.x}`) | Strict: only a non-nullable `string` or `number` leaf — text has no way to render "absent" |
+| Attribute (`class={state.x}`) | Lax: any leaf builder, booleans included, and `value`/`checked` are bindable; event props and props with special propToAttr handling are excluded |
+| List items | Sites inside `map()` callbacks are compiled too, keyed through the list |
+
+`optional()` / `nullable()` modifiers disqualify a field in either position. Anything unprovable is simply left as written — those sites keep the runtime path, an island re-render followed by a DOM morph — so the compiled and uncompiled programs mean the same thing. And the pass **fails open**: a module it cannot parse is passed through untransformed rather than failing the build, because a missed optimization is recoverable and a broken build is not.
+
+## The intent-split pass
+
+`splitClientModule(id, code)` (from `intent-split.ts`) is `compiler.splitIntents` — **opt-in**. It moves an intent's `run()` body into its own chunk, downloaded on first invocation, and leaves a lazy stub behind. The strictness rule: only a **provably self-contained** `run()` is moved — one that touches nothing from module scope beyond its own bag — because a body that closes over module state cannot be lifted without changing what it means.
+
+The stub keeps `intents[name]` a callable of the same shape, which is why nothing downstream notices: wire markers, guards, schemas and the manifest all read the intent *definition*, and the definition — server-side and in the client's typed surface — is unchanged; only where the body's bytes live moves. Client graph only.
+
+Why opt-in rather than default: the split run is necessarily async, so an agent proposal's shadow-run diff degrades to input-only for that intent, and its writes land after the synchronous batch. Measured on the shop example, the chunk round-trip costs more than small run bodies save — the pass pays only when a run carries real weight (a heavy dependency, a large body).
+
 ## The image optimizer
 
 One optimizer, used from both ends of an app's life — the build-time half of the [images guide](/docs/guide/images):

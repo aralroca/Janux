@@ -1,4 +1,4 @@
-import { boot } from 'janux/client';
+import { boot, agentGlow } from 'janux/client';
 import { SiteSearch } from './components/SiteSearch';
 
-boot({ defs: [SiteSearch], glow: true });
+boot({ defs: [SiteSearch], glow: agentGlow() });

@@ -5,6 +5,8 @@ import { jsx } from '../jsx-runtime';
 import { int, list, schema, str } from '../schema';
 import { renderToString } from '../render/server';
 import { boot, navigateAction, type BootOptions, type JanuxClient } from './boot';
+import { agentCursor } from './cursor';
+import { agentGlow } from './glow';
 
 beforeAll(() => GlobalRegistrator.register());
 afterAll(() => GlobalRegistrator.unregister());
@@ -235,7 +237,7 @@ describe('client boot (resume without hydration)', () => {
 
     document.body.innerHTML = html + scripts;
     document.getElementById('janux-glow-styles')?.remove();
-    const client = boot({ defs: [counter, session], glow: { duration: 10 } });
+    const client = boot({ defs: [counter, session], glow: agentGlow({ duration: 10 }) });
     const island = document.querySelector('janux-island')!;
     const incButton = document.querySelector('[data-jxa="counter#default:inc"]')!;
 
@@ -264,8 +266,8 @@ describe('client boot (resume without hydration)', () => {
     await approvePending;
   });
 
-  it('boot({ cursor: true }) walks the simulated cursor to the operated control', async () => {
-    const client = await serveAndBoot({ cursor: { duration: 10 } });
+  it('boot({ cursor: agentCursor() }) walks the simulated cursor to the operated control', async () => {
+    const client = await serveAndBoot({ cursor: agentCursor({ duration: 10 }) });
     const incButton = document.querySelector('[data-jxa="counter#default:inc"]')!;
 
     incButton.getBoundingClientRect = () =>
@@ -280,7 +282,7 @@ describe('client boot (resume without hydration)', () => {
     await pending;
   });
 
-  it('boot({ glow: true }) injects styles and glows the operated island', async () => {
+  it('boot({ glow: agentGlow() }) injects styles and glows the operated island', async () => {
     const { html, snapshots } = await renderToString(jsx(counter as any, {}), {
       initialState: { 'ui://counter#default': { n: 1, history: [] } },
       storeDefs: { session },
@@ -294,7 +296,7 @@ describe('client boot (resume without hydration)', () => {
 
     document.body.innerHTML = html + scripts;
     document.getElementById('janux-glow-styles')?.remove();
-    const client = boot({ defs: [counter, session], glow: { duration: 10 } });
+    const client = boot({ defs: [counter, session], glow: agentGlow({ duration: 10 }) });
 
     expect(document.getElementById('janux-glow-styles')).not.toBeNull();
     const pending = client.call('counter.inc');
@@ -434,7 +436,7 @@ describe('client boot (resume without hydration)', () => {
   it('the enabled glow paints janux:tool-target elements (DOM-fallback feedback)', async () => {
     document.body.innerHTML = '<button id="go">Go</button>';
     document.getElementById('janux-glow-styles')?.remove();
-    boot({ defs: [counter], glow: { duration: 10 } });
+    boot({ defs: [counter], glow: agentGlow({ duration: 10 }) });
     const button = document.getElementById('go')!;
 
     document.dispatchEvent(
@@ -457,7 +459,7 @@ describe('client boot (resume without hydration)', () => {
 
     document.body.innerHTML = '<button id="go">Go</button>';
     document.getElementById('janux-glow-styles')?.remove();
-    boot({ defs: [counter], glow: { duration: 10 } });
+    boot({ defs: [counter], glow: agentGlow({ duration: 10 }) });
     const button = document.getElementById('go')!;
     const flash = () =>
       document.dispatchEvent(
@@ -484,7 +486,7 @@ describe('client boot (resume without hydration)', () => {
     const { suspendAgentGlow } = await import('./glow');
 
     document.body.innerHTML = '<button id="go">Go</button>';
-    boot({ defs: [counter], glow: { duration: 5 } });
+    boot({ defs: [counter], glow: agentGlow({ duration: 5 }) });
     const button = document.getElementById('go')!;
     const fire = (phase: string) =>
       document.dispatchEvent(
