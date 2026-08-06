@@ -59,6 +59,28 @@ async function callTool(page: Page, name: string, input: unknown): Promise<any> 
   return JSON.parse(envelope.content[0].text);
 }
 
+/**
+ * A guarded call does not answer until a human decides, so it is started and
+ * collected separately — holding an `evaluate` open across the click that
+ * settles it is what the assertion would otherwise have to do.
+ */
+const startCall = (page: Page, name: string, input: unknown): Promise<void> =>
+  page.evaluate(
+    ([tool, args]) => {
+      (window as any).__parked = (document as any).modelContext.callTool(tool, args);
+    },
+    [name, input] as const,
+  );
+
+const collectCall = async (page: Page): Promise<any> =>
+  JSON.parse((await page.evaluate(() => (window as any).__parked)).content[0].text);
+
+/** The copilot panel open and ready to be the approval surface. */
+async function openChat(page: Page): Promise<void> {
+  await page.click('.copilot-toggle');
+  await page.waitForSelector('.copilot-panel input[name="text"]', { timeout: TIMEOUT });
+}
+
 const counter = (page: Page): Promise<string> =>
   page.frameLocator('#pg-preview iframe').locator('h1').innerText();
 
@@ -136,14 +158,58 @@ describe.skipIf(!BUILT)('an agent can operate the playground (apps/docs)', () =>
       const page = await openPlayground();
 
       await callTool(page, 'playground_counter_inc', { by: 2 });
-      const result = await callTool(page, 'playground_counter_reset', {});
+      await startCall(page, 'playground_counter_reset', {});
+      await page.waitForSelector('#pg-agent .proposal-card', { timeout: TIMEOUT });
 
-      expect(result.result.status).toBe('proposal');
-      expect(await page.locator('#pg-agent .proposal-card').count()).toBe(1);
+      // Proposed, not run — and the caller is still waiting on the human.
       expect(await counter(page)).toBe('2');
 
       await page.click('#pg-agent .proposal-actions .approve');
       await waitForCounter(page, '0');
+
+      expect((await collectCall(page)).approved).toBe(true);
+      await page.close();
+    },
+    TIMEOUT,
+  );
+
+  it(
+    'asks for the approval in the chat, and holds the call until the reader answers',
+    async () => {
+      const page = await openPlayground();
+
+      await callTool(page, 'playground_counter_inc', { by: 4 });
+      await openChat(page);
+      await startCall(page, 'playground_counter_reset', {});
+      // The complaint this fixes: the agent pane's card is behind the open chat.
+      await page.waitForSelector('.copilot-panel .proposal-card', { timeout: TIMEOUT });
+
+      expect(await counter(page)).toBe('4');
+
+      await page.click('.copilot-panel .proposal-card .approve');
+      await waitForCounter(page, '0');
+
+      expect((await collectCall(page)).approved).toBe(true);
+      expect(await page.locator('.copilot-panel .proposal-card').count()).toBe(0);
+      await page.close();
+    },
+    TIMEOUT,
+  );
+
+  it(
+    'runs nothing when the reader rejects it in the chat',
+    async () => {
+      const page = await openPlayground();
+
+      await callTool(page, 'playground_counter_inc', { by: 5 });
+      await openChat(page);
+      await startCall(page, 'playground_counter_reset', {});
+      await page.waitForSelector('.copilot-panel .proposal-card', { timeout: TIMEOUT });
+      await page.click('.copilot-panel .proposal-card .reject');
+      const result = await collectCall(page);
+
+      expect(result.approved).toBe(false);
+      expect(await counter(page)).toBe('5');
       await page.close();
     },
     TIMEOUT,

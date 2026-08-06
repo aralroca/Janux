@@ -1,3 +1,4 @@
+import { forgetApprovals, useApprovalSink } from '../approvals';
 import { EXAMPLES } from './examples';
 import { createEditor } from './monaco-setup';
 import { createFrame, decodeShare, encodeShare, type FrameHost } from './frame-host';
@@ -141,14 +142,15 @@ export async function mountPlayground(): Promise<() => void> {
   const callTool = (tool: string, input: unknown): void => {
     frame.send({ type: 'call', tool, input, id: `${Date.now()}` });
   };
-  const approve = (id: string): void => {
+  // One path for both cards — the agent pane's and the chat's. Whichever the
+  // reader used, the frame runs it once and the parked tool call answers.
+  const decide = (id: string, approved: boolean): void => {
     pendingProposal = undefined;
-    frame.send({ type: 'approve', id });
+    frame.send({ type: approved ? 'approve' : 'reject', id });
+    agentTools.decided(id, approved).catch(console.error);
   };
-  const reject = (id: string): void => {
-    pendingProposal = undefined;
-    frame.send({ type: 'reject', id });
-  };
+  const approve = (id: string): void => decide(id, true);
+  const reject = (id: string): void => decide(id, false);
   const showProposal = (): void => {
     if (pendingProposal) renderProposal(els.agent, pendingProposal, approve, reject);
   };
@@ -180,6 +182,7 @@ export async function mountPlayground(): Promise<() => void> {
   };
 
   frame = createFrame(els.preview, onFrameMessage);
+  useApprovalSink(decide);
   editor.onDidChangeModelContent(debounce(run, 600));
   els.example.addEventListener('change', () => {
     editor.setValue(EXAMPLES[els.example.value] ?? '');
@@ -193,6 +196,8 @@ export async function mountPlayground(): Promise<() => void> {
   });
 
   return () => {
+    useApprovalSink(undefined);
+    forgetApprovals();
     agentTools.dispose();
     frame.dispose();
     editor.getModel()?.dispose();

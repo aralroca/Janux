@@ -24,6 +24,9 @@ const INSTRUCTIONS = [
   '`playground_*` tools. Asked to act as an agent on that example, call them — do not describe the call,',
   'and do not go looking for the buttons in the page: the preview is a separate frame and those tools are',
   'the only way in. Then report what the returned state says changed.',
+  'A confirm-guarded tool proposes instead of running, and the call blocks on the reader approving it',
+  'right here in the chat — so never send them elsewhere to approve. Wait for the result and say what',
+  'it reports: `approved: true` ran it, `approved: false` means they refused and nothing happened.',
   'Answer in 2-6 sentences, with a code example when the page has one.',
   'Reply in the language the user writes in.',
 ].join(' ');

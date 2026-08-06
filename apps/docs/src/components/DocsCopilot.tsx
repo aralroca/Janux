@@ -1,11 +1,15 @@
 import { component, effect, intent, schema, str, bool, enums, list } from 'janux';
+import { offerPendingApproval, releaseApprovalSurface, useApprovalSurface } from '../approvals';
+import { ProposalCard } from './ProposalCard';
 import {
+  approvalSurface,
   clearInput,
   controller,
   converse,
   rememberQuestion,
   resumeAfterReload,
   scrollToLatest,
+  settleProposal,
   wasInterrupted,
 } from '../copilot/panel';
 
@@ -27,7 +31,17 @@ export const DocsCopilot = component({
     open: bool(),
     ready: bool(),
     status: str(),
+    /** The proposal a guarded tool call is parked on, if any. Empty id = none pending. */
+    proposalId: str(),
+    proposalSummary: str(),
   }),
+
+  lifecycle: {
+    // Keyed on `state`, which is this instance: a stale detach must not
+    // unregister the surface a live one just installed.
+    attach: ({ state, intents }: any) => useApprovalSurface(approvalSurface(state, intents), state),
+    detach: ({ state }: any) => releaseApprovalSurface(state),
+  },
 
   effects: {
     resumeAnswer: effect({
@@ -43,12 +57,41 @@ export const DocsCopilot = component({
       description: 'Open or close the copilot panel',
       run: async ({ state }: any) => {
         state.open = !state.open;
-        if (!state.open || state.ready) return;
+        if (!state.open) return;
+        // An agent may have raised a proposal while this was shut; opening is
+        // the first moment the reader can actually answer it.
+        offerPendingApproval();
+        if (state.ready) return;
         const { setup } = await controller();
 
         await setup();
         state.ready = true;
       },
+    }),
+    /*
+     * Human-only, like `send` and `stop`: an agent that can approve its own
+     * proposal is not a guard, it is a formality. `copilot.*` is excluded from
+     * the copilot's tools too — belt and braces on the one intent where it
+     * actually matters.
+     */
+    showProposal: intent({
+      description: 'Put the proposal an agent raised in front of the reader (empty id clears it)',
+      guard: 'forbidden',
+      input: schema({ id: str(), summary: str() }),
+      run: ({ state, input }: any) => {
+        state.proposalId = input.id;
+        state.proposalSummary = input.summary;
+      },
+    }),
+    approve: intent({
+      description: 'Approve the proposal the agent raised',
+      guard: 'forbidden',
+      run: ({ state }: any) => settleProposal(state, true),
+    }),
+    reject: intent({
+      description: 'Reject the proposal the agent raised',
+      guard: 'forbidden',
+      run: ({ state }: any) => settleProposal(state, false),
     }),
     stop: intent({
       description: 'Stop the answer being written',
@@ -131,6 +174,9 @@ export const DocsCopilot = component({
               </li>
             ) : null}
           </ol>
+          {state.proposalId
+            ? ProposalCard({ summary: state.proposalSummary, onApprove: intents.approve, onReject: intents.reject })
+            : null}
           <form onSubmit={intents.send}>
             <input name="text" placeholder={state.ready ? 'Ask about Janux' : 'Starting…'} />
             {state.busy ? (

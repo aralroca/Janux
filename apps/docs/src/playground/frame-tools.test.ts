@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'bun:test';
 import { registry } from '@aralroca/gui-agent';
+import { forgetApprovals, useApprovalSurface, type AgentProposal } from '../approvals';
 import { createFrameTools, type FrameTools } from './frame-tools';
 
 const COUNTER = {
@@ -20,7 +21,17 @@ let active: FrameTools | undefined;
 afterEach(() => {
   active?.dispose();
   active = undefined;
+  // An undecided proposal outlives its test otherwise: installing a surface
+  // re-offers it, which is the whole point of the catch-up.
+  forgetApprovals();
+  useApprovalSurface({ show: () => false, clear: () => undefined }, undefined);
 });
+
+const PROPOSAL = { status: 'proposal', id: 'prop_1', tool: 'counter.reset' };
+
+/** Whether a promise is still waiting, without waiting on it. */
+const stillPending = async (promise: Promise<unknown>): Promise<boolean> =>
+  (await Promise.race([promise.then(() => 'done'), Promise.resolve('pending')])) === 'pending';
 
 /** A stand-in frame: records what the page posts to it, answers when the test says so. */
 function frame(): { tools: FrameTools; sent: any[] } {
@@ -70,6 +81,64 @@ describe('playground frame tools', () => {
     tools.settle(sent[0].id, 3);
 
     expect(await payload(answer)).toEqual({ result: 3, state: { count: 3 } });
+  });
+
+  it('parks a guarded call on the reader instead of answering "pending"', async () => {
+    const { tools, sent } = frame();
+
+    tools.sync(COUNTER, { state: { count: 2 } });
+    const answer = registry.get('playground_counter_reset')!.execute({});
+
+    tools.settle(sent[0].id, PROPOSAL);
+
+    // The old behaviour returned here, and the model told the reader to go and
+    // approve in a panel the chat was covering.
+    expect(await stillPending(answer)).toBe(true);
+
+    const settled = tools.decided('prop_1', true);
+
+    tools.sync(COUNTER, { state: { count: 0 } });
+    await settled;
+
+    expect(await payload(answer)).toEqual({ approved: true, state: { count: 0 } });
+  });
+
+  it('reports a refusal as a refusal, with nothing run', async () => {
+    const { tools, sent } = frame();
+
+    tools.sync(COUNTER, { state: { count: 2 } });
+    const answer = registry.get('playground_counter_reset')!.execute({});
+
+    tools.settle(sent[0].id, PROPOSAL);
+    await tools.decided('prop_1', false);
+    const result = await payload(answer);
+
+    expect(result.approved).toBe(false);
+    expect(result.note).toContain('rejected');
+  });
+
+  it('offers the proposal to the chat when the chat is listening', async () => {
+    const { tools, sent } = frame();
+    const shown: AgentProposal[] = [];
+
+    useApprovalSurface({ show: (proposal) => Boolean(shown.push(proposal)), clear: () => undefined }, shown);
+    tools.sync(COUNTER, { state: { count: 2 } });
+    const answer = registry.get('playground_counter_reset')!.execute({});
+
+    tools.settle(sent[0].id, PROPOSAL);
+
+    expect(shown.map(({ id, tool }) => [id, tool])).toEqual([['prop_1', 'counter.reset']]);
+    await tools.decided('prop_1', false);
+    await answer;
+  });
+
+  it('ignores a decision for a proposal it never parked', async () => {
+    const { tools } = frame();
+
+    tools.sync(COUNTER, { state: { count: 0 } });
+
+    // The agent pane can settle proposals the chat never raised.
+    expect(await tools.decided('prop_unknown', true).then(() => 'ok')).toBe('ok');
   });
 
   it('ignores an answer to a call it is not waiting for', () => {
