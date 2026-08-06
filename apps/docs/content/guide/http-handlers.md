@@ -113,4 +113,4 @@ zone.isOver.value;        // reactive drag-over state
 
 ## Streaming SSR (roadmap)
 
-Component-property Suspense (`Comp.suspense = () => <Skeleton/>`) and out-of-order streaming are on the roadmap. Today, async data reaches the UI through the reactive client cache (`useQuery`, see [Data cache](/docs/guide/data-cache)): the page ships instantly and data fills in reactively — no blocking SSR wait. Streaming SSR is a first-paint optimization tracked alongside the compiler work.
+Component-property Suspense (`Comp.suspense = () => <Skeleton/>`) and out-of-order streaming are on the roadmap. Today, async data reaches the UI through the reactive client cache (`useQuery`, see [Data cache](/docs/guide/data-cache)): the page ships instantly and data fills in reactively — no blocking SSR wait. Streaming SSR is a first-paint optimization tracked on the [roadmap](/docs/guide/architecture-and-roadmap), next to the one rendering piece still open there — a fine-grained list primitive.

@@ -105,8 +105,8 @@ Now `janux build` also prerenders every page into `dist/client`:
 
 ```
 dist/client/index.html                        # /
-dist/client/docs/guide/getting-started/index.html
-dist/client/docs/guide/getting-started.md     # markdown projection of each page (`/` → `.md`)
+dist/client/docs/guide/overview/index.html
+dist/client/docs/guide/overview.md     # markdown projection of each page (`/` → `.md`)
 dist/client/404.html                          # src/routes/_404.tsx, when the app has one
 dist/client/llms.txt                          # agent index, when llmsTxt is configured
 dist/client/sitemap.xml, robots.txt           # when siteUrl is configured
@@ -129,7 +129,7 @@ export function staticParams() {
 export default function DocPage({ params }) { ... }
 ```
 
-Every record becomes a prerendered page (`{ section: 'guide', slug: 'getting-started' }` → `/docs/guide/getting-started`). Dynamic routes **without** `staticParams` are skipped with a build warning. The export also improves server apps: `llms.txt` lists the concrete pages instead of the raw `/docs/[section]/[slug]` pattern, so agents can navigate directly.
+Every record becomes a prerendered page (`{ section: 'guide', slug: 'overview' }` → `/docs/guide/overview`). Dynamic routes **without** `staticParams` are skipped with a build warning. The export also improves server apps: `llms.txt` lists the concrete pages instead of the raw `/docs/[section]/[slug]` pattern, so agents can navigate directly.
 
 ### What you give up
 

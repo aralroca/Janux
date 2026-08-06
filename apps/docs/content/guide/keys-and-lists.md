@@ -39,7 +39,10 @@ cost the same as rebuilding all of them.
 
 `<For>` gives every row its **own** reactive scope. The list level only matches
 rows by key and moves nodes; a row's body re-runs when that row's data changes,
-or when a signal only that row reads changes.
+or when a signal only that row reads changes. (For provable static reads,
+including sites inside `map()` callbacks, the compiler writes these fine-grained
+bindings automatically — `<For>` is the primitive for everything it cannot
+prove. See [Build internals](/docs/reference/build-internals).)
 
 ```tsx
 import { For } from 'janux';

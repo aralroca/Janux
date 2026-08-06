@@ -29,6 +29,10 @@ No. `approve` endpoints/bridges execute a stored closure exactly once, and appro
 
 The island fails in isolation — other islands and the static page keep working. Errors surface as `janux:error` DOM events. The same holds during SSR: an island's throw renders its [`error` view](/docs/guide/ssr-and-resumability#error-boundaries) (or the closest ancestor's), never a dead page.
 
+## Does Janux have a compiler?
+
+Yes, since the 0.6-era compiler evolution. The client build rewrites provable static state reads in views — `{state.count}`, `class={state.tone}` — into binding thunks, so those writes update one DOM site without re-running the view; anything it can't prove keeps the island re-render, and the output is semantically identical either way. Turn it off with `compiler: { bindingMaps: false }` if a rewrite ever looks wrong. A second pass, `compiler.splitIntents`, is opt-in: it moves heavy intent `run()` bodies into chunks fetched on first invocation. Both are documented in [Build internals](/docs/reference/build-internals).
+
 ## Is `x-janux-origin` spoofable?
 
 Yes, and that's fine: `human` is the default and most-privileged origin, so lying about it grants nothing. Real authentication belongs in [`src/ctx.ts`](/docs/recipes/auth-and-context); guards govern *agent* behavior, not network trust.

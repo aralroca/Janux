@@ -5,9 +5,17 @@ description: "The vocabulary this documentation uses: bifacial component, island
 
 # Glossary
 
+**Agent cursor** — the built-in simulated cursor that travels the screen element to element as an agent acts. A feedback layer enabled per app: `boot({ cursor: agentCursor() })` — imported code, so apps that skip it ship none of it.
+
+**Agent glow** — the built-in highlight that rings the island (or the intent's declared `glowTarget`) while an agent operates it. Enabled with `boot({ glow: agentGlow() })`; combines freely with the agent cursor.
+
 **Agentic Web** — the web as both people and AI agents operate it: pages that are simultaneously a human interface and a discoverable, callable, permissioned tool surface. Its stack is MCP (tools over HTTP), WebMCP (tools in the browser), `llms.txt` (discovery) and Web Bot Auth (identity). See [The Agentic Web](/docs/getting-started/the-agentic-web).
 
 **Bifacial component** — the core primitive: one definition projecting a view (humans), a resource (agents) and tools (both). Named after Janus.
+
+**Binding map** — the compiler's record of the provable static state reads in a view, each rewritten so that writing the field updates its one DOM site directly instead of re-rendering the island. On by default; `compiler: { bindingMaps: false }` is the escape hatch.
+
+**Binding thunk** — the compiled form of one such read — `{state.count}` becomes `{() => (state.count)}` — subscribing to exactly the leaf paths it reads. What the analysis cannot prove keeps the re-render + morph path, with identical semantics.
 
 **Island** — a bifacial component mounted in a page. Server-rendered, then *resumed* (not hydrated) on first interaction.
 

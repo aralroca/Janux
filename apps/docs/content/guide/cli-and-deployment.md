@@ -26,6 +26,7 @@ janux eval [files...]       # scripted agent-task scenarios against a live app
 ## What `build` produces
 
 - `dist/client/client.js` — your `src/client.ts` entry bundled (runtime + island defs).
+- The client build runs the binding-maps compiler pass by default: provable static state reads in views are rewritten into binding thunks so those updates skip the island re-render ([Build internals](/docs/reference/build-internals)). Escape hatch: `compiler: { bindingMaps: false }` in `janux.config.ts`.
 - If there is no `src/client.ts`, build is a no-op: your app is fully static and ships 0 KB of JS.
 - With `output: "static"` in your app config, `build` also prerenders every page — dynamic routes enumerated by their `staticParams` export — plus `llms.txt` into `dist/client`, ready for any static host with no server. See [Deploying → Static export](/docs/recipes/deploying).
 

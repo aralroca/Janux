@@ -71,7 +71,7 @@ export const SECTIONS: SectionDef[] = [
     section: 'guide',
     label: 'Guide',
     groups: [
-      { label: 'Overview', slugs: ['getting-started'] },
+      { label: 'Overview', slugs: ['overview'] },
       {
         label: 'Components & state',
         slugs: [
@@ -132,6 +132,7 @@ export const SECTIONS: SectionDef[] = [
       { label: 'Reactivity', slugs: ['signal', 'computed', 'watch', 'batch', 'untrack', 'owners', 'for'] },
       { label: 'Helpers', slugs: ['every', 'parse-duration', 'create-bus', 'i18n-api', 'worker', 'service-worker'] },
       { label: 'Client & CLI', slugs: ['client-api', 'client-state', 'data-cache-api', 'foreign', 'client-runtime', 'client-tools', 'cli', 'codemods', 'build-internals'] },
+      { label: 'Diagnostics', slugs: ['errors'] },
     ],
   },
   {
@@ -144,7 +145,8 @@ export const SECTIONS: SectionDef[] = [
         label: 'Agents & MCP',
         slugs: ['local-model-copilot', 'external-mcp-clients', 'a2a-and-agent-card', 'debugging-webmcp', 'agent-evals-in-ci'],
       },
-      { label: 'Testing & deployment', slugs: ['testing-components', 'deploying', 'adapters', 'vercel', 'docker', 'sentry'] },
+      { label: 'Testing', slugs: ['testing-components'] },
+      { label: 'Deployment', slugs: ['deploying', 'adapters', 'vercel', 'docker', 'sentry'] },
     ],
   },
   {
@@ -152,7 +154,7 @@ export const SECTIONS: SectionDef[] = [
     label: 'More',
     groups: [
       { slugs: ['templates', 'examples', 'interop-matrix', 'comparison', 'benchmarks', 'faq', 'glossary'] },
-      { label: 'Migrating', slugs: ['migrating-from-next', 'migrating-from-astro'] },
+      { label: 'Migrating', slugs: ['migrating-from-next', 'migrating-from-astro', 'upgrading'] },
     ],
   },
 ];
