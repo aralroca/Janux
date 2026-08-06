@@ -55,15 +55,29 @@ interface FeedbackToggle {
   onToggle: (enabled: boolean) => void;
 }
 
-function feedbackToggle(text: string, state: FeedbackToggle): HTMLElement {
+interface FeedbackLink {
+  text: string;
+  /** The guide section that explains how to configure the layer. */
+  href: string;
+}
+
+// A link inside a label doesn't toggle the checkbox: interactive descendants
+// take precedence over label activation, so the word navigates and the rest
+// of the row keeps toggling.
+function feedbackToggle(before: string, link: FeedbackLink, after: string, state: FeedbackToggle): HTMLElement {
   const label = el('label', 'glow-toggle');
   const box = document.createElement('input');
+  const anchor = document.createElement('a');
 
   box.type = 'checkbox';
   box.checked = state.enabled;
   box.addEventListener('change', () => state.onToggle(box.checked));
+  anchor.href = link.href;
+  anchor.textContent = link.text;
   label.appendChild(box);
-  label.appendChild(document.createTextNode(text));
+  label.appendChild(document.createTextNode(before));
+  label.appendChild(anchor);
+  label.appendChild(document.createTextNode(after));
 
   return label;
 }
@@ -79,8 +93,11 @@ export function renderAgentPanel(
   pane.innerHTML = '';
   pane.appendChild(el('h2', '', '🤖 What the agent sees'));
   if (feedback) {
-    pane.appendChild(feedbackToggle(' ✨ Glow the UI while the agent acts', feedback.glow));
-    pane.appendChild(feedbackToggle(' 🖱️ Move a simulated cursor to what it touches', feedback.cursor));
+    const glowDocs = '/docs/guide/events-and-interactions#visualizing-agent-activity-the-glow';
+    const cursorDocs = '/docs/guide/events-and-interactions#the-simulated-cursor';
+
+    pane.appendChild(feedbackToggle(' ✨ ', { text: 'Glow', href: glowDocs }, ' the UI while the agent acts', feedback.glow));
+    pane.appendChild(feedbackToggle(' 🖱️ Move a simulated ', { text: 'cursor', href: cursorDocs }, ' to what it touches', feedback.cursor));
   }
   manifest.tools.forEach((tool: any) => pane.appendChild(toolRow(tool, onCall)));
   pane.appendChild(el('h2', '', `Resource <code>${resource.uri}</code>`));
