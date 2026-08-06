@@ -4,10 +4,10 @@ Janux is 0.x. This file says what that costs you, how long a version keeps worki
 for a 1.0 to exist. [STABILITY.md](./STABILITY.md) says the same thing per API; [CHANGELOG.md](./CHANGELOG.md) says
 what actually happened.
 
-## One version, eight packages
+## One version, eleven packages
 
-`janux`, `@janux/server`, `@janux/agent`, `@janux/vite`, `@janux/tailwind`, `@janux/cli`, `@janux/vercel` and
-`create-janux` always release together, on the same number. They are one framework split across entry points: the
+`janux`, `@janux/server`, `@janux/agent`, `@janux/content`, `@janux/vite`, `@janux/tailwind`, `@janux/cli`,
+`@janux/testing`, `@janux/vercel`, `@janux/node` and `create-janux` always release together, on the same number. They are one framework split across entry points: the
 Vite plugin emits what the client runtime resumes, and the CLI builds what the server serves. A matrix of
 independently versioned packages would be a matrix of combinations nobody tests.
 
@@ -63,7 +63,7 @@ runtime version is a **minor**, with the same one-minor notice a stable API gets
 ## How a release happens
 
 1. Every pull request that changes a published package ships a [changeset](./.changeset/README.md).
-2. `bun run release:version` consumes them: it bumps the eight manifests, writes their changelogs, folds them into
+2. `bun run release:version` consumes them: it bumps the eleven manifests, writes their changelogs, folds them into
    the root `CHANGELOG.md` and syncs the root manifest. That is a normal pull request, reviewed like any other.
 3. Merging it and pushing the tag — `0.6.0`, no `v` — is the release.
    [`.github/workflows/release.yml`](./.github/workflows/release.yml) runs the suite, the typecheck, the coverage

@@ -11,7 +11,7 @@
  * fine here and dies for the first user who runs it. (That is not hypothetical —
  * `content-site` shipped without `@mdx-js/mdx` and served a 500 until this ran.)
  */
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Glob } from 'bun';
@@ -57,32 +57,26 @@ async function tarballsByName(packed: string): Promise<Map<string, string>> {
 }
 
 /**
- * Only the tarballs the app itself declares.
- *
- * `npm install <tarball>` *saves* what it installs, so handing it all ten would
- * quietly complete a template that forgot one of its own dependencies — and that
- * omission is the single thing this script exists to catch.
+ * Every framework resolution — the transitive exact pins included — must come
+ * from this commit's tarballs. The packages pin each other exactly at publish
+ * time, so during a release PR the pinned version does not exist on npm yet:
+ * asking the registry for it is exactly backwards — the smoke gates the
+ * release, it cannot follow it. Rewriting the declared specs and adding the
+ * same paths as `overrides` keeps npm away from the registry for every
+ * `@janux/*` edge. Only specs of names the template already declares are
+ * touched, so a template that forgot one of its own dependencies still fails
+ * here — that omission is the single thing this script exists to catch.
  */
-function declaredTarballs(app: string, byName: Map<string, string>): string[] {
-  const declared = Object.keys(JSON.parse(readFileSync(join(app, 'package.json'), 'utf8')).dependencies ?? {});
+function resolveFromTarballs(app: string, byName: Map<string, string>): void {
+  const manifestPath = join(app, 'package.json');
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  const specs = new Map([...byName].map(([name, path]) => [name, `file:${path}`]));
 
-  return declared.map((name) => byName.get(name)).filter((path): path is string => path !== undefined);
-}
-
-/**
- * The rest of the framework, pinned without being declared.
- *
- * A template names the packages it uses; the ones those pull in — `@janux/vite`
- * behind `@janux/cli`, say — still came from the registry, so half the app under
- * test was the last release. An export added to one package and consumed by
- * another then fails here for the one reason a release never will: the two
- * publish together. `--no-save` keeps them out of `dependencies`, so a template
- * that forgot one of its own is still caught by the install above.
- */
-function undeclaredTarballs(app: string, byName: Map<string, string>): string[] {
-  const declared = new Set(declaredTarballs(app, byName));
-
-  return [...byName.values()].filter((path) => !declared.has(path));
+  for (const name of Object.keys(manifest.dependencies ?? {})) {
+    if (specs.has(name)) manifest.dependencies[name] = specs.get(name);
+  }
+  manifest.overrides = Object.fromEntries(specs);
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 /**
@@ -95,12 +89,10 @@ async function scaffold(root: string, template: string, byName: Map<string, stri
   const created = await run(['npx', 'create-janux', `smoke-${template}`, '--template', template], root);
 
   if (!created.ok) return `${template}: scaffold failed\n${created.output}`;
-  const installed = await run(['npm', 'install', '--no-audit', '--no-fund', ...declaredTarballs(app, byName)], app);
+  resolveFromTarballs(app, byName);
+  const installed = await run(['npm', 'install', '--no-audit', '--no-fund'], app);
 
-  if (!installed.ok) return `${template}: install failed\n${installed.output}`;
-  const pinned = await run(['npm', 'install', '--no-save', '--no-audit', '--no-fund', ...undeclaredTarballs(app, byName)], app);
-
-  return pinned.ok ? undefined : `${template}: pinning the rest of the framework failed\n${pinned.output}`;
+  return installed.ok ? undefined : `${template}: install failed\n${installed.output}`;
 }
 
 /**

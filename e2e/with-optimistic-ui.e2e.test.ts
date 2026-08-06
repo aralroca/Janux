@@ -84,11 +84,13 @@ describe.skipIf(!BUILT)('examples/with-optimistic-ui in the browser', () => {
     await openReset(page);
     await page.click(starButton('Aurora'));
     // `.pending` is the optimistic entry `onMutate` wrote — it exists only
-    // while the (artificially delayed) request is still in flight.
-    const pending = page.locator('.favorites .fav.pending');
+    // while the (artificially delayed) request is still in flight, which is a
+    // 600ms window. Name and pending-ness are therefore asserted by ONE wait:
+    // resolving the locator a second time to read its text is a second round
+    // trip, and on a loaded runner the save lands inside it.
+    const pending = page.locator('.favorites .fav.pending', { hasText: 'Aurora' });
 
     await pending.waitFor({ state: 'visible', timeout: 10_000 });
-    expect(await pending.textContent()).toContain('Aurora');
     await waitForSettled(page);
     await waitForCount(page, 1);
     expect(await favorites(page)).toEqual(['Aurora']);
