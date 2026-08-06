@@ -94,6 +94,33 @@ describe('the optimizer config', () => {
   });
 });
 
+const ISLAND_SOURCE = `import { component, schema, int } from 'janux';
+export const Counter = component({ name: 'counter', state: schema({ n: int() }), view: ({ state }: any) => <b>{state.n}</b> });
+`;
+
+/**
+ * The compiler evolution is on by default: the client copy of a view ships
+ * with its provable reads compiled to bindings, the SSR copy ships as
+ * written (the server resolves thunks inline anyway), and
+ * `compiler.bindingMaps: false` is the app's escape hatch.
+ */
+describe('the binding-maps compiler in the plugin', () => {
+  const docs = resolve(import.meta.dir, '../../../apps/docs');
+  const id = `${docs}/src/Counter.tsx`;
+
+  it('compiles client modules by default, never the SSR graph, and honors the escape hatch', async () => {
+    const plugin: any = janux();
+
+    await plugin.config({ root: docs }, { command: 'build', mode: 'production' });
+    expect((await plugin.transform.call({}, ISLAND_SOURCE, id, undefined))?.code).toContain('{() => (state.n)}');
+    expect(await plugin.transform.call({}, ISLAND_SOURCE, id, { ssr: true })).toBeUndefined();
+    const off: any = janux({ compiler: { bindingMaps: false } });
+
+    await off.config({ root: docs }, { command: 'build', mode: 'production' });
+    expect(await off.transform.call({}, ISLAND_SOURCE, id, undefined)).toBeUndefined();
+  });
+});
+
 const API_SOURCE = "export const list = api({ description: 'List', run: () => [] });\n";
 
 /** The client-stub transform, called the way Vite calls it. */

@@ -261,6 +261,26 @@ export interface JanuxConfig {
   cache?: CacheConfig;
   /** What to do about registering the worker `src/sw.ts` builds into. */
   serviceWorker?: ServiceWorkerConfig;
+  /** The compiler evolution's switches (see the roadmap's Rendering entry). */
+  compiler?: CompilerConfig;
+}
+
+export interface CompilerConfig {
+  /**
+   * Rewrite provable static state reads in views into reactive binding
+   * thunks, so a write re-runs one DOM write instead of one island render.
+   * The escape hatch for a rewrite the analysis got wrong is `false`.
+   */
+  bindingMaps?: boolean;
+  /**
+   * Move provably self-contained intent `run()` bodies into their own
+   * chunks, downloaded on first invocation. Client graph only — the server
+   * keeps the full defs, so guards, schemas and the manifest never change.
+   * Trade-offs of the lazy stub: a split run is always async, so an agent
+   * proposal's shadow-run diff degrades to input-only for it, and its writes
+   * land after the synchronous batch. Pays when a run carries real weight.
+   */
+  splitIntents?: boolean;
 }
 
 /** Identity helper for `janux.config.ts`: type-checks and autocompletes the config. */

@@ -20,7 +20,7 @@ const SKIP_DIRS = /^(node_modules|dist|results|baselines)$/;
 
 // Written from scratch for Janux: no upstream counterpart exists, so claiming
 // Octane provenance on these would be a false attribution, not a safe one.
-const JANUX_ORIGINAL = ['report.mjs', 'report.test.mjs'];
+const JANUX_ORIGINAL = ['report.mjs', 'report.test.mjs', 'lib/janux-compiler.mjs'];
 
 const read = (file: string): string => readFileSync(file, 'utf8');
 
@@ -36,7 +36,9 @@ function walk(dir: string): string[] {
   });
 }
 
-const benchFiles = walk(BENCH).map((file) => relative(BENCH, file));
+// Forward-slash on every OS: the allowlist below names paths that way, and
+// Windows' `relative()` answers with backslashes.
+const benchFiles = walk(BENCH).map((file) => relative(BENCH, file).replaceAll('\\', '/'));
 const harnessFiles = benchFiles.filter(
   (file) => /(\.mjs|shared\.js)$/.test(file) && !JANUX_ORIGINAL.includes(file),
 );

@@ -1,4 +1,4 @@
-import { batch, signal, untrack, type Sig } from '../signals';
+import { batch, signal, trackingBoundary, untrack, type Sig } from '../signals';
 import { assertMutable, createGate, type MutationGate } from './mutation-gate';
 import { ancestorsOf, childPath, parentOf } from './path';
 import { isPlainContainer, plainify } from './plainify';
@@ -27,6 +27,60 @@ export interface ReactiveState<T extends object = Record<string, unknown>> {
 
 /** Writes between prune sweeps: keeps the sweep cost amortized O(1) per write. */
 const PRUNE_EVERY = 256;
+
+/**
+ * The paths the thunk currently evaluating under `withLeafTracking` read.
+ * Module-global on purpose — a binding can read several islands' states in
+ * one thunk — which is exactly why entries are keyed PER INSTANCE (by the
+ * state's own `versions` map): two states sharing a path string must both
+ * subscribe, and neither may suppress the other's maximality. Within an
+ * instance, `null` marks a path a deeper read traversed — `readTrap` fires
+ * for every step of a member chain, so marking the parent at read time IS
+ * the maximality predicate, with no scan afterwards.
+ */
+let leafFrame: Map<object, Map<string, Sig<number> | null>> | null = null;
+
+// A scope created inside a thunk (a userland computed/watch) tracks for
+// itself: its runner suspends the frame for the duration of its own run.
+trackingBoundary.suspend = () => {
+  const frame = leafFrame;
+
+  leafFrame = null;
+
+  return frame;
+};
+trackingBoundary.resume = (token) => {
+  leafFrame = token as typeof leafFrame;
+};
+
+/**
+ * Runs a binding thunk so only the MAXIMAL paths it read subscribe (the
+ * structural fix for regression #22: a read of `values[3]` traverses
+ * `values`, and subscribing the container re-runs every sibling binding on
+ * any write). Dropping the prefixes loses nothing for VALUE writes —
+ * `touch` bumps a written path's descendants, so a container write always
+ * reaches the leaf signal — and `writeTrap`/`deleteTrap` notify the
+ * container itself for KEY-SET changes, so enumerating thunks stay live
+ * too. Frames nest by restoration, and the subscribing reads happen HERE,
+ * inside whatever effect is currently tracking. Known boundary: a thunk
+ * that reads a leaf AND hands out the container itself keeps only the leaf
+ * subscription — return leaves from thunks, not containers.
+ */
+export function withLeafTracking<T>(read: () => T): T {
+  const previous = leafFrame;
+  const frame: NonNullable<typeof leafFrame> = (leafFrame = new Map());
+
+  try {
+    return read();
+  } finally {
+    leafFrame = previous;
+    frame.forEach((paths) =>
+      paths.forEach((sig) => {
+        if (sig) void sig.value;
+      }),
+    );
+  }
+}
 
 export function createReactiveState<T extends object>(
   initial: T,
@@ -179,7 +233,19 @@ export function createReactiveState<T extends object>(
     // version signal, so skipping it for untracked reads would stop a write from
     // minting a new identity for the changed subtree — the contract `foreign()`
     // hands React. (Measured as a ~15% win on list writes, and reverted for it.)
-    versionOf(target).value;
+    const version = versionOf(target);
+
+    // A leaf frame defers the subscription: the signal must still exist (bump
+    // only bumps existing signals), but only the maximal paths get read. The
+    // `has` guard keeps a re-read from resurrecting a parent a deeper read
+    // already marked.
+    if (leafFrame) {
+      let paths = leafFrame.get(versions);
+
+      if (!paths) leafFrame.set(versions, (paths = new Map()));
+      paths.set(path, null);
+      if (!paths.has(target)) paths.set(target, version);
+    } else void version.value;
 
     return isPlainContainer(value) ? proxyFor(value, target) : value;
   };
@@ -189,8 +255,17 @@ export function createReactiveState<T extends object>(
     const target = childPath(path, key);
 
     assertMutable(gate, target);
+    // A write that changes the container's KEY SET (a new key, array growth
+    // by index, a length truncation) is a write TO the container — notify it
+    // the way push/splice already do, or a binding that dropped the container
+    // subscription for its leaves never hears the shape changed. The root is
+    // the documented exception (see notification-granularity conformance):
+    // nothing can subscribe to '', so a top-level new key notifies only itself.
+    const structural =
+      path !== '' && (!Object.prototype.hasOwnProperty.call(raw, key) || (Array.isArray(raw) && key === 'length'));
+
     Reflect.set(raw, key, plainify(value, target, undefined, true));
-    touch(target);
+    touch(structural ? path : target);
 
     return true;
   };
@@ -201,7 +276,9 @@ export function createReactiveState<T extends object>(
 
     assertMutable(gate, target);
     Reflect.deleteProperty(raw, key);
-    touch(target);
+    // Removing a key is structural: the container is what changed (except at
+    // the unsubscribable root, where only the key itself can have readers).
+    touch(path === '' ? target : path);
 
     return true;
   };

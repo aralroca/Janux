@@ -24,6 +24,8 @@ import {
 import { apiModuleName, apiStubModule } from './api-stubs';
 import { scheduleServerOptions } from './schedules';
 import { channelServerOptions } from './channels';
+import { compileClientModule } from './binding-sites';
+import { extractIntentRun, parseIntentVirtualId, splitClientModule } from './intent-split';
 import { collectIslands, islandCatalogFromDir } from './islands';
 import { attachDevWebSocket } from './dev-websocket';
 import { DEV_ROUTE_PATH, devRouteHandler } from './dev-route-info';
@@ -191,6 +193,9 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
   /** Island defs met while bundling the client graph — the build's catalog, see islands.ts. */
   const islandCatalog: Record<string, string> = {};
   let bundling = false;
+  /** The compiler evolution's switches, resolved with the app config. */
+  let bindingMaps = false;
+  let splitIntents = false;
 
   return {
     name: 'janux',
@@ -202,6 +207,8 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       const { clientEntry } = app;
 
       serverDir = app.serverDir;
+      bindingMaps = app.compiler?.bindingMaps ?? true;
+      splitIntents = app.compiler?.splitIntents ?? false;
 
       return {
         appType: 'custom',
@@ -234,11 +241,46 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
      * `languages.register is not a function`.
      */
     transform(code, id, transformOptions) {
-      if (bundling && !transformOptions?.ssr) collectIslands(islandCatalog, id, code);
-      if (!serverDir || !isApiModule(serverDir, id)) return undefined;
       if (transformOptions?.ssr) return undefined;
+      if (bundling) collectIslands(islandCatalog, id, code);
+      // Before the compiler on purpose: a server module never reaches it, so
+      // the compiler cannot interfere with "server code stays server-side".
+      if (serverDir && isApiModule(serverDir, id)) return { code: apiStubModule(id, code), map: null };
+      const bound = bindingMaps ? compileClientModule(id, code) : undefined;
+      const split = splitIntents ? splitClientModule(id, bound ?? code) : undefined;
+      const compiled = split ?? bound;
 
-      return { code: apiStubModule(id, code), map: null };
+      return compiled ? { code: compiled, map: null } : undefined;
+    },
+
+    /** The intent chunks' scheme, and relative imports made from inside them. */
+    resolveId(source, importer) {
+      if (source.startsWith('janux-intent:')) return `\0${source}`;
+      const virtual = importer ? parseIntentVirtualId(importer) : undefined;
+
+      // A virtual module carries its original module's imports verbatim, so
+      // its relative specifiers resolve against the original file.
+      return virtual ? this.resolve(source, virtual.module, { skipSelf: true }).then((r) => r?.id) : undefined;
+    },
+
+    load(id) {
+      const virtual = parseIntentVirtualId(id);
+
+      if (!virtual) return undefined;
+      // Re-derived from disk on every load (and watched): a dev edit to the
+      // original module can never serve a stale run.
+      this.addWatchFile(virtual.module);
+      const tsx = virtual.module.split('?')[0]!.endsWith('x');
+
+      try {
+        const code = extractIntentRun(readFileSync(virtual.module, 'utf8'), tsx, virtual.island, virtual.intent);
+
+        return code ? { code, map: null } : undefined;
+      } catch {
+        // The file left the disk mid-session: let resolution fail loudly
+        // downstream instead of throwing out of the hook.
+        return undefined;
+      }
     },
 
     /** The island catalog, read back by `prodServerOptions` as `islandModules`. */
