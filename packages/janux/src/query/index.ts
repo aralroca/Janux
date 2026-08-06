@@ -1,14 +1,25 @@
 import { signal, effect as watch, type Sig } from '../signals';
 import { QueryClient, hashKey, type QueryKey, type QueryOptions, type QueryState } from './cache';
+import { hydrateQueries } from './payload';
 
 export { QueryClient, hashKey } from './cache';
 export type { QueryKey, QueryOptions, QueryState, QueryStatus, MutationOptions } from './cache';
+export type { QueryPayload } from './payload';
 
 let ambient: QueryClient | undefined;
 
-/** The process/app-wide client. Apps may pass their own to `query()`/`mutation()`. */
+/**
+ * The process/app-wide client. Apps may pass their own to `query()`/`mutation()`.
+ * The first browser client drains the SSR payload (`window.__JANUX_QUERY__`),
+ * so what the server already fetched is never requested a second time — and an
+ * app with no queries never ships the machinery: hydration moved here from
+ * `boot()` precisely so the query cache is only bundled when something imports it.
+ */
 export function getQueryClient(): QueryClient {
-  ambient ??= new QueryClient();
+  if (!ambient) {
+    ambient = new QueryClient();
+    if (typeof document !== 'undefined') hydrateQueries(ambient);
+  }
 
   return ambient;
 }

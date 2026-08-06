@@ -1,4 +1,4 @@
-import { boot } from 'janux/client';
+import { boot, agentGlow, agentCursor } from 'janux/client';
 import { PrimeLab } from './components/PrimeLab';
 
 /**
@@ -17,5 +17,5 @@ function startTicker(): void {
   }, 100);
 }
 
-boot({ defs: [PrimeLab], glow: true, cursor: true });
+boot({ defs: [PrimeLab], glow: agentGlow(), cursor: agentCursor() });
 startTicker();

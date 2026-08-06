@@ -1,5 +1,4 @@
 import diff from 'diff-dom-streaming';
-import { installI18n } from './i18n';
 import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { scanMarkers, scanTree } from './events';
 import { consumePrefetched, navigableBody, NAVIGATION_HEADERS, type NavigablePage } from './prefetch';
@@ -513,7 +512,8 @@ async function wireUpPage(mount: MountContext): Promise<void> {
   scanMarkers(document);
   // The incoming page brought the server's document-wide speculation rules.
   rescopeSpeculationRules();
-  installI18n(mount.ctx);
+  // Boot features re-read their per-page payloads (i18n's dictionary among them).
+  mount.refresh?.forEach((refresh) => refresh());
   await sweepStaleInstances(mount);
   sweepDisconnectedForeigns(mount);
   await disposeRouteStores(mount);

@@ -5,24 +5,30 @@ export { mountIsland, type MountContext } from './mount';
 export { morph } from './morph';
 export { toDomNodes } from './dom';
 export { clientApi } from './api-stub';
+export type { BootFeature } from './features';
 export {
-  enableAgentGlow,
+  emitToolTarget,
   injectGlowStyles,
   glowElement,
-  glowTargetFor,
-  emitToolTarget,
   suspendAgentGlow,
   GLOW_CLASS,
-  type GlowOptions,
   type ToolTargetDetail,
+} from './feedback';
+export {
+  agentGlow,
+  enableAgentGlow,
+  glowTargetFor,
+  type GlowOptions,
 } from './glow';
 export {
+  agentCursor,
   enableAgentCursor,
   injectCursorStyles,
   moveCursorTo,
   CURSOR_ID,
   type CursorOptions,
 } from './cursor';
+export { i18n } from './i18n';
 export { performNavigation, mountEagerIslands, KEEP_ATTRIBUTE } from './navigate';
 export { prefetch, prefetchOnHover } from './prefetch';
 export {

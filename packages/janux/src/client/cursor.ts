@@ -1,4 +1,6 @@
-import { feedbackSuspended, glowTargetFor, withDeclaredTarget, type ToolTargetDetail } from './glow';
+import { feedbackSuspended, type ToolTargetDetail } from './feedback';
+import type { BootFeature } from './features';
+import { glowTargetFor, withDeclaredTarget } from './glow';
 import { KEEP_ATTRIBUTE } from './navigate';
 import { applyNonce } from './nonce';
 
@@ -106,8 +108,8 @@ export function moveCursorTo(el: Element, duration = CURSOR_LINGER_MS): void {
  * page (gui-agent style): fed by the same events as the glow — `janux:tool-call`
  * for intents, `janux:tool-target` for the DOM-fallback tools — so the two
  * layers combine freely: both, either, or neither. `suspendAgentGlow` stands
- * this layer down too. Returns a disposer. `boot({ cursor: true })` wires this
- * for you.
+ * this layer down too. Returns a disposer. `boot({ cursor: agentCursor() })`
+ * wires this for you.
  */
 export function enableAgentCursor(options: CursorOptions = {}): () => void {
   const duration = options.duration ?? CURSOR_LINGER_MS;
@@ -141,5 +143,18 @@ export function enableAgentCursor(options: CursorOptions = {}): () => void {
     clearTimeout(hideTimer);
     clearTimeout(settleTimer);
     document.getElementById(CURSOR_ID)?.remove();
+  };
+}
+
+/**
+ * The simulated cursor as a boot feature: `boot({ cursor: agentCursor() })`.
+ * Importing it is what ships it — `boot()` without it carries zero bytes of
+ * this module.
+ */
+export function agentCursor(options: CursorOptions = {}): BootFeature {
+  return {
+    install: () => {
+      enableAgentCursor(options);
+    },
   };
 }

@@ -1,7 +1,8 @@
 import { isMarkerAttr } from '../render/html';
-import { applyNonce } from './nonce';
+import type { BootFeature } from './features';
+import { feedbackSuspended, glowElement, injectGlowStyles, GLOW_CLASS, type ToolTargetDetail } from './feedback';
 
-export const GLOW_CLASS = 'janux-agent-glow';
+export { emitToolTarget, feedbackSuspended, glowElement, injectGlowStyles, suspendAgentGlow, GLOW_CLASS, type ToolTargetDetail } from './feedback';
 
 /** ms a DOM-fallback target stays lit. Matches what `ui_click`/`ui_fill` used to paint themselves. */
 const TARGET_GLOW_MS = 1200;
@@ -9,77 +10,6 @@ const TARGET_GLOW_MS = 1200;
 export interface GlowOptions {
   /** ms the glow lingers after the call finishes. Default 700. */
   duration?: number;
-}
-
-/**
- * The element a DOM-fallback client tool (`ui_click` / `ui_fill`) just resolved,
- * reported on `janux:tool-target` right before it acts. The tools never paint:
- * whichever feedback layer is enabled decides what the user sees — the built-in
- * glow below, or a richer visualizer.
- */
-export interface ToolTargetDetail {
-  element: Element;
-  action: 'click' | 'fill';
-  selector: string;
-}
-
-/** Announces the live element a client tool is about to operate. */
-export function emitToolTarget(detail: ToolTargetDetail): void {
-  if (typeof document === 'undefined') return;
-  document.dispatchEvent(new CustomEvent('janux:tool-target', { detail }));
-}
-
-let suspensions = 0;
-
-/** Whether a richer feedback layer currently holds the painting claim. Shared by every built-in layer. */
-export function feedbackSuspended(): boolean {
-  return suspensions > 0;
-}
-
-/**
- * Hands the agent feedback over to a richer layer (status chips, an animated
- * ring, a backdrop veil): the events keep flowing, but the built-in layers —
- * the glow and the simulated cursor — stop painting so two layers never
- * highlight the same element at once. Returns a resume function; nested
- * suspensions each hold their own claim.
- */
-export function suspendAgentGlow(): () => void {
-  let released = false;
-
-  suspensions += 1;
-
-  return () => {
-    if (released) return;
-    released = true;
-    suspensions -= 1;
-  };
-}
-
-/* !important: the glow is runtime-owned feedback and must win over inline
-   view styles (e.g. a button that sets its own box-shadow). */
-const GLOW_CSS = `
-.${GLOW_CLASS} {
-  box-shadow: 0 0 0 3px var(--janux-glow-ring, rgba(37, 99, 235, 0.55)),
-    0 0 var(--janux-glow-spread, 34px) 4px var(--janux-glow-halo, rgba(34, 211, 238, 0.35)) !important;
-  border-radius: var(--janux-glow-radius, 18px);
-  transition: box-shadow 0.25s;
-}`;
-
-/** Idempotently installs the default glow styles. Override via the --janux-glow-* CSS vars. */
-export function injectGlowStyles(doc: Document = document): void {
-  if (doc.getElementById('janux-glow-styles')) return;
-  const style = doc.createElement('style');
-
-  style.id = 'janux-glow-styles';
-  applyNonce(style);
-  style.textContent = GLOW_CSS;
-  doc.head.appendChild(style);
-}
-
-/** Glows one element now, fading after `duration` ms. */
-export function glowElement(el: Element, duration = 700): void {
-  el.classList.add(GLOW_CLASS);
-  setTimeout(() => el.classList.remove(GLOW_CLASS), duration);
 }
 
 /**
@@ -172,7 +102,7 @@ export function withDeclaredTarget(selector: string, paint: (el: Element) => voi
  * `janux:tool-call` bridge events and glows the matching island — or, when the
  * intent declares a `glowTarget`, the exact element the run created — plus
  * `janux:tool-target` for the elements the DOM-fallback tools touch. Returns a
- * disposer. `boot({ glow: true })` wires this for you.
+ * disposer. `boot({ glow: agentGlow() })` wires this for you.
  */
 export function enableAgentGlow(options: GlowOptions = {}): () => void {
   const duration = options.duration ?? 700;
@@ -183,7 +113,7 @@ export function enableAgentGlow(options: GlowOptions = {}): () => void {
   const onToolTarget = (event: Event): void => {
     const { element } = ((event as CustomEvent).detail ?? {}) as ToolTargetDetail;
 
-    if (suspensions) return;
+    if (feedbackSuspended()) return;
     if (element) glowElement(element, TARGET_GLOW_MS);
   };
   const onToolCall = (event: Event): void => {
@@ -199,11 +129,11 @@ export function enableAgentGlow(options: GlowOptions = {}): () => void {
       if (painted) setTimeout(() => painted.classList.remove(GLOW_CLASS), duration);
       // The DOM a declared `glowTarget` names only exists after the run — a
       // React Flow node, a row an intent appended — so it is lit on `ok`.
-      if (phase === 'ok' && glowTarget && !suspensions) withDeclaredTarget(glowTarget, (el) => glowElement(el, duration));
+      if (phase === 'ok' && glowTarget && !feedbackSuspended()) withDeclaredTarget(glowTarget, (el) => glowElement(el, duration));
 
       return;
     }
-    if (suspensions) return;
+    if (feedbackSuspended()) return;
     // A declared target arrives with `ok`: guessing from the view now would
     // ring the island first and the intent's real target a moment later.
     if (glowTargetPending) return;
@@ -221,5 +151,17 @@ export function enableAgentGlow(options: GlowOptions = {}): () => void {
   return () => {
     document.removeEventListener('janux:tool-call', onToolCall);
     document.removeEventListener('janux:tool-target', onToolTarget);
+  };
+}
+
+/**
+ * The glow layer as a boot feature: `boot({ glow: agentGlow() })`. Importing it
+ * is what ships it — `boot()` without it carries zero bytes of this module.
+ */
+export function agentGlow(options: GlowOptions = {}): BootFeature {
+  return {
+    install: () => {
+      enableAgentGlow(options);
+    },
   };
 }

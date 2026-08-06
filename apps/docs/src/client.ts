@@ -1,4 +1,4 @@
-import { boot } from 'janux/client';
+import { boot, agentGlow } from 'janux/client';
 import { DocsCopilot } from './components/DocsCopilot';
 import { PlaygroundShell } from './components/PlaygroundShell';
 import { SearchModal } from './components/SearchModal';
@@ -8,7 +8,7 @@ import { setupHeroVideo } from './hero-video';
 import { setupScoresVideo } from './scores-video';
 import { setupTocSpy } from './toc-spy';
 
-const client = boot({ defs: [DocsCopilot, PlaygroundShell, SearchModal, ThemeToggle], glow: true });
+const client = boot({ defs: [DocsCopilot, PlaygroundShell, SearchModal, ThemeToggle], glow: agentGlow() });
 
 setupTocSpy();
 setupCopyCode();

@@ -13,7 +13,7 @@ not even enter and `update` cost 1816ms).
 
 - **Parity or wins across the full-app suites**: lifecycle 1.00×react, stores 0.83-1.27× (outlier: tanstack invalidation 1.62×), submit 0.92×, reset 0.40×, scheduler 1.48×, composition 1.26×, suspense-recovery 1.01-1.10×.
 - **Resume crushes hydration**: news hydrate 0.13×react; hydration at 6× throttle 0.19-0.20×; hydration_work 0.22-0.24×.
-- **Bundle**: 24.7KB total js_gzip = 0.40×react; 4th of 6 (preact 10.0, solid 14.1, svelte 18.4, janux 24.7≈vue-vapor 24.1, react 62.1).
+- **Bundle**: 30.9KB total js_gzip = 0.50×react; 5th of 6 (preact 10.0, solid 14.1, svelte 18.4, vue-vapor 24.1, janux 30.9, react 62.1). The July 0.4.0 recording was 24.7KB; the 0.4→0.6 feature layers grew it to 34.8 before #26 clawed back what an unused layer should never have cost.
 - **Bulk creation**: runlots 0.64×, clear 0.75×.
 - **Honest gaps with a known cause**: sub-ms krausest micro-ops (select 16.8×, remove 20× — needs a fine-grained list primitive, RFC below) and SSR throughput (4.5× — the string-emission pipeline, the next server-side lever).
 - **scaling-curves is now ~linear**: 19.5/41/101/258/508ms for 8/32/96/256/512 (was 127/454/1281/3470/7609).
@@ -54,6 +54,7 @@ delta — including the ones that get reverted.
 | 23 | **Leaf-path subscription for binding thunks** (`withLeafTracking` in `state/reactive-state.ts`, wrapped around every binding effect) | #22's boundary is structural, not inherent: record the paths a thunk traverses and subscribe only the MAXIMAL ones — `touch` already bumps a written path's descendants, so a container write still reaches the leaf signal | 512 sibling field bindings: one write re-runs 1 binding, not 512 (regression test). Unblocks #22's fixture bindings, which now land via #24: controlled-form typing 87.5→83.2, controls_submit 73.3→67.4, reset 18.6→15.8; scaling-curves update_256 11.3→10.4, update_512 17.9→17.4 (2026-08-05 final pass, vs a same-day pre-change baseline; zero regressions across the five suites). Cost: fw_gzip +204B — the per-instance frame keying, structural-write notification and the scopes-inside-frames boundary the adversarial review demanded are the paid-for part | ✅ committed |
 | 24 | **Compile-time binding maps** (`@janux/vite` `binding-sites.ts`; on by default, `compiler.bindingMaps: false` opts out) | what #17/#20/#21 hand-wrote, the compiler can prove: a JSX site that is a pure static read of a schema-typed state path (map-callback list indexing included) rewrites to the same thunk shape — so an idiomatic view stops re-rendering per island without the author binding anything | the janux fixtures now build through the shipped compiler, as the Solid/Svelte/Vapor fixtures ship theirs; the #23 deltas are the compiled numbers; zero janux regressions across js-framework, scaling-curves, controlled-form, todomvc and bundle-size; app bytes +2B gzip | ✅ committed |
 | 25 | **Per-intent code splitting** (`compiler.splitIntents`, `intent-split.ts`) | a provably self-contained `run()` moves to a chunk downloaded on first invocation; the stub keeps `intents[name]`'s callable shape, so wire markers, guards, schemas and the manifest never notice | shop: 9 of 12 intents extract (~1.2KB gz of on-demand chunks) but the entry grows 32.9→33.3KB gz — stub + chunk overhead exceeds what tiny run bodies move. Kept opt-in: it pays exactly when a run carries real weight (a heavy import) | ✅ committed (opt-in) |
+| 26 | **Boot features as imports** (`agentGlow()`/`agentCursor()`/`i18n()` from `janux/client`, query hydration into the first `getQueryClient()`, `"sideEffects": false` on the package) | `boot({ glow: true })` forced every app to bundle the glow painter, cursor, i18n installer and query cache, used or not — the bundle had crept 24.7→34.8KB gz across 0.4→0.6 as each new layer wired itself into `boot()` unconditionally. A feature the app imports is a feature the bundler can drop | krausest fixture js_gzip 34,818→30,937 (react 62,120; ratio 0.560→0.498), fw_gzip 32,843→28,963 (0.482); todomvc 34,218→30,332. Both bundle ratio guards back under 0.5×react. The always-on WebMCP surface keeps its paint primitives through the new `feedback.ts` seam; `sideEffects: false` alone dropped ~390B gz of re-exported-but-unused modules (the SSR unsuspense runtime among them) | ✅ committed |
 
 **What #22 teaches, and it is the boundary of the primitive**: a binding is a
 win exactly when its thunk reads a path narrower than what the enclosing view
@@ -69,6 +70,11 @@ read.)
 **88 of 156 janux/react cells are `+` and 68 are `-` — 56.4% positive**, from
 68/87 (43.9%) at the start of this loop and 74/82 (47.4%) after `<For>` alone.
 The 90% acceptance bar (141 cells) was **not** reached.
+
+(2026-08-06, after #26: a full verification run kept all 23 ratio guards green
+and re-measured the deterministic bytes quoted in #26. Its timing columns ran
+with concurrent tooling on the machine — usable for ratios, not for records —
+so the board above remains the 2026-08-02 pass.)
 
 The two primitives added since the last pass, and what each bought:
 

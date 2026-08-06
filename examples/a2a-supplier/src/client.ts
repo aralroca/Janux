@@ -1,4 +1,4 @@
-import { boot } from 'janux/client';
+import { boot, agentGlow, agentCursor } from 'janux/client';
 import { ApprovalDesk } from './components/ApprovalDesk';
 
-boot({ defs: [ApprovalDesk], glow: true, cursor: true });
+boot({ defs: [ApprovalDesk], glow: agentGlow(), cursor: agentCursor() });

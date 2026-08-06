@@ -12,6 +12,7 @@
     "email": "contact@aralroca.com"
   },
   "type": "module",
+  "sideEffects": false,
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",

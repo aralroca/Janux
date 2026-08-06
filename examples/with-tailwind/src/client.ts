@@ -1,4 +1,4 @@
-import { boot } from 'janux/client';
+import { boot, agentGlow, agentCursor } from 'janux/client';
 import { PricingTable } from './components/Pricing';
 
-boot({ defs: [PricingTable], glow: true, cursor: true });
+boot({ defs: [PricingTable], glow: agentGlow(), cursor: agentCursor() });

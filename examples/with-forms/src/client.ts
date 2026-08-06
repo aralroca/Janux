@@ -1,4 +1,4 @@
-import { boot } from 'janux/client';
+import { boot, agentGlow, agentCursor } from 'janux/client';
 import { Registration } from './components/Registration';
 
-boot({ defs: [Registration], glow: true, cursor: true });
+boot({ defs: [Registration], glow: agentGlow(), cursor: agentCursor() });

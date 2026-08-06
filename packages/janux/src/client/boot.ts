@@ -1,15 +1,12 @@
 import { createBus } from '../runtime/bus';
-import { hydrateQueries } from './query-payload';
 import type { ComponentDef } from '../define/types';
 import type { ForeignDef } from '../interop';
 import type { AuditEntry, Proposal } from '../runtime/intents';
 import { createBridge, type JanuxBridge } from './bridge';
 import { listen } from './events';
+import type { BootFeature } from './features';
 import { mountDocumentForeigns, mountIsland, type MountContext } from './mount';
 import { createClientRegistry, registerDef, type IslandLoader } from './registry';
-import { enableAgentCursor, type CursorOptions } from './cursor';
-import { enableAgentGlow, type GlowOptions } from './glow';
-import { installI18n } from './i18n';
 import type { NavigationConfig } from '../config';
 import { mountEagerIslands, performNavigation } from './navigate';
 import { captureNonce } from './nonce';
@@ -25,10 +22,12 @@ export interface BootOptions {
   islands?: Record<string, IslandLoader>;
   defs?: (ComponentDef | ForeignDef)[];
   ctx?: Record<string, unknown>;
-  /** Highlight islands while an agent operates them. `true` or `{ duration }`. */
-  glow?: boolean | GlowOptions;
-  /** Simulated cursor that travels to each element an agent operates. Combines freely with `glow`. */
-  cursor?: boolean | CursorOptions;
+  /** Highlight islands while an agent operates them: `glow: agentGlow()`. An import, not a flag, so unused layers ship zero bytes. */
+  glow?: BootFeature;
+  /** Simulated cursor that travels to each element an agent operates: `cursor: agentCursor()`. Combines freely with `glow`. */
+  cursor?: BootFeature;
+  /** Client-side translations: `i18n: i18n()`. Reads the page's embedded dictionary, and re-reads it after every SPA navigation. */
+  i18n?: BootFeature;
   /**
    * SPA navigation via the Navigation API + streamed DOM diff. Default: true.
    * Overrides `navigation` from `janux.config.ts`, which is where an app
@@ -96,6 +95,18 @@ async function awaitTracked(mount: MountContext, work: Promise<unknown>): Promis
   } finally {
     mount.inflight.delete(work);
   }
+}
+
+/** Dev-only (the call site is `import.meta.env?.DEV`-guarded, so production builds ship none of this). */
+function warnOnLegacyFlags(options: BootOptions): void {
+  const legacy = [
+    ['glow', options.glow, 'agentGlow()'],
+    ['cursor', options.cursor, 'agentCursor()'],
+  ].filter(([, value]) => typeof value === 'boolean');
+
+  legacy.forEach(([key, , factory]) => {
+    console.warn(`Janux: boot({ ${key}: true }) no longer ships the feedback layer — import { ${String(factory).replace('()', '')} } from 'janux/client' and pass ${key}: ${factory}.`);
+  });
 }
 
 let nativeClickAt = 0;
@@ -234,11 +245,13 @@ export function boot(options: BootOptions = {}): JanuxClient {
 
   const registry = createClientRegistry();
   const proposals = new Map<string, Proposal>();
+  const refreshers: Array<() => void> = [];
   const mount: MountContext = {
     registry,
     bus: createBus(),
     ctx: options.ctx ?? {},
     inflight: new Set(),
+    refresh: refreshers,
     onProposal: (proposal) => {
       proposals.set((proposal as Proposal).id, proposal as Proposal);
       document.dispatchEvent(new CustomEvent('janux:proposal', { detail: proposal }));
@@ -257,13 +270,16 @@ export function boot(options: BootOptions = {}): JanuxClient {
   });
   (options.defs ?? []).forEach((def) => registerDef(registry, def));
   readSnapshots(mount);
-  // Before anything can observe a query: what SSR already fetched is in the
-  // payload, so an island resuming here must not ask for it a second time.
-  hydrateQueries();
-  installI18n(mount.ctx);
+  if (import.meta.env?.DEV) warnOnLegacyFlags(options);
+  // Features are imported code, not flags: installing them here (before any
+  // island mounts) lets i18n publish the page dictionary into the shared ctx
+  // first, and their refreshers re-run after every SPA navigation.
+  for (const feature of [options.i18n, options.glow, options.cursor]) {
+    const refresh = feature?.install(mount.ctx);
+
+    if (refresh) refreshers.push(refresh);
+  }
   listen(mount, (work) => trackInflight(mount, work));
-  if (options.glow) enableAgentGlow(options.glow === true ? {} : options.glow);
-  if (options.cursor) enableAgentCursor(options.cursor === true ? {} : options.cursor);
   const navigation = shellNavigationConfig();
 
   if (options.navigation ?? navigation.spa ?? true) installNavigation(mount, navigation);

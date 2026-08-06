@@ -1,4 +1,4 @@
-import { glowElement, injectGlowStyles } from './glow';
+import { glowElement, injectGlowStyles } from './feedback';
 import type { WebMCPToolDescriptor } from './webmcp';
 
 export interface PageLink {

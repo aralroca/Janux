@@ -21,6 +21,12 @@ export interface MountContext {
    * instance from one the user created by interacting mid-stream.
    */
   epoch?: number;
+  /**
+   * Boot-feature refreshers, re-run after every SPA navigation — how i18n
+   * re-reads the incoming page's dictionary. `boot()` fills it; contexts built
+   * by hand (tests) may omit it.
+   */
+  refresh?: Array<() => void>;
 }
 
 /** Client-discovered nested islands seed their def (already imported by the parent) and props. */

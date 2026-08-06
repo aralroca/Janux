@@ -1,4 +1,4 @@
-import { boot } from 'janux/client';
+import { boot, agentGlow, agentCursor } from 'janux/client';
 import { Notes } from './components/Notes';
 
-boot({ defs: [Notes], glow: true, cursor: true });
+boot({ defs: [Notes], glow: agentGlow(), cursor: agentCursor() });
