@@ -232,12 +232,30 @@ const freezerShell = component({
   view: ({ state }: any) => jsx('section', { children: jsx(FreezerIsland as any, { state }) }),
 });
 
-async function until(check: () => boolean, ms = 1500): Promise<void> {
+/** Bound on one drain, so a queue that keeps refilling cannot outlast the budget below. */
+const DRAIN_MS = 25;
+
+/**
+ * Polls `check`, draining happy-dom's task queue between attempts.
+ *
+ * The drain is raced, not awaited: `waitUntilComplete()` resolves only once
+ * *all* async work has settled, and React's scheduler can keep work queued for
+ * as long as it likes. Awaiting it outright made this loop's budget a fiction —
+ * under load the whole test hung to Bun's 5s default instead of failing here,
+ * which is how five of these turned up as bare timeouts on a busy CI runner
+ * with nothing to say about which condition never came true.
+ */
+async function until(check: () => boolean, ms = 4000): Promise<void> {
   const start = Date.now();
+  const drain = (): Promise<unknown> =>
+    Promise.race([
+      (globalThis as any).happyDOM?.waitUntilComplete?.() ?? Promise.resolve(),
+      new Promise((resolve) => setTimeout(resolve, DRAIN_MS)),
+    ]);
 
   while (!check()) {
     if (Date.now() - start > ms) throw new Error('until: condition not met');
-    await (globalThis as any).happyDOM?.waitUntilComplete?.();
+    await drain();
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
 }
