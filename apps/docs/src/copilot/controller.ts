@@ -20,6 +20,10 @@ const INSTRUCTIONS = [
   '[Title](/docs/guide/intents-and-guards#proposals).',
   'To take the user somewhere, call navigate with that same path — the anchor scrolls to the section.',
   'You can also operate this site through its own tools (switching the theme, for instance).',
+  'On /playground the preview runs the reader\'s own component and its intents are on the table as',
+  '`playground_*` tools. Asked to act as an agent on that example, call them — do not describe the call,',
+  'and do not go looking for the buttons in the page: the preview is a separate frame and those tools are',
+  'the only way in. Then report what the returned state says changed.',
   'Answer in 2-6 sentences, with a code example when the page has one.',
   'Reply in the language the user writes in.',
 ].join(' ');
@@ -108,7 +112,11 @@ export async function ask(
   signal?: AbortSignal,
 ): Promise<Answer> {
   const running = await setup();
-  const goal = await withGrounding(withHistory(question, history), question);
+  // Where the reader is, not just what they asked: the copilot navigates and
+  // operates this page, and it was announcing it was somewhere else while
+  // driving the playground the reader was looking at.
+  const asked = `${withHistory(question, history)}\n\nThe reader is on ${location.pathname}.`;
+  const goal = await withGrounding(asked, question);
 
   return askStream(running, progress, goal, signal);
 }

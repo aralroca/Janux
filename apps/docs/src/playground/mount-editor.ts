@@ -1,6 +1,7 @@
 import { EXAMPLES } from './examples';
 import { createEditor } from './monaco-setup';
 import { createFrame, decodeShare, encodeShare, type FrameHost } from './frame-host';
+import { createFrameTools } from './frame-tools';
 import { renderAgentPanel, renderProposal } from './agent-panel';
 
 interface Els {
@@ -128,6 +129,9 @@ export async function mountPlayground(): Promise<() => void> {
   let pendingProposal: any;
   let glowEnabled = true;
   let cursorEnabled = true;
+  // The same wire the "Call as agent" buttons use, exposed to whatever is
+  // driving this page — Ask AI included.
+  const agentTools = createFrameTools((message) => frame.send(message));
   const run = (): void => {
     els.error.hidden = true;
     els.loading.classList.add('on');
@@ -160,12 +164,14 @@ export async function mountPlayground(): Promise<() => void> {
     if (data?.type === 'ready' || data?.type === 'error') els.loading.classList.remove('on');
     if (data?.type === 'frame-ready') run();
     if (data?.type === 'state') {
+      agentTools.sync(data.manifest, data.resource);
       renderAgentPanel(els.agent, data.manifest, data.resource, callTool, {
         glow: { enabled: glowEnabled, onToggle: toggleGlow },
         cursor: { enabled: cursorEnabled, onToggle: toggleCursor },
       });
       showProposal();
     }
+    if (data?.type === 'call-result') agentTools.settle(data.id, data.result);
     if (data?.type === 'proposal') {
       pendingProposal = data.proposal;
       showProposal();
@@ -187,6 +193,7 @@ export async function mountPlayground(): Promise<() => void> {
   });
 
   return () => {
+    agentTools.dispose();
     frame.dispose();
     editor.getModel()?.dispose();
     editor.dispose();
