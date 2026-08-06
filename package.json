@@ -1,6 +1,6 @@
 {
   "name": "janux-monorepo",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Janux — the fullstack framework for the Agentic Web. One component, two faces.",
   "private": true,
   "repository": {

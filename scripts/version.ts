@@ -2,7 +2,7 @@
 /**
  * `changeset version`, plus the two things it cannot do in this repository.
  *
- * It writes eight package changelogs and bumps eight manifests. It does not
+ * It writes the publishable packages' changelogs and bumps their manifests. It does not
  * know about the root `CHANGELOG.md` — the file a reader actually opens — and
  * it does not know about the root manifest, which is private, is not a
  * workspace member, and still carries the version the tag is cut from.
@@ -19,7 +19,7 @@ import { packageDir, PUBLISH_ORDER, readManifest } from './packaging/packages';
 const ROOT_CHANGELOG = 'CHANGELOG.md';
 const ROOT_MANIFEST = 'package.json';
 
-/** The eight packages are a fixed group, so "the version" is a single fact — or a bug. */
+/** The publishable packages are a fixed group, so "the version" is a single fact — or a bug. */
 async function releaseVersion(): Promise<string> {
   const manifests = await Promise.all(PUBLISH_ORDER.map(readManifest));
   const versions = new Set(manifests.map((pkg) => pkg.version as string));
