@@ -36,7 +36,9 @@ export const PlaygroundShell = component({
         <button id="pg-share" type="button">
           Share
         </button>
-        <span class="pg-hint">Edits run automatically · the right panel is what an agent sees</span>
+        {/* The tools are the reader's own, and Ask AI can call them — worth saying,
+            because nothing on screen suggests the chat reaches into the preview. */}
+        <span class="pg-hint">Edits run automatically · the right panel is what an agent sees · ask Ask AI to drive it</span>
       </div>
       <div class="playground" id="pg-root">
         <div class="editor-pane">

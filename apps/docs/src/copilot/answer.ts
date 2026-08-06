@@ -38,19 +38,37 @@ const NOTHING_FOUND = 'I could not find an answer for that in the docs.';
 async function consume(stream: ReadableStream<UIMessageChunk>, progress: Progress): Promise<Streamed> {
   const reader = stream.getReader();
   let text = '';
+  let ranTool = false;
   let end: Streamed | undefined;
 
   while (!end) {
     const { done, value } = await reader.read();
 
     if (done) break;
-    // Each turn is its own text part: a model that narrates ("Let me look this
-    // up") before answering would otherwise have the two glued into one word.
-    if (value.type === 'text-start' && text) text += '\n\n';
+    /*
+     * Text written before a tool ran is a guess about what the tool will say,
+     * and the model is free to be wrong: asked to reset a guarded counter it
+     * announced the counter was back to zero, then the approval it was actually
+     * waiting on landed and it said so again, properly. Both sentences stayed
+     * on screen, contradicting each other. So a text part that opens *after* a
+     * tool call replaces the narration instead of being glued under it — while
+     * parts within one turn still join, since that is one answer in pieces.
+     */
+    if (value.type === 'text-start' && text) {
+      text = ranTool ? '' : `${text}\n\n`;
+      ranTool = false;
+    }
     // Stripped per delta, not once at the end: the model's reasoning would
     // otherwise sit in the panel for the whole run and vanish on the last paint.
     if (value.type === 'text-delta') progress.onText(stripThink((text += value.delta ?? '')));
-    if (value.type === 'tool-input-available') progress.onTool(String(value.toolName));
+    // Both signals: only `tool-output-available` is minted here, `tool-input-available`
+    // is the provider's and not every one sends it — keying on that alone left the
+    // guess standing on the models that don't.
+    if (value.type === 'tool-output-available' || value.type === 'tool-output-denied') ranTool = true;
+    if (value.type === 'tool-input-available') {
+      ranTool = true;
+      progress.onTool(String(value.toolName));
+    }
     if (value.type === 'abort') end = { text, outcome: 'stopped' };
     if (value.type === 'error') end = { text, outcome: 'failed', error: String(value.errorText) };
   }

@@ -1,6 +1,8 @@
+import { forgetApprovals, useApprovalSink } from '../approvals';
 import { EXAMPLES } from './examples';
 import { createEditor } from './monaco-setup';
 import { createFrame, decodeShare, encodeShare, type FrameHost } from './frame-host';
+import { createFrameTools } from './frame-tools';
 import { renderAgentPanel, renderProposal } from './agent-panel';
 
 interface Els {
@@ -128,6 +130,9 @@ export async function mountPlayground(): Promise<() => void> {
   let pendingProposal: any;
   let glowEnabled = true;
   let cursorEnabled = true;
+  // The same wire the "Call as agent" buttons use, exposed to whatever is
+  // driving this page — Ask AI included.
+  const agentTools = createFrameTools((message) => frame.send(message));
   const run = (): void => {
     els.error.hidden = true;
     els.loading.classList.add('on');
@@ -137,14 +142,15 @@ export async function mountPlayground(): Promise<() => void> {
   const callTool = (tool: string, input: unknown): void => {
     frame.send({ type: 'call', tool, input, id: `${Date.now()}` });
   };
-  const approve = (id: string): void => {
+  // One path for both cards — the agent pane's and the chat's. Whichever the
+  // reader used, the frame runs it once and the parked tool call answers.
+  const decide = (id: string, approved: boolean): void => {
     pendingProposal = undefined;
-    frame.send({ type: 'approve', id });
+    frame.send({ type: approved ? 'approve' : 'reject', id });
+    agentTools.decided(id, approved).catch(console.error);
   };
-  const reject = (id: string): void => {
-    pendingProposal = undefined;
-    frame.send({ type: 'reject', id });
-  };
+  const approve = (id: string): void => decide(id, true);
+  const reject = (id: string): void => decide(id, false);
   const showProposal = (): void => {
     if (pendingProposal) renderProposal(els.agent, pendingProposal, approve, reject);
   };
@@ -160,12 +166,14 @@ export async function mountPlayground(): Promise<() => void> {
     if (data?.type === 'ready' || data?.type === 'error') els.loading.classList.remove('on');
     if (data?.type === 'frame-ready') run();
     if (data?.type === 'state') {
+      agentTools.sync(data.manifest, data.resource);
       renderAgentPanel(els.agent, data.manifest, data.resource, callTool, {
         glow: { enabled: glowEnabled, onToggle: toggleGlow },
         cursor: { enabled: cursorEnabled, onToggle: toggleCursor },
       });
       showProposal();
     }
+    if (data?.type === 'call-result') agentTools.settle(data.id, data.result);
     if (data?.type === 'proposal') {
       pendingProposal = data.proposal;
       showProposal();
@@ -174,6 +182,7 @@ export async function mountPlayground(): Promise<() => void> {
   };
 
   frame = createFrame(els.preview, onFrameMessage);
+  useApprovalSink(decide);
   editor.onDidChangeModelContent(debounce(run, 600));
   els.example.addEventListener('change', () => {
     editor.setValue(EXAMPLES[els.example.value] ?? '');
@@ -187,6 +196,9 @@ export async function mountPlayground(): Promise<() => void> {
   });
 
   return () => {
+    useApprovalSink(undefined);
+    forgetApprovals();
+    agentTools.dispose();
     frame.dispose();
     editor.getModel()?.dispose();
     editor.dispose();

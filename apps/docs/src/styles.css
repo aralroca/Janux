@@ -1395,6 +1395,14 @@ body[data-theme='dark'] .scores-video {
   background: var(--bg-soft);
 }
 
+/* The proposal sits between the answer and the composer, above the panel's own
+   scroll: a decision the reader has to make must not be something they can
+   scroll past. `.proposal-card` styles it — this only places it. */
+.copilot-panel .proposal-card {
+  flex: none;
+  margin: 0 12px 12px;
+}
+
 /* On a phone the panel is the screen; a floating card would waste the room the
    answer needs. */
 @media (max-width: 700px) {

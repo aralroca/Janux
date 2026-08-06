@@ -1,4 +1,4 @@
-import { boot, agentGlow } from 'janux/client';
+import { boot, agentCursor, agentGlow } from 'janux/client';
 import { DocsCopilot } from './components/DocsCopilot';
 import { PlaygroundShell } from './components/PlaygroundShell';
 import { SearchModal } from './components/SearchModal';
@@ -8,7 +8,13 @@ import { setupHeroVideo } from './hero-video';
 import { setupScoresVideo } from './scores-video';
 import { setupTocSpy } from './toc-spy';
 
-const client = boot({ defs: [DocsCopilot, PlaygroundShell, SearchModal, ThemeToggle], glow: agentGlow() });
+// Both feedback layers: the docs site is the showcase for them, so Ask AI
+// operating this page has to look the way the guide says it looks.
+const client = boot({
+  defs: [DocsCopilot, PlaygroundShell, SearchModal, ThemeToggle],
+  glow: agentGlow(),
+  cursor: agentCursor(),
+});
 
 setupTocSpy();
 setupCopyCode();

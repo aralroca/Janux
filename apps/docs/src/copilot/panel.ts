@@ -1,7 +1,51 @@
+import { decideApproval, type AgentProposal, type ApprovalSurface } from '../approvals';
 import type { Exchange, Progress } from './controller';
 import { forgetQuestion, interruptedQuestion, rememberQuestion, wasInterrupted } from './interrupted';
 
 export { rememberQuestion, wasInterrupted };
+
+function summarize(proposal: AgentProposal): string {
+  const input = proposal.input === undefined ? '' : ` ${JSON.stringify(proposal.input)}`;
+
+  return `${proposal.tool}${input}`;
+}
+
+/**
+ * The chat as a place to approve from.
+ *
+ * It goes through the island's own `showProposal` intent rather than writing
+ * `state` directly: a proposal can be raised by a WebMCP client with no intent
+ * anywhere on the stack, and Janux refuses those writes by design (RFC §4.4) —
+ * which left the card unrendered and the agent's call parked on a decision the
+ * reader was never shown.
+ */
+export function approvalSurface(state: any, intents: any): ApprovalSurface {
+  const post = (id: string, summary: string): void => {
+    intents.showProposal({ id, summary }).catch(console.error);
+  };
+
+  return {
+    show(proposal) {
+      if (!state.open) return false;
+      post(proposal.id, summarize(proposal));
+      scrollToLatest();
+
+      return true;
+    },
+    clear(id) {
+      if (state.proposalId === id) post('', '');
+    },
+  };
+}
+
+/** Both buttons, one path: the agent pane's card settles the same proposal the same way. */
+export function settleProposal(state: any, approved: boolean): void {
+  const id = state.proposalId;
+
+  if (!id) return;
+  state.proposalId = '';
+  decideApproval(id, approved);
+}
 
 /**
  * The agent runtime (gui-agent, the markdown renderer) loads only when the

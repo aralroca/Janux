@@ -105,6 +105,38 @@ describe('askStream', () => {
     expect(answer.html).toContain('</p>');
   });
 
+  it('drops a guess the tool went on to disprove', async () => {
+    const answer = await askStream(
+      streamOf([
+        { type: 'text-start', id: 't0' },
+        { type: 'text-delta', delta: 'The counter is back to zero.' },
+        { type: 'text-end', id: 't0' },
+        // No `tool-input-available`: several providers only ever send the output.
+        { type: 'tool-output-available', toolCallId: 'c1', output: { approved: true } },
+        { type: 'text-start', id: 't1' },
+        { type: 'text-delta', delta: 'You approved it, so it ran: count is 0.' },
+      ]),
+      silent,
+    );
+
+    // Both sentences used to stay, the wrong one first — the reader got to read
+    // the model contradicting itself about what it had just done.
+    expect(answer.text).toBe('You approved it, so it ran: count is 0.');
+  });
+
+  it('keeps the narration when the run ends before answering', async () => {
+    const answer = await askStream(
+      streamOf([
+        { type: 'text-start', id: 't0' },
+        { type: 'text-delta', delta: 'Calling the reset tool now.' },
+        { type: 'tool-input-available', toolName: 'playground_counter_reset' },
+      ]),
+      silent,
+    );
+
+    expect(answer.text).toBe('Calling the reset tool now.');
+  });
+
   it('announces the tool that is running', async () => {
     const tools: string[] = [];
 
