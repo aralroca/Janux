@@ -119,11 +119,16 @@ export function createFrameTools(send: Send): FrameTools {
   return {
     sync(manifest, resource) {
       const tools = manifest?.tools ?? [];
-      // The whole shape, not just the names: editing an intent's input schema
-      // renames nothing, and a stale schema is what the model would be handed.
-      const shape = JSON.stringify(tools.map((tool: any) => [tool.name, tool.guard, tool.input]));
+      /*
+       * The whole manifest, verbatim — not a list of fields worth watching.
+       * Picking fields is how the agent pane came to advertise one description
+       * while the registered tool still carried the previous one: the reader
+       * edits arbitrary parts of an intent, so anything that differs is a
+       * different surface, including fields nobody has added yet.
+       */
+      const shape = JSON.stringify(tools);
 
-      // Every call reports fresh state; only a changed surface needs re-registering.
+      // Every call reports fresh state; only a changed surface re-registers.
       snapshot = resource;
       reports.splice(0).forEach((done) => done());
       if (shape === signature) return;

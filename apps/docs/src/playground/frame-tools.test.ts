@@ -171,6 +171,21 @@ describe('playground frame tools', () => {
     expect(registry.get('playground_counter_inc')!.inputSchema).toEqual(edited.tools[0]!.input as any);
   });
 
+  it('re-registers when the reader edits only an intent description', () => {
+    const { tools } = frame();
+    // Same tools, same guards, same schemas: the description is the only edit.
+    const reworded = {
+      tools: [{ ...COUNTER.tools[0]!, description: 'Add points to the basket' }, COUNTER.tools[1]!],
+    };
+
+    tools.sync(COUNTER, { state: { count: 0 } });
+    tools.sync(reworded, { state: { count: 0 } });
+
+    // The agent pane showed the new wording while the registered tool still
+    // carried the old one — the panel and the agent disagreeing about the page.
+    expect(registry.get('playground_counter_inc')!.description).toContain('Add points to the basket');
+  });
+
   it('keeps the surface across the state reports every call produces', () => {
     const { tools } = frame();
 

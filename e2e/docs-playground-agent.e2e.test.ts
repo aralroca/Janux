@@ -215,6 +215,75 @@ describe.skipIf(!BUILT)('an agent can operate the playground (apps/docs)', () =>
     TIMEOUT,
   );
 
+  /**
+   * The reader's own code is the point of the playground: an intent they write
+   * has to be a tool the agent can call, with the wording they gave it.
+   * Delivered through a share link — the app's own way of loading arbitrary
+   * reader code, and unlike driving Monaco it behaves the same on every engine.
+   *
+   * This loads that code once, so it proves the surface is built from the
+   * reader's manifest and nothing else. Re-syncing *after* a change is a
+   * different claim: the example switch below covers it end to end, and
+   * `frame-tools.test.ts` covers which edits count — including the reword that
+   * a surface keyed on names, guards and schemas alone used to miss.
+   */
+  it(
+    "exposes the reader's own intents, with the descriptions they wrote",
+    async () => {
+      const source = (description: string, extra: string) => `import { component, intent, schema, int } from 'janux';
+
+export const Counter = component({
+  name: 'counter',
+  description: 'A counter agents can read and change',
+  state: schema({ count: int() }),
+  intents: {
+    inc: intent({
+      description: '${description}',
+      input: schema({ by: int().default(1) }),
+      run: ({ state, input }) => (state.count += input.by),
+    }),${extra}
+  },
+  view: ({ state, intents }) => (
+    <section class="flex min-h-screen flex-col items-center justify-center gap-6">
+      <h1 class="text-6xl font-extrabold">{state.count}</h1>
+      <button onClick={intents.inc}>+1</button>
+    </section>
+  ),
+});
+`;
+      const code = source(
+        'Add points to the basket',
+        `
+    double: intent({ description: 'Double it', run: ({ state }) => (state.count *= 2) }),`,
+      );
+      const share = Buffer.from(code, 'utf8').toString('base64url');
+      const { page } = await openPage(browser!);
+
+      await page.goto(`${BASE}/playground#c=${share}`);
+      await page.waitForSelector('#pg-agent .tool-row', { timeout: TIMEOUT });
+      await page.waitForFunction(
+        () => (document as any).modelContext.listTools().some((tool: any) => tool.name === 'playground_counter_double'),
+        { timeout: TIMEOUT },
+      );
+
+      // An intent the reader wrote, callable, doing what its body says.
+      await callTool(page, 'playground_counter_inc', { by: 3 });
+
+      expect((await callTool(page, 'playground_counter_double', {})).state).toEqual({ count: 6 });
+
+      // …advertised with the reader's own wording, not the stock example's.
+      const described = await page.evaluate(
+        () =>
+          (document as any).modelContext.listTools().find((tool: any) => tool.name === 'playground_counter_inc')
+            ?.description ?? '',
+      );
+
+      expect(described).toContain('Add points to the basket');
+      await page.close();
+    },
+    TIMEOUT,
+  );
+
   it(
     'swaps the surface with the example, and takes it away on the way out',
     async () => {
