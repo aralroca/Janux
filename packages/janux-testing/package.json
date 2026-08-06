@@ -1,6 +1,6 @@
 {
   "name": "@janux/testing",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Testing utilities for Janux apps — a route harness, api() mocks and settled-based Playwright fixtures. No sleeps: quiescence is observable.",
   "repository": {
     "type": "git",
