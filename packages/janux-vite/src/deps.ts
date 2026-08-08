@@ -47,6 +47,7 @@ export function packageDir(specifier: string, from: string): string | undefined 
 const RUNTIME_BROWSER_DEPS: [dep: string, owner?: string][] = [
   ['diff-dom-streaming', 'janux'],
   ['react'],
+  ['react-dom'],
   ['react-dom/client'],
   ['@aralroca/gui-agent', '@janux/agent'],
   ['@aralroca/gui-agent/ai-sdk', '@janux/agent'],

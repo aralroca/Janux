@@ -66,14 +66,29 @@ function imageSources(publicDir: string): string[] {
     .filter(isOptimizable);
 }
 
+/**
+ * A `public/` directory is not a curated gallery — a mislabeled or corrupt file
+ * costs a warning that names it, never the build. Returns `true` on success.
+ */
+async function writeSourceOrWarn(outDir: string, src: string, file: string): Promise<boolean> {
+  try {
+    await writeSource(outDir, src, file);
+
+    return true;
+  } catch (error) {
+    console.warn(`janux build: skipped image ${src} — ${error instanceof Error ? error.message : error}`);
+
+    return false;
+  }
+}
+
 /** Every variant every page could link to, written under `outDir`. Returns the number of sources processed. */
 export async function writeImageVariants(root: string, outDir: string): Promise<number> {
   const publicDir = join(root, 'public');
   const sources = imageSources(publicDir);
+  const written = await Promise.all(sources.map((src) => writeSourceOrWarn(outDir, src, join(publicDir, src.slice(1)))));
 
-  await Promise.all(sources.map((src) => writeSource(outDir, src, join(publicDir, src.slice(1)))));
-
-  return sources.length;
+  return written.filter(Boolean).length;
 }
 
 /** The dev answer to a variant URL, or `undefined` when the request is not one Janux would have emitted. */

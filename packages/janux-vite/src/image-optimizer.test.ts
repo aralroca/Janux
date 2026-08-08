@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { afterAll, beforeAll, describe, expect, it, spyOn } from 'bun:test';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { IMAGE_FORMATS, IMAGE_WIDTHS } from 'janux';
@@ -89,5 +89,43 @@ describe('a source whose name needs encoding', () => {
     const response = await imageResponse(APP, `/${encoded}/640.webp`);
 
     expect(response?.headers.get('content-type')).toBe('image/webp');
+  });
+});
+
+/**
+ * A public directory is not a curated gallery: real apps carry every file the
+ * site ever served, including the occasional mislabeled or corrupt "image". One
+ * bad file must cost a warning that names it — never the whole build.
+ */
+describe('a source sharp cannot decode', () => {
+  let brokenApp = '';
+  let brokenOut = '';
+
+  beforeAll(() => {
+    brokenApp = mkdtempSync(join(tmpdir(), 'janux-image-broken-'));
+    brokenOut = mkdtempSync(join(tmpdir(), 'janux-image-broken-out-'));
+    mkdirSync(join(brokenApp, 'public/photos'), { recursive: true });
+    copyFileSync(join(APP, 'public/photos/hero.jpg'), join(brokenApp, 'public/photos/hero.jpg'));
+    writeFileSync(join(brokenApp, 'public/not-really.jpg'), 'plain text wearing a .jpg extension');
+  });
+
+  afterAll(() => {
+    rmSync(brokenApp, { recursive: true, force: true });
+    rmSync(brokenOut, { recursive: true, force: true });
+  });
+
+  it('skips it with a warning that names the file, and still writes everything else', async () => {
+    const warn = spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const processed = await writeImageVariants(brokenApp, brokenOut);
+
+      expect(processed).toBe(1);
+      expect(statSync(join(brokenOut, '_janux/image/photos/hero.jpg', '640.webp')).isFile()).toBe(true);
+      expect(existsSync(join(brokenOut, '_janux/image/not-really.jpg'))).toBe(false);
+      expect(warn.mock.calls.flat().join('\n')).toContain('/not-really.jpg');
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

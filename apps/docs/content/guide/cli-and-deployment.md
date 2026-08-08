@@ -22,6 +22,7 @@ janux eval [files...]       # scripted agent-task scenarios against a live app
 
 - Boots Vite with the Janux plugin: JSX runtime (`jsxImportSource: janux`), SSR route loading, and the SWC transform that turns `src/server/*.api.ts` into client fetch stubs.
 - Mounts the full Janux server as middleware: pages, `/_janux/api/*`, `/_janux/manifest`, `/_janux/agent`, `/_janux/approve`.
+- Picks up `janux.config.ts` edits live: the embedded server is rebuilt on file changes and the config is re-imported fresh each time — no restart needed. (Bun keys its module cache on the file path, so the config entry is evicted explicitly; an `?mtime` query alone only busts Node's cache.)
 
 ## What `build` produces
 

@@ -1,5 +1,5 @@
 export { JxType, type Infer, type InferShape, type JxKind, type JxFlags } from './types';
-export { str, int, num, bool, money, enums, list, obj, schema, type Shape } from './builders';
+export { str, int, num, bool, money, enums, list, obj, json, schema, type Shape } from './builders';
 export { validate, type JxResult, type JxError } from './validate';
 export { coerceForm } from './coerce';
 export { buildDefault } from './defaults';

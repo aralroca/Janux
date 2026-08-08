@@ -127,6 +127,15 @@ describe('retiring a worker', () => {
   it('says nothing for an app that never had one', () => {
     expect(retireServiceWorker(fixture({ 'client.js': 'x' }))).toBe(false);
   });
+
+  // A worker the app ships by hand in `public/sw.js` is not ours to retire:
+  // it reached the output by the verbatim public/ copy, not by `src/sw.ts`.
+  it('leaves a hand-shipped public/sw.js alone', () => {
+    const out = fixture({ 'dist/client/sw.js': 'hand-rolled worker', 'public/sw.js': 'hand-rolled worker' });
+
+    expect(retireServiceWorker(join(out, 'dist/client'), out)).toBe(false);
+    expect(existsSync(join(out, 'dist/client/sw.js'))).toBe(true);
+  });
 });
 
 describe('what the server registers', () => {

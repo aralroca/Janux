@@ -443,6 +443,22 @@ async function buffered(body: ReadableStream<Uint8Array>): Promise<ReadableStrea
   });
 }
 
+/**
+ * A live foreign host's children are React's: the morph must not rewrite DOM
+ * its fibers still reference — a later render bails out against text it never
+ * wrote (the state looks committed but the page shows the incoming SSR copy),
+ * and unmount throws `removeChild` on nodes it moved. The host element itself
+ * still diffs: the refreshed `data-jxf-props` attribute is what
+ * `mountDocumentForeigns` pushes into the live root after the swap. Hosts with
+ * no live root (first visit, hydrate-on-visible still pending) take the
+ * incoming SSR children as always.
+ */
+function skipLiveForeignChildren(mount: MountContext): (node: Node | null) => boolean {
+  return (node) =>
+    (node as Element | null)?.nodeName === 'JANUX-FOREIGN' &&
+    mount.registry.foreigns.has((node as Element).getAttribute('data-jx') ?? '');
+}
+
 async function applyPage(mount: MountContext, page: NavigablePage, options: NavigateOptions = {}): Promise<void> {
   const { signal } = options;
   const source = viewTransitionsWanted() ? await buffered(page.body) : page.body;
@@ -464,7 +480,10 @@ async function applyPage(mount: MountContext, page: NavigablePage, options: Navi
      */
     await applyWithViewTransition(async () => {
       // The Navigation API drives the transition; diff directly (its own would be skipped).
-      await diff(document, source, { shouldIgnoreNode: ignoreAppliedStyles() });
+      await diff(document, source, {
+        shouldIgnoreNode: ignoreAppliedStyles(),
+        shouldSkipChildren: skipLiveForeignChildren(mount),
+      });
       /*
        * A superseded navigation must not report success: the diff can finish
        * cleanly on a cancelled stream, having applied only the part that arrived,

@@ -1,4 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { discoverSkills, type ServerOptions, type Skill } from '@janux/server';
@@ -8,6 +9,7 @@ import type {
   CspConfig,
   FeedConfig,
   FontConfig,
+  HeaderRule,
   JanuxConfig,
   JanuxOutput,
   McpAuthConfig,
@@ -84,10 +86,14 @@ export interface JanuxAppConfig {
   output: JanuxOutput;
   /** Fonts to self-host, as declared in janux.config.ts. */
   fonts: FontConfig[];
+  /** Whether `<Image>` variants are pre-encoded at build and answered in dev. Default true. */
+  images: boolean;
   /** Legacy URLs answered with a 3xx, as declared in janux.config.ts. */
   redirects?: RedirectRule[];
   /** URLs served by another route of this app, as declared in janux.config.ts. */
   rewrites?: RewriteRule[];
+  /** Response headers by URL pattern, as declared in janux.config.ts. */
+  headers?: HeaderRule[];
   navigation?: NavigationConfig;
   csp?: boolean | CspConfig;
   cache?: CacheConfig;
@@ -121,11 +127,20 @@ function packageJsonOptions(root: string): JanuxPluginOptions {
   }
 }
 
-/** `janux.config.(ts|js)` default export. The mtime query busts the ESM cache so dev picks up edits. */
+/** Reaches the runtime's CJS-side cache; under Bun that IS the module cache. */
+const configRequire = createRequire(import.meta.url);
+
+/**
+ * `janux.config.(ts|js)` default export, read fresh on every call. The mtime
+ * query busts Node's ESM cache; Bun keys its module cache on the file path and
+ * ignores the query, so the entry is evicted directly — without that, every
+ * `janux dev` session is stuck with the config it booted with.
+ */
 async function configFileOptions(root: string): Promise<JanuxConfig> {
   const file = CONFIG_FILES.map((name) => join(root, name)).find(existsSync);
 
   if (!file) return {};
+  if (configRequire.cache) delete configRequire.cache[file];
   const url = `${pathToFileURL(file).href}?v=${statSync(file).mtimeMs}`;
 
   return (await import(/* @vite-ignore */ url)).default ?? {};
@@ -195,8 +210,10 @@ export async function resolveAppConfig(root: string, pluginOptions: JanuxPluginO
     llmsTxt: options.llmsTxt,
     output: options.output ?? 'bun',
     fonts: options.fonts ?? [],
+    images: options.images ?? true,
     redirects: options.redirects,
     rewrites: options.rewrites,
+    headers: options.headers,
     navigation: options.navigation,
     csp: options.csp,
     cache: options.cache,
@@ -253,8 +270,8 @@ export function shellOptions(
  * routing field wired into one and forgotten in the other is a redirect that
  * works locally and 404s in production.
  */
-export function routingOptions(app: JanuxAppConfig): Pick<ServerOptions, 'redirects' | 'rewrites'> {
-  return { redirects: app.redirects, rewrites: app.rewrites };
+export function routingOptions(app: JanuxAppConfig): Pick<ServerOptions, 'redirects' | 'rewrites' | 'headers'> {
+  return { redirects: app.redirects, rewrites: app.rewrites, headers: app.headers };
 }
 
 /**

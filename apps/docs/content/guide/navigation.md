@@ -148,6 +148,27 @@ Middleware still goes first, so the app keeps its escape hatch. Declared rules r
 
 An app that declares neither pays nothing: with no rules, there is nothing to compile and nothing to match.
 
+## Response headers
+
+The same config family covers the headers a response must carry — the `COOP`/`COEP` pair `SharedArrayBuffer` requires, a `Permissions-Policy`, an agent-discovery `Link`. Declared once, matched with the router's own grammar, set after the app produced the response:
+
+```ts title="janux.config.ts"
+export default defineConfig({
+  headers: [
+    {
+      from: '/[[...all]]',
+      except: ['/[lang]/blog/[...slug]', '/[lang]/media/video-embed'],
+      headers: {
+        'cross-origin-opener-policy': 'same-origin',
+        'cross-origin-embedder-policy': 'credentialless',
+      },
+    },
+  ],
+});
+```
+
+Unlike redirects, **every matching rule contributes**: rules merge in declaration order and a later rule overrides a header both name. `except` patterns carve holes out of `from` — how an app says "isolation everywhere but the pages that embed a third-party iframe" without enumerating every other page. `/_janux/*` is never addressed, same as rewrites. A `HeaderRule`'s patterns are validated at boot, like everything else on this page.
+
 ### With `output: 'static'`
 
 A static export leaves no server, so these rules can only be applied by the host. An adapter that can express them writes them into the platform's own config — `@janux/vercel` compiles them into the Build Output routing table ahead of the filesystem handler. `janux build` on its own has no host to ask, so it prints which rules are on their own, and `janux build` through an adapter that cannot express them says so too.

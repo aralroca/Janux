@@ -16,6 +16,8 @@ export interface IslandRecord {
 
 export interface RenderRegistry {
   islands: IslandRecord[];
+  /** Foreign hosts met during the render — a page with any needs the runtime to mount them. */
+  foreigns: ForeignDef[];
   stores: Map<string, JanuxInstance>;
 }
 
@@ -167,7 +169,7 @@ function failSoftScript(id: string, error: unknown, nonce?: string): string {
 function isolatedScope(scope: RenderScope): RenderScope {
   return {
     ...scope,
-    registry: { islands: [], stores: scope.registry.stores },
+    registry: { islands: [], foreigns: scope.registry.foreigns, stores: scope.registry.stores },
     boundaries: scope.boundaries && [],
     buffered: true,
   };
@@ -198,7 +200,7 @@ function fallbackScope(scope: RenderScope): RenderScope {
     // No boundaries and no registrations: the whole subtree dies at swap time,
     // so nothing in it may flush trailing chunks, boot, or ship a snapshot.
     boundaries: undefined,
-    registry: { islands: [], stores: scope.registry.stores },
+    registry: { islands: [], foreigns: scope.registry.foreigns, stores: scope.registry.stores },
   };
 }
 
@@ -402,6 +404,8 @@ async function renderForeign(def: ForeignDef, node: JanuxNode, scope: RenderScop
   const explicit = node.$k !== undefined ? String(node.$k) : (node.$p.id as string | undefined);
   const key = nextKey(scope, def as unknown as ComponentDef, explicit);
   const id = `${def.name}#${key}`;
+
+  scope.registry.foreigns.push(def);
   const { children: _children, ...props } = node.$p;
   const inner = await foreignInner(def, props, scope);
 
@@ -834,7 +838,7 @@ async function flushBoundaries(scope: RenderScope, emit: Emit, halt: Promise<typ
  * where the buffered render resolves them in place.
  */
 export function renderToStream(node: unknown, options: RenderOptions = {}): RenderStream {
-  const registry: RenderRegistry = { islands: [], stores: new Map() };
+  const registry: RenderRegistry = { islands: [], foreigns: [], stores: new Map() };
   const i18nKeys = options.ctx?.i18n ? new Set<string>() : undefined;
   const queue: string[] = [];
   let wake: (() => void) | undefined;

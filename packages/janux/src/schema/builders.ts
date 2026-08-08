@@ -42,6 +42,16 @@ export function obj<S extends Shape>(shape: S): JxType<InferShape<S>> {
   return new JxType('object', { shape });
 }
 
+/**
+ * An arbitrary JSON-serializable value, passed through untouched — no shape,
+ * no key stripping. For payloads whose structure the app does not own
+ * (interop props bundles, embedded documents). Prefer `obj()` when the shape
+ * is known: `json()` gives agents no contract to validate against.
+ */
+export function json(): JxType<unknown> {
+  return new JxType('json');
+}
+
 /** Root schema for component/store state and intent/api inputs. */
 export function schema<S extends Shape>(shape: S): JxType<InferShape<S>> {
   return obj(shape);

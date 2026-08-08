@@ -194,7 +194,7 @@ export async function build({ root }: Pick<CliCommand, 'root'>): Promise<void> {
   else console.log('janux build: nothing to bundle — fully static app (0 KB JS).');
   await emitAssets(root, app);
   if (app.serviceWorkerEntry) await bundleServiceWorker(root, app.serviceWorkerEntry);
-  else if (retireServiceWorker(join(root, 'dist/client'))) {
+  else if (retireServiceWorker(join(root, 'dist/client'), root)) {
     console.log('janux build: removed sw.js — the app has no src/sw.ts.');
   }
   if (app.output === 'static') await prerenderStatic(root, app);
@@ -327,10 +327,13 @@ function copyPublicDir(root: string): void {
  * server left to produce anything, and `janux start` should serve bytes rather
  * than make them.
  */
-export async function emitAssets(root: string, app: { fonts: FontConfig[] }): Promise<void> {
+export async function emitAssets(root: string, app: { fonts: FontConfig[]; images?: boolean }): Promise<void> {
   copyPublicDir(root);
   const outDir = join(root, 'dist/client');
-  const [images, fonts] = await Promise.all([writeImageVariants(root, outDir), writeFontAssets(root, app.fonts, outDir)]);
+  const [images, fonts] = await Promise.all([
+    app.images === false ? 0 : writeImageVariants(root, outDir),
+    writeFontAssets(root, app.fonts, outDir),
+  ]);
 
   if (images > 0) console.log(`janux build: optimized ${images} image${images === 1 ? '' : 's'} (avif + webp).`);
   if (fonts > 0) console.log(`janux build: self-hosted ${fonts} font${fonts === 1 ? '' : 's'} (subset + adjusted fallback).`);

@@ -136,6 +136,11 @@ dist/client/
   …
 ```
 
+Two escape hatches, both for `public/` directories that are not curated galleries:
+
+- A file the encoder cannot decode — a mislabeled `.jpg`, a corrupt download — costs a **warning that names it**, never the build. Its variants simply don't exist, which only matters if a page names them.
+- An app that never renders `<Image>` can set **`images: false`** in `janux.config.ts`: the verbatim `public/` copy stays, the variant pre-encode is skipped entirely (and dev stops answering variant URLs). A migration carrying thousands of legacy images pays nothing for a pipeline it doesn't use.
+
 A width larger than the source is never upscaled — the file exists so no candidate 404s, it just stops at the pixels the original has.
 
 ## Sources it does not touch

@@ -51,6 +51,19 @@ export function registerDef(registry: ClientRegistry, def: ComponentDef | Foreig
   registry.defs.set(def.name, def as ComponentDef);
 }
 
+/** Def kinds a lazily loaded island module may export (stores attach via `use`, not by name). */
+const LOADABLE_KINDS = new Set(['component', 'foreign']);
+
+/** A `boot({ islands })` loader is a plain `() => import(...)`: file every def its module exports. */
+function registerModuleDefs(registry: ClientRegistry, mod: unknown): void {
+  if (typeof mod !== 'object' || mod === null) return;
+  Object.values(mod).forEach((value) => {
+    const def = value as ComponentDef | ForeignDef;
+
+    if (typeof def?.name === 'string' && LOADABLE_KINDS.has(def.kind!)) registerDef(registry, def);
+  });
+}
+
 export async function resolveDef(registry: ClientRegistry, name: string): Promise<ComponentDef> {
   const existing = registry.defs.get(name);
 
@@ -58,7 +71,9 @@ export async function resolveDef(registry: ClientRegistry, name: string): Promis
   const loader = registry.loaders.get(name);
 
   if (!loader) throw new Error(`Janux: unknown island "${name}" (no loader registered)`);
-  await loader();
+  const mod = await loader();
+
+  if (!registry.defs.has(name)) registerModuleDefs(registry, mod);
   const loaded = registry.defs.get(name);
 
   if (!loaded) throw new Error(`Janux: island module for "${name}" did not register its def`);

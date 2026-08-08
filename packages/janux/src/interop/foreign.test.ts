@@ -349,6 +349,35 @@ describe('foreign React interop', () => {
     await until(() => document.querySelector('.gauge-level')?.textContent === 'top:9');
   });
 
+  it('never leaves the host empty while the live root replaces the SSR markup', async () => {
+    /*
+     * The clear and React's first commit must land in ONE task. With a
+     * concurrent first commit the host paints empty for a frame — after a
+     * navigation that collapses the page to header+footer, and the browser's
+     * scroll anchoring then follows the footer down as React re-inserts the
+     * content: a restored scroll of 515 ends at the bottom of the page.
+     * MutationObserver callbacks are the checkpoints: at every one of them
+     * the host must still have children.
+     */
+    const { html } = await renderToString(
+      jsx('main', { children: jsx(GaugeIsland as any, { state: { level: 3, label: 'ssr' } }) }),
+      {},
+    );
+
+    document.body.innerHTML = html;
+    const host = document.querySelector('janux-foreign')!;
+    let emptySightings = 0;
+    const observer = new MutationObserver(() => {
+      if (host.childElementCount === 0) emptySightings += 1;
+    });
+
+    observer.observe(host, { childList: true });
+    boot({ defs: [GaugeIsland] });
+    await until(() => document.querySelector('.gauge-live')?.textContent === 'yes');
+    observer.disconnect();
+    expect(emptySightings).toBe(0);
+  });
+
   it('refreshes a preserved standalone foreign with the next page\'s call-site props', async () => {
     const pageHtml = async (level: number, label: string) => {
       const { html } = await renderToString(

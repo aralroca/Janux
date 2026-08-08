@@ -84,6 +84,7 @@ function validateObject(type: JxType, value: unknown, path: string): JxResult {
 }
 
 function validatePresent(type: JxType, value: unknown, path: string): JxResult {
+  if (type.kind === 'json') return pass(value);
   if (type.kind === 'enum') return validateEnum(type, value, path);
   if (type.kind === 'list') return validateList(type, value, path);
   if (type.kind === 'object') return validateObject(type, value, path);

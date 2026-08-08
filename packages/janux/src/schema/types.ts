@@ -6,7 +6,8 @@ export type JxKind =
   | 'money'
   | 'enum'
   | 'list'
-  | 'object';
+  | 'object'
+  | 'json';
 
 export interface JxFlags {
   optional?: boolean;

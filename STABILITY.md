@@ -23,13 +23,13 @@ Type-only exports are outside this contract. They are documented, and they move,
 
 ### `janux`
 
-- **Stable** — `CLIENT_TOOL_NAMES`, `CLIENT_TOOL_SPECS`, `CONFIG_SCRIPT_ID`, `FONT_ROUTE`, `For`, `Fragment`, `IMAGE_FORMATS`, `IMAGE_WIDTHS`, `Image`, `JanuxIntentError`, `JxType`, `SPECULATION_SCRIPT_ID`, `allowsScopes`, `articleJsonLd`, `batch`, `bool`, `breadcrumbJsonLd`, `buildDefault`, `buildManifest`, `cacheHeaders`, `cachePolicy`, `coerceForm`, `component`, `computed`, `createBus`, `createInstance`, `createRoot`, `defineConfig`, `effect`, `enums`, `every`, `fallbackOverrides`, `fenceUntrusted`, `fontFaceCss`, `fontPreloadHrefs`, `formatElements`, `getI18n`, `getOwner`, `grantedScopes`, `guardUnderTaint`, `hasUntrusted`, `int`, `intent`, `isNotFoundError`, `isOptimizable`, `jsx`, `jsxs`, `list`, `money`, `notFound`, `num`, `obj`, `onCleanup`, `onEvent`, `organizationJsonLd`, `originUnderTaint`, `parseDuration`, `parseVariantUrl`, `renderToStream`, `renderToString`, `resolveGuard`, `runWithOwner`, `schema`, `selectMessages`, `signal`, `source`, `speculationRules`, `store`, `str`, `toJsonSchema`, `toRaw`, `translateCore`, `untrack`, `untrustedFields`, `validate`, `variantUrl`, `watch`
+- **Stable** — `CLIENT_TOOL_NAMES`, `CLIENT_TOOL_SPECS`, `CONFIG_SCRIPT_ID`, `FONT_ROUTE`, `For`, `Fragment`, `IMAGE_FORMATS`, `IMAGE_WIDTHS`, `Image`, `JanuxIntentError`, `JxType`, `SPECULATION_SCRIPT_ID`, `allowsScopes`, `articleJsonLd`, `batch`, `bool`, `breadcrumbJsonLd`, `buildDefault`, `buildManifest`, `cacheHeaders`, `cachePolicy`, `coerceForm`, `component`, `computed`, `createBus`, `createInstance`, `createRoot`, `defineConfig`, `effect`, `enums`, `every`, `fallbackOverrides`, `fenceUntrusted`, `fontFaceCss`, `fontPreloadHrefs`, `formatElements`, `getI18n`, `getOwner`, `grantedScopes`, `guardUnderTaint`, `hasUntrusted`, `int`, `intent`, `isNotFoundError`, `isOptimizable`, `json`, `jsx`, `jsxs`, `list`, `money`, `notFound`, `num`, `obj`, `onCleanup`, `onEvent`, `organizationJsonLd`, `originUnderTaint`, `parseDuration`, `parseVariantUrl`, `redirect`, `redirectTarget`, `renderToStream`, `renderToString`, `resolveGuard`, `runWithOwner`, `schema`, `selectMessages`, `signal`, `source`, `speculationRules`, `store`, `str`, `toJsonSchema`, `toRaw`, `translateCore`, `untrack`, `untrustedFields`, `validate`, `variantUrl`, `watch`
 - **Experimental** — _none_
 - **Internal** — _none_
 
 ### `janux/types`
 
-- **Stable** — `JxType`, `bool`, `buildDefault`, `coerceForm`, `enums`, `int`, `list`, `money`, `num`, `obj`, `schema`, `str`, `toJsonSchema`, `validate`
+- **Stable** — `JxType`, `bool`, `buildDefault`, `coerceForm`, `enums`, `int`, `json`, `list`, `money`, `num`, `obj`, `schema`, `str`, `toJsonSchema`, `validate`
 - **Experimental** — _none_
 - **Internal** — _none_
 

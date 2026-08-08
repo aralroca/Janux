@@ -3,6 +3,7 @@ import {
   hasUntrusted,
   originUnderTaint,
   isNotFoundError,
+  redirectTarget,
   renderToStream,
   renderToString,
   selectMessages,
@@ -19,6 +20,7 @@ import {
   type JanuxInstance,
   type NavigationConfig,
   type PageMeta,
+  type HeaderRule,
   type RedirectRule,
   type RenderResult,
   type RewriteRule,
@@ -211,6 +213,8 @@ export interface ServerOptions {
   redirects?: RedirectRule[];
   /** URLs served by another route of this app, without the address bar changing (janux.config.ts). */
   rewrites?: RewriteRule[];
+  /** Response headers by URL pattern, set after the app produced the response (janux.config.ts). */
+  headers?: HeaderRule[];
   /** Arbitrary HTTP handlers: a `src/api/**` tree mounted (by default) at `/api`. */
   httpHandlers?: { dir: string; prefix?: string; loadModule: (filePath: string) => Promise<HandlerModule> };
   /** Bearer verification for the hosted MCP endpoint (`/_janux/mcp`). Absent → open. */
@@ -293,6 +297,8 @@ interface RenderablePage {
 interface ResolvedDocument {
   status: number;
   page?: RenderablePage;
+  /** Set when the route called `redirect()`: answered with a Location, nothing renders. */
+  redirect?: { location: string; status: number };
   /**
    * The matched route's declared policy. Only a 200 carries one: an error page
    * is not the page the policy described, and caching a miss under a cached
@@ -430,7 +436,12 @@ export function createJanuxServer(options: ServerOptions = {}) {
   const router = options.routesDir ? createFsRouter(options.routesDir, options.matchers) : undefined;
   // Compiled once, and `undefined` for the app that declared none — which is
   // what keeps this feature free for everybody who is not migrating anything.
-  const routingRules = createRoutingRules({ redirects: options.redirects, rewrites: options.rewrites, matchers: options.matchers });
+  const routingRules = createRoutingRules({
+    redirects: options.redirects,
+    rewrites: options.rewrites,
+    headers: options.headers,
+    matchers: options.matchers,
+  });
   const httpHandlers = options.httpHandlers
     ? createHttpHandlers({ ...options.httpHandlers, matchers: options.matchers, cache: options.cache })
     : undefined;
@@ -636,6 +647,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return page ? { status: 200, page, cache: page.cache } : await resolveErrorPage('notFound', ctx);
     } catch (error) {
       if (isNotFoundError(error)) return resolveErrorPage('notFound', ctx);
+      const moved = redirectTarget(error);
+
+      if (moved) return { status: moved.status, redirect: moved };
       reportRenderFailure(error, pathname);
 
       return resolveErrorPage('serverError', ctx, error);
@@ -655,6 +669,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return await resolvePage(pathname, ctx);
     } catch (error) {
       if (isNotFoundError(error)) return undefined;
+      if (redirectTarget(error)) return undefined;
       throw error;
     }
   };
@@ -1091,6 +1106,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
     let interludeSent = false;
     const document = kind ? await resolveErrorPage(kind, ctx) : await resolveDocument(page, ctx);
 
+    if (document.redirect) {
+      return new Response(null, { status: document.redirect.status, headers: { location: document.redirect.location } });
+    }
     if (!document.page) {
       return new Response(STATUS_TEXT[document.status], {
         status: document.status,
@@ -1105,7 +1123,10 @@ export function createJanuxServer(options: ServerOptions = {}) {
         // Suspended islands may not have registered yet (their sources are
         // still loading), but their modules are known: the map ships complete.
         shell.islandNames = [...new Set([...shell.islandNames, ...Object.keys(options.islandModules ?? {})])];
-        shell.runtimeUrl = shell.islandNames.length > 0 ? options.runtimeUrl : undefined;
+        shell.runtimeUrl =
+          shell.islandNames.length > 0 || (summary.registry.foreigns?.length ?? 0) > 0
+            ? options.runtimeUrl
+            : undefined;
         summary.snapshots.forEach((snapshot) => interludeUris.add(snapshot.uri));
         interludeSent = true;
 
@@ -1122,6 +1143,9 @@ export function createJanuxServer(options: ServerOptions = {}) {
      */
     const shellFor = (result?: RenderSummary): Omit<ShellOptions, 'html'> => {
       const islandNames = [...new Set((result?.registry.islands ?? []).map(({ def }) => def.name))];
+      // Standalone foreign hosts have no island, but boot() is still what
+      // mounts them — a page with any needs the runtime as much as one with islands.
+      const foreignsSeen = (result?.registry.foreigns?.length ?? 0) > 0;
 
       return {
         title: rendered.meta?.title ?? options.title,
@@ -1132,7 +1156,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
         snapshots: result?.snapshots ?? [],
         islandNames,
         islandModules: options.islandModules,
-        runtimeUrl: islandNames.length > 0 ? options.runtimeUrl : undefined,
+        runtimeUrl: islandNames.length > 0 || foreignsSeen ? options.runtimeUrl : undefined,
         // Not gated on islands, unlike the runtime: an app with no islands at
         // all is precisely the one whose offline story is its whole point.
         serviceWorkerUrl: options.serviceWorkerUrl,
@@ -1231,7 +1255,7 @@ export function createJanuxServer(options: ServerOptions = {}) {
       return new Response('WebSocket upgrade required', { status: 426, headers: { upgrade: 'websocket' } });
     }
     if (httpHandlers?.handles(pathname)) {
-      return cached(req, async () => httpHandlers.dispatch(req, await ctxWithAgent(req)));
+      return cached(req, async () => httpHandlers.dispatch(req, await ctxWithAgent(req), pathname));
     }
     if (pathname.startsWith('/_janux/api/')) return handleApi(req, pathname.slice('/_janux/api/'.length));
     if (pathname === '/_janux/elicit') return handleElicitPage(req);
@@ -1338,9 +1362,21 @@ export function createJanuxServer(options: ServerOptions = {}) {
    * operator hears about it instead of the process printing an unattributed
    * stack. Fail-open all the way: the visitor still gets a status line.
    */
+  /** Declared header rules, set once the app has produced its response (redirects included, like Next). */
+  const withDeclaredHeaders = (req: Request, response: Response): Response => {
+    const declared = routingRules?.headersFor(new URL(req.url).pathname);
+
+    if (!declared) return response;
+    const decorated = new Response(response.body, response);
+
+    Object.entries(declared).forEach(([name, value]) => decorated.headers.set(name, value));
+
+    return decorated;
+  };
+
   const answer = async (req: Request, span: JanuxSpan): Promise<Response> => {
     try {
-      return await handleRequest(req, span);
+      return withDeclaredHeaders(req, await handleRequest(req, span));
     } catch (error) {
       reportError(error, { phase: 'invocation', route: new URL(req.url).pathname });
 

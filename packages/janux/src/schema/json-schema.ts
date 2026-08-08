@@ -9,6 +9,9 @@ const PRIMITIVE_TYPES: Record<string, string> = {
 };
 
 function baseSchema(type: JxType): Record<string, unknown> {
+  // Unconstrained on purpose: `json()` accepts any JSON value, and `{}` is how
+  // JSON Schema says exactly that.
+  if (type.kind === 'json') return {};
   if (type.kind === 'enum') return { enum: [...type.values!] };
   if (type.kind === 'list') return { type: 'array', items: toJsonSchema(type.item!) };
   if (type.kind === 'object') return objectSchema(type);
@@ -48,6 +51,8 @@ function applyBounds(type: JxType, base: Record<string, unknown>): void {
  */
 function applyNullable(type: JxType, base: Record<string, unknown>): void {
   if (!type.flags.nullable) return;
+  // `json()` already accepts null: there is no `type` member to widen.
+  if (type.kind === 'json') return;
   if (type.kind === 'enum') base.enum = [...(base.enum as unknown[]), null];
   else base.type = [base.type, 'null'].flat();
 }

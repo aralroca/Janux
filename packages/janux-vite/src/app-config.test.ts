@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { apiFiles, mcpAuthOptions, publishAppRoot, resolveAppConfig, routingOptions, toPosix } from './app-config';
@@ -40,6 +40,20 @@ describe('resolveAppConfig janux.config.ts', () => {
     const root = app({ 'janux.config.ts': `export default { title: 'From file' };` });
 
     expect((await resolveAppConfig(root, { title: 'From plugin' })).title).toBe('From plugin');
+  });
+
+  it('re-reads the config file after an edit, mid-process', async () => {
+    // What `janux dev` does on every server rebuild. Bun keys its module
+    // cache on the file path and ignores the `?v=` mtime query, so without
+    // an explicit eviction every dev session is stuck with the config it
+    // booted with, and only a restart picks up janux.config.ts edits.
+    const root = app({ 'janux.config.ts': `export default { title: 'Before edit' };` });
+
+    expect((await resolveAppConfig(root)).title).toBe('Before edit');
+    writeFileSync(join(root, 'janux.config.ts'), `export default { title: 'After edit' };`);
+    // A same-millisecond rewrite would also defeat Node's mtime query.
+    utimesSync(join(root, 'janux.config.ts'), new Date(), new Date(Date.now() + 5));
+    expect((await resolveAppConfig(root)).title).toBe('After edit');
   });
 });
 
