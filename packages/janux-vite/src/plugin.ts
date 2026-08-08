@@ -178,10 +178,10 @@ const FOREIGN_PACKAGES = ['react', 'react-dom', 'react-dom/client'];
  * produced on demand here — so the page you are writing and the page you ship
  * pick from the same files.
  */
-export async function devAsset(root: string, path: string): Promise<Response | undefined> {
+export async function devAsset(root: string, path: string, images = true): Promise<Response | undefined> {
   const publicFile = resolvePublicFile(root, path);
 
-  if (!publicFile) return fontResponse(root, path) ?? imageResponse(root, path);
+  if (!publicFile) return fontResponse(root, path) ?? (images ? imageResponse(root, path) : undefined);
 
   return new Response(readFileSync(publicFile), { headers: { 'content-type': mimeFor(publicFile) } });
 }
@@ -190,6 +190,8 @@ export async function devAsset(root: string, path: string): Promise<Response | u
 export function janux(options: JanuxPluginOptions = {}): Plugin {
   /** Where the app keeps its `*.api.ts` modules, learned in `config`. */
   let serverDir = '';
+  /** Whether dev answers <Image> variant URLs, learned in `config`. */
+  let imagesEnabled = true;
   /** Island defs met while bundling the client graph — the build's catalog, see islands.ts. */
   const islandCatalog: Record<string, string> = {};
   let bundling = false;
@@ -209,6 +211,7 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       serverDir = app.serverDir;
       bindingMaps = app.compiler?.bindingMaps ?? true;
       splitIntents = app.compiler?.splitIntents ?? false;
+      imagesEnabled = app.images;
 
       return {
         appType: 'custom',
@@ -326,7 +329,7 @@ export function janux(options: JanuxPluginOptions = {}): Plugin {
       return () => {
         vite.middlewares.use((req, res, next) => {
           const handle = async () => {
-            const asset = await devAsset(vite.config.root, req.url?.split('?')[0] ?? '/');
+            const asset = await devAsset(vite.config.root, req.url?.split('?')[0] ?? '/', imagesEnabled);
 
             if (asset) return sendFetchResponse(res, asset);
             // The dev overlay asking which route file and `_layout` chain

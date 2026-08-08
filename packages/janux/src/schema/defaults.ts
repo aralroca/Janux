@@ -16,6 +16,7 @@ const ZERO_VALUES: Record<string, unknown> = {
 export function buildDefault(type: JxType): unknown {
   if (type.flags.defaultValue !== undefined) return type.flags.defaultValue;
   if (type.flags.nullable) return null;
+  if (type.kind === 'json') return null;
   if (type.kind === 'list') return [];
   if (type.kind === 'enum') return type.values![0];
   if (type.kind === 'object') return buildObjectDefault(type);

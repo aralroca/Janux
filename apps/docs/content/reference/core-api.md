@@ -227,6 +227,23 @@ export default function PostPage({ params }: { params: { slug: string } }) {
 
 Call it from the route module (or something it awaits): once the document starts streaming the status line is already sent. `isNotFoundError(error)` recognizes the signal, for a [custom server](/docs/recipes/custom-server) that wraps `server.fetch` and wants to answer a `notFound()` its own way.
 
+### redirect(location, status?) / redirectTarget(error)
+
+`notFound()`'s sibling: a route that knows its content lives elsewhere answers with a `Location` header instead of rendering something else under the old URL. The status is a `RedirectStatus` (`301 | 302 | 307 | 308`), default `307` — temporary, and the method survives. Like `notFound()` it throws and never returns:
+
+```tsx
+import { redirect } from 'janux';
+import { parseConversionSlug } from './conversions';
+
+export default function Page({ params }: { params: { conversion: string } }) {
+  if (!parseConversionSlug(params.conversion)) redirect('/convert/png-to-webp');
+
+  return <Converter slug={params.conversion} />;
+}
+```
+
+Use the declarative [`redirects`](/docs/reference/server-api) in `janux.config.ts` for URL-to-URL moves the router can decide alone; `redirect()` is for the moves only the route's own logic can decide (a retired slug, a row that changed owner). `redirectTarget(error)` reads the signal back — `{ location, status }`, or `undefined` when the error is something else — for a custom server wrapping `server.fetch`.
+
 ### parseDuration(input)
 
 Parses the duration strings used by `every()` and `effect({ debounce })` into milliseconds — `'300ms'`, `'2s'`, `'5m'`, `'1h'`. Throws on anything else. Exposed mostly so custom refresh/debounce logic can share one parser.

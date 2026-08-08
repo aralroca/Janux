@@ -172,8 +172,13 @@ export function createHttpHandlers(options: HttpHandlersOptions) {
       return pathname === prefix || pathname.startsWith(`${prefix}/`);
     },
 
-    async dispatch(req: Request, ctx: Ctx): Promise<Response> {
+    async dispatch(req: Request, ctx: Ctx, pathname?: string): Promise<Response> {
       const url = new URL(req.url);
+
+      // A declared rewrite resolved the path `handles()` said yes to; the
+      // request still carries the browser's URL, so the handler's `url` takes
+      // the resolved path (the query survives — it was never rewritten).
+      if (pathname !== undefined) url.pathname = pathname;
       const subPath = url.pathname.slice(prefix.length) || '/';
       const match = router.match(subPath);
 

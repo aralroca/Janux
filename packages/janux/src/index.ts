@@ -40,6 +40,7 @@ export {
   enums,
   list,
   obj,
+  json,
   JxType,
   type Infer,
   type InferShape,
@@ -81,6 +82,7 @@ export {
   type McpAuthConfig,
   type CspConfig,
   type NavigationConfig,
+  type HeaderRule,
   type RedirectRule,
   type RewriteRule,
   type ServiceWorkerConfig,
@@ -126,6 +128,7 @@ export {
   type OrganizationLd,
 } from './jsonld';
 export { isNotFoundError, notFound } from './not-found';
+export { redirect, redirectTarget, type RedirectStatus } from './redirect';
 export {
   translateCore,
   formatElements,

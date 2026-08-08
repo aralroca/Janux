@@ -202,3 +202,47 @@ describe('config mistakes are caught at boot, not in production', () => {
     expect(() => createRoutingRules({ redirects: [{ from: '/a', to: '/b', status: 404 as 301 }] })).toThrow(/301, 302, 307 or 308/);
   });
 });
+
+/**
+ * Declared `headers` (janux.config.ts): every matching rule contributes, in
+ * declaration order (later rules override a header both name), and `except`
+ * patterns carve holes — how an app says "COOP/COEP everywhere but the pages
+ * that embed a third-party iframe".
+ */
+describe('headers', () => {
+  const coop = { 'cross-origin-opener-policy': 'same-origin', 'cross-origin-embedder-policy': 'credentialless' };
+
+  it('answers the headers of every matching rule, later rules winning per name', () => {
+    const rules = rulesFor({
+      headers: [
+        { from: '/[[...all]]', headers: { 'x-frame-options': 'SAMEORIGIN', 'x-a': '1' } },
+        { from: '/admin/[...rest]', headers: { 'x-frame-options': 'DENY' } },
+      ],
+    });
+
+    expect(rules.headersFor('/about')).toEqual({ 'x-frame-options': 'SAMEORIGIN', 'x-a': '1' });
+    expect(rules.headersFor('/admin/panel')).toEqual({ 'x-frame-options': 'DENY', 'x-a': '1' });
+  });
+
+  it('skips a rule where an except pattern matches', () => {
+    const rules = rulesFor({
+      headers: [{ from: '/[[...all]]', except: ['/[lang]/blog/[...slug]', '/[lang]/music/youtube-loop-mix'], headers: coop }],
+    });
+
+    expect(rules.headersFor('/en/pdf/pdf-merger')).toEqual(coop);
+    expect(rules.headersFor('/en/blog/some-post')).toBeUndefined();
+    expect(rules.headersFor('/es/music/youtube-loop-mix')).toBeUndefined();
+  });
+
+  it('is undefined when nothing matches', () => {
+    const rules = rulesFor({ headers: [{ from: '/only/here', headers: { 'x-a': '1' } }] });
+
+    expect(rules.headersFor('/elsewhere')).toBeUndefined();
+  });
+
+  it('never addresses the framework surface', () => {
+    const rules = rulesFor({ headers: [{ from: '/[[...all]]', headers: { 'x-a': '1' } }] });
+
+    expect(rules.headersFor('/_janux/manifest')).toBeUndefined();
+  });
+});

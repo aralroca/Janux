@@ -93,10 +93,13 @@ export function serviceWorkerVersion(outDir: string, assets: string[]): string {
  * this feature is careful about. It is also how a browser retires a worker it
  * already installed: the update check 404s, and the registration goes.
  */
-export function retireServiceWorker(outDir: string): boolean {
+export function retireServiceWorker(outDir: string, root?: string): boolean {
   const worker = join(outDir, SERVICE_WORKER_FILE);
 
   if (!existsSync(worker)) return false;
+  // A worker the app ships by hand in public/ reached the output through the
+  // verbatim copy, not through `src/sw.ts` — it is not ours to retire.
+  if (root && existsSync(join(root, 'public', SERVICE_WORKER_FILE))) return false;
   rmSync(worker, { force: true });
   rmSync(`${worker}.map`, { force: true });
 

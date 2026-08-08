@@ -169,7 +169,9 @@ function serviceWorkerScripts(options: Omit<ShellOptions, 'html'>): string {
 }
 
 function runtimeScripts(options: Omit<ShellOptions, 'html'>): string {
-  if (options.islandNames.length === 0) return '';
+  // `runtimeUrl` may be set with zero islands: a page whose only client code
+  // is standalone foreign hosts still boots the runtime to mount them.
+  if (options.islandNames.length === 0 && !options.runtimeUrl) return '';
   const modules = Object.fromEntries(
     options.islandNames.map((name) => [name, options.islandModules?.[name] ?? '']),
   );
@@ -177,12 +179,16 @@ function runtimeScripts(options: Omit<ShellOptions, 'html'>): string {
   const cspAttr = nonceAttr(options.nonce);
 
   return [
-    `<script key="jx-islands"${cspAttr}>window.__JANUX_ISLANDS__=${safeJson(modules)}</script>`,
+    options.islandNames.length > 0
+      ? `<script key="jx-islands"${cspAttr}>window.__JANUX_ISLANDS__=${safeJson(modules)}</script>`
+      : '',
     // `safeAttr` like every other href/src the shell emits: the value is a build
     // output today, but an unescaped one is a hole waiting for the first adapter
     // that derives it from a request — and escaping an honest URL changes nothing.
     options.runtimeUrl ? `<script type="module" key="jx-runtime" src="${safeAttr(options.runtimeUrl)}"${cspAttr}></script>` : '',
-  ].join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 /**

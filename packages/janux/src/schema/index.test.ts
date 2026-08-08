@@ -4,6 +4,7 @@ import {
   buildDefault,
   enums,
   int,
+  json,
   list,
   money,
   obj,
@@ -61,6 +62,31 @@ describe('schema validate', () => {
 
     expect(validate(type, 'paid').ok).toBe(true);
     expect(validate(type, 'nope').ok).toBe(false);
+  });
+});
+
+describe('schema json', () => {
+  it('passes arbitrary JSON values through without stripping keys', () => {
+    const payload = { lang: 'en', namespaces: { common: { nested: { deep: [1, 'a', true] } } } };
+    const result = validate(schema({ compat: json() }), { compat: payload });
+
+    expect(result.ok).toBe(true);
+    expect((result.value as any).compat).toEqual(payload);
+  });
+
+  it('accepts primitives, arrays and null-with-nullable', () => {
+    expect(validate(json(), 'text').ok).toBe(true);
+    expect(validate(json(), 7).ok).toBe(true);
+    expect(validate(json(), [1, 2]).ok).toBe(true);
+    expect(validate(json().nullable(), null).ok).toBe(true);
+    expect(validate(json(), undefined).ok).toBe(false);
+    expect(validate(json().optional(), undefined).ok).toBe(true);
+  });
+
+  it('builds defaults and serializes as an unconstrained JSON Schema', () => {
+    expect(buildDefault(json())).toBe(null);
+    expect(buildDefault(json().default({ a: 1 }))).toEqual({ a: 1 });
+    expect(toJsonSchema(json())).toEqual({});
   });
 });
 

@@ -125,7 +125,11 @@ export function mountForeign(
   let stopKeepingPortals: (() => void) | undefined;
 
   const start = async () => {
-    const [{ createElement }, client] = await Promise.all([import('react'), import('react-dom/client')]);
+    const [{ createElement }, client, { flushSync }] = await Promise.all([
+      import('react'),
+      import('react-dom/client'),
+      import('react-dom'),
+    ]);
 
     if (disposed || !host.isConnected) return;
     const element = () => {
@@ -146,7 +150,26 @@ export function mountForeign(
       onUncaughtError: (error: unknown) => reportError(`foreign <${def.name}>: ${error}`),
     }) as ReactRoot;
     stopKeepingPortals = keepPortalsAcrossNavigation();
-    stopRender = watch(() => reactRoot!.render(element()));
+    /*
+     * The first commit lands in THIS task (flushSync), so the clear above and
+     * the live tree are one paint: a concurrent first commit leaves the host
+     * empty for a frame, which after a navigation collapses the page to
+     * header+footer — and the browser's scroll anchoring then follows the
+     * footer down as React re-inserts the content, turning "restore to 515"
+     * into "end at the bottom of the previous page". Outside the watch, so
+     * React's synchronous render never runs inside the tracking scope — the
+     * effect's first run only registers the props dependency. Later renders
+     * stay concurrent: only the swap over SSR markup needs to be atomic.
+     */
+    let committed = false;
+
+    stopRender = watch(() => {
+      const node = element();
+
+      if (committed) reactRoot!.render(node);
+    });
+    flushSync(() => reactRoot!.render(element()));
+    committed = true;
   };
 
   scheduleHydrate(host, def.options.hydrate, () => {

@@ -86,6 +86,64 @@ describe('pages', () => {
   it('404s unknown routes', async () => {
     expect((await get('/nope')).status).toBe(404);
   });
+
+  /**
+   * `redirect()` is `notFound()`'s sibling: a route that knows the content
+   * moved answers with a Location, not by rendering something else at the old
+   * URL. Thrown from the route module, answered before anything streams.
+   */
+  it('answers redirect() from a route with the location and status it named', async () => {
+    const { redirect } = await import('janux');
+    const moved = createJanuxServer({
+      routes: {
+        '/old': () => redirect('/new'),
+        '/legacy': () => redirect('/forever', 308),
+      },
+    });
+    const temp = await moved.fetch(new Request('http://test/old'));
+    const perm = await moved.fetch(new Request('http://test/legacy'));
+
+    expect(temp.status).toBe(307);
+    expect(temp.headers.get('location')).toBe('/new');
+    expect(perm.status).toBe(308);
+    expect(perm.headers.get('location')).toBe('/forever');
+  });
+
+  // Declared header rules land on the produced response — the COOP/COEP pair
+  // SharedArrayBuffer needs is config, not middleware — with `except` holes.
+  it('sets declared headers on matching pages and skips the except patterns', async () => {
+    const ruled = createJanuxServer({
+      routes: { '/': () => jsx('h1', { children: 'a' }), '/blog/[slug]': () => jsx('h1', { children: 'b' }) },
+      headers: [
+        { from: '/[[...all]]', except: ['/blog/[...slug]'], headers: { 'cross-origin-opener-policy': 'same-origin' } },
+      ],
+    });
+    const home = await ruled.fetch(new Request('http://test/'));
+    const blog = await ruled.fetch(new Request('http://test/blog/post'));
+
+    expect(home.headers.get('cross-origin-opener-policy')).toBe('same-origin');
+    expect(home.headers.get('content-type')).toContain('text/html');
+    expect(blog.headers.get('cross-origin-opener-policy')).toBeNull();
+  });
+
+  /**
+   * A page whose only interactivity is a standalone `foreign()` host still
+   * needs the runtime: `boot()` is what mounts document foreigns. Gating the
+   * script on islands alone shipped these pages dead — SSR'd but inert.
+   */
+  it('serves the runtime for a page whose only client code is a standalone foreign', async () => {
+    const { foreign } = await import('janux/interop');
+    const Hello = ({ who }: { who: string }) => `hello ${who}`;
+    const HelloIsland = foreign(Hello, { name: 'hello-foreign' });
+    const foreignServer = createJanuxServer({
+      routes: { '/': () => jsx('main', { children: jsx(HelloIsland as any, { who: 'world' }) }) },
+      runtimeUrl: '/_janux/client.js',
+    });
+    const html = await (await foreignServer.fetch(new Request('http://test/'))).text();
+
+    expect(html).toContain('<janux-foreign');
+    expect(html).toContain('src="/_janux/client.js"');
+  });
 });
 
 describe('api endpoints', () => {

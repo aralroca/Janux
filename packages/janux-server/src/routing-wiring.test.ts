@@ -65,6 +65,33 @@ describe('rewrites', () => {
 });
 
 /**
+ * A rewrite may land on `src/api/**`: `handles()` is asked with the rewritten
+ * path, so `dispatch` must resolve against that same path — not re-derive the
+ * browser's URL from the request and 404 on it.
+ */
+describe('a rewrite into an http handler', () => {
+  const handlers = () =>
+    serve({
+      rewrites: [{ from: '/[lang]/orders.xml', to: '/api/orders/[lang]' }],
+      httpHandlers: { dir: `${import.meta.dirname}/__fixtures__/api`, loadModule: (file) => import(file) },
+    });
+
+  it('dispatches the handler the rewritten path names', async () => {
+    const response = await handlers()('/en/orders.xml');
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ id: 'en' });
+  });
+
+  it('keeps the query the visitor sent', async () => {
+    const response = await handlers()('/api/orders/o42?q=1');
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ id: 'o42' });
+  });
+});
+
+/**
  * Design invariant 4: guards are enforced at the invocation pipeline. A rewrite
  * that could address `/_janux/*` would be a URL-shaped way past it, so the
  * framework surface is unreachable from a rule — including when the path is

@@ -1,4 +1,4 @@
-import type { RedirectRule, RewriteRule } from 'janux';
+import type { HeaderRule, RedirectRule, RewriteRule } from 'janux';
 import { matchRoute } from './match-segments';
 import { BUILTIN_MATCHERS, parsePattern, type Matcher, type Segment } from './router';
 
@@ -30,6 +30,7 @@ interface CompiledRule {
 export interface RoutingRulesConfig {
   redirects?: RedirectRule[];
   rewrites?: RewriteRule[];
+  headers?: HeaderRule[];
   /** The app's typed param matchers — the same map the router is given. */
   matchers?: Record<string, Matcher>;
 }
@@ -39,6 +40,8 @@ export interface RoutingRules {
   redirect(url: URL): Response | undefined;
   /** The path a declared rewrite serves instead, or `undefined` when none matches. */
   rewrite(pathname: string): string | undefined;
+  /** The merged headers every matching rule contributes for this path, or `undefined`. */
+  headersFor(pathname: string): Record<string, string> | undefined;
 }
 
 /** The framework's own surface, which no declared rule may address. */
@@ -62,6 +65,28 @@ function compile(rule: RedirectRule | RewriteRule, status: number, isRewrite: bo
   if (!REDIRECT_STATUSES.has(status)) throw new Error(`${what} — the status must be 301, 302, 307 or 308 (got ${status}).`);
 
   return { segments: parsePattern(rule.from), to: rule.to, status };
+}
+
+interface CompiledHeaderRule {
+  from: { segments: Segment[] };
+  except: { segments: Segment[] }[];
+  headers: Record<string, string>;
+}
+
+/** Boot-time validation, mirroring `compile`: a bad pattern names the rule that wrote it. */
+function compileHeaders(rule: HeaderRule): CompiledHeaderRule {
+  const what = `janux: headers "${rule.from}"`;
+
+  if (!rule.from.startsWith('/')) throw new Error(`${what} — the source pattern must start with a slash.`);
+  (rule.except ?? []).forEach((pattern) => {
+    if (!pattern.startsWith('/')) throw new Error(`${what} — except pattern "${pattern}" must start with a slash.`);
+  });
+
+  return {
+    from: { segments: parsePattern(rule.from) },
+    except: (rule.except ?? []).map((pattern) => ({ segments: parsePattern(pattern) })),
+    headers: rule.headers,
+  };
 }
 
 /** The first rule whose pattern matches, with what it captured. Declaration order is the contract. */
@@ -148,11 +173,12 @@ function settle(rules: CompiledRule[], from: string, matchers: Record<string, Ma
 export function createRoutingRules(config: RoutingRulesConfig): RoutingRules | undefined {
   const redirects = (config.redirects ?? []).map((rule) => compile(rule, rule.status ?? DEFAULT_STATUS, false));
   const rewrites = (config.rewrites ?? []).map((rule) => compile(rule, DEFAULT_STATUS, true));
+  const headerRules = (config.headers ?? []).map(compileHeaders);
   // Built-ins included, exactly as `createFsRouter` composes them: `[id=integer]`
   // has to mean the same thing in a redirect as it does in a route file.
   const matchers = { ...BUILTIN_MATCHERS, ...config.matchers };
 
-  if (redirects.length + rewrites.length === 0) return undefined;
+  if (redirects.length + rewrites.length + headerRules.length === 0) return undefined;
 
   return {
     // `/_janux/*` is excluded on the way in too: a greedy `[...all]` rule is a
@@ -171,6 +197,17 @@ export function createRoutingRules(config: RoutingRulesConfig): RoutingRules | u
     },
     rewrite(pathname) {
       return isInternal(pathname) ? undefined : settle(rewrites, pathname, matchers);
+    },
+    headersFor(pathname) {
+      if (isInternal(pathname)) return undefined;
+      const segments = pathname.split('/').filter(Boolean);
+      const matches = (pattern: { segments: Segment[] }): boolean =>
+        matchRoute(pattern as never, segments, matchers) !== undefined;
+      const merged = headerRules
+        .filter((rule) => matches(rule.from) && !rule.except.some(matches))
+        .reduce((acc, rule) => Object.assign(acc, rule.headers), {} as Record<string, string>);
+
+      return Object.keys(merged).length > 0 ? merged : undefined;
     },
   };
 }

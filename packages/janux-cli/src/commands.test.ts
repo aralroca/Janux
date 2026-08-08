@@ -301,4 +301,19 @@ describe('emitAssets', () => {
 
     expect(existsSync(join(root, 'dist/client/_janux'))).toBe(false);
   });
+
+  // An app that never renders <Image> should not pay an encode per public/
+  // file — `images: false` keeps the verbatim copy and skips the variants.
+  it(
+    'skips the variants when the app opted out of image optimization',
+    async () => {
+      const root = appWithImage();
+
+      await emitAssets(root, { fonts: [], images: false });
+
+      expect(existsSync(join(root, 'dist/client/hero.jpg'))).toBe(true);
+      expect(existsSync(join(root, 'dist/client/_janux/image'))).toBe(false);
+    },
+    60_000,
+  );
 });

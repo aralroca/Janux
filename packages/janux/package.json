@@ -124,7 +124,7 @@
   },
   "dependencies": {
     "csstype": "^3.2.3",
-    "diff-dom-streaming": "^0.6.10"
+    "diff-dom-streaming": "^0.6.11"
   },
   "scripts": {
     "prepublishOnly": "bun ../../scripts/prepublish-guard.ts"

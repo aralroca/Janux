@@ -218,6 +218,22 @@ export interface RewriteRule {
   to: string;
 }
 
+/**
+ * Response headers for the URLs a pattern matches, e.g. the COOP/COEP pair
+ * `SharedArrayBuffer` requires. Same grammar and same ordering as
+ * {@link RedirectRule}: every matching rule contributes, later rules override
+ * a header both name, and `except` patterns carve holes — how an app says
+ * "isolation everywhere but the pages that embed a third-party iframe".
+ */
+export interface HeaderRule {
+  /** The URLs the rule covers, e.g. `/[[...all]]`. */
+  from: string;
+  /** Patterns carved out of `from` — a matching URL skips this rule entirely. */
+  except?: string[];
+  /** Header name → value, set on the response after the app produced it. */
+  headers: Record<string, string>;
+}
+
 export interface JanuxConfig {
   routesDir?: string;
   serverDir?: string;
@@ -249,10 +265,18 @@ export interface JanuxConfig {
   output?: JanuxOutput;
   /** Fonts to self-host, subset, preload and give an adjusted fallback. */
   fonts?: FontConfig[];
+  /**
+   * Pre-encode every `public/` image into the `<Image>` variant ladder at build
+   * (and answer those URLs in dev). Default `true`; set `false` when the app
+   * never renders `<Image>`, so a large `public/` costs nothing.
+   */
+  images?: boolean;
   /** Legacy URLs, answered with a 3xx before the route is resolved. */
   redirects?: RedirectRule[];
   /** URLs served by another route of this app, without the address bar changing. */
   rewrites?: RewriteRule[];
+  /** Response headers by URL pattern, applied after the app produced the response. */
+  headers?: HeaderRule[];
   /** SPA navigation, prefetching and speculation rules. */
   navigation?: NavigationConfig;
   /** Strict CSP: nonce every inline tag, and (with `true`) send the header. */
