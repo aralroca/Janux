@@ -56,21 +56,29 @@ async function copyRuntimeFiles(root: string, target: string, include: string[])
 }
 
 /**
- * The slice of `dist/client` the server reads back at boot: the top-level
- * manifests (`styles.css`, `islands.json`, `client.js`, a built `sw.js`) and
- * the framework's `_janux/` assets. The rest is the browser's payload — the
- * CDN serves it from `static/`, and a copy inside the function only counts
- * against the platform's size ceiling, which a media-heavy `public/` (copied
- * into `dist/client` by the build) is enough to blow through on its own.
+ * Exactly what the prod server opens under `dist/client` at boot — the list
+ * `prod.ts` and `fonts.ts` read, not a directory heuristic. Everything else
+ * there is the browser's payload: the CDN serves it from `static/`, and a
+ * copy inside the function only counts against the platform's size ceiling,
+ * which a media-heavy `public/` (copied into `dist/client` by the build) or
+ * the image optimizer's `_janux/image` output is enough to blow through.
  */
+const SERVER_READ_CLIENT_PATHS = [
+  'styles.css', // prod.ts: inlined or served as the app stylesheet
+  'islands.json', // prod.ts: the island catalog
+  'client.js', // prod.ts: probed for runtimeUrl
+  'sw.js', // service-worker.ts: probed for serviceWorkerUrl
+  '_janux/font/fonts.css', // fonts.ts: font faces for the shell
+  '_janux/font/preloads.json', // fonts.ts: preload hrefs for the shell
+];
+
 async function copyServerDist(root: string, target: string): Promise<void> {
   const client = join(root, 'dist/client');
 
-  if (!existsSync(client)) return;
-
-  for (const entry of await readdir(client, { withFileTypes: true })) {
-    if (entry.isDirectory() && entry.name !== '_janux') continue;
-    await cp(join(client, entry.name), join(target, 'dist/client', entry.name), { recursive: true });
+  for (const path of SERVER_READ_CLIENT_PATHS) {
+    if (existsSync(join(client, path))) {
+      await cp(join(client, path), join(target, 'dist/client', path));
+    }
   }
 }
 

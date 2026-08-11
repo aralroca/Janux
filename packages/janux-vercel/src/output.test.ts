@@ -64,23 +64,29 @@ describe('a bundled function with no node_modules beside it', () => {
 });
 
 /**
- * The function carries what the server reads back at boot — the top-level
- * manifests (`styles.css`, `islands.json`, `client.js`) and the framework's
- * own `_janux/` assets — and none of what the CDN already answers. The
- * distinction only matters at scale: a media-heavy app copies `public/` into
- * `dist/client`, and a function that carries it too blows through the
- * platform's 250MB ceiling for bytes no request would ever read from it.
+ * The function carries what the server reads back at boot — an allowlist
+ * drawn from `prod.ts` and `fonts.ts`, nothing inferred — and none of what
+ * the CDN already answers. The distinction only matters at scale: a
+ * media-heavy app copies `public/` into `dist/client`, and a function that
+ * carries it too blows through the platform's 250MB ceiling for bytes no
+ * request would ever read from it. The allowlist is what keeps a root-level
+ * `/hero.mp4` or the optimizer's `_janux/image` output on the CDN alone.
  */
 describe('the function payload', () => {
   it('carries the files the server reads, not the bytes the CDN answers', async () => {
     const client = join(APP, 'dist/client');
 
     // dist/client as a built app leaves it: server-read manifests, the
-    // framework's assets, and the browser payload beside them.
+    // framework's assets, and the browser payload beside them — including a
+    // root-level media file from public/ and the image optimizer's output.
     await Bun.write(join(client, 'styles.css'), 'body{}');
     await Bun.write(join(client, 'islands.json'), '{}');
+    await Bun.write(join(client, 'sw.js'), 'self.skipWaiting();');
     await Bun.write(join(client, '_janux/font/fonts.css'), '@font-face{}');
     await Bun.write(join(client, '_janux/font/preloads.json'), '[]');
+    await Bun.write(join(client, '_janux/font/manrope.woff2'), 'x'.repeat(1024));
+    await Bun.write(join(client, '_janux/image/hero-1200.avif'), 'x'.repeat(1024));
+    await Bun.write(join(client, 'hero.mp4'), 'x'.repeat(1024));
     await Bun.write(join(client, 'assets/chunk-abc.js'), 'export {};');
     await Bun.write(join(client, 'images/big.bin'), 'x'.repeat(1024));
 
@@ -91,16 +97,25 @@ describe('the function payload', () => {
     // The CDN gets all of it.
     expect(existsSync(join(APP, '.vercel/output/static/assets/chunk-abc.js'))).toBe(true);
     expect(existsSync(join(APP, '.vercel/output/static/images/big.bin'))).toBe(true);
+    expect(existsSync(join(APP, '.vercel/output/static/hero.mp4'))).toBe(true);
+    expect(existsSync(join(APP, '.vercel/output/static/_janux/image/hero-1200.avif'))).toBe(true);
 
     // The function gets what its server will actually open.
     expect(existsSync(join(fn, 'dist/client/styles.css'))).toBe(true);
     expect(existsSync(join(fn, 'dist/client/islands.json'))).toBe(true);
+    expect(existsSync(join(fn, 'dist/client/sw.js'))).toBe(true);
     expect(existsSync(join(fn, 'dist/client/_janux/font/fonts.css'))).toBe(true);
+    expect(existsSync(join(fn, 'dist/client/_janux/font/preloads.json'))).toBe(true);
     expect(existsSync(join(fn, 'src/routes/index.tsx'))).toBe(true);
 
-    // And none of what only a browser would fetch.
+    // And none of what only a browser would fetch — not the payload
+    // directories, not root-level media, not the framework's own image and
+    // font binaries.
     expect(existsSync(join(fn, 'dist/client/assets'))).toBe(false);
     expect(existsSync(join(fn, 'dist/client/images'))).toBe(false);
+    expect(existsSync(join(fn, 'dist/client/hero.mp4'))).toBe(false);
+    expect(existsSync(join(fn, 'dist/client/_janux/image'))).toBe(false);
+    expect(existsSync(join(fn, 'dist/client/_janux/font/manrope.woff2'))).toBe(false);
   }, 30_000);
 });
 
