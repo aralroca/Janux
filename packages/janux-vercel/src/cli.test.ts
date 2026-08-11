@@ -2,7 +2,6 @@ import { describe, expect, it } from 'bun:test';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ensureFakeNative } from './__fixtures__/fake-native';
 import { parseVercelArgs, runVercelInit, vercelFiles } from './cli';
 
 describe('parseVercelArgs', () => {
@@ -63,8 +62,6 @@ describe('runVercelInit', () => {
   /** A server app gets the whole deployment: static assets, function, routes. */
   it('writes a Build Output API deployment for a server app', async () => {
     const app = join(import.meta.dirname, '__fixtures__/app');
-
-    ensureFakeNative(app);
     const output = join(app, '.vercel/output');
 
     await runVercelInit(['--include', 'content', '--max-duration', '60'], app);
