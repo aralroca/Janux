@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { cp, mkdir, rm } from 'node:fs/promises';
+import { cp, mkdir, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { JanuxAppConfig } from '@janux/vite/config';
 import { BUNDLE_PATH, buildFunction } from './build';
@@ -47,10 +47,30 @@ export interface OutputOptions {
 
 /** Config the app reads from disk at runtime, so it travels with the function. */
 async function copyRuntimeFiles(root: string, target: string, include: string[]): Promise<void> {
-  const dirs = ['src', 'dist', ...include];
+  const dirs = ['src', ...include];
 
   for (const dir of dirs) {
     if (existsSync(join(root, dir))) await cp(join(root, dir), join(target, dir), { recursive: true });
+  }
+  await copyServerDist(root, target);
+}
+
+/**
+ * The slice of `dist/client` the server reads back at boot: the top-level
+ * manifests (`styles.css`, `islands.json`, `client.js`, a built `sw.js`) and
+ * the framework's `_janux/` assets. The rest is the browser's payload — the
+ * CDN serves it from `static/`, and a copy inside the function only counts
+ * against the platform's size ceiling, which a media-heavy `public/` (copied
+ * into `dist/client` by the build) is enough to blow through on its own.
+ */
+async function copyServerDist(root: string, target: string): Promise<void> {
+  const client = join(root, 'dist/client');
+
+  if (!existsSync(client)) return;
+
+  for (const entry of await readdir(client, { withFileTypes: true })) {
+    if (entry.isDirectory() && entry.name !== '_janux') continue;
+    await cp(join(client, entry.name), join(target, 'dist/client', entry.name), { recursive: true });
   }
 }
 

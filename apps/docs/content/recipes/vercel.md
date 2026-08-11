@@ -54,8 +54,12 @@ A [Build Output API](https://vercel.com/docs/build-output-api) directory — the
     ├── index.js                   # the handler
     ├── .janux/server.js           # the app, bundled
     ├── src/                       # the routes tree, read at boot
+    ├── dist/client/               # only what the server reads back: the
+    │                              # top-level manifests and _janux/ assets
     └── content/                   # --include: whatever your app reads
 ```
+
+The function does not carry the browser's payload. `dist/client` holds everything `janux build` emitted — hashed chunks, `public/` copied in whole — and all of it is already on the CDN as `static/`. Only the slice the server opens at boot (`styles.css`, `islands.json`, `client.js`, a built `sw.js`, the `_janux/` font assets) travels with the function, which is what keeps a media-heavy app under the platform's function size ceiling.
 
 The function asks for Bun by name:
 
