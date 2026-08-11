@@ -55,11 +55,19 @@ export function applyPatch(
   writeFields(state, gate, values, result.value as Bag);
 }
 
-/** Only the fields the caller named, so paths it never mentioned do not notify. */
+/**
+ * Only the fields the caller named, so paths it never mentioned do not notify —
+ * and only the fields that actually CHANGE: a `persist` rehydration whose
+ * payload equals current state must be a no-op, or it dirties the store and
+ * force-wakes every reader on every boot (see `onStateWrite`).
+ */
 function writeFields(state: ReactiveState<Bag>, gate: MutationGate, values: Bag, clean: Bag): void {
+  const current = state.snapshot();
+
   withGate(gate, () => {
     Object.keys(values)
       .filter((field) => Object.hasOwn(clean, field))
+      .filter((field) => JSON.stringify(clean[field]) !== JSON.stringify(current[field]))
       .forEach((field) => ((state.proxy as Bag)[field] = clean[field]));
   });
 }

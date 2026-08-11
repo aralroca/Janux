@@ -14,6 +14,12 @@ export interface ClientRegistry {
   /** In-flight mounts, so concurrent triggers (double event, unbatched writes) share one instance. */
   mounting: Map<string, Promise<JanuxInstance>>;
   stores: Map<string, JanuxInstance>;
+  /**
+   * Stores written on this client. Their SSR HTML is no longer trustworthy, so
+   * inert islands that declare them resume on the write — and again after a
+   * navigation brings in fresh server markup rendered without those writes.
+   */
+  dirtyStores: Set<string>;
   snapshots: Map<string, Record<string, unknown>>;
   /**
    * Snapshot uris a mount already resumed from. A snapshot resumes an island
@@ -34,6 +40,7 @@ export function createClientRegistry(): ClientRegistry {
     mountedEpoch: new Map(),
     mounting: new Map(),
     stores: new Map(),
+    dirtyStores: new Set(),
     snapshots: new Map(),
     consumedSnapshots: new Set(),
     foreignDefs: new Map(),

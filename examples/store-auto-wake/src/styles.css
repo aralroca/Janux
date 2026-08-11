@@ -1,0 +1,67 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.brand {
+  font-weight: 700;
+}
+
+.scoreboard {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.pitch {
+  flex: 1;
+  display: grid;
+  place-content: center;
+  gap: 1.5rem;
+  text-align: center;
+  padding: 2rem;
+}
+
+.hint {
+  max-width: 42ch;
+  opacity: 0.75;
+}
+
+.bench {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.bench button {
+  font: inherit;
+  padding: 0.6rem 1.1rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  background: transparent;
+  cursor: pointer;
+}
+
+.foot {
+  padding: 1rem 1.5rem;
+  opacity: 0.6;
+  font-size: 0.85rem;
+}

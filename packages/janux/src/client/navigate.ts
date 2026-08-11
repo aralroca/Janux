@@ -1,5 +1,5 @@
 import diff from 'diff-dom-streaming';
-import { mountDocumentForeigns, mountIsland, sweepDisconnectedForeigns, type MountContext } from './mount';
+import { mountDocumentForeigns, mountIsland, storeReaderSelector, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { scanMarkers, scanTree } from './events';
 import { consumePrefetched, navigableBody, NAVIGATION_HEADERS, type NavigablePage } from './prefetch';
 import { saveWidgetFocus, settleRouteA11y } from './route-a11y';
@@ -128,8 +128,15 @@ async function disposeRouteStores(mount: MountContext): Promise<void> {
     ([name, instance]) => instance.def.scope === 'route' && !keptStores.has(name),
   );
 
+  // Out of the registry BEFORE disposing: the async-aware gate lets a write
+  // land during (or after) detach, and it must find no live slot to re-dirty
+  // or wake readers against. The successor resumes fresh from the incoming
+  // page's snapshot, so its markup and its state agree — nothing left to wake.
+  dropped.forEach(([name]) => {
+    registry.stores.delete(name);
+    registry.dirtyStores.delete(name);
+  });
   await Promise.all(dropped.map(([, instance]) => instance.dispose()));
-  dropped.forEach(([name]) => registry.stores.delete(name));
 }
 
 /** App-store snapshots (already-embedded) survive; UI snapshots are replaced by the incoming page. */
@@ -151,9 +158,15 @@ function reindexSnapshots(mount: MountContext): void {
   });
 }
 
-/** Islands marked `eager` mount without waiting for interaction (editors, event listeners…). */
+/**
+ * Islands marked `eager` mount without waiting for interaction (editors, event
+ * listeners…) — and so do readers of a dirty store: this markup was rendered
+ * by a server that never saw the client's writes, so leaving them inert would
+ * show state the store has already moved past.
+ */
 export async function mountEagerIslands(mount: MountContext): Promise<void> {
-  const pending = [...document.querySelectorAll('janux-island[data-jx-eager]')].filter(
+  const selector = ['janux-island[data-jx-eager]', ...[...mount.registry.dirtyStores].map(storeReaderSelector)].join(',');
+  const pending = [...document.querySelectorAll(selector)].filter(
     (node) => !mount.registry.mounted.has(node.getAttribute('data-jx') ?? ''),
   );
 

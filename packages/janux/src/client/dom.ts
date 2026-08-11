@@ -112,6 +112,10 @@ function islandPlaceholder(node: JanuxNode, def: ComponentDef, pass: RenderPass)
   el.setAttribute('data-jx', id);
   if (node.$p.persist) el.setAttribute('data-jx-persist', '');
   if (node.$p.eager) el.setAttribute('data-jx-eager', '');
+  // Same stamp SSR emits: the store-wake selectors must see this host too.
+  const uses = Object.values(def.use ?? {}).map((storeDef) => storeDef.name).join(' ');
+
+  if (uses) el.setAttribute('data-jx-use', uses);
   pass.islands.push({ id, def, initial: node.$p.initial as Record<string, unknown> | undefined });
 
   return el;

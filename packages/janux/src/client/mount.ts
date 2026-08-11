@@ -51,13 +51,19 @@ export async function ensureStore(storeDef: ComponentDef, mount: MountContext): 
 
   if (existing) return existing;
   const snap = registry.snapshots.get(`store://${storeDef.name}`) as any;
-  const instance = createInstance(storeDef, {
+  const instance: JanuxInstance = createInstance(storeDef, {
     bus: mount.bus,
     ctx: mount.ctx,
     initial: snap?.state,
     initialSources: snap?.sources,
     onProposal: mount.onProposal as any,
     onAudit: mount.onAudit as any,
+    // Liveness-guarded: the async-aware gate lets an in-flight intent write
+    // after this instance was disposed (route-store sweep), and that zombie
+    // write must not re-dirty the store or wake readers of its successor.
+    onStateWrite: () => {
+      if (registry.stores.get(storeDef.name) === instance) wakeStoreReaders(storeDef.name, mount);
+    },
   });
 
   registry.stores.set(storeDef.name, instance);
@@ -78,6 +84,38 @@ export async function ensureStore(storeDef: ComponentDef, mount: MountContext): 
 
 function reportError(error: unknown): void {
   document.dispatchEvent(new CustomEvent('janux:error', { detail: String(error) }));
+}
+
+/** The one selector both wake paths share: island hosts naming this store in `data-jx-use`. */
+export function storeReaderSelector(name: string): string {
+  const safe = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(name) : name;
+
+  return `janux-island[data-jx-use~="${safe}"]`;
+}
+
+/**
+ * A store write outdates the SSR HTML of every island that reads it: resume
+ * them now instead of letting them sit stale until their own first interaction.
+ * The store stays marked dirty so post-navigation passes re-run this against
+ * fresh server markup (rendered without the client's writes).
+ */
+export function wakeStoreReaders(name: string, mount: MountContext): void {
+  // Already dirty: the first write woke every reader in the document, and later
+  // arrivals (navigation, suspense chunks) go through mountEagerIslands' dirty
+  // pass — steady-state writes must not pay a per-write document scan.
+  if (mount.registry.dirtyStores.has(name)) return;
+  mount.registry.dirtyStores.add(name);
+  document.querySelectorAll(storeReaderSelector(name)).forEach((host) => {
+    const id = host.getAttribute('data-jx')!;
+
+    if (mount.registry.mounted.has(id) || mount.registry.mounting.has(id)) return;
+    const work = mountIsland(id, host, mount).catch(reportError);
+
+    // Tracked so `settled()` covers the wake: the write is only "done" once
+    // every reader it woke is showing it.
+    mount.inflight.add(work);
+    work.finally(() => mount.inflight.delete(work));
+  });
 }
 
 /** Mount pass-discovered islands that made it into the DOM and are not live yet. */

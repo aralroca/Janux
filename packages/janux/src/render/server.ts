@@ -344,13 +344,17 @@ async function renderIslandInto(def: ComponentDef, props: any, scope: RenderScop
   const instance = createInstance(def, { ...scope.hooks, key, ctx: islandCtx(scope), bus: scope.bus, initial, stores: useStores });
   const persist = props.persist ? ' data-jx-persist' : '';
   const eager = props.eager ? ' data-jx-eager' : '';
+  // The island's store names travel on the host, so the client can wake inert
+  // readers when a store's first write outdates the HTML they were served with.
+  const useNames = Object.values(def.use ?? {}).map((storeDef) => storeDef.name).join(' ');
+  const uses = useNames ? ` data-jx-use="${escapeHtml(useNames)}"` : '';
   const id = escapeHtml(`${def.name}#${key}`);
   const childScope: RenderScope = {
     ...scope,
     island: { name: def.name, key, keySeq: new Map(), usedKeys: new Set() },
     underErrorBoundary: scope.underErrorBoundary || def.error !== undefined,
   };
-  const open = `<janux-island key="${id}" data-jx="${id}"${persist}${eager}`;
+  const open = `<janux-island key="${id}" data-jx="${id}"${persist}${eager}${uses}`;
 
   /*
    * `key` is the same id, for the navigation diff rather than for us: it matches
