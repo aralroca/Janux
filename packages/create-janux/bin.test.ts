@@ -224,6 +224,33 @@ describe('create-janux', () => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
+  /**
+   * The default scaffold installs the janux being released, not the one that
+   * was current when the template was last touched: a literal `^0.5.0` in the
+   * template survives every release after it, and for 0.x that range *excludes*
+   * the newer minors — `create-janux@0.8.0` would scaffold an app running
+   * 0.5.x. So every janux range the template declares — dependencies and
+   * `overrides` alike — rides `workspace:*` and is stamped with the creator's
+   * own version at scaffold time.
+   */
+  test('the default scaffold pins every janux range to the released version', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));
+    const result = Bun.spawnSync(['bun', join(import.meta.dirname, 'bin.ts'), 'my-app'], { cwd });
+
+    expect(result.exitCode).toBe(0);
+    const version = JSON.parse(readFileSync(join(import.meta.dirname, 'package.json'), 'utf-8')).version;
+    const pkg = JSON.parse(readFileSync(join(cwd, 'my-app/package.json'), 'utf-8'));
+    const janux = (section: Record<string, string> | undefined) =>
+      Object.entries(section ?? {}).filter(([dep]) => dep === 'janux' || dep.startsWith('@janux/'));
+
+    expect(janux(pkg.dependencies).length).toBeGreaterThan(0);
+    expect(janux(pkg.overrides).length).toBeGreaterThan(0);
+    for (const [dep, range] of [...janux(pkg.dependencies), ...janux(pkg.overrides)]) {
+      expect(`${dep}@${range}`).toBe(`${dep}@^${version}`);
+    }
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
   /** The template is a working app, not a snippet: what it declares has to exist. */
   test('scaffolds a template whose entry points are all there', () => {
     const cwd = mkdtempSync(join(tmpdir(), 'create-janux-'));

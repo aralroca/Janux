@@ -90,13 +90,26 @@ async function sourceDir(): Promise<string> {
   return join(ROOT, 'template');
 }
 
-/** App name + real registry versions instead of the monorepo's workspace:* ranges. */
+/**
+ * App name + real registry versions instead of the monorepo's workspace:*
+ * ranges — in every section that can carry one. `overrides` matters as much
+ * as `dependencies`: a stale pin there quietly holds a fresh scaffold on an
+ * old framework, which for 0.x ranges means excluding the release entirely.
+ */
 function writeAppPackage(): void {
   const path = join(target, 'package.json');
   const pkg = JSON.parse(readFileSync(path, 'utf-8').replace(/__APP_NAME__/g, name!));
-  const deps = Object.entries(pkg.dependencies ?? {}).map(([dep, range]) => [dep, range === 'workspace:*' ? `^${VERSION}` : range]);
+  const versioned = (section?: Record<string, string>) =>
+    section && Object.fromEntries(Object.entries(section).map(([dep, range]) => [dep, range === 'workspace:*' ? `^${VERSION}` : range]));
 
-  writeFileSync(path, `${JSON.stringify({ ...pkg, name, dependencies: Object.fromEntries(deps) }, null, 2)}\n`);
+  writeFileSync(
+    path,
+    `${JSON.stringify(
+      { ...pkg, name, dependencies: versioned(pkg.dependencies), devDependencies: versioned(pkg.devDependencies), overrides: versioned(pkg.overrides) },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 /**

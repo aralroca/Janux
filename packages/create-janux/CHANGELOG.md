@@ -2,6 +2,10 @@
 
 ## 0.8.0
 
+### Patch Changes
+
+- The default scaffold installs the janux being released. The template pinned its ranges when it was written (`^0.5.0`), and for 0.x that range excludes every later minor — so a fresh scaffold quietly ran an old framework. Every janux range the template declares — `dependencies` and `overrides` alike — now rides `workspace:*` and is stamped with the creator's own version at scaffold time, the same way examples and product templates already were.
+
 ## 0.7.0
 
 ### Patch Changes
