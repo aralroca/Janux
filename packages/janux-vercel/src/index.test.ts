@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'bun:test';
 import { join } from 'node:path';
 import { resolveAppConfig } from '@janux/vite/config';
+import { ensureFakeNative } from './__fixtures__/fake-native';
 import { createHandler, vercelConfig } from './index';
 
 const APP = join(import.meta.dirname, '__fixtures__/app');
+
+ensureFakeNative(APP);
 
 describe('vercelConfig', () => {
   it('puts a server app on Bun and builds the deployment through the adapter', () => {

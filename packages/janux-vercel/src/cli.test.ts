@@ -2,19 +2,25 @@ import { describe, expect, it } from 'bun:test';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ensureFakeNative } from './__fixtures__/fake-native';
 import { parseVercelArgs, runVercelInit, vercelFiles } from './cli';
 
 describe('parseVercelArgs', () => {
   it('collects every --include and reads --max-duration', () => {
     expect(parseVercelArgs(['--include', 'content', '--include', 'data', '--max-duration', '60'])).toEqual({
       include: ['content', 'data'],
+      native: [],
       maxDuration: 60,
     });
   });
 
   it('ignores a --max-duration that is not a number', () => {
     expect(parseVercelArgs(['--max-duration', 'soon']).maxDuration).toBeUndefined();
-    expect(parseVercelArgs([])).toEqual({ include: [], maxDuration: undefined });
+    expect(parseVercelArgs([])).toEqual({ include: [], native: [], maxDuration: undefined });
+  });
+
+  it('collects every --native', () => {
+    expect(parseVercelArgs(['--native', '@resvg/resvg-js', '--native', 'sharp']).native).toEqual(['@resvg/resvg-js', 'sharp']);
   });
 });
 
@@ -29,6 +35,13 @@ describe('vercelFiles', () => {
 
     expect(json.endsWith('\n')).toBe(true);
     expect(JSON.parse(json).$schema).toBe('https://openapi.vercel.sh/vercel.json');
+  });
+
+  /** The config calls the build again with the same flags — --native included, or the next deploy forgets it. */
+  it('carries --native into the committed buildCommand', () => {
+    const json = vercelFiles({ output: 'bun', native: ['@resvg/resvg-js'] })['vercel.json']!;
+
+    expect(JSON.parse(json).buildCommand).toContain('--native @resvg/resvg-js');
   });
 });
 
@@ -50,6 +63,8 @@ describe('runVercelInit', () => {
   /** A server app gets the whole deployment: static assets, function, routes. */
   it('writes a Build Output API deployment for a server app', async () => {
     const app = join(import.meta.dirname, '__fixtures__/app');
+
+    ensureFakeNative(app);
     const output = join(app, '.vercel/output');
 
     await runVercelInit(['--include', 'content', '--max-duration', '60'], app);

@@ -66,6 +66,8 @@ export interface VercelConfigOptions {
   buildCommand?: string;
   /** Extra top-level directories the function reads at runtime (app data, content). */
   include?: string[];
+  /** Packages with platform binaries: kept out of the bundle, installed beside the function. */
+  native?: string[];
   maxDuration?: number;
 }
 
@@ -83,9 +85,14 @@ export function vercelConfig({
   output = 'bun',
   buildCommand = 'bun run build && bunx janux-vercel',
   include = [],
+  native = [],
   maxDuration,
 }: VercelConfigOptions = {}): Record<string, unknown> {
-  const flags = [...include.flatMap((dir) => ['--include', dir]), ...(maxDuration ? ['--max-duration', String(maxDuration)] : [])];
+  const flags = [
+    ...include.flatMap((dir) => ['--include', dir]),
+    ...native.flatMap((pkg) => ['--native', pkg]),
+    ...(maxDuration ? ['--max-duration', String(maxDuration)] : []),
+  ];
   const base = { $schema: SCHEMA, buildCommand: [buildCommand, ...flags].join(' ') };
 
   // A static export has no runtime to choose: prerendered HTML on the CDN.

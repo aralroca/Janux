@@ -6,16 +6,19 @@ import { writeVercelOutput } from './output';
 
 export interface VercelArgs {
   include: string[];
+  native: string[];
   maxDuration?: number;
 }
 
-/** `janux-vercel --include content --max-duration 60` */
+/** `janux-vercel --include content --native @resvg/resvg-js --max-duration 60` */
 export function parseVercelArgs(argv: string[]): VercelArgs {
   const value = (flag: string) => argv[argv.indexOf(flag) + 1];
+  const collect = (flag: string) => argv.flatMap((arg, index) => (arg === flag && argv[index + 1] ? [argv[index + 1]!] : []));
   const duration = argv.includes('--max-duration') ? Number(value('--max-duration')) : undefined;
 
   return {
-    include: argv.flatMap((arg, index) => (arg === '--include' && argv[index + 1] ? [argv[index + 1]!] : [])),
+    include: collect('--include'),
+    native: collect('--native'),
     maxDuration: Number.isFinite(duration) ? duration : undefined,
   };
 }

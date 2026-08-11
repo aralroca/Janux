@@ -4,6 +4,7 @@ import { cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveAppConfig } from '@janux/vite/config';
+import { ensureFakeNative, FAKE_NATIVE_MARKER } from './__fixtures__/fake-native';
 import { routes, writeVercelOutput } from './output';
 
 const PACKAGE = join(import.meta.dirname, '..');
@@ -15,6 +16,7 @@ beforeAll(() => {
 
   mkdirSync(scope, { recursive: true });
   if (!existsSync(join(scope, 'vercel'))) symlinkSync(PACKAGE, join(scope, 'vercel'));
+  ensureFakeNative(APP);
 });
 
 /* `appModules` and `generateApp` moved to @janux/cli/adapter — see adapter-generate.test.ts there. */
@@ -116,6 +118,65 @@ describe('the function payload', () => {
     expect(existsSync(join(fn, 'dist/client/hero.mp4'))).toBe(false);
     expect(existsSync(join(fn, 'dist/client/_janux/image'))).toBe(false);
     expect(existsSync(join(fn, 'dist/client/_janux/font/manrope.woff2'))).toBe(false);
+  }, 30_000);
+});
+
+/**
+ * A native package cannot ride the bundle: its platform binary is a file the
+ * bundler cannot inline, and the binary the dev machine has is the wrong one
+ * anyway (darwin-arm64 on a laptop, linux-x64-gnu in the function). `--native`
+ * splits the problem: the specifier stays bare in the bundle, and the package
+ * is installed beside it for the platform the function actually runs on,
+ * pinned to the version the app already resolved.
+ */
+describe('a native dependency', () => {
+  it('stays a bare specifier and is installed for the function platform', async () => {
+    const runs: string[][] = [];
+
+    await writeVercelOutput(APP, await resolveAppConfig(APP), {
+      native: ['fake-native'],
+      run: (argv) => {
+        runs.push(argv);
+        return { success: true, stderr: '' };
+      },
+    });
+
+    const bundle = await Bun.file(join(APP, '.vercel/output/functions/index.func/.janux/server.js')).text();
+
+    // Externalized, not inlined: the specifier survives, the module body does not.
+    expect(bundle).toContain('fake-native');
+    expect(bundle).not.toContain(FAKE_NATIVE_MARKER);
+
+    // Installed where the bundle resolves it, for the platform it runs on,
+    // pinned to the version the app has — not whatever the registry says today.
+    expect(runs).toEqual([
+      [
+        'npm',
+        'install',
+        'fake-native@1.2.3',
+        '--prefix',
+        join(APP, '.vercel/output/functions/index.func'),
+        '--os',
+        'linux',
+        '--cpu',
+        'x64',
+        '--libc',
+        'glibc',
+        '--no-save',
+        '--ignore-scripts',
+        '--no-audit',
+        '--no-fund',
+      ],
+    ]);
+  }, 30_000);
+
+  /** A package the app never installed has no version to pin — that is a wrong flag, not a guess to make. */
+  it('refuses a native package the app does not have', async () => {
+    const app = await resolveAppConfig(APP);
+
+    expect(
+      writeVercelOutput(APP, app, { native: ['missing-native'], run: () => ({ success: true, stderr: '' }) }),
+    ).rejects.toThrow('missing-native');
   }, 30_000);
 });
 

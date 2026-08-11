@@ -19,8 +19,8 @@ import type { JanuxAppConfig } from '@janux/vite/config';
 /** The bundle sits one level under the app root, like `api/`. */
 export const BUNDLE_PATH = `${GENERATED_DIR}/server.js`;
 
-/** Bundles the app into `.janux/server.js` and returns its size in bytes. */
-export async function buildFunction(root: string, app: JanuxAppConfig): Promise<number> {
+/** Bundles the app into `.janux/server.js` and returns its size in bytes. `external` packages stay bare specifiers. */
+export async function buildFunction(root: string, app: JanuxAppConfig, external: string[] = []): Promise<number> {
   const builder = createAdapterBuilder(root, app, 'janux-vercel');
 
   await builder.writeEntry({
@@ -28,5 +28,5 @@ export async function buildFunction(root: string, app: JanuxAppConfig): Promise<
     body: 'export default createHandler(app);',
   });
 
-  return builder.bundle(BUNDLE_PATH, 'bun');
+  return builder.bundle(BUNDLE_PATH, 'bun', external);
 }
