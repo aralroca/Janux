@@ -81,9 +81,9 @@ export function createAdapterBuilder(
       await write(join(root, GENERATED_DIR, 'entry.ts'), entrySource(entry));
     },
 
-    bundle: async (outfile, target) => {
+    bundle: async (outfile, target, external = []) => {
       const entry = `${GENERATED_DIR}/entry.ts`;
-      const built = Bun.spawnSync(['bun', bundlerPath(), entry, outfile, target], { cwd: root });
+      const built = Bun.spawnSync(['bun', bundlerPath(), entry, outfile, target, ...external], { cwd: root });
 
       if (!built.success) throw new Error(`${name}: could not bundle the app\n${built.stderr.toString()}`);
 

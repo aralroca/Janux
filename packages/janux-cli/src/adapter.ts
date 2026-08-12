@@ -96,8 +96,13 @@ export interface AdapterBuilder {
    * `janux` from, so resolving the app at boot is not an option.
    */
   writeEntry(entry: AdapterEntry): Promise<void>;
-  /** Bundles the written entry to `outfile` (relative to `root`). Returns its size in bytes. */
-  bundle(outfile: string, target: 'node' | 'bun'): Promise<number>;
+  /**
+   * Bundles the written entry to `outfile` (relative to `root`). Returns its
+   * size in bytes. `external` names packages the bundle must not inline —
+   * native modules whose binaries the adapter ships beside the function — so
+   * their specifiers survive for the runtime's resolver.
+   */
+  bundle(outfile: string, target: 'node' | 'bun', external?: string[]): Promise<number>;
   /** Copies `dist/client` to `to` (relative to `root`), creating it if needed. */
   copyClient(to: string): void;
   /**

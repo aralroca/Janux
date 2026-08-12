@@ -59,6 +59,16 @@ A [Build Output API](https://vercel.com/docs/build-output-api) directory — the
     └── content/                   # --include: whatever your app reads
 ```
 
+### Native modules
+
+A package that ships a platform binary — `@resvg/resvg-js`, `sharp` — cannot ride the bundle: the binary is not JavaScript, and the one on the build machine is built for the build machine (darwin-arm64 on a laptop; the function runs linux-x64-gnu). Name it with `--native` and the adapter splits the problem in two: the bundle keeps the bare specifier, and the package is installed into the function's own `node_modules`, aimed at the function's platform and pinned to the version the app already resolved.
+
+```bash
+bunx janux-vercel --native @resvg/resvg-js
+```
+
+Like `--include`, the flag rides the committed `vercel.json`, so the platform's own builds repeat it.
+
 The function does not carry the browser's payload. `dist/client` holds everything `janux build` emitted — hashed chunks, `public/` copied in whole, the image optimizer's output — and all of it is already on the CDN as `static/`. Only the allowlist the server opens at boot (`styles.css`, `islands.json`, `client.js`, a built `sw.js`, the font manifests under `_janux/font`) travels with the function, which is what keeps a media-heavy app under the platform's function size ceiling.
 
 The function asks for Bun by name:

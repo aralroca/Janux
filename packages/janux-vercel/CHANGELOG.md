@@ -2,6 +2,10 @@
 
 ## 0.8.0
 
+### Minor Changes
+
+- `--native <pkg>`: native modules deploy. A package that ships a platform binary (`@resvg/resvg-js`, `sharp`) cannot ride the bundle — the binary is not JavaScript, and the build machine's copy is built for the build machine. Named with `--native`, the specifier stays bare in the bundle and the package is installed into the function's own `node_modules`, aimed at the function's platform (`linux-x64-gnu`) and pinned to the version the app already resolved. Without it, one native import took the whole function down at boot. The flag rides the committed `vercel.json` like `--include`.
+
 ### Patch Changes
 
 - The Vercel function no longer carries the browser's payload.

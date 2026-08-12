@@ -42,7 +42,59 @@ const RUNTIME = 'bun1.x';
 export interface OutputOptions {
   /** Extra top-level directories the app reads at runtime (`content` for a docs site). */
   include?: string[];
+  /** Packages with platform binaries: kept out of the bundle, installed beside the function. */
+  native?: string[];
   maxDuration?: number;
+  /** Runs the install command — a seam so tests assert the argv instead of hitting the registry. */
+  run?: (argv: string[]) => { success: boolean; stderr: string };
+}
+
+/** The platform a Vercel Bun function runs on — what the native install targets, whatever machine builds. */
+const FUNCTION_PLATFORM = ['--os', 'linux', '--cpu', 'x64', '--libc', 'glibc'];
+
+const runInstall = (argv: string[]): { success: boolean; stderr: string } => {
+  const proc = Bun.spawnSync(argv, { stdout: 'inherit' });
+
+  return { success: proc.success, stderr: proc.stderr.toString() };
+};
+
+/**
+ * Installs each `--native` package into the function's own `node_modules`,
+ * where the externalized specifier resolves at runtime. npm does the install
+ * because it can be aimed at another platform: the build machine holds a
+ * darwin binary, the function needs linux-x64-gnu, and `--os`/`--cpu`/`--libc`
+ * pick the right optional dependency without either being run. The version is
+ * pinned to what the app resolved — a package the app never installed has no
+ * version to pin, and that is a wrong flag to report, not a guess to make.
+ */
+export async function installNativePackages(
+  root: string,
+  target: string,
+  packages: string[],
+  run: (argv: string[]) => { success: boolean; stderr: string } = runInstall,
+): Promise<void> {
+  for (const pkg of packages) {
+    const manifest = join(root, 'node_modules', pkg, 'package.json');
+
+    if (!existsSync(manifest)) {
+      throw new Error(`janux-vercel: --native ${pkg} is not installed — the function cannot carry what the app does not have`);
+    }
+    const { version } = await Bun.file(manifest).json();
+    const install = run([
+      'npm',
+      'install',
+      `${pkg}@${version}`,
+      '--prefix',
+      target,
+      ...FUNCTION_PLATFORM,
+      '--no-save',
+      '--ignore-scripts',
+      '--no-audit',
+      '--no-fund',
+    ]);
+
+    if (!install.success) throw new Error(`janux-vercel: could not install ${pkg}@${version} for the function\n${install.stderr}`);
+  }
 }
 
 /** Config the app reads from disk at runtime, so it travels with the function. */
@@ -82,9 +134,9 @@ async function copyServerDist(root: string, target: string): Promise<void> {
   }
 }
 
-async function writeFunction(root: string, app: JanuxAppConfig, { include = [], maxDuration }: OutputOptions): Promise<number> {
+async function writeFunction(root: string, app: JanuxAppConfig, { include = [], native = [], maxDuration, run }: OutputOptions): Promise<number> {
   const target = join(root, FUNCTION_DIR);
-  const bytes = await buildFunction(root, app);
+  const bytes = await buildFunction(root, app, native);
 
   await mkdir(join(target, '.janux'), { recursive: true });
   await cp(join(root, BUNDLE_PATH), join(target, BUNDLE_PATH));
@@ -95,6 +147,7 @@ async function writeFunction(root: string, app: JanuxAppConfig, { include = [], 
     `${JSON.stringify({ runtime: RUNTIME, handler: 'index.js', launcherType: 'Nodejs', supportsResponseStreaming: true, ...(maxDuration ? { maxDuration } : {}) }, null, 2)}\n`,
   );
   await copyRuntimeFiles(root, target, include);
+  await installNativePackages(root, target, native, run);
 
   return bytes;
 }
