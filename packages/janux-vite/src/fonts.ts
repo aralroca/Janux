@@ -8,7 +8,7 @@
  * is filtered lives in `google-fonts.ts`; this module is the I/O around it.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   fallbackOverrides,
@@ -84,9 +84,11 @@ async function cached(file: string, fetchOnce: () => Promise<Uint8Array>): Promi
   return bytes;
 }
 
-async function googleCss(dir: string, config: FontConfig, fetchImpl: Fetch): Promise<string> {
+async function googleCss(dir: string, config: FontConfig, fetchImpl: Fetch, refresh = false): Promise<string> {
   const url = googleCssUrl(config);
   const file = join(dir, `${slug(config.family)}-${digest(url)}.css`);
+
+  if (refresh) rmSync(file, { force: true });
   const bytes = await cached(file, () => download(fetchImpl, url, config.family));
 
   return new TextDecoder().decode(bytes);
@@ -131,15 +133,25 @@ async function overridesFor(dir: string, config: FontConfig, selected: GoogleFac
   return fallbackOverrides(metrics, (await FALLBACK_METRICS[fallback]()).default);
 }
 
-async function resolveFont(dir: string, config: FontConfig, fetchImpl: Fetch): Promise<ResolvedFont> {
-  const selected = selectFaces(parseGoogleCss(await googleCss(dir, config, fetchImpl)), config);
+async function resolveFont(dir: string, config: FontConfig, fetchImpl: Fetch, refresh = false): Promise<ResolvedFont> {
+  try {
+    const selected = selectFaces(parseGoogleCss(await googleCss(dir, config, fetchImpl, refresh)), config);
 
-  if (selected.length === 0) throw new Error(nothingSelected(config));
-  // Hosted before measured: `metricsOf` reads the file this puts on disk.
-  const faces = await Promise.all(selected.map((face) => hostFace(dir, config, face, fetchImpl)));
-  const overrides = await overridesFor(dir, config, selected);
+    if (selected.length === 0) throw new Error(nothingSelected(config));
+    // Hosted before measured: `metricsOf` reads the file this puts on disk.
+    const faces = await Promise.all(selected.map((face) => hostFace(dir, config, face, fetchImpl)));
+    const overrides = await overridesFor(dir, config, selected);
 
-  return { ...declaredShape(config), overrides, faces };
+    return { ...declaredShape(config), overrides, faces };
+  } catch (error) {
+    // Google rotates font versions, and a CSS — cached here or by their edge —
+    // can point at files that no longer exist (observed as a 404 on a woff2 the
+    // CSS itself advertised). One retry against a fresh CSS is the difference
+    // between a deterministic build and one that fails when URLs outlive files.
+    if (refresh) throw error;
+
+    return resolveFont(dir, config, fetchImpl, true);
+  }
 }
 
 export async function resolveFonts(root: string, configs: FontConfig[], fetchImpl: Fetch = fetch): Promise<ResolvedFont[]> {
