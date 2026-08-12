@@ -16,6 +16,10 @@
 
   Navigation is safe around live foreign (React) islands: the first foreign commit is flushed synchronously so a swap never shows an empty host, and the streaming DOM diff treats mounted foreign hosts as opaque leaves (`diff-dom-streaming` ≥ 0.6.11), so a morph no longer races the framework that owns those subtrees.
 
+### Patch Changes
+
+- `AdapterBuilder.bundle(outfile, target, external?)`: adapters can name packages the bundle must not inline — native modules whose binaries ship beside the function — and the bundler passes them straight to `Bun.build`'s `external`.
+
 ## 0.7.0
 
 ### Minor Changes

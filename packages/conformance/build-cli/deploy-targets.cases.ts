@@ -157,7 +157,7 @@ export const CAPABILITY_CASES: CapabilityRow[] = [
 ];
 
 export interface VercelConfigCase {
-  options: { output?: 'bun' | 'static'; buildCommand?: string; include?: string[]; maxDuration?: number };
+  options: { output?: 'bun' | 'static'; buildCommand?: string; include?: string[]; native?: string[]; maxDuration?: number };
   /** Fields the row is about; `undefined` asserts the key is absent. */
   expected: Partial<{ buildCommand: string; bunVersion: string | undefined; cleanUrls: boolean | undefined }>;
 }
@@ -215,24 +215,32 @@ export const VERCEL_CONFIG_CASES: VercelConfigRow[] = [
     options: { maxDuration: 0 },
     expected: { buildCommand: BUILD },
   },
+  {
+    id: 'build2-vercel-carries-every-native-package-into-the-build-command',
+    src: 'janux',
+    options: { native: ['@resvg/resvg-js'], maxDuration: 30 },
+    expected: { buildCommand: `${BUILD} --native @resvg/resvg-js --max-duration 30` },
+  },
 ];
 
 export interface VercelArgsCase {
   argv: string[];
-  expected: { include: string[]; maxDuration?: number };
+  expected: { include: string[]; native: string[]; maxDuration?: number };
 }
 
 export type VercelArgsRow = Case<VercelArgsCase>;
 
 export const VERCEL_ARGS_CASES: VercelArgsRow[] = [
-  { id: 'build2-vercel-args-default-to-nothing-extra', src: 'janux', argv: [], expected: { include: [] } },
-  { id: 'build2-vercel-args-read-one-include', src: 'janux', argv: ['--include', 'content'], expected: { include: ['content'] } },
-  { id: 'build2-vercel-args-collect-every-include-in-order', src: 'janux', argv: ['--include', 'content', '--include', 'data'], expected: { include: ['content', 'data'] } },
-  { id: 'build2-vercel-args-ignore-an-include-with-nothing-after-it', src: 'janux', argv: ['--include'], expected: { include: [] } },
-  { id: 'build2-vercel-args-read-a-max-duration', src: 'janux', argv: ['--max-duration', '60'], expected: { include: [], maxDuration: 60 } },
-  { id: 'build2-vercel-args-drop-a-max-duration-that-is-not-a-number', src: 'janux', argv: ['--max-duration', 'soon'], expected: { include: [] } },
-  { id: 'build2-vercel-args-drop-a-dangling-max-duration', src: 'janux', argv: ['--max-duration'], expected: { include: [] } },
-  { id: 'build2-vercel-args-read-both-flags-together', src: 'janux', argv: ['--include', 'content', '--max-duration', '15'], expected: { include: ['content'], maxDuration: 15 } },
+  { id: 'build2-vercel-args-default-to-nothing-extra', src: 'janux', argv: [], expected: { include: [], native: [] } },
+  { id: 'build2-vercel-args-read-one-include', src: 'janux', argv: ['--include', 'content'], expected: { include: ['content'], native: [] } },
+  { id: 'build2-vercel-args-collect-every-include-in-order', src: 'janux', argv: ['--include', 'content', '--include', 'data'], expected: { include: ['content', 'data'], native: [] } },
+  { id: 'build2-vercel-args-ignore-an-include-with-nothing-after-it', src: 'janux', argv: ['--include'], expected: { include: [], native: [] } },
+  { id: 'build2-vercel-args-read-a-max-duration', src: 'janux', argv: ['--max-duration', '60'], expected: { include: [], native: [], maxDuration: 60 } },
+  { id: 'build2-vercel-args-drop-a-max-duration-that-is-not-a-number', src: 'janux', argv: ['--max-duration', 'soon'], expected: { include: [], native: [] } },
+  { id: 'build2-vercel-args-drop-a-dangling-max-duration', src: 'janux', argv: ['--max-duration'], expected: { include: [], native: [] } },
+  { id: 'build2-vercel-args-read-both-flags-together', src: 'janux', argv: ['--include', 'content', '--max-duration', '15'], expected: { include: ['content'], native: [], maxDuration: 15 } },
+  { id: 'build2-vercel-args-collect-every-native-in-order', src: 'janux', argv: ['--native', '@resvg/resvg-js', '--native', 'sharp'], expected: { include: [], native: ['@resvg/resvg-js', 'sharp'] } },
+  { id: 'build2-vercel-args-ignore-a-native-with-nothing-after-it', src: 'janux', argv: ['--native'], expected: { include: [], native: [] } },
 ];
 
 /** Re-exported so the runner does not import the adapters twice. */

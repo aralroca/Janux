@@ -26,12 +26,16 @@ const clientOnlyAssets: BunPlugin = {
   },
 };
 
-const [entry, outfile, target] = process.argv.slice(2);
+// Everything after the target is an external: a package the bundle must not
+// inline — a native module whose platform binary travels beside the function
+// instead — so its specifier survives for the runtime's own resolver.
+const [entry, outfile, target, ...external] = process.argv.slice(2);
 // Written here rather than through `outdir`: the output path is the caller's
 // business, and Bun's naming templates only get in the way of one file.
 const built = await Bun.build({
   entrypoints: [entry!],
   target: (target as 'node' | 'bun') ?? 'bun',
+  external,
   plugins: [clientOnlyAssets],
 });
 
