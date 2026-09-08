@@ -170,6 +170,47 @@ describe('store writes wake inert readers', () => {
     expect(document.querySelector('section output')?.textContent).toBe('2');
   });
 
+  it('settled waits for a late reader module and its updated DOM', async () => {
+    const late = component({
+      name: 'late-reader',
+      use: { tally },
+      view: ({ use }: any) => jsx('output', { children: use.tally.state.n }),
+    });
+    const { html } = await renderToString(jsx(late as any, {}), { storeDefs: { tally } });
+    const gate = Promise.withResolvers<void>();
+    const started = Promise.withResolvers<void>();
+
+    document.body.innerHTML = '';
+    const client = boot({
+      defs: [tally],
+      islands: { 'late-reader': async () => {
+        started.resolve();
+        await gate.promise;
+        return { late };
+      } },
+    });
+
+    await client.call('tally.inc');
+    await client.settled();
+    document.body.insertAdjacentHTML('beforeend', html);
+    document.dispatchEvent(new CustomEvent('janux:unsuspense'));
+    await started.promise;
+    let done = false;
+    const settling = client.settled().then(() => { done = true; });
+
+    try {
+      // Give an incorrectly untracked settled() time to resolve while the
+      // module is deterministically held behind the gate.
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(done).toBe(false);
+      expect(document.querySelector('output')?.textContent).toBe('0');
+    } finally {
+      gate.resolve();
+      await settling;
+    }
+    expect(document.querySelector('output')?.textContent).toBe('1');
+  });
+
   it('a zombie write from a disposed store neither re-dirties it nor wakes readers', async () => {
     const registry = createClientRegistry();
     const mount = { registry, ctx: {}, inflight: new Set(), onProposal: () => {} } as unknown as MountContext;

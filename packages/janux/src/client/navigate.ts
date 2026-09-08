@@ -1,5 +1,5 @@
 import diff from 'diff-dom-streaming';
-import { mountDocumentForeigns, mountIsland, storeReaderSelector, sweepDisconnectedForeigns, type MountContext } from './mount';
+import { mountDocumentForeigns, mountIsland, mountSelectedIslands, storeReaderSelector, sweepDisconnectedForeigns, type MountContext } from './mount';
 import { scanMarkers, scanTree } from './events';
 import { consumePrefetched, navigableBody, NAVIGATION_HEADERS, type NavigablePage } from './prefetch';
 import { saveWidgetFocus, settleRouteA11y } from './route-a11y';
@@ -166,11 +166,8 @@ function reindexSnapshots(mount: MountContext): void {
  */
 export async function mountEagerIslands(mount: MountContext): Promise<void> {
   const selector = ['janux-island[data-jx-eager]', ...[...mount.registry.dirtyStores].map(storeReaderSelector)].join(',');
-  const pending = [...document.querySelectorAll(selector)].filter(
-    (node) => !mount.registry.mounted.has(node.getAttribute('data-jx') ?? ''),
-  );
 
-  await Promise.all(pending.map((node) => mountIsland(node.getAttribute('data-jx')!, node, mount)));
+  await mountSelectedIslands(selector, mount);
 }
 
 /**
