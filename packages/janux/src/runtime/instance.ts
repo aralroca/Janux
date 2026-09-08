@@ -21,6 +21,8 @@ export interface InstanceOptions {
   stores?: Record<string, JanuxInstance>;
   onAudit?: (entry: AuditEntry) => void;
   onProposal?: (proposal: Proposal) => void;
+  /** Fires after every state write lands — how the client wakes inert readers of a written store. */
+  onStateWrite?: () => void;
   /** `false` where nothing shows the proposal's before/after — see `IntentHooks`. */
   proposalDiff?: boolean;
 }
@@ -135,7 +137,7 @@ export function createInstance(def: ComponentDef, options: InstanceOptions = {})
   const tracker = createPendingTracker();
   const initial = resolveInitial(def, options.initial);
   const gate = createGate();
-  const state = createReactiveState(initial as Record<string, unknown>, gate);
+  const state = createReactiveState(initial as Record<string, unknown>, gate, options.onStateWrite);
   const sourcesRuntime = createSources(def.sources, ctx, bus, tracker, options.initialSources);
   const { readers: derived, dispose: disposeDerived } = derivedReaders(def, state.proxy);
   const emit = makeEmit(def, bus);

@@ -108,6 +108,30 @@ describe('resolving a font end to end', () => {
 
     expect(resolveFonts(appRoot(), [{ family: 'Nonexistent' }], failing)).rejects.toThrow(/Nonexistent/);
   });
+
+  /**
+   * Google rotates font versions: a CSS (cached here, or served stale by their
+   * edge) can advertise a woff2 that 404s minutes later — observed breaking CI.
+   * The resolver must refresh the CSS and retry once instead of failing the build.
+   */
+  it('recovers from a CSS pointing at files Google no longer serves', async () => {
+    const root = appRoot();
+    const dead = 'https://fonts.gstatic.com/s/inter/v20/dead.woff2';
+    const staleCss = CSS.replaceAll(/url\([^)]+\)/g, `url(${dead})`);
+    let cssServes = 0;
+    const fetchImpl = async (url: string) => {
+      if (url === dead) return new Response('gone', { status: 404 });
+      if (url.endsWith('.woff2')) return new Response(WOFF2);
+      cssServes += 1;
+
+      return new Response(cssServes === 1 ? staleCss : CSS);
+    };
+    const [font] = await resolveFonts(root, [{ family: 'Inter', weights: [400], subsets: ['latin'] }], fetchImpl);
+
+    expect(cssServes).toBe(2);
+    expect(font!.faces.length).toBeGreaterThan(0);
+    expect(font!.faces.every((face) => !face.url.includes('dead'))).toBe(true);
+  });
 });
 
 /**

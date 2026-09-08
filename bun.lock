@@ -667,6 +667,16 @@
         "janux": "workspace:*",
       },
     },
+    "examples/store-auto-wake": {
+      "name": "janux-example-store-auto-wake",
+      "version": "0.2.1",
+      "dependencies": {
+        "@janux/agent": "workspace:*",
+        "@janux/cli": "workspace:*",
+        "@janux/server": "workspace:*",
+        "janux": "workspace:*",
+      },
+    },
     "examples/with-advanced-routing": {
       "name": "janux-example-with-advanced-routing",
       "version": "0.2.1",
@@ -922,7 +932,7 @@
     },
     "packages/create-janux": {
       "name": "create-janux",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "bin": {
         "create-janux": "./bin.ts",
       },
@@ -951,7 +961,7 @@
     },
     "packages/janux": {
       "name": "janux",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "csstype": "^3.2.3",
         "diff-dom-streaming": "^0.6.11",
@@ -975,7 +985,7 @@
     },
     "packages/janux-agent": {
       "name": "@janux/agent",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "@aralroca/gui-agent": "^0.5.0",
         "@janux/server": "workspace:*",
@@ -1004,7 +1014,7 @@
     },
     "packages/janux-cli": {
       "name": "@janux/cli",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "bin": {
         "janux": "./bin.ts",
       },
@@ -1018,7 +1028,7 @@
     },
     "packages/janux-content": {
       "name": "@janux/content",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "rehype-raw": "^7.0.0",
         "yaml": "^2.6.0",
@@ -1037,7 +1047,7 @@
     },
     "packages/janux-node": {
       "name": "@janux/node",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "bin": {
         "janux-node": "./bin.ts",
       },
@@ -1055,7 +1065,7 @@
     },
     "packages/janux-server": {
       "name": "@janux/server",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "janux": "workspace:*",
         "web-bot-auth": "^0.1.3",
@@ -1064,7 +1074,7 @@
     },
     "packages/janux-tailwind": {
       "name": "@janux/tailwind",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "@tailwindcss/postcss": "^4.0.0",
         "tailwindcss": "^4.0.0",
@@ -1072,7 +1082,7 @@
     },
     "packages/janux-testing": {
       "name": "@janux/testing",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "@janux/cli": "workspace:*",
         "@janux/server": "workspace:*",
@@ -1091,7 +1101,7 @@
     },
     "packages/janux-vercel": {
       "name": "@janux/vercel",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "bin": {
         "janux-vercel": "./bin.ts",
       },
@@ -1107,7 +1117,7 @@
     },
     "packages/janux-vite": {
       "name": "@janux/vite",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "@capsizecss/metrics": "^3",
         "@capsizecss/unpack": "^2",
@@ -2208,7 +2218,7 @@
 
     "fast-glob": ["fast-glob@3.3.3", "", { "dependencies": { "@nodelib/fs.stat": "^2.0.2", "@nodelib/fs.walk": "^1.2.3", "glob-parent": "^5.1.2", "merge2": "^1.3.0", "micromatch": "^4.0.8" } }, "sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg=="],
 
-    "fast-uri": ["fast-uri@3.1.5", "", {}, "sha512-gHwA1O9LDIcKunMKhObS/HimwtehO1nPUECKAu5TpKgaO19fcWEl4bliWe1jWxVFvIXztJjjQ4L8XQ1EU9f7Jw=="],
+    "fast-uri": ["fast-uri@3.1.6", "", {}, "sha512-7Ical1vFEMr0onbVzEDIreM22I4khW+fzyQPwvAFWBp1iwdshSZRsL4jjRvPG9JP1uiqMHRto+YU6R2/CzDz5Q=="],
 
     "fastq": ["fastq@1.20.1", "", { "dependencies": { "reusify": "^1.0.4" } }, "sha512-GGToxJ/w1x32s/D2EKND7kTil4n8OVk/9mycTc4VDza13lOvpUZTGX3mFSCtV9ksdGBVzvsyAVLM6mHFThxXxw=="],
 
@@ -2411,6 +2421,8 @@
     "janux-example-realtime-chat": ["janux-example-realtime-chat@workspace:examples/realtime-chat"],
 
     "janux-example-shop": ["janux-example-shop@workspace:examples/shop"],
+
+    "janux-example-store-auto-wake": ["janux-example-store-auto-wake@workspace:examples/store-auto-wake"],
 
     "janux-example-with-advanced-routing": ["janux-example-with-advanced-routing@workspace:examples/with-advanced-routing"],
 
@@ -2812,7 +2824,7 @@
 
     "puppeteer-core": ["puppeteer-core@25.3.0", "", { "dependencies": { "@puppeteer/browsers": "3.0.6", "chromium-bidi": "16.0.1", "devtools-protocol": "0.0.1638949", "typed-query-selector": "^2.12.2", "webdriver-bidi-protocol": "0.4.2", "ws": "^8.21.0" } }, "sha512-fm+wpUr2oigH1PXZvwgATrM2tYWHMDG8ASzTEe9uukCye4X5Ldx1K5BTHPFKITrIWvQQAQ256d1NpbEveBcKjA=="],
 
-    "qs": ["qs@6.15.3", "", { "dependencies": { "es-define-property": "^1.0.1", "side-channel": "^1.1.1" } }, "sha512-O9gl3zCl5h5blw1KGUzQKhA5oUXSl8rwUIM5o0S3nCXMliSvy5Dzx7/DJcI+SwgICv+IneSZwhBh1oSyEHA71A=="],
+    "qs": ["qs@6.16.0", "", { "dependencies": { "es-define-property": "^1.0.1", "side-channel": "^1.1.1" } }, "sha512-h6fhOIaRrID2CbEY2fqs+7t+UXZo+MLAnU5gRIq85uFtdiUPCdsApMlHhXogKVM4HM2DVbIjGNTTYH2OcmP1vA=="],
 
     "quansync": ["quansync@0.2.11", "", {}, "sha512-AifT7QEbW9Nri4tAwR5M/uzpBuqfZf+zwaEM/QkzEjj7NBuFD2rBuy0K3dE+8wltbezDV7JMA0WfnCPYRSYbXA=="],
 
@@ -3260,7 +3272,7 @@
 
     "parse5/entities": ["entities@6.0.1", "", {}, "sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g=="],
 
-    "postcss/nanoid": ["nanoid@3.3.17", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-xQLf0A3HOMlgHq0n247/LRuAOYmB7dXJ/DvAxGvsSBij45XtBSmQycu+F8ODbHwns/XyFZagyL1+J0Offw1E0g=="],
+    "postcss/nanoid": ["nanoid@3.3.18", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w=="],
 
     "protobufjs/@types/node": ["@types/node@26.1.1", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-nxAkRSVkN1Y0JC1W8ky/fTfkGsMmcrRsbx+3XoZE+rMOX71kLYTV7fLXpqud1GpbpP5TuffXFqfX7fH2GgZREw=="],
 

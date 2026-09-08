@@ -51,13 +51,19 @@ export async function ensureStore(storeDef: ComponentDef, mount: MountContext): 
 
   if (existing) return existing;
   const snap = registry.snapshots.get(`store://${storeDef.name}`) as any;
-  const instance = createInstance(storeDef, {
+  const instance: JanuxInstance = createInstance(storeDef, {
     bus: mount.bus,
     ctx: mount.ctx,
     initial: snap?.state,
     initialSources: snap?.sources,
     onProposal: mount.onProposal as any,
     onAudit: mount.onAudit as any,
+    // Liveness-guarded: the async-aware gate lets an in-flight intent write
+    // after this instance was disposed (route-store sweep), and that zombie
+    // write must not re-dirty the store or wake readers of its successor.
+    onStateWrite: () => {
+      if (registry.stores.get(storeDef.name) === instance) wakeStoreReaders(storeDef.name, mount);
+    },
   });
 
   registry.stores.set(storeDef.name, instance);
@@ -78,6 +84,65 @@ export async function ensureStore(storeDef: ComponentDef, mount: MountContext): 
 
 function reportError(error: unknown): void {
   document.dispatchEvent(new CustomEvent('janux:error', { detail: String(error) }));
+}
+
+/** The one selector both wake paths share: island hosts naming this store in `data-jx-use`. */
+export function storeReaderSelector(name: string): string {
+  const safe = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(name) : name;
+
+  return `janux-island[data-jx-use~="${safe}"]`;
+}
+
+/**
+ * A store write outdates the SSR HTML of every island that reads it: resume
+ * them now instead of letting them sit stale until their own first interaction.
+ * The store stays marked dirty so post-navigation passes re-run this against
+ * fresh server markup (rendered without the client's writes).
+ */
+export function wakeStoreReaders(name: string, mount: MountContext): void {
+  // Already dirty: the first write woke every reader in the document, and later
+  // arrivals (navigation, suspense chunks) go through mountEagerIslands' dirty
+  // pass — steady-state writes must not pay a per-write document scan.
+  if (mount.registry.dirtyStores.has(name)) return;
+  mount.registry.dirtyStores.add(name);
+  mountSelectedIslands(storeReaderSelector(name), mount).catch(reportError);
+}
+
+/** Resume ancestors before descendants: a parent's first render can replace a child's SSR host. */
+export async function mountSelectedIslands(selector: string, mount: MountContext): Promise<void> {
+  const jobs = new Map<Element, Promise<unknown>>();
+
+  document.querySelectorAll(selector).forEach((host) => {
+    const id = host.getAttribute('data-jx')!;
+    const ancestors: Promise<unknown>[] = [];
+
+    for (let parent = host.parentElement; parent; parent = parent.parentElement) {
+      const pending = jobs.get(parent) ?? mount.registry.mounting.get(parent.getAttribute('data-jx') ?? '');
+
+      if (pending) ancestors.push(pending);
+    }
+    const work = (async () => {
+      if (ancestors.length) await Promise.all(ancestors);
+      // Reconciliation may have moved/replaced this host, or removed the
+      // conditional child entirely. Never mount into the detached SSR copy.
+      const current = host.isConnected ? host : document.querySelector(`janux-island[data-jx="${id}"]`);
+
+      if (current) await mountIsland(id, current, mount);
+    })();
+
+    jobs.set(host, work);
+  });
+  const work = Promise.allSettled(jobs.values());
+
+  mount.inflight.add(work);
+  try {
+    const results = await work;
+    const failure = results.find((result) => result.status === 'rejected');
+
+    if (failure?.status === 'rejected') throw failure.reason;
+  } finally {
+    mount.inflight.delete(work);
+  }
 }
 
 /** Mount pass-discovered islands that made it into the DOM and are not live yet. */

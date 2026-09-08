@@ -85,6 +85,7 @@ export function withLeafTracking<T>(read: () => T): T {
 export function createReactiveState<T extends object>(
   initial: T,
   gate: MutationGate = createGate(),
+  onWrite?: () => void,
 ): ReactiveState<T> {
   const versions = new Map<string, Sig<number>>();
   // Direct-children index: descendant notification walks the subtree instead
@@ -168,6 +169,8 @@ export function createReactiveState<T extends object>(
       writesSincePrune = 0;
       prune();
     }
+    // After the bumps: a listener reading the state here sees the write landed.
+    onWrite?.();
   };
 
   const wrapArrayMethod = (target: unknown[], path: string, method: string) => {

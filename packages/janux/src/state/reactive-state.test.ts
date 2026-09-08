@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test';
 import { effect } from '../signals';
 import { createGate, withGate } from './mutation-gate';
-import { createReactiveState } from './reactive-state';
+import { createReactiveState, type ReactiveState } from './reactive-state';
 
 const initial = () => ({
   items: [{ id: 'a', qty: 1 }],
@@ -130,6 +130,31 @@ describe('reactive state', () => {
     snap.items[0]!.qty = 99;
     expect(state.proxy.items[0]!.qty).toBe(1);
     expect(JSON.parse(JSON.stringify(snap)).items[0].qty).toBe(99);
+  });
+
+  it('onWrite fires once per landed write — sets, array mutators and deletes alike', () => {
+    const gate = createGate();
+    const writes = mock(() => {});
+    const state = createReactiveState(initial(), gate, writes);
+
+    expect(state.proxy.items[0]!.qty).toBe(1);
+    expect(writes).toHaveBeenCalledTimes(0);
+    withGate(gate, () => {
+      state.proxy.coupon = 'SAVE10';
+      state.proxy.items.push({ id: 'b', qty: 2 });
+      delete (state.proxy as any).coupon;
+    });
+    expect(writes).toHaveBeenCalledTimes(3);
+    // The listener observes the write already landed, not the previous value.
+    const seen = mock((_coupon: string | null) => {});
+    const observed: ReactiveState<ReturnType<typeof initial>> = createReactiveState(initial(), gate, () =>
+      seen(observed.proxy.coupon),
+    );
+
+    withGate(gate, () => {
+      observed.proxy.coupon = 'LATE';
+    });
+    expect(seen).toHaveBeenCalledWith('LATE');
   });
 
 });

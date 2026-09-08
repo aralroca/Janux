@@ -89,6 +89,20 @@ On load, `boot()`:
 
 The verified guarantee (it's in the test suite): a rendered page executes **zero** component code until you touch it.
 
+## Shared stores wake their readers
+
+Deferred resume has a classic tear: island A resumes, writes a shared store, and island B — still inert HTML — keeps showing the state the server rendered. Janux closes it without serializing a reactive graph:
+
+1. SSR stamps every island host with the stores its component declares: `use: { cart }` becomes `data-jx-use="cart"` in the markup.
+2. The **first client-side write** to a store (an intent, an agent call, a `persist` rehydration) resumes every inert island whose host names that store. Stores are singletons, so the woken island renders against the live state, not its stale snapshot.
+3. A written store stays marked **dirty**: markup arriving later — a suspense chunk, the next SPA navigation — was rendered by a server that never saw the write, so its inert readers resume on arrival too.
+
+Waking is resuming, so mismatches are safe by construction: the island re-runs its view against live state and reconciles it with the existing DOM — a conditional that flipped since SSR is patched in place, not a broken hydration. And it's exactly as selective as `use`: islands that don't declare the store never run. Until the first write, SSR HTML and store state agree by definition, so the zero-code-until-interaction guarantee stands.
+
+`eager` remains for islands that must be live without any write — editors, pollers, hosts of bus-event listeners.
+
+> **See it running**: [`examples/store-auto-wake`](https://github.com/aralroca/Janux/tree/main/examples/store-auto-wake) — nothing is `eager`; the first goal wakes the scoreboard, flipped conditional included.
+
 ## Zero JS for static pages
 
 If a route mounts no islands, the document ships no JavaScript at all — no runtime, no state, no island map. A content site in Janux weighs what hand-written HTML weighs. The one `<script>` tag such a page carries is the [speculation rules](/docs/guide/navigation#prefetching-and-speculation-rules) JSON, which the browser reads as data and never executes; set `navigation.speculationRules: false` if you want the document free of script tags entirely.

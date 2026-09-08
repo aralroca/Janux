@@ -85,7 +85,7 @@ describe('def-level persist config', () => {
 
   const mountContext = () =>
     ({
-      registry: { stores: new Map(), snapshots: new Map() },
+      registry: { stores: new Map(), snapshots: new Map(), dirtyStores: new Set() },
       bus: undefined,
       ctx: {},
       inflight: new Set(),

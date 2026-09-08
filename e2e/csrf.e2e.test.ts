@@ -88,6 +88,10 @@ describe.skipIf(!BUILT)('a third-party page cannot invoke api() in a real browse
     async () => {
       const { page, errors } = await openPage(browser!);
 
+      // Other E2E files import the same payments module, so the ledger can
+      // already contain legitimate transfers. The attack must leave it unchanged.
+      const before = await executedTransfers();
+
       seen.length = 0;
       await page.goto(`http://localhost:${attacker!.port}/`, { waitUntil: 'load' });
       await page.waitForFunction(() => document.title !== 'free kittens', undefined, { timeout: TIMEOUT });
@@ -105,7 +109,7 @@ describe.skipIf(!BUILT)('a third-party page cannot invoke api() in a real browse
        * and it is also what a subdomain takeover looks like in production.
        */
       expect(seen[0]?.site).toBe('same-site');
-      expect(await executedTransfers()).toEqual([]);
+      expect(await executedTransfers()).toEqual(before);
       expect(errors).toEqual([]);
       await page.close();
     },
