@@ -140,6 +140,36 @@ describe('store writes wake inert readers', () => {
     expect(document.querySelector('output')!.textContent).toBe('n=1');
   });
 
+  it.each([false, true])('wakes nested readers after their parent replaces the host (lazy parent: %s)', async (lazy) => {
+    const child = component({
+      name: 'nested-reader',
+      use: { tally },
+      view: ({ use }: any) => jsx('output', { children: use.tally.state.n }),
+    });
+    const parent = component({
+      name: 'reader-parent',
+      use: { tally },
+      view: ({ use }: any) => jsx(use.tally.state.n ? 'section' : 'div', { children: jsx(child as any, {}) }),
+    });
+    const { html } = await renderToString(jsx(parent as any, {}), { storeDefs: { tally } });
+
+    document.body.innerHTML = html;
+    const client = boot({
+      defs: lazy ? [tally, child] : [tally, parent, child],
+      islands: lazy ? { 'reader-parent': async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return { parent };
+      } } : undefined,
+    });
+
+    await client.call('tally.inc');
+    await client.settled();
+    expect(document.querySelector('section output')?.textContent).toBe('1');
+    await client.call('tally.inc');
+    await client.settled();
+    expect(document.querySelector('section output')?.textContent).toBe('2');
+  });
+
   it('a zombie write from a disposed store neither re-dirties it nor wakes readers', async () => {
     const registry = createClientRegistry();
     const mount = { registry, ctx: {}, inflight: new Set(), onProposal: () => {} } as unknown as MountContext;

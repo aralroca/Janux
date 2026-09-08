@@ -105,17 +105,44 @@ export function wakeStoreReaders(name: string, mount: MountContext): void {
   // pass — steady-state writes must not pay a per-write document scan.
   if (mount.registry.dirtyStores.has(name)) return;
   mount.registry.dirtyStores.add(name);
-  document.querySelectorAll(storeReaderSelector(name)).forEach((host) => {
+  mountSelectedIslands(storeReaderSelector(name), mount).catch(reportError);
+}
+
+/** Resume ancestors before descendants: a parent's first render can replace a child's SSR host. */
+export async function mountSelectedIslands(selector: string, mount: MountContext): Promise<void> {
+  const jobs = new Map<Element, Promise<unknown>>();
+
+  document.querySelectorAll(selector).forEach((host) => {
     const id = host.getAttribute('data-jx')!;
+    const ancestors: Promise<unknown>[] = [];
 
-    if (mount.registry.mounted.has(id) || mount.registry.mounting.has(id)) return;
-    const work = mountIsland(id, host, mount).catch(reportError);
+    for (let parent = host.parentElement; parent; parent = parent.parentElement) {
+      const pending = jobs.get(parent) ?? mount.registry.mounting.get(parent.getAttribute('data-jx') ?? '');
 
-    // Tracked so `settled()` covers the wake: the write is only "done" once
-    // every reader it woke is showing it.
-    mount.inflight.add(work);
-    work.finally(() => mount.inflight.delete(work));
+      if (pending) ancestors.push(pending);
+    }
+    const work = (async () => {
+      if (ancestors.length) await Promise.all(ancestors);
+      // Reconciliation may have moved/replaced this host, or removed the
+      // conditional child entirely. Never mount into the detached SSR copy.
+      const current = host.isConnected ? host : document.querySelector(`janux-island[data-jx="${id}"]`);
+
+      if (current) await mountIsland(id, current, mount);
+    })();
+
+    jobs.set(host, work);
   });
+  const work = Promise.allSettled(jobs.values());
+
+  mount.inflight.add(work);
+  try {
+    const results = await work;
+    const failure = results.find((result) => result.status === 'rejected');
+
+    if (failure?.status === 'rejected') throw failure.reason;
+  } finally {
+    mount.inflight.delete(work);
+  }
 }
 
 /** Mount pass-discovered islands that made it into the DOM and are not live yet. */
