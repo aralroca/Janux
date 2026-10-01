@@ -24,6 +24,8 @@ const RING_SELECTOR = '[data-gui-agent-highlight]';
 const CURSOR_SELECTOR = '[data-gui-agent-cursor]';
 /** Long enough for the frame on which a selector target mounts its host. */
 const FRAME_MS = 32;
+/** ~2s of frames: as long as gui-agent waits for a selector target to mount. */
+const CLAIM_TRIES = 64;
 
 /**
  * Marks a host the runtime injected so a navigation keeps it. The id matters as
@@ -68,25 +70,29 @@ export function startVisualization(
   const config = options === true ? {} : options;
   const visualizer = createAgentVisualizer({ ...config, labels: wireLabels(config.labels, wireName) });
   const resumeGlow = suspendAgentGlow();
-  let ring: Element | null = null;
+  /** The `<body>` hosts gui-agent creates lazily for this config: the ring, and the pointer with `cursor`. */
+  const hosts = [
+    { selector: RING_SELECTOR, id: 'janux-agent-ring', wanted: config.highlight !== false },
+    { selector: CURSOR_SELECTOR, id: 'janux-agent-cursor', wanted: Boolean(config.cursor) },
+  ].filter((host) => host.wanted);
+  let retry: ReturnType<typeof setTimeout> | undefined;
   /**
-   * Claims the host gui-agent lazily creates for the ring: it lives in `<body>`,
-   * so without the marker a navigation's document diff takes it down for good
-   * and the glow silently stops working. A selector target mounts the host a
-   * frame later, hence the retry.
+   * Claims those hosts: unmarked, a navigation's document diff takes them down
+   * for good and the glow (or the pointer, animating a detached element) stops
+   * working. A selector target mounts them a few frames later, hence the retry,
+   * bounded by how long gui-agent itself waits for the target.
    */
-  const claimRing = (): void => {
-    if (ring?.isConnected) return;
-    ring = document.querySelector(RING_SELECTOR);
-    if (ring) markRuntimeHost(ring, 'janux-agent-ring');
-    else setTimeout(claimRing, FRAME_MS);
-  };
-  /** The pointer's host is created with the ring's tour, and lost the same way. */
-  const claimHosts = (): void => {
-    const cursor = document.querySelector(CURSOR_SELECTOR);
+  const claimHosts = (tries = CLAIM_TRIES): void => {
+    const missing = hosts.filter(({ selector, id }) => {
+      const host = document.querySelector(selector);
 
-    if (cursor) markRuntimeHost(cursor, 'janux-agent-cursor');
-    claimRing();
+      if (host) markRuntimeHost(host, id);
+
+      return !host;
+    });
+
+    clearTimeout(retry);
+    if (missing.length && tries > 0) retry = setTimeout(() => claimHosts(tries - 1), FRAME_MS);
   };
   const highlight = (target: Element | string | undefined): void => {
     if (!target) return;
@@ -118,6 +124,7 @@ export function startVisualization(
       if (step.type === 'tool-target') claimHosts();
     },
     dispose() {
+      clearTimeout(retry);
       document.removeEventListener('janux:tool-target', onToolTarget);
       document.removeEventListener('janux:tool-call', onToolCall);
       visualizer.element.remove();

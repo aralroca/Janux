@@ -1,5 +1,5 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { afterAll, afterEach, describe, expect, it, mock } from 'bun:test';
+import { afterAll, afterEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import type { LlmRequest, LlmResponse } from '@aralroca/gui-agent';
 
 // Registered before gui-agent is loaded, not in `beforeAll`: its bundled WebMCP
@@ -268,6 +268,49 @@ describe('createCopilot', () => {
     expect(cursor?.id).toBe('janux-agent-cursor');
     copilot.dispose();
   }, 20_000);
+
+  it('claims the cursor host when the first highlight waits for its target to mount', async () => {
+    installBridge();
+    document.body.innerHTML = '';
+    const { llm } = scriptedLlm([]);
+    const copilot = createCopilot({ llm, visualize: { cursor: true } });
+
+    await copilot.ask('hi');
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-call', {
+        detail: { tool: 'wf.add', phase: 'ok', guard: 'auto', glowTarget: '.late-node' },
+      }),
+    );
+    document.body.insertAdjacentHTML('beforeend', '<div class="late-node">node</div>');
+    await new Promise((done) => setTimeout(done, 300));
+
+    expect(document.querySelector('[data-gui-agent-cursor]')?.id).toBe('janux-agent-cursor');
+    copilot.dispose();
+  });
+
+  /** A host the config never creates is not waited for: no polling with the ring off. */
+  it('does not poll for a ring that highlight: false never creates', async () => {
+    installBridge();
+    document.body.innerHTML = '<button id="go">Go</button>';
+    const { llm } = scriptedLlm([]);
+    const copilot = createCopilot({ llm, visualize: { highlight: false } });
+    const timers = spyOn(globalThis, 'setTimeout');
+
+    await copilot.ask('hi');
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-target', {
+        detail: { element: document.getElementById('go'), action: 'click', selector: '#go' },
+      }),
+    );
+    copilot.dispose();
+    await new Promise((done) => setTimeout(done, 120));
+    const settled = timers.mock.calls.length;
+
+    await new Promise((done) => setTimeout(done, 200));
+    // Only the test's own wait arms a timer from here on.
+    expect(timers.mock.calls.length).toBe(settled + 1);
+    timers.mockRestore();
+  });
 
   /** dispose() unregisters the tools ask() re-registers, so ask-after-dispose is a shape apps hit. */
   it('rebuilds the overlay when asked again after dispose', async () => {
