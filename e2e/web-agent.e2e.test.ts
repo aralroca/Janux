@@ -1,4 +1,6 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { planFor } from '../examples/with-web-agent/src/demo-plan';
 import { createTestApp } from '@janux/testing';
 import { appRoot } from './support/app';
@@ -25,6 +27,17 @@ describe('examples/with-web-agent end to end', () => {
     expect(html).toContain('id="assistant-panel"');
     // The chat form empties itself on submit through the runtime, not a DOM poke.
     expect(html).toContain('data-jxreset');
+  });
+
+  it('boots every island the console renders, so a delegated event can always resume it', () => {
+    const src = path.resolve(import.meta.dir, '../examples/with-web-agent/src');
+    const client = readFileSync(path.join(src, 'client.ts'), 'utf8');
+    const booted = /defs:\s*\[([^\]]*)\]/.exec(client)![1]!.split(',').map((name) => name.trim());
+    const islands = readdirSync(path.join(src, 'components'))
+      .map((file) => readFileSync(path.join(src, 'components', file), 'utf8'))
+      .flatMap((code) => [...code.matchAll(/export const (\w+) = component\(/g)].map((match) => match[1]!));
+
+    expect(islands.filter((name) => !booted.includes(name))).toEqual([]);
   });
 
   it('exposes exactly the console it means to expose', async () => {
