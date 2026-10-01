@@ -12,6 +12,7 @@
  * re-renders and navigations is runtime knowledge.
  */
 import { createAgentVisualizer, type AgentVisualizer, type AgentVisualizerOptions } from '@aralroca/gui-agent/ui';
+import type { AgentStep } from '@aralroca/gui-agent';
 import { glowTargetFor, suspendAgentGlow, KEEP_ATTRIBUTE } from 'janux/client';
 
 /** Marks the chip-list host, so apps position and theme it from their own CSS. */
@@ -19,6 +20,8 @@ export const STEPS_ATTRIBUTE = 'data-janux-agent-steps';
 
 /** gui-agent's ring host, created lazily on its first highlight. */
 const RING_SELECTOR = '[data-gui-agent-highlight]';
+/** gui-agent's pointer host (`cursor: true`), created lazily on its first move. */
+const CURSOR_SELECTOR = '[data-gui-agent-cursor]';
 /** Long enough for the frame on which a selector target mounts its host. */
 const FRAME_MS = 32;
 
@@ -36,6 +39,8 @@ function markRuntimeHost(host: Element, id: string): void {
 
 export interface Visualization {
   visualizer: AgentVisualizer;
+  /** Feeds an agent step to the visualizer, claiming the hosts it creates. */
+  onStep(step: AgentStep): void;
   dispose(): void;
 }
 
@@ -76,10 +81,17 @@ export function startVisualization(
     if (ring) markRuntimeHost(ring, 'janux-agent-ring');
     else setTimeout(claimRing, FRAME_MS);
   };
+  /** The pointer's host is created with the ring's tour, and lost the same way. */
+  const claimHosts = (): void => {
+    const cursor = document.querySelector(CURSOR_SELECTOR);
+
+    if (cursor) markRuntimeHost(cursor, 'janux-agent-cursor');
+    claimRing();
+  };
   const highlight = (target: Element | string | undefined): void => {
     if (!target) return;
     visualizer.highlight(target);
-    claimRing();
+    claimHosts();
   };
   const onToolTarget = (event: Event): void => {
     highlight((event as CustomEvent).detail?.element);
@@ -101,6 +113,10 @@ export function startVisualization(
 
   return {
     visualizer,
+    onStep(step) {
+      visualizer.onStep(step);
+      if (step.type === 'tool-target') claimHosts();
+    },
     dispose() {
       document.removeEventListener('janux:tool-target', onToolTarget);
       document.removeEventListener('janux:tool-call', onToolCall);

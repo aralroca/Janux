@@ -229,6 +229,46 @@ describe('createCopilot', () => {
     copilot.dispose();
   });
 
+  /** gui-agent's pointer host lives in `<body>` too: unmarked, a navigation deletes it and it animates detached. */
+  it('claims the cursor host so the pointer outlives a navigation', async () => {
+    installBridge();
+    document.body.innerHTML = '<button id="go">Go</button>';
+    const { llm } = scriptedLlm([]);
+    const copilot = createCopilot({ llm, visualize: { cursor: true } });
+
+    await copilot.ask('hi');
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-target', {
+        detail: { element: document.getElementById('go'), action: 'click', selector: '#go' },
+      }),
+    );
+    await new Promise((done) => setTimeout(done, 100));
+    const cursor = document.querySelector('[data-gui-agent-cursor]');
+
+    expect(cursor?.hasAttribute('data-janux-keep')).toBe(true);
+    expect(cursor?.id).toBe('janux-agent-cursor');
+    copilot.dispose();
+  });
+
+  /** A DOM-fallback drag shows the pointer from the agent's own steps, not from a janux event. */
+  it('claims the cursor host a DOM-fallback drag creates', async () => {
+    installBridge();
+    document.body.innerHTML =
+      '<div draggable="true" aria-label="Card">Card</div><section aria-label="Done" aria-dropeffect="move">Done</section>';
+    const { llm } = scriptedLlm([
+      { id: '1', name: 'read_page', arguments: {} },
+      { id: '2', name: 'drag', arguments: { ref: 'e1', to: 'e2' } },
+    ]);
+    const copilot = createCopilot({ llm, domFallback: true, visualize: { cursor: true } });
+
+    await copilot.ask('move the card to done');
+    const cursor = document.querySelector('[data-gui-agent-cursor]');
+
+    expect(cursor?.hasAttribute('data-janux-keep')).toBe(true);
+    expect(cursor?.id).toBe('janux-agent-cursor');
+    copilot.dispose();
+  }, 20_000);
+
   /** dispose() unregisters the tools ask() re-registers, so ask-after-dispose is a shape apps hit. */
   it('rebuilds the overlay when asked again after dispose', async () => {
     installBridge();
