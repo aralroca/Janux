@@ -4,16 +4,17 @@
  * one by handing `createCopilot` a `localLlm()` or `serverLlm()` — see copilot.ts.
  *
  * Manifest tool names arrive at the model sanitized (`users.search` →
- * `users_search`); `read_page` and `fill` are the DOM fallback, used only for the
- * display name, which no tool exposes.
+ * `users_search`); `read_page`, `fill` and `drag` are the DOM fallback, used for
+ * the display name, which no tool exposes, and for dragging cards on the board.
  */
 export interface PlannedCall {
   name: string;
   arguments: Record<string, unknown>;
 }
 
-/** The placeholder `fill` ref, resolved from the live page snapshot at call time. */
+/** A placeholder ref, resolved at call time from the live page snapshot line naming `name`. */
 export const PENDING_REF = 'e?';
+const pending = (name: string) => `${PENDING_REF}${name}`;
 
 /** What this planner knows how to do — the panel's suggestions and its greeting. */
 export const EXAMPLE_GOALS = [
@@ -21,6 +22,7 @@ export const EXAMPLE_GOALS = [
   'search Kenji',
   'change my display name to Neo',
   'build a workflow',
+  'move Fix login redirect to Done',
 ];
 
 const WORKFLOW_STEPS = ['Trigger', 'Fetch data', 'Transform', 'Send notification'];
@@ -30,7 +32,9 @@ const ADD_STEP = /add\s+(?:a\s+)?(?:step\s+)?["“]?([\w \-]+?)["”]?\s*(?:step
 const EMAIL = /([\w.+-]+@[\w-]+\.[\w.-]+)/;
 const SEARCH = /(?:search|find|filter)\s+(?:for\s+|users?\s+)?(\w+)/i;
 const RENAME = /(?:display name|name)\s+to\s+(.+)$/i;
-const TAB = /\b(users|team|profile|workflows?)\b/i;
+const MOVE = /\bmove\s+["“]?(.+?)["”]?\s+to\s+(todo|in progress|done)\b/i;
+const COLUMNS: Record<string, string> = { todo: 'Todo', 'in progress': 'In progress', done: 'Done' };
+const TAB = /\b(users|team|profile|workflows?|board)\b/i;
 
 /** Acting on a tab that isn't on screen would be invisible, so the agent opens it first. */
 const open = (tab: string): PlannedCall => ({ name: 'console_goToTab', arguments: { tab } });
@@ -76,7 +80,20 @@ function rename(goal: string): PlannedCall[] | undefined {
   return [
     open('profile'),
     { name: 'read_page', arguments: {} },
-    { name: 'fill', arguments: { ref: PENDING_REF, value: match[1]!.trim() } },
+    { name: 'fill', arguments: { ref: pending('Display name'), value: match[1]!.trim() } },
+  ];
+}
+
+/** Nothing exposes moving a card either: the agent drags it, as a hand would. */
+function move(goal: string): PlannedCall[] | undefined {
+  const match = MOVE.exec(goal);
+
+  if (!match) return undefined;
+
+  return [
+    open('board'),
+    { name: 'read_page', arguments: {} },
+    { name: 'drag', arguments: { ref: pending(match[1]!.trim()), to: pending(COLUMNS[match[2]!.toLowerCase()]!) } },
   ];
 }
 
@@ -86,7 +103,7 @@ function goToTab(goal: string): PlannedCall[] | undefined {
   return match ? [open(match[1]!.toLowerCase().replace(/^workflow$/, 'workflows'))] : undefined;
 }
 
-const RULES = [buildWorkflow, addStep, invite, search, rename, goToTab];
+const RULES = [buildWorkflow, addStep, invite, search, rename, move, goToTab];
 
 /** The whole plan for a goal, in order. Empty when nothing matches. */
 export function planFor(goal: string): PlannedCall[] {

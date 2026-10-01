@@ -132,7 +132,7 @@ export function createCopilot(options: CopilotOptions): Copilot {
   // The visualizer never replaces the caller's observer — it chains onto it.
   const onStep = (step: AgentStep): void => {
     options.onStep?.(step);
-    visualization?.visualizer.onStep(step);
+    visualization?.onStep(step);
     runListeners.forEach((listener) => listener(step));
   };
   /**

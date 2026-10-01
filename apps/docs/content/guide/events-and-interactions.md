@@ -125,7 +125,7 @@ export const Board = component({
 });
 ```
 
-The payload travels through **island state**, not `dataTransfer`: `onDragStart` records *what* is being dragged (`.with()` says which card each element means), `onDrop` reads it back. That keeps the whole gesture on the agent surface — `board.pick` and `board.dropOn` are ordinary tools, so a copilot can move the card with two calls and no mouse. The runtime also cancels the browser's default drop handling (navigating to a dragged link), and the drop intent receives `{ x, y }` for position-sensitive targets.
+The payload travels through **island state**, not `dataTransfer`: `onDragStart` records *what* is being dragged (`.with()` says which card each element means), `onDrop` reads it back. That keeps the whole gesture on the agent surface — `board.pick` and `board.dropOn` are ordinary tools, so a copilot can move the card with two calls and no mouse. A copilot with the [DOM fallback](/docs/recipes/local-model-copilot#show-what-the-agent-is-doing) can also drag it the way a hand does: gui-agent's `drag` fires the same `dragstart` and `drop`, which land on these same intents, while its pointer carries the card to the column. The runtime also cancels the browser's default drop handling (navigating to a dragged link), and the drop intent receives `{ x, y }` for position-sensitive targets.
 
 Two escape hatches, when you need them:
 

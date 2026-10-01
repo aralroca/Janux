@@ -20,7 +20,7 @@
   "dependencies": {
     "janux": "workspace:*",
     "@janux/server": "workspace:*",
-    "@aralroca/gui-agent": "^0.5.0",
+    "@aralroca/gui-agent": "^0.7.0",
     "ai": "^6.0.0"
   },
   "peerDependencies": {

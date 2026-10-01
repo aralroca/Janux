@@ -1,5 +1,5 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { afterAll, afterEach, describe, expect, it, mock } from 'bun:test';
+import { afterAll, afterEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import type { LlmRequest, LlmResponse } from '@aralroca/gui-agent';
 
 // Registered before gui-agent is loaded, not in `beforeAll`: its bundled WebMCP
@@ -227,6 +227,89 @@ describe('createCopilot', () => {
     expect(ring?.id).toBe('janux-agent-ring');
     expect(document.querySelector('[data-janux-agent-steps]')?.id).toBe('janux-agent-steps');
     copilot.dispose();
+  });
+
+  /** gui-agent's pointer host lives in `<body>` too: unmarked, a navigation deletes it and it animates detached. */
+  it('claims the cursor host so the pointer outlives a navigation', async () => {
+    installBridge();
+    document.body.innerHTML = '<button id="go">Go</button>';
+    const { llm } = scriptedLlm([]);
+    const copilot = createCopilot({ llm, visualize: { cursor: true } });
+
+    await copilot.ask('hi');
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-target', {
+        detail: { element: document.getElementById('go'), action: 'click', selector: '#go' },
+      }),
+    );
+    await new Promise((done) => setTimeout(done, 100));
+    const cursor = document.querySelector('[data-gui-agent-cursor]');
+
+    expect(cursor?.hasAttribute('data-janux-keep')).toBe(true);
+    expect(cursor?.id).toBe('janux-agent-cursor');
+    copilot.dispose();
+  });
+
+  /** A DOM-fallback drag shows the pointer from the agent's own steps, not from a janux event. */
+  it('claims the cursor host a DOM-fallback drag creates', async () => {
+    installBridge();
+    document.body.innerHTML =
+      '<div draggable="true" aria-label="Card">Card</div><section aria-label="Done" aria-dropeffect="move">Done</section>';
+    const { llm } = scriptedLlm([
+      { id: '1', name: 'read_page', arguments: {} },
+      { id: '2', name: 'drag', arguments: { ref: 'e1', to: 'e2' } },
+    ]);
+    const copilot = createCopilot({ llm, domFallback: true, visualize: { cursor: true } });
+
+    await copilot.ask('move the card to done');
+    const cursor = document.querySelector('[data-gui-agent-cursor]');
+
+    expect(cursor?.hasAttribute('data-janux-keep')).toBe(true);
+    expect(cursor?.id).toBe('janux-agent-cursor');
+    copilot.dispose();
+  }, 20_000);
+
+  it('claims the cursor host when the first highlight waits for its target to mount', async () => {
+    installBridge();
+    document.body.innerHTML = '';
+    const { llm } = scriptedLlm([]);
+    const copilot = createCopilot({ llm, visualize: { cursor: true } });
+
+    await copilot.ask('hi');
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-call', {
+        detail: { tool: 'wf.add', phase: 'ok', guard: 'auto', glowTarget: '.late-node' },
+      }),
+    );
+    document.body.insertAdjacentHTML('beforeend', '<div class="late-node">node</div>');
+    await new Promise((done) => setTimeout(done, 300));
+
+    expect(document.querySelector('[data-gui-agent-cursor]')?.id).toBe('janux-agent-cursor');
+    copilot.dispose();
+  });
+
+  /** A host the config never creates is not waited for: no polling with the ring off. */
+  it('does not poll for a ring that highlight: false never creates', async () => {
+    installBridge();
+    document.body.innerHTML = '<button id="go">Go</button>';
+    const { llm } = scriptedLlm([]);
+    const copilot = createCopilot({ llm, visualize: { highlight: false } });
+    const timers = spyOn(globalThis, 'setTimeout');
+
+    await copilot.ask('hi');
+    document.dispatchEvent(
+      new CustomEvent('janux:tool-target', {
+        detail: { element: document.getElementById('go'), action: 'click', selector: '#go' },
+      }),
+    );
+    copilot.dispose();
+    await new Promise((done) => setTimeout(done, 120));
+    const settled = timers.mock.calls.length;
+
+    await new Promise((done) => setTimeout(done, 200));
+    // Only the test's own wait arms a timer from here on.
+    expect(timers.mock.calls.length).toBe(settled + 1);
+    timers.mockRestore();
   });
 
   /** dispose() unregisters the tools ask() re-registers, so ask-after-dispose is a shape apps hit. */

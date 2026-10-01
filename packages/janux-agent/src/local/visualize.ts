@@ -12,6 +12,7 @@
  * re-renders and navigations is runtime knowledge.
  */
 import { createAgentVisualizer, type AgentVisualizer, type AgentVisualizerOptions } from '@aralroca/gui-agent/ui';
+import type { AgentStep } from '@aralroca/gui-agent';
 import { glowTargetFor, suspendAgentGlow, KEEP_ATTRIBUTE } from 'janux/client';
 
 /** Marks the chip-list host, so apps position and theme it from their own CSS. */
@@ -19,8 +20,12 @@ export const STEPS_ATTRIBUTE = 'data-janux-agent-steps';
 
 /** gui-agent's ring host, created lazily on its first highlight. */
 const RING_SELECTOR = '[data-gui-agent-highlight]';
+/** gui-agent's pointer host (`cursor: true`), created lazily on its first move. */
+const CURSOR_SELECTOR = '[data-gui-agent-cursor]';
 /** Long enough for the frame on which a selector target mounts its host. */
 const FRAME_MS = 32;
+/** ~2s of frames: as long as gui-agent waits for a selector target to mount. */
+const CLAIM_TRIES = 64;
 
 /**
  * Marks a host the runtime injected so a navigation keeps it. The id matters as
@@ -36,6 +41,8 @@ function markRuntimeHost(host: Element, id: string): void {
 
 export interface Visualization {
   visualizer: AgentVisualizer;
+  /** Feeds an agent step to the visualizer, claiming the hosts it creates. */
+  onStep(step: AgentStep): void;
   dispose(): void;
 }
 
@@ -63,23 +70,34 @@ export function startVisualization(
   const config = options === true ? {} : options;
   const visualizer = createAgentVisualizer({ ...config, labels: wireLabels(config.labels, wireName) });
   const resumeGlow = suspendAgentGlow();
-  let ring: Element | null = null;
+  /** The `<body>` hosts gui-agent creates lazily for this config: the ring, and the pointer with `cursor`. */
+  const hosts = [
+    { selector: RING_SELECTOR, id: 'janux-agent-ring', wanted: config.highlight !== false },
+    { selector: CURSOR_SELECTOR, id: 'janux-agent-cursor', wanted: Boolean(config.cursor) },
+  ].filter((host) => host.wanted);
+  let retry: ReturnType<typeof setTimeout> | undefined;
   /**
-   * Claims the host gui-agent lazily creates for the ring: it lives in `<body>`,
-   * so without the marker a navigation's document diff takes it down for good
-   * and the glow silently stops working. A selector target mounts the host a
-   * frame later, hence the retry.
+   * Claims those hosts: unmarked, a navigation's document diff takes them down
+   * for good and the glow (or the pointer, animating a detached element) stops
+   * working. A selector target mounts them a few frames later, hence the retry,
+   * bounded by how long gui-agent itself waits for the target.
    */
-  const claimRing = (): void => {
-    if (ring?.isConnected) return;
-    ring = document.querySelector(RING_SELECTOR);
-    if (ring) markRuntimeHost(ring, 'janux-agent-ring');
-    else setTimeout(claimRing, FRAME_MS);
+  const claimHosts = (tries = CLAIM_TRIES): void => {
+    const missing = hosts.filter(({ selector, id }) => {
+      const host = document.querySelector(selector);
+
+      if (host) markRuntimeHost(host, id);
+
+      return !host;
+    });
+
+    clearTimeout(retry);
+    if (missing.length && tries > 0) retry = setTimeout(() => claimHosts(tries - 1), FRAME_MS);
   };
   const highlight = (target: Element | string | undefined): void => {
     if (!target) return;
     visualizer.highlight(target);
-    claimRing();
+    claimHosts();
   };
   const onToolTarget = (event: Event): void => {
     highlight((event as CustomEvent).detail?.element);
@@ -101,7 +119,12 @@ export function startVisualization(
 
   return {
     visualizer,
+    onStep(step) {
+      visualizer.onStep(step);
+      if (step.type === 'tool-target') claimHosts();
+    },
     dispose() {
+      clearTimeout(retry);
       document.removeEventListener('janux:tool-target', onToolTarget);
       document.removeEventListener('janux:tool-call', onToolCall);
       visualizer.element.remove();

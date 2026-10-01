@@ -12,7 +12,7 @@
     "build:frame": "bunx vite build --config vite.frame.config.ts"
   },
   "dependencies": {
-    "@aralroca/gui-agent": "^0.5.0",
+    "@aralroca/gui-agent": "^0.7.0",
     "@janux/agent": "workspace:*",
     "@janux/cli": "workspace:*",
     "@janux/content": "workspace:*",

@@ -239,3 +239,33 @@ form.ask button.primary {
   width: 328px;
   z-index: 10;
 }
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.board .column {
+  min-height: 220px;
+  padding: 10px;
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.board .column h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--mut);
+}
+
+.board .card {
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  cursor: grab;
+}
