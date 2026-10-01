@@ -1,10 +1,11 @@
 import { component, enums, intent, schema } from 'janux';
+import { Board } from './Board';
 import { Profile } from './Profile';
 import { Team } from './Team';
 import { Users } from './Users';
 import { Workflow } from './Workflow';
 
-const TABS = ['users', 'team', 'profile', 'workflows'];
+const TABS = ['users', 'team', 'profile', 'workflows', 'board'];
 const label = (tab: string) => tab[0]!.toUpperCase() + tab.slice(1);
 
 export const Console = component({
@@ -49,6 +50,13 @@ export const Console = component({
           with <code>foreign()</code>. Nodes the agent adds mount asynchronously, so the glow waits for them.
         </p>
         <Workflow />
+      </section>
+      <section class={state.tab === 'board' ? 'panel active' : 'panel'}>
+        <p class="hint">
+          Plain HTML5 drag and drop: the agent drags a card with the DOM fallback, and the pointer carries it to its
+          column.
+        </p>
+        <Board />
       </section>
     </div>
   ),

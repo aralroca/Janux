@@ -6,6 +6,7 @@ A mini product console operated in natural language, with the interaction visual
 - **Zero wiring for the feedback** — `createCopilot({ visualize })` is the whole of it. The framework feeds it from `janux:tool-call` for this app's intents (including the `glowTarget` the workflow declares) and from the agent's own steps for the DOM fallback, and stands the built-in `glow` down while it runs.
 - **Glow on DOM that doesn't exist yet** — `workflow.addStep` declares `glowTarget`, so the ring waits for the React Flow node to mount instead of missing it.
 - **A DOM fallback that is honest** — the display name is only reachable by hand: its intent is `guard: 'forbidden'`, so it never reaches the manifest and the agent has to read the page and fill the field, landing on the very same intent a keystroke does.
+- **Drag and drop, as a hand does it** — the Board tab is plain HTML5 drag and drop (`onDragStart` picks a card, `onDrop` makes each column a drop zone). The agent drags a card with the DOM fallback's `drag`, which fires those same events, and `visualize: { cursor: true }` makes the pointer carry a copy of the card to its column.
 - **React, unchanged** — the canvas is `@xyflow/react` mounted with `foreign()` (`hydrate: 'only'`, since React Flow measures the viewport on mount).
 
 ```bash
@@ -13,7 +14,7 @@ bun install
 bun run dev   # http://localhost:4321
 ```
 
-Ask it: **"invite jane@acme.com as admin"**, **"search Kenji"**, **"change my display name to Neo"** (the DOM fallback), or **"build a workflow"** — the ring follows every node as it appears.
+Ask it: **"invite jane@acme.com as admin"**, **"search Kenji"**, **"change my display name to Neo"** (the DOM fallback), **"move Fix login redirect to Done"** (a drag on the Board tab), or **"build a workflow"** — the ring follows every node as it appears.
 
 ## No API key needed
 
@@ -34,5 +35,6 @@ llm: supportsLocalLlm() ? localLlm() : serverLlm(),
 | `src/components/Console.tsx` | The shell: `tab` state, `goToTab`, and every panel kept mounted so switching tabs never throws work away |
 | `src/components/Team.tsx` | One intent, two faces: the human's click uses the fields, the agent passes `{ email, role }` |
 | `src/components/Profile.tsx` | A `forbidden` intent — the human UI has it, the agent surface doesn't |
+| `src/components/Board.tsx` | A plain HTML5 drag-and-drop kanban the agent moves with the DOM fallback's `drag` |
 | `src/components/Workflow.tsx` | `glowTarget` for asynchronously mounted nodes + the `foreign()` React Flow island |
 | `src/copilot.ts` | The copilot: `visualize`, chip labels, and the scripted planner seam |

@@ -14,11 +14,14 @@ describe('examples/with-web-agent end to end', () => {
     const html = await (await app.fetch('/')).text();
 
     expect(html).toContain('<title>Janux — web agent console</title>');
-    ['Users', 'Team', 'Profile', 'Workflows'].forEach((tab) => expect(html).toContain(`>${tab}<`));
+    ['Users', 'Team', 'Profile', 'Workflows', 'Board'].forEach((tab) => expect(html).toContain(`>${tab}<`));
     // Every panel ships mounted; CSS hides the inactive ones, so tab switches keep their state.
     expect(html).toContain('id="display-name"');
     expect(html).toContain('id="invite-send"');
     expect(html).toContain('Kenji Tanaka');
+    // The board is plain HTML5 drag and drop: draggable cards, columns that take them.
+    expect(html).toContain('Fix login redirect');
+    expect(html).toContain('aria-dropeffect="move"');
     expect(html).toContain('id="assistant-panel"');
     // The chat form empties itself on submit through the runtime, not a DOM poke.
     expect(html).toContain('data-jxreset');
@@ -35,6 +38,8 @@ describe('examples/with-web-agent end to end', () => {
       'team.setRole': 'auto',
       'team.invite': 'auto',
       'workflow.addStep': 'auto',
+      'board.pick': 'auto',
+      'board.dropOn': 'auto',
     });
     // `forbidden` intents are the app's own plumbing: the display name is only
     // reachable through the DOM fallback, and the copilot doesn't talk to itself.
@@ -70,8 +75,20 @@ describe('the demo planner', () => {
     expect(planFor('change my display name to Neo')).toEqual([
       { name: 'console_goToTab', arguments: { tab: 'profile' } },
       { name: 'read_page', arguments: {} },
-      { name: 'fill', arguments: { ref: 'e?', value: 'Neo' } },
+      { name: 'fill', arguments: { ref: 'e?Display name', value: 'Neo' } },
     ]);
+  });
+
+  it('drags a card onto its column with the DOM fallback, as a hand would', () => {
+    expect(planFor('move Fix login redirect to Done')).toEqual([
+      { name: 'console_goToTab', arguments: { tab: 'board' } },
+      { name: 'read_page', arguments: {} },
+      { name: 'drag', arguments: { ref: 'e?Fix login redirect', to: 'e?Done' } },
+    ]);
+    expect(planFor('move "Write release notes" to in progress')[2]).toEqual({
+      name: 'drag',
+      arguments: { ref: 'e?Write release notes', to: 'e?In progress' },
+    });
   });
 
   it('builds the whole flow in one turn', () => {
