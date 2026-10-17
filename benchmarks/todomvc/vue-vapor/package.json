@@ -10,9 +10,9 @@
 		"preview": "vite preview --port 5244 --strictPort"
 	},
 	"dependencies": {
-		"vue": "3.6.0-rc.1",
-		"@vue/runtime-dom": "3.6.0-rc.1",
-		"@vue/runtime-vapor": "3.6.0-rc.1"
+		"vue": "3.6.0-rc.12",
+		"@vue/runtime-dom": "3.6.0-rc.12",
+		"@vue/runtime-vapor": "3.6.0-rc.12"
 	},
 	"devDependencies": {
 		"@vitejs/plugin-vue": "^6.0.8",

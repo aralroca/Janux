@@ -237,8 +237,9 @@ export const QUERY_STREAM_CASES: ScenarioCase[] = [
       const html = await text('/split');
 
       // `late` needs 45ms and only starts once the island renders: the tail
-      // cannot have been written before it settled.
-      log.push(`waited=${performance.now() - started >= 45}`);
+      // cannot have been written before it settled. The margin absorbs timers
+      // firing a hair early on Windows' coarse clock (seen at 44.x ms).
+      log.push(`waited=${performance.now() - started >= 40}`);
       log.push(`delivered=${html.includes('late-1')}`);
     },
     expected: ['waited=true', 'delivered=true'],
